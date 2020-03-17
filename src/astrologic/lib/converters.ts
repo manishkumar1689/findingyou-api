@@ -1,13 +1,13 @@
 import { isNumeric } from './validators';
 import config from '../.config';
 
-const locStringToGeo = (loc) => {
+export const locStringToGeo = (loc) => {
   const [lat, lng, altV] = loc.split(',').filter(isNumeric).map(parseFloat);
   const alt = isNumeric(altV) ? altV : config.defaults.altitude;
   return { lat, lng, alt };
 }
 
-const dmsToDegrees = (dms) => {
+export const dmsToDegrees = (dms) => {
   let v = 0;
   if (dms instanceof Object) {
     const keys = Object.keys(dms);
@@ -28,7 +28,7 @@ const dmsToDegrees = (dms) => {
 @param flDeg:number
 @return Object
 */
-const decDegToDms = (flDeg) => {
+export const decDegToDms = (flDeg) => {
   let dms = { deg: 0, min: 0, sec: 0 };
   if (isNumeric(flDeg)) {
     flDeg = parseFloat(flDeg);
@@ -47,7 +47,7 @@ const decDegToDms = (flDeg) => {
 @param mode:string (raw|lat|lng)
 @return string
 */
-const degAsDms = (flDeg, mode = 'raw') => {
+export const degAsDms = (flDeg, mode = 'raw') => {
   const dms = decDegToDms(flDeg);
   let letter = '';
   let hasLetter = false;
@@ -66,5 +66,3 @@ const degAsDms = (flDeg, mode = 'raw') => {
   const suffix = hasLetter ? ' ' + letter : '';
   return `${degrees}º ${dms.min}' ${dms.sec}"${suffix}`;
 }
-
-module.exports = { locStringToGeo, dmsToDegrees, decDegToDms, degAsDms };
