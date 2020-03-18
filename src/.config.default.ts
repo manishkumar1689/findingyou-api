@@ -14,9 +14,9 @@ export const redisOptions = {
   port: 6379,
 };
 
-export const ephemerisPath: '/usr/share/libswe/ephe';
+export const ephemerisPath = '/usr/share/libswe/ephe';
 
-export const ephemerisDefaults: {
+export const ephemerisDefaults = {
   altitude: 30,
   pressure: 1000,
   temperature: 10,
