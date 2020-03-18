@@ -1,7 +1,7 @@
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 import lineByLine from 'n-readlines';
-import config from '../.config';
+import { ephemerisPath } from '../../.config';
 /*
 @param fn:string
 @return Object
@@ -104,5 +104,5 @@ export const readDataFiles = async (directoryPath) => {
 * return Promise<Array<Object>>
 */
 export const readEpheFiles = async () => {
-  return await readDataFiles(config.ephemerisPath);
+  return await readDataFiles(ephemerisPath);
 }

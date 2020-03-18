@@ -28,6 +28,7 @@
     "@nestjs/platform-express": "^7.0.0",
     "cache-manager-redis-store": "^2.0.0",
     "mongoose": "^5.9.5",
+    "n-readlines": "^1.0.0",
     "nestjs-redis": "^1.2.6",
     "passport": "^0.4.1",
     "reflect-metadata": "^0.1.13",
