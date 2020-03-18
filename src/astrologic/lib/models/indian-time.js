@@ -1,9 +1,8 @@
-const moment = require("moment");
-const { BaseObject } = require('./base-object');
-const { JyotishDay } = require("./jyotish-day");
+import moment from "moment";
+import { BaseObject } from './base-object';
+import { JyotishDay } from "./jyotish-day";
 
-
-class IndianTime extends BaseObject {
+export class IndianTime extends BaseObject {
   /*
     const dayOffset = dayBefore ? -1 : 0;
   const date = moment.utc(datetime).add(dayOffset, 'day');
@@ -83,5 +82,3 @@ class IndianTime extends BaseObject {
   }
 
 }
-
-module.exports = { IndianTime };

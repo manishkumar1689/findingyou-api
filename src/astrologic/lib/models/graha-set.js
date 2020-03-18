@@ -1,32 +1,32 @@
-const { isNumeric, notEmptyString } = require("../validators");
-const { BaseObject } = require("./base-object");
-const { mapToObject } = require('../mappers');
-const { longitudeMatchesHouseIndex, mapSignToHouse, calcAllVargas, calcVargaSet, calcInclusiveDistance, calcInclusiveTwelfths, calcInclusiveNakshatras } = require('../astro-math-funcs');
-const nakshatraValues = require('../settings/nakshatra-values');
-const maitriData = require('../settings/maitri-data');
+import { isNumeric, notEmptyString } from "../validators";
+import { BaseObject } from "./base-object";
+import { mapToObject } from '../mappers';
+import { longitudeMatchesHouseIndex, mapSignToHouse, calcAllVargas, calcVargaSet, calcInclusiveDistance, calcInclusiveTwelfths, calcInclusiveNakshatras } from '../astro-math-funcs';
+import nakshatraValues from '../settings/nakshatra-values';
+import maitriData from '../settings/maitri-data';
 
-class Graha extends BaseObject {
+export class Graha extends BaseObject {
 
-  num = -1;
-  name = "";
-  key = "";
-  ref = "";
-  altRef = "";
-  jyNum = -1;
-  icon = "";
-  bhuta = '';
-  guna = '';
-  caste = '';
-  dhatu = '';
-  dosha = '';
-  longitude = 0;
-  latitude = 0;
-  distance = 1;
-  longitudeSpeed = 0;
-  latitudeSpeed = 0;
-  distanceSpeed = 0;
-  rflag = 0;
-  sign = 0;
+  num:number = -1;
+  name:string = "";
+  key:string = "";
+  ref:string = "";
+  altRef:string = "";
+  jyNum:number = -1;
+  icon:string = "";
+  bhuta:string = '';
+  guna:string = '';
+  caste:string = '';
+  dhatu:string = '';
+  dosha:string = '';
+  longitude:number = 0;
+  latitude:number = 0;
+  distance:string = 1;
+  longitudeSpeed:number = 0;
+  latitudeSpeed:number = 0;
+  distanceSpeed:number = 0;
+  rflag:number = 0;
+  sign:number = 0;
   nakshatra = {
     within: 0,
     degrees: 0
@@ -86,10 +86,10 @@ Calculate pachanga values for a body
 
 }
 
-class GrahaSet {
+export class GrahaSet {
 
   jd = null;
-  bodies = [];
+  bodies:Array<Graha> = [];
 
   constructor(bodyData) {
     if (bodyData instanceof Object) {
@@ -230,5 +230,3 @@ class GrahaSet {
   }
 
 }
-
-module.exports = { GrahaSet, Graha };
