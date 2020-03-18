@@ -17,13 +17,13 @@ export const dmsToDegrees = (dms:degreesMinutesSeconds) => {
   let v = 0;
   const keys = Object.keys(dms);
   if (keys.includes('deg')) {
-    v = parseFloat(dms.deg);
+    v = dms.deg;
   }
   if (keys.includes('min')) {
-    v += parseFloat(dms.min / 60);
+    v += dms.min / 60;
   }
   if (keys.includes('sec')) {
-    v += parseFloat(dms.sec / 3600);
+    v += dms.sec / 3600;
   }
   return v;
 }

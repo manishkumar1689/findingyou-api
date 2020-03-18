@@ -50,4 +50,4 @@ const mrityubhagaData = {
 	},
 }
 
-module.exports = mrityubhagaData;
+export default mrityubhagaData;

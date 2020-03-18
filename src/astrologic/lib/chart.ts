@@ -1,4 +1,4 @@
-import util from "util";
+import * as util from "util";
 const exec = require('child_process').exec;
 import { isNumeric, isInteger, notEmptyString, emptyString, validLocationParameter, validISODateString } from "./validators";
 const run = util.promisify(exec);

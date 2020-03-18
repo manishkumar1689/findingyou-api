@@ -21,25 +21,35 @@ export class Graha extends BaseObject {
   dosha:string = '';
   longitude:number = 0;
   latitude:number = 0;
-  distance:string = 1;
+  distance:number = 1;
   longitudeSpeed:number = 0;
   latitudeSpeed:number = 0;
   distanceSpeed:number = 0;
   rflag:number = 0;
   sign:number = 0;
+  calc:string = "";
   nakshatra = {
     within: 0,
-    degrees: 0
+    degrees: 0,
+    aksharas: []
   };
   ruler = "";
+  friends = [];
+  neutral = [];
+  enemies = [];
   relationship = {
-    natural: ''
+    natural: '',
+    temporary: '',
+    compound: ''
   };
   withinSign = 0;
   isOwnSign = false;
+  mulaTrikon: -1;
   isMulaTrikon = false;
-  isExalted = false;
-  isDebilitated = false;
+  mulaTrikonDegrees: 0;
+  exalted = false;
+  exaltedDegree = 0;
+  debilitated = false;
   ownSign = [];
   charaKarakaMode = "standard";
   charaKaraka = "";
@@ -49,7 +59,7 @@ export class Graha extends BaseObject {
   percent = 0;
   akshara = null;
 
-  constructor(body) {
+  constructor(body:any = null) {
     super();
     if (body instanceof Object) {
       Object.entries(body).forEach(entry => {
@@ -134,7 +144,7 @@ export class GrahaSet {
   getBodies = () => this.bodies;
 
   getRuler(key) {
-    const body = this.graha(key);
+    const body = this.get(key);
     let rulerKey = "";
     if (body) {
       rulerKey = body.ruler;

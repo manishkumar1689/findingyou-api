@@ -130,12 +130,12 @@ export const calcTransitionJd = async (jd:number, geo, planetNum, showInput = tr
   return data;
 }
 
-const calcSunTrans = async (datetime, geo) => {
+export const calcSunTrans = async (datetime, geo) => {
   const jd = calcJulDate(datetime);
   return calcSunTransJd(jd, geo);
 }
 
-const calcSunTransJd = async (jd, geo) => {
+export const calcSunTransJd = async (jd, geo) => {
   const prev = await calcTransitionJd(jd - 1, geo, 0, false, false);
   const curr = await calcTransitionJd(jd, geo, 0, false, false);
   const next = await calcTransitionJd(jd + 1, geo, 0, false, false);

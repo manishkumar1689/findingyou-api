@@ -3,7 +3,6 @@ import { dmsToDegrees, decDegToDms, degAsDms } from "./converters";
 import { simplifyObject } from './mappers';
 import { calcAsync, calcUtAsync, riseTransAsync, fixedStarUtAsync, fixedStar2UtAsync, fixstar2MagAsync, getHouses } from './sweph-async';
 import { calcJulDate, jdToDateTime } from './date-funcs';
-import { calcLagnaSet } from './math-funcs';
 import { calcTransition, calcTransitionJd, calcJyotishSunRise, calcSunTrans, matchTransData, fetchIndianTimeData } from './transitions';
 import stars from './settings/stars';
 import asteroids from './settings/asteroids';
@@ -44,7 +43,7 @@ export const calcUpagrahas = async (datetime, geo, showPeriods = false) => {
 	const sectionKey = isDaytime ? "daytime" : "nighttime";
 	const upaRow = upagrahaData[sectionKey].find(row => row.day === weekDay);
 	let values = [];
-	for (ref of upagrahaData.refs) {
+	for (const ref of upagrahaData.refs) {
 		const partIndex = upaRow.parts.findIndex(b => b === ref.body);
 		const parts = partIndex + 1;
 		const value = (partIndex + ref.position) * eighthJd;
@@ -134,6 +133,7 @@ export const calcMrityubhaga = async (datetime:string, geo) => {
 		let signIndex = -1;
 		let signLng = null;
 		let active = false;
+		let degree = 0;
 		switch (row.graha) {
 			case 'as':
 				lng = ascendant;
@@ -175,9 +175,8 @@ export const calcAllTransitions = async (datetime:string, geo) => {
 		"SE_NEPTUNE",
 		"SE_PLUTO"
 	];
-	for (body of bodies) {
-		const num = swisseph[body]
-		const bodyData = await calcTransitionJd(data.jd, geo, num, false, true);
+	for (const body of bodies) {
+		const bodyData = await calcTransitionJd(data.jd, geo, body.num, false, true);
 		data.bodies.push({
 			num,
 			body,
@@ -194,7 +193,7 @@ export const calcStarPos = async (datetime:string, starname:string) => {
 }
 
 const calcStarPosJd = async (jd:number, starname:string) => {
-	let data = { valid: false };
+	let data:any = { valid: false };
 	if (isNumeric(jd) && notEmptyString(starname, 2)) {
 		await fixedStar2UtAsync(starname, jd, swisseph.SEFLG_SWIEPH)
 			.catch(result => {
@@ -259,12 +258,10 @@ const matchNakshatra = (deg:number) => {
 */
 const processBodyResult = (result:any, body: Graha) => {
 	// for Ketu calculate opposing longitude
-	if (body.hasCalc) {
-		switch (body.calc) {
-			case 'opposite':
-				result.longitude = (result.longitude + 180) % 360;
-				break;
-		}
+	switch (body.calc) {
+		case 'opposite':
+			result.longitude = (result.longitude + 180) % 360;
+			break;
 	}
 	result.sign = Math.floor(result.longitude / 30) + 1;
 	result.nakshatra = matchNakshatra(result.longitude);
@@ -411,7 +408,7 @@ export const calcAllBodies = async (datetime:string, mode:string = 'all') => {
 }
 
 const calcBodyJd = async (jd, key) => {
-	let data = {};
+	let data:any = {};
 
 	const body = grahaValues.find(b => b.key === key);
 	if (body) {

@@ -15,22 +15,11 @@ import {
   Req,
 } from '@nestjs/common';
 import { validISODateString, notEmptyString } from './lib/validators';
+import { locStringToGeo } from './lib/converters';
 import { calcAllTransitions } from './lib/core';
 
 @Controller('astrologic')
 export class AstrologicController {
-
-/*
-app.get("/api/transitions/:loc/:dt", async (req, res) => {
-  const { dt, loc } = req.params;
-  const geo = locStringToGeo(loc);
-  let data = { valid: false };
-  if (validISODateString(dt)) {
-    data = await calcAllTransitions(dt, geo);
-  }
-  res.send(data);
-});
-*/
 
   @Get('transitions/:loc/:dt')
   async transitions(
@@ -38,7 +27,7 @@ app.get("/api/transitions/:loc/:dt", async (req, res) => {
     @Param('loc') loc,
     @Param('dt') dt,
   ) {
-    if (validISODateString(dt) && notEmptyString(geo, 3)) {
+    if (validISODateString(dt) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const data = await calcAllTransitions(dt, geo);
       return res.status(HttpStatus.OK).json(data);
