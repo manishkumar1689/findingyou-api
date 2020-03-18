@@ -16,7 +16,12 @@ import {
 } from '@nestjs/common';
 import { validISODateString, notEmptyString } from './lib/validators';
 import { locStringToGeo } from './lib/converters';
-import { calcAllTransitions, fetchHouseData, calcBodiesInHouses } from './lib/core';
+import { 
+  calcAllTransitions,
+  fetchHouseData,
+  calcBodiesInHouses,
+  calcVargas,
+} from './lib/core';
 import { readEpheFiles } from './lib/files';
 
 @Controller('astrologic')
@@ -73,10 +78,26 @@ export class AstrologicController {
     @Param('system') system,    
     ) {
     let data:any = { valid: false };
-    if (notEmptyString(dt, 6) && notEmptyString(loc, 3) && notEmptyString(system)) {
+    if (notEmptyString(dt, 6) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const sysRef = notEmptyString(system) ? system : 'W';
       data = await calcBodiesInHouses(dt, geo, system);
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('vargas/:loc/:dt/:system?')
+  async vargasByDateGeo(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Param('system') system, 
+    ) {
+    let data:any = { valid: false };
+    if (notEmptyString(dt, 6) && notEmptyString(loc, 3)) {
+      const geo = locStringToGeo(loc);
+      const sysRef = notEmptyString(system) ? system : 'W';
+      data = await calcVargas(dt, geo, sysRef);
     }
     return res.status(HttpStatus.OK).json(data);
   }
