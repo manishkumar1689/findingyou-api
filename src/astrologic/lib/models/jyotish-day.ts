@@ -1,5 +1,5 @@
 import { BaseObject } from './base-object';
-import { calcAstroWeekDayIndex } from '../astro-dates';
+import { calcAstroWeekDayIndex } from '../date-funcs';
 
 export class JyotishDay extends BaseObject {
 

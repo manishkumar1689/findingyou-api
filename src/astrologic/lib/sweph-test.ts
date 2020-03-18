@@ -1,7 +1,7 @@
 import * as swisseph from 'swisseph';
 import { isNumeric, isInteger, validLocationParameter, validISODateString } from "./validators";
 import { calcAsync, calcUtAsync } from './sweph-async';
-import { calcJulDate, calcJulDateFromParts } from './astro-dates';
+import { calcJulDate, calcJulDateFromParts } from './date-funcs';
 
 const planet = async (jd, planetId) => {
   let data = { valid: false };

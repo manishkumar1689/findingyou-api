@@ -70,4 +70,4 @@ const parsed = asteroids.map(row => {
   return row;
 });
 
-exports default parsed;
+export default parsed;

@@ -1,6 +1,6 @@
-import swisseph from 'swisseph';
+import * as swisseph from 'swisseph';
 import { calcUtAsync } from './sweph-async';
-import { calcJulDate, jdToDateTime } from './astro-dates';
+import { calcJulDate, jdToDateTime } from './date-funcs';
 import { withinTolerance } from './validators';
 import grahaValues from './settings/graha-values';
 

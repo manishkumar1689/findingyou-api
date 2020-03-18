@@ -1,7 +1,7 @@
 import { isNumeric, notEmptyString } from "../validators";
 import { BaseObject } from "./base-object";
 import { mapToObject } from '../mappers';
-import { longitudeMatchesHouseIndex, mapSignToHouse, calcAllVargas, calcVargaSet, calcInclusiveDistance, calcInclusiveTwelfths, calcInclusiveNakshatras } from '../astro-math-funcs';
+import { longitudeMatchesHouseIndex, mapSignToHouse, calcAllVargas, calcVargaSet, calcInclusiveDistance, calcInclusiveTwelfths, calcInclusiveNakshatras } from '../math-funcs';
 import nakshatraValues from '../settings/nakshatra-values';
 import maitriData from '../settings/maitri-data';
 
