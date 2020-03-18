@@ -28,13 +28,13 @@ import induValues from './settings/indu-values';
 import { GrahaSet, Graha } from './models/graha-set';
 import { RashiSet, Rashi } from './models/rashi-set';
 import { HouseSet } from './models/house-set';
-import config from '../.config';
+import { ephemerisPath, ephemerisDefaults } from '../../.config';
 import { isNumeric, notEmptyString, validISODateString, inRange } from "./validators";
 
-swisseph.swe_set_ephe_path(config.ephemerisPath);
+swisseph.swe_set_ephe_path(ephemerisPath);
 
 // Make user-configurable
-swisseph.swe_set_sid_mode(swisseph[config.defaults.sid_mode], 0, 0);
+swisseph.swe_set_sid_mode(swisseph[ephemerisDefaults.sid_mode], 0, 0);
 
 export const calcUpagrahas = async (datetime, geo, showPeriods = false) => {
 	const { jd, startJd, sunData, periodLength, dayBefore, periodHours, isDaytime, weekDay } = await calcJyotishSunRise(datetime, geo);
@@ -256,7 +256,6 @@ const matchNakshatra = (deg) => {
 	add extra data for each body based on position
 @param result:Object
 @param body:Object
-@param showBodyConfig:boolean
 */
 const processBodyResult = (result, body) => {
 	// for Ketu calculate opposing longitude
@@ -391,7 +390,7 @@ const addAsteroids = async (data) => {
 @param mode:string (all|core|asteroids)
 @param showBodyConfig:boolean
 */
-export const calcAllBodies = async (datetime, mode = 'all') => {
+export const calcAllBodies = async (datetime:string, mode:string = 'all') => {
 	let data = { valid: false, jd: 0, bodies: [] };
 	if (validISODateString(datetime)) {
 		data.jd = calcJulDate(datetime);
