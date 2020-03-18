@@ -31,6 +31,7 @@ export class Graha extends BaseObject {
   nakshatra = {
     within: 0,
     degrees: 0,
+    percent: 0,
     aksharas: []
   };
   ruler = "";

@@ -329,7 +329,6 @@ export const fetchHouseData = async (datetime:string, geo, system = 'W'):Promise
 const addGrahaValues = async (data) => {
 	for (const body of grahaValues) {
 		const num = swisseph[body.ref];
-		//swisseph.swe_set_sid_mode(swisseph.SE_SIDM_TRUE_CITRA, 0, 0);
 		const flag = swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SIDEREAL + swisseph.SEFLG_SPEED;
 		await calcUtAsync(data.jd, num, flag).catch(async result => {
 			if (result instanceof Object) {
@@ -409,7 +408,7 @@ export const calcAllBodies = async (datetime:string, mode:string = 'all') => {
 	return data;
 }
 
-const calcBodyJd = async (jd, key) => {
+const calcBodyJd = async (jd:number, key:string) => {
 	let data:any = {};
 
 	const body = grahaValues.find(b => b.key === key);
@@ -435,7 +434,7 @@ const fetchRashiSet = () => new RashiSet();
 
 const fetchRashi = (key) => new RashiSet().get(key);
 
-export const calcSphutaData = async (datetime, geo) => {
+export const calcSphutaData = async (datetime:string, geo) => {
 	const grahaSet = await calcGrahaSet(datetime);
 	const houseData = await fetchHouseData(datetime, geo);
 	const upagrahas = await calcUpagrahas(datetime, geo);
@@ -444,7 +443,7 @@ export const calcSphutaData = async (datetime, geo) => {
 	return { ...data };
 }
 
-const matchInduVal = (houseNum) => {
+const matchInduVal = (houseNum:number) => {
 	const matchedGraha = rashiValues.find(r => r.num === houseNum);
 	let indu = {
 		graha: "",
@@ -472,9 +471,9 @@ const subtractCycleInclusive = (one, two, radix) => {
 	return (((one - 1) - two + radix) % radix) + 1;
 }
 
-const addSphutaData = async (grahaSet, houseData, iTime, upagrahas) => {
+const addSphutaData = async (grahaSet:GrahaSet, houseData, iTime, upagrahas) => {
 	const { bodies } = grahaSet;
-	let data = grahaSet;
+	let data:any = { grahaSet };
 	const grahaLngs = grahaSet.longitudes();
 	data.houseSign = Math.floor(houseData.houses[0] / 30) + 1;
 	const moon = grahaSet.moon();
@@ -506,7 +505,7 @@ const addSphutaData = async (grahaSet, houseData, iTime, upagrahas) => {
 
 	data.varnadaLagna = calcVarnadaLagna(data, houseData);
 
-	data.yogiSphuta = grahaSet.calcYogiSphuta(bodies);
+	data.yogiSphuta = grahaSet.calcYogiSphuta();
 
 	const yogiSphutaNk = matchNakshatra(data.yogiSphuta);
 	data.yogi = yogiSphutaNk.ruler;
