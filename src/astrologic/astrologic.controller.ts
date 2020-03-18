@@ -17,6 +17,7 @@ import {
 import { validISODateString, notEmptyString } from './lib/validators';
 import { locStringToGeo } from './lib/converters';
 import { calcAllTransitions } from './lib/core';
+import { readEpheFiles } from './lib/files';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -38,6 +39,19 @@ export class AstrologicController {
       };
       return res.status(HttpStatus.BAD_REQUEST).json(result);
     }
+  }
+
+/*
+app.get("/api/ephe-files", async (req, res) => {
+  const data = await readEpheFiles();
+  res.send(data);
+});
+*/
+
+  @Get('ephe-files')
+  async transitions(@Res() res) {
+    const data = await readEpheFiles();
+    return res.status(HttpStatus.BAD_REQUEST).json(data);
   }
 
 }
