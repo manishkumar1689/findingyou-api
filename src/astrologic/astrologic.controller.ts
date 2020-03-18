@@ -16,7 +16,7 @@ import {
 } from '@nestjs/common';
 import { validISODateString, notEmptyString } from './lib/validators';
 import { locStringToGeo } from './lib/converters';
-import { calcAllTransitions, fetchHouseData } from './lib/core';
+import { calcAllTransitions, fetchHouseData, calcBodiesInHouses } from './lib/core';
 import { readEpheFiles } from './lib/files';
 
 @Controller('astrologic')
@@ -49,7 +49,7 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-///houses/65.2727,-13.2626/1965-08-13T18:12:34/W
+
  @Get('houses/:loc/:dt/:system')
   async housesByDateGeo(
     @Res() res,
@@ -61,6 +61,22 @@ export class AstrologicController {
     if (notEmptyString(dt, 6) && notEmptyString(loc, 3) && notEmptyString(system)) {
       const geo = locStringToGeo(loc);
       data = await fetchHouseData(dt, geo, system);
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('bodies-in-houses/:loc/:dt/:system?')
+  async bodiesInhousesByDateGeo(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Param('system') system,    
+    ) {
+    let data:any = { valid: false };
+    if (notEmptyString(dt, 6) && notEmptyString(loc, 3) && notEmptyString(system)) {
+      const geo = locStringToGeo(loc);
+      const sysRef = notEmptyString(system) ? system : 'W';
+      data = await calcBodiesInHouses(dt, geo, system);
     }
     return res.status(HttpStatus.OK).json(data);
   }
