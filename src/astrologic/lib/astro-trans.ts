@@ -4,7 +4,7 @@ import { JyotishDay } from './models/jyotish-day';
 import { IndianTime } from './models/indian-time';
 import { riseTransAsync } from './sweph-async';
 import { isNumeric } from './validators';
-import config from '../.config';
+import { ephemerisDefaults } from '../../.config';
 
 export const matchTransData = async (inData, transType = 0, transKey = 'trans') => {
   let data = { valid: false };
@@ -56,7 +56,7 @@ export const calcTransitionJd = async (jd, geo, planetNum, showInput = true, sho
     let valid = false;
     let longitude = 0;
     let latitude = 0;
-    let { altitude, temperature, pressure } = config.defaults;
+    let { altitude, temperature, pressure } = ephemerisDefaults;
     if (!planetNum) {
       planetNum = 0;
     }

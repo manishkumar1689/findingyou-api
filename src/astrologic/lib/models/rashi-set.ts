@@ -1,6 +1,6 @@
-const rashiValues = require('../settings/rashi-values');
+import rashiValues from '../settings/rashi-values';
 
-class Rashi {
+export class Rashi {
 
   num:number = 1;
   key:string = "";
@@ -27,7 +27,7 @@ class Rashi {
 
 }
 
-class RashiSet {
+export class RashiSet {
 
   values = [];
 
