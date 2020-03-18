@@ -1,13 +1,12 @@
-const swisseph = require('swisseph');
-const moment = require('moment');
-const { isNumeric, isInteger, validISODateString } = require("./validators");
-
+import swisseph from 'swisseph';
+import moment from 'moment';
+import { isNumeric, isInteger, validISODateString } from "./validators";
 const defaultDateParts = { year: 0, mmonth: 0, day: 0, hour: 0 };
 
 /*
 @param params:Object
 */
-const calcJulianDate = (params) => {
+export const calcJulianDate = (params) => {
   let iso = null;
   let jd = null;
   let dp = defaultDateParts;
@@ -30,7 +29,7 @@ const calcJulianDate = (params) => {
   };
 }
 
-const buildDatePartsFromParams = (query) => {
+export const buildDatePartsFromParams = (query) => {
   const keys = Object.keys(query);
   let dp = defaultDateParts;
   if (keys.includes("y")) {
@@ -59,7 +58,7 @@ const buildDatePartsFromParams = (query) => {
   return dp;
 }
 
-const toDateParts = (strDate) => {
+export const toDateParts = (strDate) => {
   let dt = moment.utc(strDate);
   let minSecs = (dt.minutes() * 60) + dt.seconds();
   let decHrs = dt.hours() + (minSecs / 3600);
@@ -71,7 +70,7 @@ const toDateParts = (strDate) => {
   };
 }
 
-const buildIsoDateFromParts = (dp) => {
+export const buildIsoDateFromParts = (dp) => {
   const hours = Math.floor(dp.hour);
   const minVal = (dp.hour % 1) * 60;
   const mins = Math.floor(minVal);
@@ -79,21 +78,21 @@ const buildIsoDateFromParts = (dp) => {
   return new Date(dp.year, (dp.month - 1), dp.day, hours, mins, secs).toISOString().split(".").shift();
 }
 
-const calcJulDate = (strDate, julian = false) => {
+export const calcJulDate = (strDate, julian = false) => {
   let dp = toDateParts(strDate);
   return calcJulDateFromParts(dp, julian);
 }
 
-const calcJulDateFromParts = (dp, julian = false) => {
+export const calcJulDateFromParts = (dp, julian = false) => {
   const greg_flag = julian === true ? 0 : 1;
   return swisseph.swe_julday(dp.year, dp.month, dp.day, dp.hour, greg_flag);
 }
 
-const jdToDateParts = (jd, gregFlag = 1) => {
+export const jdToDateParts = (jd, gregFlag = 1) => {
   return swisseph.swe_revjul(jd, gregFlag);
 }
 
-const zero2Pad = (num) => {
+export const zero2Pad = (num) => {
   let out = '';
   if (isNumeric(num)) {
     const iVal = parseInt(num);
@@ -106,7 +105,7 @@ const zero2Pad = (num) => {
   return out;
 }
 
-const jdToDateTime = (jd, gregFlag = 1) => {
+export const jdToDateTime = (jd, gregFlag = 1) => {
   const parts = jdToDateParts(jd, gregFlag);
   const dateStr = [parts.year, zero2Pad(parts.month), zero2Pad(parts.day)].join('-');
   const hours = Math.floor(parts.hour);
@@ -119,9 +118,7 @@ const jdToDateTime = (jd, gregFlag = 1) => {
   return dateStr + 'T' + timeStr + '.' + millisecs;
 }
 
-const calcAstroWeekDayIndex = (datetime, afterSunrise = true) => {
+export const calcAstroWeekDayIndex = (datetime, afterSunrise = true) => {
   const daySubtract = afterSunrise ? 0 : 1;
   return moment(datetime).subtract(daySubtract, 'day').weekday();
 }
-
-module.exports = { calcJulianDate, buildDatePartsFromParams, buildIsoDateFromParts, calcJulDate, calcJulDateFromParts, jdToDateParts, jdToDateTime, calcAstroWeekDayIndex };
