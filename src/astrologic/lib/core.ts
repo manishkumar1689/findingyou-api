@@ -61,7 +61,7 @@ export const calcUpagrahas = async (datetime, geo, showPeriods = false) => {
 	return out;
 }
 
-export const calcHoras = async (datetime, geo) => {
+export const calcHoras = async (datetime:string, geo) => {
 	const { jd, startJd, dayLength, isDaytime, weekDay } = await calcJyotishSunRise(datetime, geo);
 	const horaRow = horaValues.find(row => row.day === weekDay);
 	const numHoras = horaRow.hora.length;
@@ -73,7 +73,7 @@ export const calcHoras = async (datetime, geo) => {
 	return { jd, horaRow, ruler, index: horaIndex, weekDay, isDaytime };
 }
 
-const calcMuhurtaIndex = async (datetime, geo) => {
+const calcMuhurtaIndex = async (datetime:string, geo) => {
 	const { jd, sunData, dayLength, dayBefore } = await calcJyotishSunRise(datetime, geo);
 	const { prevRise, rise } = sunData;
 	const dayStart = dayBefore ? prevRise.jd : rise.jd;
@@ -85,13 +85,13 @@ const calcMuhurtaIndex = async (datetime, geo) => {
 	return { jd, dayStart, index, numMuhurtas, muhurtaLength };
 }
 
-const calcMuhurta = async (datetime, geo) => {
+const calcMuhurta = async (datetime:string, geo) => {
 	const { jd, index } = await calcMuhurtaIndex(datetime, geo);
 	const muhurtaRow = muhurtaValues[index];
 	return { jd, index, ...muhurtaRow };
 }
 
-const calcDayMuhurtas = async (datetime, geo) => {
+const calcDayMuhurtas = async (datetime:string, geo) => {
 	const { jd, dayStart, index, muhurtaLength } = await calcMuhurtaIndex(datetime, geo);
 	const values = muhurtaValues.map((row, ri) => {
 		const mJd = dayStart + (ri * muhurtaLength);
@@ -101,7 +101,7 @@ const calcDayMuhurtas = async (datetime, geo) => {
 	return { jd, values, muhurtaLength, dayStart };
 }
 
-const calcUpagrahaPeriods = async (startJd, eighthJd, geo) => {
+const calcUpagrahaPeriods = async (startJd:number, eighthJd:number, geo) => {
 	let periods = [];
 	for (let i = 0; i < 9; i++) {
 		const periodJd = startJd + (i * eighthJd);
@@ -121,7 +121,7 @@ const calcUpagrahaPeriods = async (startJd, eighthJd, geo) => {
 	return periods;
 }
 
-export const calcMrityubhaga = async (datetime, geo) => {
+export const calcMrityubhaga = async (datetime:string, geo) => {
 	const bodyData = await calcAllBodies(datetime, 'core');
 	const { jd, bodies } = bodyData;
 	const hd = await fetchHouseDataJd(jd, geo);
@@ -158,7 +158,7 @@ export const calcMrityubhaga = async (datetime, geo) => {
 	return { jd, dt: datetime, ascendant, standardRange, altRange, bodies };
 }
 
-export const calcAllTransitions = async (datetime, geo) => {
+export const calcAllTransitions = async (datetime:string, geo) => {
 	let data = {
 		jd: calcJulDate(datetime),
 		bodies: []
@@ -187,13 +187,13 @@ export const calcAllTransitions = async (datetime, geo) => {
 	return data;
 }
 
-export const calcStarPos = async (datetime, starname) => {
+export const calcStarPos = async (datetime:string, starname:string) => {
 	const jd = calcJulDate(datetime);
 	const data = await calcStarPosJd(jd, starname);
 	return { jd, ...data };
 }
 
-const calcStarPosJd = async (jd, starname) => {
+const calcStarPosJd = async (jd:number, starname:string) => {
 	let data = { valid: false };
 	if (isNumeric(jd) && notEmptyString(starname, 2)) {
 		await fixedStar2UtAsync(starname, jd, swisseph.SEFLG_SWIEPH)
@@ -222,7 +222,7 @@ const calcStarPosJd = async (jd, starname) => {
 @param datetime:string isodate
 @return Promise<Array<Object>>
 */
-export const calcAllStars = async (datetime) => {
+export const calcAllStars = async (datetime:string) => {
 	let data = {
 		valid: false,
 		jd: calcJulDate(datetime),
@@ -238,7 +238,7 @@ export const calcAllStars = async (datetime) => {
 	return data;
 }
 
-const matchNakshatra = (deg) => {
+const matchNakshatra = (deg:number) => {
 	let row = { index: -1 };
 	const nkVal = deg / (360 / nakshatraValues.length);
 	const index = Math.floor(nkVal);
@@ -257,7 +257,7 @@ const matchNakshatra = (deg) => {
 @param result:Object
 @param body:Object
 */
-const processBodyResult = (result, body) => {
+const processBodyResult = (result:any, body: Graha) => {
 	// for Ketu calculate opposing longitude
 	if (body.hasCalc) {
 		switch (body.calc) {
@@ -269,7 +269,9 @@ const processBodyResult = (result, body) => {
 	result.sign = Math.floor(result.longitude / 30) + 1;
 	result.nakshatra = matchNakshatra(result.longitude);
 	const ruler = grahaValues.find(b => b.ownSign.includes(result.sign));
-	let rel = {};
+	let rel = {
+		natural: "",
+	};
 	if (ruler) {
 		result.ruler = ruler.key;
 		if (body.friends.includes(ruler.key)) {
@@ -315,7 +317,7 @@ export const fetchHouseDataJd = async (jd, geo, system = 'W', mode = 'TRUE_CITRA
 	return new HouseSet(houseData);
 }
 
-const fetchHouseData = async (datetime, geo, system = 'W') => {
+const fetchHouseData = async (datetime:string, geo, system = 'W') => {
 	let houseData = {};
 	//swisseph.swe_set_sid_mode(swisseph.SE_SIDM_TRUE_CITRA, 0, 0);
 	if (validISODateString(datetime) && geo instanceof Object) {

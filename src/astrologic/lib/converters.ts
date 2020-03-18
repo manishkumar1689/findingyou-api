@@ -1,25 +1,29 @@
 import { isNumeric } from './validators';
 import { ephemerisDefaults } from '../../.config';
 
-export const locStringToGeo = (loc) => {
+interface degreesMinutesSeconds {
+  deg:number?,
+  min:number?,
+  sec:number?
+}
+
+export const locStringToGeo = (loc:string) => {
   const [lat, lng, altV] = loc.split(',').filter(isNumeric).map(parseFloat);
   const alt = isNumeric(altV) ? altV : ephemerisDefaults.altitude;
   return { lat, lng, alt };
 }
 
-export const dmsToDegrees = (dms) => {
+export const dmsToDegrees = (dms:degreesMinutesSeconds) => {
   let v = 0;
-  if (dms instanceof Object) {
-    const keys = Object.keys(dms);
-    if (keys.includes('deg')) {
-      v = parseFloat(dms.deg);
-    }
-    if (keys.includes('min')) {
-      v += parseFloat(dms.min / 60);
-    }
-    if (keys.includes('sec')) {
-      v += parseFloat(dms.sec / 3600);
-    }
+  const keys = Object.keys(dms);
+  if (keys.includes('deg')) {
+    v = parseFloat(dms.deg);
+  }
+  if (keys.includes('min')) {
+    v += parseFloat(dms.min / 60);
+  }
+  if (keys.includes('sec')) {
+    v += parseFloat(dms.sec / 3600);
   }
   return v;
 }
