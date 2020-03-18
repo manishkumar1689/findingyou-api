@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import lineByLine from 'n-readlines';
+import * as lineByLine from 'n-readlines';
 import { ephemerisPath } from '../../.config';
 /*
 @param fn:string

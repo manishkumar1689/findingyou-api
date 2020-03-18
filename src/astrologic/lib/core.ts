@@ -176,7 +176,8 @@ export const calcAllTransitions = async (datetime:string, geo) => {
 		"SE_PLUTO"
 	];
 	for (const body of bodies) {
-		const bodyData = await calcTransitionJd(data.jd, geo, body.num, false, true);
+		const num = swisseph[body];
+		const bodyData = await calcTransitionJd(data.jd, geo, num, false, true);
 		data.bodies.push({
 			num,
 			body,
@@ -228,7 +229,7 @@ export const calcAllStars = async (datetime:string) => {
 		stars: []
 	};
 	if (validISODateString(datetime)) {
-		for (star of stars) {
+		for (const star of stars) {
 			const res = await calcStarPosJd(data.jd, star);
 			data.stars.push({ star, ...res });
 		}
@@ -256,7 +257,7 @@ const matchNakshatra = (deg:number) => {
 @param result:Object
 @param body:Object
 */
-const processBodyResult = (result:any, body: Graha) => {
+const processBodyResult = (result:any, body: any) => {
 	// for Ketu calculate opposing longitude
 	switch (body.calc) {
 		case 'opposite':
@@ -302,19 +303,20 @@ export const fetchHouseDataJd = async (jd, geo, system = 'W', mode = 'TRUE_CITRA
 	if (sid_mode_key.length > 8 && swisseph.hasOwnProperty(sid_mode_key)) {
 		swisseph.swe_set_sid_mode(swisseph[sid_mode_key], 0, 0);
 	}
-	let houseData = {};
+	let houseData:any = { jd };
 	await getHouses(jd, iflag, geo.lat, geo.lng, system)
 		.catch(res => {
 			if (res instanceof Object) {
 				if (res.house) {
 					houseData = res;
+					houseData.jd = jd;
 				}
 			}
 		});
 	return new HouseSet(houseData);
 }
 
-const fetchHouseData = async (datetime:string, geo, system = 'W'):Promise<HouseSet> => {
+export const fetchHouseData = async (datetime:string, geo, system = 'W'):Promise<HouseSet> => {
 	let houseData = new HouseSet();
 	//swisseph.swe_set_sid_mode(swisseph.SE_SIDM_TRUE_CITRA, 0, 0);
 	if (validISODateString(datetime) && geo instanceof Object) {

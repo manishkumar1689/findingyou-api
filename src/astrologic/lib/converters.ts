@@ -41,7 +41,7 @@ export const decDegToDms = (flDeg) => {
     const flMins = remainder * 60;
     dms.min = Math.floor(flMins);
     const remainderMins = flMins % 1;
-    dms.sec = (remainderMins * 60).toFixed(3);
+    dms.sec = remainderMins * 60;
   }
   return dms;
 }
@@ -68,5 +68,6 @@ export const degAsDms = (flDeg, mode = 'raw') => {
   }
   const degrees = hasLetter ? Math.abs(dms.deg) : dms.deg;
   const suffix = hasLetter ? ' ' + letter : '';
-  return `${degrees}º ${dms.min}' ${dms.sec}"${suffix}`;
+  const sec3dec = dms.sec.toFixed(3);
+  return `${degrees}º ${dms.min}' ${sec3dec}"${suffix}`;
 }

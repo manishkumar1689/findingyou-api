@@ -8,7 +8,7 @@ export const chartData = async (dt, loc) => {
   const script_dir = __dirname + '/../scripts/';
   let datetime = "";
   let location = "";
-  let result = { valid: false };
+  let result:any = { valid: false };
   if (dt && loc) {
     if (validISODateString(dt)) {
       datetime = dt;

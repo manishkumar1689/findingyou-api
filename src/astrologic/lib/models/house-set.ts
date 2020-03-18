@@ -1,5 +1,6 @@
 
 export class HouseSet {
+  
   jd:number = 0;
   houses:Array<number> = [];
   ascendant:number = 0;
