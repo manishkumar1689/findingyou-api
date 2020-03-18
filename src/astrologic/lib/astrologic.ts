@@ -766,7 +766,7 @@ Calculate panchanga
 */
 export const calcPanchanga = async (datetime, geo) => {
 	if (!geo.alt) {
-		geo.alt = config.defaults.altitude;
+		geo.alt = ephemerisDefaults.altitude;
 	}
 	swisseph.swe_set_topo(geo.lng, geo.lat, geo.alt);
 	const grahaSet = await calcGrahaSet(datetime);

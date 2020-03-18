@@ -1,9 +1,9 @@
 import { isNumeric } from './validators';
-import config from '../.config';
+import { ephemerisDefaults } from '../../.config';
 
 export const locStringToGeo = (loc) => {
   const [lat, lng, altV] = loc.split(',').filter(isNumeric).map(parseFloat);
-  const alt = isNumeric(altV) ? altV : config.defaults.altitude;
+  const alt = isNumeric(altV) ? altV : ephemerisDefaults.altitude;
   return { lat, lng, alt };
 }
 
