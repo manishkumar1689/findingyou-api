@@ -1,4 +1,4 @@
-const yoga = [
+const yogaValues = [
     { num: 1, name: "viṣkambha", ruler: "sa", bm: "m" },
     { num: 2, name: "prīti", ruler: "me", bm: "b" },
     { num: 3, name: "āyuśmān", ruler: "ke", bm: "b" },
@@ -28,4 +28,4 @@ const yoga = [
     { num: 27, name: "vaidhṛti", ruler: "ju", bm: "m" },
 ];
 
-module.exports = yoga;
+export default yogaValues;

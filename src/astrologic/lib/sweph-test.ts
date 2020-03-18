@@ -1,7 +1,7 @@
 import * as swisseph from 'swisseph';
 import { isNumeric, isInteger, validLocationParameter, validISODateString } from "./validators";
 import { calcAsync, calcUtAsync } from './sweph-async';
-import { calcJulDate, calcJulDateFromParts } from './date-funcs';
+import { calcJulDate, calcJulDateFromParts, toDateParts, defaultDateParts } from './date-funcs';
 
 const planet = async (jd, planetId) => {
   let data = { valid: false };
@@ -14,7 +14,7 @@ const planet = async (jd, planetId) => {
 }
 
 export const planetData = async (params) => {
-  let data = { valid: false, error: "invalid parameters" };
+  let data:any = { valid: false, error: "invalid parameters" };
   if (params.dt) {
     let jd = calcJulDate(params.dt);
     if (params.planet) {
@@ -134,7 +134,7 @@ const polymorphicParseFunc = (funcname, getVars) => {
 }
 
 export const parseFunc = async (funcname, params) => {
-  let data = { valid: false };
+  let data:any = { valid: false };
   switch (funcname) {
     case 'planet':
       data = await planetData(params);
@@ -158,7 +158,7 @@ export const parseFunc = async (funcname, params) => {
 export const getFuncNames = () => {
   let vals = [];
   if (swisseph instanceof Object) {
-    for (name in swisseph) {
+    for (const name in swisseph) {
       const func = swisseph[name];
       if (func instanceof Function) {
         vals.push(name);
@@ -171,7 +171,7 @@ export const getFuncNames = () => {
 export const getConstantVals = () => {
   let vals = [];
   if (swisseph instanceof Object) {
-    for (name in swisseph) {
+    for (const name in swisseph) {
       const value = swisseph[name];
       if (typeof value === 'number') {
         vals.push({ name, value })

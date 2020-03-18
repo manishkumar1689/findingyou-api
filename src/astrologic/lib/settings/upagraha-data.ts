@@ -26,4 +26,4 @@ const upagrahaData = {
   ],
 }
 
-module.exports = upagrahaData;
+export default upagrahaData;

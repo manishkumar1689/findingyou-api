@@ -1,4 +1,4 @@
-import moment from "moment";
+import * as moment from "moment";
 import { BaseObject } from './base-object';
 import { JyotishDay } from "./jyotish-day";
 
@@ -25,7 +25,7 @@ export class IndianTime extends BaseObject {
 
   date = null;
 
-  constructor(jDay) {
+  constructor(jDay:JyotishDay) {
     super();
     if (jDay instanceof JyotishDay) {
       this._jDay = jDay;

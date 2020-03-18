@@ -8,4 +8,4 @@ const varaValues = [
   { name: "śanivāra ", num: 7, ruler: "sa", en: "saturday" },
 ];
 
-module.exports = varaValues;
+export default varaValues;

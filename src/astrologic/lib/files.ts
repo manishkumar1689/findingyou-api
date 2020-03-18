@@ -20,7 +20,7 @@ export const getFileData = (fn) => {
       modified = mtime.toISOString();
     }
     if (size) {
-      iSize = parseInt(size);
+      iSize = size;
     }
     if (iSize > 32 && !isDir) {
       copyLine = fetchFirstLines(path);

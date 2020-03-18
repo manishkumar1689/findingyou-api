@@ -60,4 +60,4 @@ const stars = [
   'Hydor',
 ];
 
-module.exports = stars;
+export default stars;

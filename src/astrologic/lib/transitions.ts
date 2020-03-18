@@ -6,8 +6,33 @@ import { riseTransAsync } from './sweph-async';
 import { isNumeric } from './validators';
 import { ephemerisDefaults } from '../../.config';
 
-export const matchTransData = async (inData, transType = 0, transKey = 'trans') => {
-  let data = { valid: false };
+interface TimeSet {
+  jd:number,
+  dt:string,
+  after:boolean
+}
+
+interface TransitionData {
+  rise:TimeSet,
+  set:TimeSet,
+  prevRise:TimeSet,
+  prevSet:TimeSet,
+}
+
+interface TransitionInput {
+  jd:number,
+  planetNum:0,
+  iflag: 0,
+  transType:number,
+  longitude:number,
+  latitude:number,
+  altitude:number,
+  pressure:number,
+  temperature:number,
+};
+
+export const matchTransData = async (inData:TransitionInput, transType = 0, transKey = 'trans'):Promise<TimeSet> => {
+  let data = { valid: false, transitTime: -1 };
   inData.transType = transType;
   const jd = inData.jd;
   switch (transKey) {
@@ -25,7 +50,7 @@ export const matchTransData = async (inData, transType = 0, transKey = 'trans') 
       data.valid = false;
     }
   });
-  let result = { jd: -1, dt: null };
+  let result = { jd: -1, dt: "", after: false };
   //const offset = Math.floor(jd) < Math.floor(data.transitTime) && transKey === 'set' ? 1 : 0;
   if (data.valid) {
     if (data.transitTime >= 0) {
@@ -33,7 +58,6 @@ export const matchTransData = async (inData, transType = 0, transKey = 'trans') 
         jd: data.transitTime,
         dt: jdToDateTime(data.transitTime),
         after: jd > data.transitTime,
-        //after: (jd + offset) > data.transitTime,
       }
     }
   }
@@ -50,8 +74,8 @@ export const calcTransition = async (datetime, geo, planetNum, showInput = true)
   return { jd, ...data };
 }
 
-export const calcTransitionJd = async (jd, geo, planetNum, showInput = true, showIcMc = false) => {
-  let data = { valid: false };
+export const calcTransitionJd = async (jd:number, geo, planetNum, showInput = true, showIcMc = false):Promise<TransitionData> => {
+  let data = null;
   if (isNumeric(jd)) {
     let valid = false;
     let longitude = 0;
@@ -102,9 +126,6 @@ export const calcTransitionJd = async (jd, geo, planetNum, showInput = true, sho
     } else {
       data = { valid, rise, set };
     }
-    if (showInput) {
-      data.input = { ...inData, offset };
-    }
   }
   return data;
 }
@@ -135,7 +156,7 @@ export const fetchIndianTimeData = async (datetime, geo) => {
   const jyotishDay = await calcJyotishDay(datetime, geo);
   // { jd, startJd, dayStart, sunData, dayLength, dayBefore, isDaytime }
   // { jd, sunData, startJd, dayStart, jdTime, progress, dayLength, isDaytime, year, dayNum, muhurta, ghatiVal, ghati, vighati, lipta }
-  return new IndianTime(jyotishDay, datetime);
+  return new IndianTime(jyotishDay);
 }
 
 export const toIndianTime = async (datetime, geo) => {

@@ -10,7 +10,7 @@ export class Rashi {
   element:string = "";
   mobility:string = "";
 
-  constructor(rashiRow) {
+  constructor(rashiRow:any = null) {
     if (rashiRow instanceof Object) {
       Object.entries(rashiRow).forEach(entry => {
         const [key, value] = entry;

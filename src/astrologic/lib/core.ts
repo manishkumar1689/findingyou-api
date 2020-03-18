@@ -239,7 +239,7 @@ export const calcAllStars = async (datetime:string) => {
 }
 
 const matchNakshatra = (deg:number) => {
-	let row = { index: -1 };
+	let row = { index: -1, num: 0, percent: 0, ruler: "" };
 	const nkVal = deg / (360 / nakshatraValues.length);
 	const index = Math.floor(nkVal);
 	const percent = (nkVal % 1) * 100;
@@ -299,7 +299,7 @@ const processBodyResult = (result:any, body: Graha) => {
 	return result;
 }
 
-export const fetchHouseDataJd = async (jd, geo, system = 'W', mode = 'TRUE_CITRA') => {
+export const fetchHouseDataJd = async (jd, geo, system = 'W', mode = 'TRUE_CITRA'):Promise<HouseSet> => {
 	const iflag = swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SIDEREAL;
 	const sid_mode_key = notEmptyString(mode, 2) ? ['SE_SIDM', mode.toUpperCase()].join('_') : '';
 	if (sid_mode_key.length > 8 && swisseph.hasOwnProperty(sid_mode_key)) {
@@ -317,8 +317,8 @@ export const fetchHouseDataJd = async (jd, geo, system = 'W', mode = 'TRUE_CITRA
 	return new HouseSet(houseData);
 }
 
-const fetchHouseData = async (datetime:string, geo, system = 'W') => {
-	let houseData = {};
+const fetchHouseData = async (datetime:string, geo, system = 'W'):Promise<HouseSet> => {
+	let houseData = new HouseSet();
 	//swisseph.swe_set_sid_mode(swisseph.SE_SIDM_TRUE_CITRA, 0, 0);
 	if (validISODateString(datetime) && geo instanceof Object) {
 		const jd = calcJulDate(datetime);
@@ -418,7 +418,7 @@ const calcBodyJd = async (jd, key) => {
 		await calcUtAsync(jd, body.num, swisseph.SEFLG_SIDEREAL).catch(result => {
 			if (result instanceof Object) {
 				result.valid = !result.error;
-				processBodyResult(result, body, false);
+				processBodyResult(result, body);
 				data = {
 					num: body.num,
 					name: body.name,
@@ -447,7 +447,11 @@ export const calcSphutaData = async (datetime, geo) => {
 
 const matchInduVal = (houseNum) => {
 	const matchedGraha = rashiValues.find(r => r.num === houseNum);
-	let indu = {};
+	let indu = {
+		graha: "",
+		value: 0,
+		houseNum: 0
+	};
 	if (matchedGraha) {
 		const induRow = induValues.find(v => v.graha === matchedGraha.ruler);
 		if (induRow) {

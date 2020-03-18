@@ -1,4 +1,4 @@
-const yonis = [
+const yoniValues = [
   { name: "aśva", key: "as", num: 1 },
   { name: "gaja", key: "ga", num: 2 },
   { name: "meṣa", key: "me", num: 3 },
@@ -15,4 +15,4 @@ const yonis = [
   { name: "siṃha", key: "si", num: 14 },
 ];
 
-module.exports = yonis;
+export default yoniValues;

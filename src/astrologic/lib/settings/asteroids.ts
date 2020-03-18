@@ -52,7 +52,7 @@ const asteroids = [
   { file: 'se00307s.se1', name: 'Nike' },
   { file: 'se00361s.se1', name: 'Bononia' },
   { file: 'se00390s.se1', name: 'Alma' },
-  { file: 'se00393s.se1', name: 'Lampetia' },
+  { file: 'sef00393s.se1', name: 'Lampetia' },
   { file: 'se00408s.se1', name: 'Fama' },
   { file: 'se00433s.se1', name: 'Eros' },
   { file: 'se00447s.se1', name: 'Valentine' },
@@ -65,9 +65,9 @@ const asteroids = [
 ];
 
 const parsed = asteroids.map(row => {
-  row.raw = row.file.replace(/s\.\w+$/, '').replace(/[^0-9]+/g, '');
-  row.num = parseInt(row.raw.replace(/^0+/, ''));
-  return row;
+  const raw = row.file.replace(/s\.\w+$/, '').replace(/[^0-9]+/g, '');
+  const num = parseInt(raw.replace(/^0+/, ''));
+  return {num, ...row, raw };
 });
 
 export default parsed;

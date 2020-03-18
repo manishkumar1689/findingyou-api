@@ -31,4 +31,4 @@ const values = [
     { num: 30, paksha: "kṛṣṇapakṣa", tithi: "amāvasyā", lord: "ra", div: "pūrṇa" },
 ];
 
-module.exports = values;
+export default values;

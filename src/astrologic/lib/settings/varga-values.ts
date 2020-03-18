@@ -118,4 +118,4 @@ const vargaValues = [
   },
 ];
 
-module.exports = vargaValues;
+export default vargaValues;

@@ -1,7 +1,8 @@
 import * as swisseph from 'swisseph';
 import * as moment from 'moment';
 import { isNumeric, isInteger, validISODateString } from "./validators";
-const defaultDateParts = { year: 0, month: 0, day: 0, hour: 0 };
+
+export const defaultDateParts = { year: 0, month: 0, day: 0, hour: 0 };
 
 /*
 @param params:Object

@@ -1,6 +1,6 @@
 
 export class HouseSet {
-
+  jd:number = 0;
   houses:Array<number> = [];
   ascendant:number = 0;
   mc:number = 0;
@@ -11,21 +11,23 @@ export class HouseSet {
   munkaseyCoAscendant:number = 0;
   munkaseyPolarAscendant:number = 0;
 
-  constructor(houseData) {
-    Object.entries(houseData).forEach(entry => {
-      const [key, value] = entry;
-      switch (key) {
-        case 'house':
-        case 'houses':
-          if (value instanceof Array) {
-            this.houses = value;
-          }
-          break;
-        default:
-          this[key] = value;
-          break;
-      }
-    })
+  constructor(houseData:any = null) {
+    if (houseData instanceof Object) {
+      Object.entries(houseData).forEach(entry => {
+        const [key, value] = entry;
+        switch (key) {
+          case 'house':
+          case 'houses':
+            if (value instanceof Array) {
+              this.houses = value;
+            }
+            break;
+          default:
+            this[key] = value;
+            break;
+        }
+      })
+    }
   }
 
   count = () => this.houses.length;

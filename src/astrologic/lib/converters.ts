@@ -2,9 +2,9 @@ import { isNumeric } from './validators';
 import { ephemerisDefaults } from '../../.config';
 
 interface degreesMinutesSeconds {
-  deg:number?,
-  min:number?,
-  sec:number?
+  deg:number,
+  min:number,
+  sec?:number
 }
 
 export const locStringToGeo = (loc:string) => {
