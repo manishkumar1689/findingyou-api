@@ -1,13 +1,24 @@
-export const generateApiRouteMap = (app) => {
-  const stack = app._router.stack;
-  const data = stack.filter(item => item.hasOwnProperty('route') && item.route instanceof Object).map(item => {
+import { NestFactory } from '@nestjs/core';
+import { AstrologicModule } from '../astrologic.module';
+import * as expressListRoutes from 'express-list-routes';
+
+export const generateApiRouteMap = async () => {
+  const app = await NestFactory.create(AstrologicModule);
+  const server = app.getHttpServer();
+  //const router = server._events.request._router;
+ 
+  return [];
+}
+
+/*const transformRoutes = (data) => {
+  return data.filter(item => item.hasOwnProperty('route') && item.route instanceof Object).map(item => {
     const { keys, route } = item;
     let path = "---";
     if (route instanceof Object) {
       path = route.path;
     }
     const parts = path.substring(1).split('/');
-    parts.shift();
+    parts.shift()._events.request;
     const method = parts.shift();
     const isodate = "YYYY-MM-DDThh:mm:ss";
     let query = [];
@@ -66,5 +77,4 @@ export const generateApiRouteMap = (app) => {
     });
     return { path, params, query }
   })
-  return data;
-}
+}*/

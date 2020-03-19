@@ -1,11 +1,12 @@
 import * as util from "util";
+import * as path from "path";
 const exec = require('child_process').exec;
 import { isNumeric, isInteger, notEmptyString, emptyString, validLocationParameter, validISODateString } from "./validators";
 const run = util.promisify(exec);
 
 export const chartData = async (dt, loc) => {
-
-  const script_dir = __dirname + '/../scripts/';
+  const currDir = __dirname.replace('/dist/astrologic/', '/src/astrologic/');
+  const script_dir = path.resolve(currDir + '/../scripts') + '/';
   let datetime = "";
   let location = "";
   let result:any = { valid: false };

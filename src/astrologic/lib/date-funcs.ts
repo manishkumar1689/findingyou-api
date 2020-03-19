@@ -76,7 +76,10 @@ export const buildIsoDateFromParts = (dp) => {
   const minVal = (dp.hour % 1) * 60;
   const mins = Math.floor(minVal);
   const secs = Math.ceil((minVal % 1) * 60);
-  return new Date(dp.year, (dp.month - 1), dp.day, hours, mins, secs).toISOString().split(".").shift();
+  const strDate = [dp.year, zero2Pad(dp.month - 1), zero2Pad(dp.day)].join('-');
+  const strTime = [zero2Pad(hours), zero2Pad(mins), zero2Pad(secs)].join(':');
+  const isoDate = [strDate, strTime].join('T');
+  return moment.utc(isoDate).format().split(".").shift();
 }
 
 export const calcJulDate = (strDate, julian = false) => {
