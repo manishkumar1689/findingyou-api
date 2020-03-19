@@ -43,18 +43,18 @@ const calcRetroGradeInRange = async (num, currVal, dir = 1, mode = 'start', unit
   }
 }
 
-const calcAcceleration = async (jd, body) => {
+export const calcAcceleration = async (jd, body) => {
   const { num, yearLength } = body;
   let spds = [];
   for (let i = 0; i < 2; i++) {
-    const refJd = (jd + i);
+    const refJd = (jd + (i * 0.5));
     await calcBodySpeed(refJd, num, (spd, lng) => {
-      spds.push({ spd, lng, jd: refJd, polarity: spd < 0 ? -1 : 1 })
+      spds.push({ spd, lng, jd: refJd, dt: jdToDateTime(refJd)})
     })
   }
   const [start, end] = spds;
   const rate = end.spd / start.spd;
-  return { start, end, rate, rising: rate >= 1, switching: rate < 0, polarity: start.polarity };
+  return { start, end, rate, rising: rate >= 1, switching: rate < 0 };
 }
 
 

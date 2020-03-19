@@ -14,6 +14,9 @@ import {
   UploadedFile,
   Req,
 } from '@nestjs/common';
+import { AstrologicService } from './astrologic.service';
+import { BodySpeed } from './interfaces/body-speed.interface';
+import { BodySpeedDTO } from './dto/body-speed.dto';
 import { 
   isNumeric,
   validISODateString,
@@ -33,24 +36,27 @@ import {
 } from './lib/core';
 import { 
   calcJulianDate,
+  calcJulDate,
 } from './lib/date-funcs';
 import {
   chartData,
 } from './lib/chart';
-import {
-  getFuncNames,
-  getConstantVals,
-} from './lib/sweph-test';
-import { calcRetroGrade } from './lib/astro-motion'
+import { getFuncNames, getConstantVals } from './lib/sweph-test';
+import { calcRetroGrade, calcAcceleration } from './lib/astro-motion'
 import { 
   toIndianTime,
   calcTransition,
 } from './lib/transitions';
 import { generateApiRouteMap } from './lib/route-map'; 
 import { readEpheFiles } from './lib/files';
+import grahaValues from './lib/settings/graha-values';
 
 @Controller('astrologic')
 export class AstrologicController {
+
+  constructor(
+    private astrologicService: AstrologicService,
+  ) {}
 
   @Get('juldate/:isodate?')
   async juldate(
@@ -289,7 +295,58 @@ export class AstrologicController {
       const num = parseInt(planet);
       data = await calcRetroGrade(dt, num);
     }
+    console.log(data)
+    //this.AstrologicService.saveBodySpeed(saveData);
     res.send(data);
+  }
+
+  @Get('speed-samples/:dt/:planet/:years?')
+  async saveRetrogradeSamples(
+    @Res() res,
+    @Param('dt') dt,
+    @Param('planet') planet,
+    @Param('years') years,
+    ) {
+    let data:any = { valid: false };
+    let days = isNumeric(years)? parseInt(years) * 366 : 366;
+    if (notEmptyString(dt, 6) && isNumeric(planet)) {
+      const jd = calcJulDate(dt);
+      const num = parseInt(planet);
+      const body = grahaValues.find(b => b.num === num);
+      let prevSpeed = 0;
+      for (let i = 0; i < days; i++) {
+        
+        const refJd = jd + i;
+        data = await calcAcceleration(refJd, body);
+        const {start, end} = data;
+
+        if (i > 0) {
+          const sd1:BodySpeedDTO = {
+            num,
+            speed: start.spd,
+            lng: start.lng,
+            jd: start.jd,
+            datetime: start.dt,
+            acceleration: start.spd / prevSpeed,
+            station: 'sample'
+          };
+          await this.astrologicService.saveBodySpeed(sd1);
+        }
+        
+        const sd2:BodySpeedDTO = {
+          num,
+          speed: end.spd,
+          lng: end.lng,
+          jd: end.jd,
+          datetime: end.dt,
+          acceleration: data.rate,
+          station: 'sample'
+        };
+        await this.astrologicService.saveBodySpeed(sd2);
+        prevSpeed = end.spd;
+      }
+    }
+    return res.status(HttpStatus.OK).json(data);
   }
 
   @Get('routes')
