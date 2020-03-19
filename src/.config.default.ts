@@ -1,6 +1,9 @@
 /*
  Copy this file to .config.js in the route directory
 */
+import * as redisStore from 'cache-manager-redis-store';
+
+export const port = 3043;
 
 export const mongo = {
   name: 'findingyou',

@@ -15,6 +15,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { 
+  isNumeric,
   validISODateString,
   notEmptyString,
 } from './lib/validators';
@@ -40,8 +41,10 @@ import {
   getFuncNames,
   getConstantVals,
 } from './lib/sweph-test';
+import { calcRetroGrade } from './lib/astro-motion'
 import { 
   toIndianTime,
+  calcTransition,
 } from './lib/transitions';
 import { generateApiRouteMap } from './lib/route-map'; 
 import { readEpheFiles } from './lib/files';
@@ -106,19 +109,22 @@ export class AstrologicController {
     }
   }
 
-/*
-app.get("/api/transition/:loc/:dt/:planet", async (req, res) => {
-  const { dt, loc, planet } = req.params;
-  let planetNum = 0;
-  const geo = locStringToGeo(loc);
-  let data = { valid: false };
-  if (isNumeric(planet)) {
-    planetNum = parseInt(planet);
-    data = await calcTransition(dt, geo, planetNum);
+  @Get('transition/:loc/:dt/:planet')
+  async transition(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Param('planet') planet,
+  ) {
+    let planetNum = 0;
+    const geo = locStringToGeo(loc);
+    let data:any = { valid: false };
+    if (isNumeric(planet)) {
+      planetNum = parseInt(planet);
+      data = await calcTransition(dt, geo, planetNum);
+    }
+    res.send(data);
   }
-  res.send(data);
-});
-  */
 
   @Get('transitions/:loc/:dt')
   async transitions(
@@ -138,11 +144,6 @@ app.get("/api/transition/:loc/:dt/:planet", async (req, res) => {
       return res.status(HttpStatus.BAD_REQUEST).json(result);
     }
   }
-
-
-
-  
-
 
  @Get('houses/:loc/:dt/:system')
   async housesByDateGeo(
@@ -275,6 +276,20 @@ app.get("/api/transition/:loc/:dt/:planet", async (req, res) => {
       data = await toIndianTime(dt, geo);
     }
     return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('retrograde/:loc/:dt')
+  async retrogradeStations(
+    @Res() res,
+    @Param('dt') dt,
+    @Param('planet') planet,
+    ) {
+    let data:any = { valid: false };
+    if (notEmptyString(dt, 6) && isNumeric(planet)) {
+      const num = parseInt(planet);
+      data = await calcRetroGrade(dt, num);
+    }
+    res.send(data);
   }
 
   @Get('routes')
