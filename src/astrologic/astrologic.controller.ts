@@ -278,7 +278,7 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('retrograde/:loc/:dt')
+  @Get('retrograde/:dt/:planet')
   async retrogradeStations(
     @Res() res,
     @Param('dt') dt,
