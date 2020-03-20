@@ -49,7 +49,6 @@ import {
 } from './lib/transitions';
 import { generateApiRouteMap } from './lib/route-map'; 
 import { readEpheFiles } from './lib/files';
-import grahaValues from './lib/settings/graha-values';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -310,41 +309,21 @@ export class AstrologicController {
     let data:any = { valid: false };
     let days = isNumeric(years)? parseInt(years) * 366 : 366;
     if (notEmptyString(dt, 6) && isNumeric(planet)) {
-      const jd = calcJulDate(dt);
       const num = parseInt(planet);
-      const body = grahaValues.find(b => b.num === num);
-      let prevSpeed = 0;
-      for (let i = 0; i < days; i++) {
-        
-        const refJd = jd + i;
-        data = await calcAcceleration(refJd, body);
-        const {start, end} = data;
+      data = await this.astrologicService.savePlanetStations(num, dt, days);
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
 
-        if (i > 0) {
-          const sd1:BodySpeedDTO = {
-            num,
-            speed: start.spd,
-            lng: start.lng,
-            jd: start.jd,
-            datetime: start.dt,
-            acceleration: start.spd / prevSpeed,
-            station: 'sample'
-          };
-          await this.astrologicService.saveBodySpeed(sd1);
-        }
-        
-        const sd2:BodySpeedDTO = {
-          num,
-          speed: end.spd,
-          lng: end.lng,
-          jd: end.jd,
-          datetime: end.dt,
-          acceleration: data.rate,
-          station: 'sample'
-        };
-        await this.astrologicService.saveBodySpeed(sd2);
-        prevSpeed = end.spd;
-      }
+  @Get('speed-patterns/:planet')
+  async motionPatternsByPlanet(
+    @Res() res,
+    @Param('planet') planet,
+    ) {
+    let data:any = { valid: false, values: [] };
+    if (isNumeric(planet)) {
+      const num = parseInt(planet);
+      data.values = await this.astrologicService.speedPatternsByPlanet(num);
     }
     return res.status(HttpStatus.OK).json(data);
   }
