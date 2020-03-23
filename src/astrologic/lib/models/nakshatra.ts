@@ -23,7 +23,7 @@ export class Nakshatra {
             }
             break;
           default:
-            Object.assign(this, { k: v });
+            this[k] = v;
             break;
         }
       });
