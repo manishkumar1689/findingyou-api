@@ -662,7 +662,7 @@ export const calcBodiesInHouses = async (datetime, geo, system = 'W') => {
 	const houseData = await fetchHouseData(datetime, geo, system);
 
 	grahaSet.mergeHouseData(houseData);
-
+	grahaSet.matchRelationships();
 
 	const apValues = calcAprakasaValues(grahaSet.bodies);
 	const upagrahas = await calcUpagrahas(datetime, geo);

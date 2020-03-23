@@ -3,6 +3,8 @@ import { BaseObject } from "./base-object";
 import { mapToObject } from '../mappers';
 import { longitudeMatchesHouseIndex, mapSignToHouse, calcAllVargas, calcVargaSet, calcInclusiveDistance, calcInclusiveTwelfths, calcInclusiveNakshatras } from '../math-funcs';
 import nakshatraValues from '../settings/nakshatra-values';
+import { Nakshatra } from './nakshatra';
+import { Relationship } from './relationship';
 import maitriData from '../settings/maitri-data';
 
 export class Graha extends BaseObject {
@@ -28,21 +30,12 @@ export class Graha extends BaseObject {
   rflag:number = 0;
   sign:number = 0;
   calc:string = "";
-  nakshatra = {
-    within: 0,
-    degrees: 0,
-    percent: 0,
-    aksharas: []
-  };
+  nakshatra = new Nakshatra();
   ruler = "";
   friends = [];
   neutral = [];
   enemies = [];
-  relationship = {
-    natural: '',
-    temporary: '',
-    compound: ''
-  };
+  relationship = new Relationship();
   withinSign = 0;
   isOwnSign = false;
   mulaTrikon: -1;
@@ -65,7 +58,17 @@ export class Graha extends BaseObject {
     if (body instanceof Object) {
       Object.entries(body).forEach(entry => {
         const [key, value] = entry;
-        this[key] = value;
+        switch (key) {
+          case 'nakshatra':
+            this.nakshatra = new Nakshatra(value);
+            break;
+          case 'relationship':
+            this.nakshatra = new Relationship(value);
+            break;
+          default:
+            this[key] = value;
+            break;
+        }
       })
       if (this.nakshatra instanceof Object) {
         this.applyPanchanga();
@@ -218,7 +221,17 @@ export class GrahaSet {
 
   matchRelationships() {
     this.bodies = this.bodies.map(b => {
-
+      const mapRelation = obRef => {
+        const ob = this.bodies.find(b2 => b2.key === obRef);
+        let valid = false;
+        if (ob) {
+          valid = ob.sign === b.sign;
+        }
+        return valid;
+      };
+      b.friends = b.friends.filter(mapRelation);
+      b.neutral = b.neutral.filter(mapRelation);
+      b.enemies = b.enemies.filter(mapRelation);
       const rulerSign = this.get(b.ruler).sign;
 
       const numSteps = calcInclusiveTwelfths(b.sign, rulerSign);
