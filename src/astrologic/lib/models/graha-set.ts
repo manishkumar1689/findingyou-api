@@ -70,7 +70,7 @@ export class Graha extends BaseObject {
             this.nakshatra = new Nakshatra(value);
             break;
           case 'relationship':
-            this.nakshatra = new Relationship(value);
+            this.relationship = new Relationship(value);
             break;
           default:
             this[key] = value;
