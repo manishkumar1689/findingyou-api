@@ -150,7 +150,7 @@ export class AstrologicController {
     }
   }
 
- @Get('houses/:loc/:dt/:system')
+ @Get('houses/:loc/:dt/:system?')
   async housesByDateGeo(
     @Res() res,
     @Param('loc') loc,
@@ -158,9 +158,10 @@ export class AstrologicController {
     @Param('system') system,    
     ) {
     let data:any = { valid: false };
-    if (notEmptyString(dt, 6) && notEmptyString(loc, 3) && notEmptyString(system)) {
+    if (notEmptyString(dt, 6) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
-      data = await fetchHouseData(dt, geo, system);
+      const sysRef = notEmptyString(system) ? system : 'W';
+      data = await fetchHouseData(dt, geo, sysRef);
     }
     return res.status(HttpStatus.OK).json(data);
   }
@@ -176,7 +177,7 @@ export class AstrologicController {
     if (notEmptyString(dt, 6) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const sysRef = notEmptyString(system) ? system : 'W';
-      data = await calcBodiesInHouses(dt, geo, system);
+      data = await calcBodiesInHouses(dt, geo, sysRef);
     }
     return res.status(HttpStatus.OK).json(data);
   }

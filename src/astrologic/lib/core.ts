@@ -337,6 +337,9 @@ const addGrahaValues = async (data) => {
 					data.bodies.push({
 						num: num,
 						name: body.name,
+						friends: body.friends,
+						neutral: body.neutral,
+						enemies: body.enemies,
 						...result
 					});
 					if (!data.valid) {
@@ -420,6 +423,7 @@ const calcBodyJd = async (jd:number, key:string) => {
 				data = {
 					num: body.num,
 					name: body.name,
+					friends: body.friends,
 					...result
 				};
 			}
