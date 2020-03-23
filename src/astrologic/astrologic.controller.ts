@@ -33,6 +33,7 @@ import {
   calcPanchanga,
   calcMrityubhaga,
   calcSphutaData,
+  fetchAllSettings,
 } from './lib/core';
 import { 
   calcJulianDate,
@@ -326,6 +327,15 @@ export class AstrologicController {
       const num = parseInt(planet);
       data.values = await this.astrologicService.speedPatternsByPlanet(num);
     }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('settings/:filter?')
+  async listSettings(
+    @Res() res,
+    @Param('filter') filter,
+    ) {
+    const data = fetchAllSettings(filter);
     return res.status(HttpStatus.OK).json(data);
   }
 
