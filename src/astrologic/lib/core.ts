@@ -19,18 +19,19 @@ import {
   matchTransData,
   fetchIndianTimeData,
 } from './transitions';
-import stars from './settings/stars';
-import asteroids from './settings/asteroids';
+import starValues from './settings/star-values';
+import asteroidValues from './settings/asteroid-values';
 import grahaValues from './settings/graha-values';
-import charaKaraka from './settings/chara-karaka';
+import charakarakaValues from './settings/charakaraka-values';
 import nakshatraValues from './settings/nakshatra-values';
-import aprakasa from './settings/aprakasa';
+import aprakasaValues from './settings/aprakasa-values';
 import upagrahaData from './settings/upagraha-data';
 import tithiValues from './settings/tithi-values';
 import yogaValues from './settings/yoga-values';
 import karanaData from './settings/karana-data';
 import varaValues from './settings/vara-values';
 import horaValues from './settings/hora-values';
+import ghatiValues from './settings/ghati-values';
 import caughadiaData from './settings/caughadia-data';
 import muhurtaValues from './settings/muhurta-values';
 import kalamData from './settings/kalam-data';
@@ -287,7 +288,7 @@ export const calcAllStars = async (datetime: string) => {
     stars: [],
   };
   if (validISODateString(datetime)) {
-    for (const star of stars) {
+    for (const star of starValues) {
       const res = await calcStarPosJd(data.jd, star);
       data.stars.push({ star, ...res });
     }
@@ -454,7 +455,7 @@ const mergeCharaKarakaToBodies = (bodies, withinSignBodies) => {
 };
 
 const addAsteroids = async data => {
-  for (const body of asteroids) {
+  for (const body of asteroidValues) {
     const num = body.num + swisseph.SE_AST_OFFSET;
     await calcUtAsync(data.jd, num, swisseph.SEFLG_SIDEREAL).catch(result => {
       if (result instanceof Object) {
@@ -682,8 +683,8 @@ const matchTithiNum = (bodies, multiplier = 1) => {
 */
 const applyCharaKaraka = (body, index) => {
   body.ck = '';
-  if (index < charaKaraka.length) {
-    body.ck = charaKaraka[index];
+  if (index < charakarakaValues.length) {
+    body.ck = charakarakaValues[index];
   }
   return body;
 };
@@ -727,7 +728,7 @@ const calcAprakasa = (sunLng = 0) => {
   let items = [];
 
   let prevVal = null;
-  aprakasa.forEach(row => {
+  aprakasaValues.forEach(row => {
     let refVal = 0;
     const { ref } = row;
     switch (ref.obj) {
@@ -1002,4 +1003,41 @@ export const calcPanchanga = async (datetime, geo) => {
     muhurtaRange,
     kalam,
   };
+};
+
+export const fetchAllSettings = (filter: string) => {
+  const settings: any = {
+    starValues,
+    asteroidValues,
+    grahaValues,
+    charakarakaValues,
+    nakshatraValues,
+    aprakasaValues,
+    upagrahaData,
+    tithiValues,
+    yogaValues,
+    karanaData,
+    varaValues,
+    horaValues,
+    ghatiValues,
+    caughadiaData,
+    muhurtaValues,
+    kalamData,
+    mrityubhagaData,
+    rashiValues,
+    arudhaValues,
+    sphutaValues,
+    induValues,
+  };
+
+  if (notEmptyString(filter, 4)) {
+    const keys = Object.keys(settings);
+    if (keys.includes(filter)) {
+      return { valid: true, [filter]: settings[filter] };
+    } else {
+      return { valid: false };
+    }
+  } else {
+    return { valid: true, ...settings };
+  }
 };

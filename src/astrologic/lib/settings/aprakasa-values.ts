@@ -1,4 +1,4 @@
-const apData = [
+const apValues = [
   {
     name: 'Dhūma', offset: { deg: 133, min: 20 }, ref: { obj: "su", op: "+" }
   },
@@ -16,4 +16,4 @@ const apData = [
   },
 ];
 
-export default apData;
+export default apValues;

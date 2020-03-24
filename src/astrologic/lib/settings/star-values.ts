@@ -1,4 +1,4 @@
-const stars = [
+const starValues = [
   'Sheratan',
   'Hamal',
   'Bharani',
@@ -60,4 +60,4 @@ const stars = [
   'Hydor',
 ];
 
-export default stars;
+export default starValues;
