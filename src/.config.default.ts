@@ -23,5 +23,13 @@ export const ephemerisDefaults = {
   altitude: 30,
   pressure: 1000,
   temperature: 10,
-  sid_mode: 'SE_SIDM_TRUE_CITRA'
-}
+  sid_mode: 'SE_SIDM_TRUE_CITRA',
+};
+
+export const geonames = {
+  username: 'serpentinegallery',
+};
+
+export const timezonedb = {
+  apiKey: '0NXJ03JE76B4',
+};

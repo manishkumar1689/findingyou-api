@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Res, HttpStatus } from '@nestjs/common';
 import { AppService } from './app.service';
 
 @Controller()
@@ -6,7 +6,11 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  welcome(@Res() res): string {
+    const welcomeData = {
+      valid: true,
+      msg: 'Welcome to Finding you API',
+    };
+    return res.status(HttpStatus.OK).json(welcomeData);
   }
 }

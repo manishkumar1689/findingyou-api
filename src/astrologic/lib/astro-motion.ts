@@ -1,11 +1,12 @@
 import * as swisseph from 'swisseph';
 import { calcUtAsync } from './sweph-async';
 import { calcJulDate, jdToDateTime } from './date-funcs';
-import { withinTolerance } from './validators';
+import { withinTolerance } from '../../lib/validators';
 import grahaValues from './settings/graha-values';
 
 const calcBodySpeed = async (jd, num, callback) => {
-  const flag = swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SIDEREAL + swisseph.SEFLG_SPEED;
+  const flag =
+    swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SIDEREAL + swisseph.SEFLG_SPEED;
   await calcUtAsync(jd, num, flag).catch(async result => {
     if (result instanceof Object) {
       if (!result.error) {
@@ -13,13 +14,19 @@ const calcBodySpeed = async (jd, num, callback) => {
       }
     }
   });
-}
+};
 
-const calcRetroGradeInRange = async (num, currVal, dir = 1, mode = 'start', unit = 'day') => {
+const calcRetroGradeInRange = async (
+  num,
+  currVal,
+  dir = 1,
+  mode = 'start',
+  unit = 'day',
+) => {
   let refSpeed = 1;
   let counter = 1;
   let divisor = 1;
-  let end:any = {};
+  let end: any = {};
   switch (unit) {
     case 'hour':
       divisor = 24;
@@ -32,30 +39,35 @@ const calcRetroGradeInRange = async (num, currVal, dir = 1, mode = 'start', unit
       break;
   }
   while (refSpeed > 0 && counter < 50000) {
-    const refJdOffset = end.jd + ((counter * dir) / 1440);
+    const refJdOffset = end.jd + (counter * dir) / 1440;
     await calcBodySpeed(refJdOffset, num, (spd, lng) => {
       refSpeed = spd;
       if (refSpeed <= 0) {
-        end = { speed: refSpeed, lng, jd: refJdOffset, dt: jdToDateTime(refJdOffset) }
+        end = {
+          speed: refSpeed,
+          lng,
+          jd: refJdOffset,
+          dt: jdToDateTime(refJdOffset),
+        };
       }
       counter++;
-    })
+    });
   }
-}
+};
 
 export const calcAcceleration = async (jd, body) => {
   const { num, yearLength } = body;
   let spds = [];
   for (let i = 0; i < 2; i++) {
-    const refJd = (jd + (i * 0.5));
+    const refJd = jd + i * 0.5;
     await calcBodySpeed(refJd, num, (spd, lng) => {
-      spds.push({ spd, lng, jd: refJd, dt: jdToDateTime(refJd)})
-    })
+      spds.push({ spd, lng, jd: refJd, dt: jdToDateTime(refJd) });
+    });
   }
   const [start, end] = spds;
   const rate = end.spd / start.spd;
   return { start, end, rate, rising: rate >= 1, switching: rate < 0 };
-}
+};
 
 export const calcStation = async (jd, num, station) => {
   let spds = [];
@@ -73,7 +85,7 @@ export const calcStation = async (jd, num, station) => {
   let matched = false;
   let saveAccel = 0;
   for (let i = 0; i < max; i++) {
-    const refJd = (startJd + (i / (24*60)));
+    const refJd = startJd + i / (24 * 60);
 
     await calcBodySpeed(refJd, num, (spd, lng) => {
       const currPolarity = spd >= 0 ? 1 : -1;
@@ -114,23 +126,23 @@ export const calcStation = async (jd, num, station) => {
       prevPolarity = currPolarity;
     });
     if (matched) {
-      await calcBodySpeed((saveJd - 0.5), num, (spd2, lng2) => {
+      await calcBodySpeed(saveJd - 0.5, num, (spd2, lng2) => {
         saveAccel = saveSpd / spd2;
       });
       break;
     }
   }
-  const returnData ={
+  const returnData = {
     jd: saveJd,
     datetime: jdToDateTime(saveJd),
     speed: saveSpd,
-    lng: saveLng, 
+    lng: saveLng,
     acceleration: saveAccel,
-    station
-  }
-  console.log(returnData)
+    station,
+  };
+  console.log(returnData);
   return returnData;
-}
+};
 
 const calcSwitchover = async (jd, body) => {
   const { num, yearLength } = body;
@@ -141,31 +153,40 @@ const calcSwitchover = async (jd, body) => {
   let polarity = 0;
   let prevPolarity = 0;
   let switched = false;
-  let row:any = {
+  let row: any = {
     spd: 0,
     lng: 0,
     jd: 0,
-    polarity: -1
+    polarity: -1,
   };
   for (let i = 0; i < max; i++) {
-    const multiplier = rate > 0 ? (rate > 1.25 && refSpeed < 1) ? refSpeed : rate : (1 / 288);
-    const refJd = (jd + (i * multiplier));
+    const multiplier =
+      rate > 0 ? (rate > 1.25 && refSpeed < 1 ? refSpeed : rate) : 1 / 288;
+    const refJd = jd + i * multiplier;
     await calcBodySpeed(refJd, num, (spd, lng) => {
       rate = refSpeed !== null ? refSpeed / spd : 0;
       polarity = spd < 0 ? -1 : 1;
       switched = polarity !== prevPolarity && prevPolarity !== 0;
       if (switched) {
-        row = { spd, dt: jdToDateTime(refJd), jd: refJd, lng, polarity, rate, multiplier };
+        row = {
+          spd,
+          dt: jdToDateTime(refJd),
+          jd: refJd,
+          lng,
+          polarity,
+          rate,
+          multiplier,
+        };
       }
       refSpeed = spd;
       prevPolarity = polarity;
-    })
+    });
     if (switched) {
       break;
     }
   }
   return row;
-}
+};
 
 const calcPeakSpeed = async (jd, body) => {
   const { num, yearLength } = body;
@@ -174,30 +195,38 @@ const calcPeakSpeed = async (jd, body) => {
   let refSpeed = null;
   let polarity = 0;
   let prevPolarity = 0;
-  let row:any = {
+  let row: any = {
     spd: 0,
     lng: 0,
     jd: 0,
-    polarity: -1
+    polarity: -1,
   };
   let prevRate = 0;
   for (let i = 0; i < max; i++) {
-    const multiplier = rate > 0 ? rate : (1 / 288);
-    const refJd = (jd + (i * multiplier));
+    const multiplier = rate > 0 ? rate : 1 / 288;
+    const refJd = jd + i * multiplier;
     await calcBodySpeed(refJd, num, (spd, lng) => {
       rate = refSpeed !== null ? refSpeed / spd : 0;
       polarity = spd < 0 ? -1 : 1;
 
       const peaked = prevRate !== 0 && withinTolerance(rate, 1, 0.02);
       if (peaked) {
-        row = { spd, dt: jdToDateTime(refJd), jd: refJd, lng, polarity, rate, multiplier };
+        row = {
+          spd,
+          dt: jdToDateTime(refJd),
+          jd: refJd,
+          lng,
+          polarity,
+          rate,
+          multiplier,
+        };
       }
       refSpeed = spd;
       prevRate = rate;
-    })
+    });
   }
   return row;
-}
+};
 
 export const calcRetroGrade = async (datetime, num) => {
   const jd = calcJulDate(datetime);
@@ -249,7 +278,7 @@ export const calcRetroGrade = async (datetime, num) => {
   } */
   const accel = await calcAcceleration(jd, body);
 
-  let nx:any = {jd: 0, lng: 0};
+  let nx: any = { jd: 0, lng: 0 };
   let refJd = jd;
   const nextSwitches = [];
   /* for (let i = 0; i < 8; i++) {
@@ -274,13 +303,12 @@ export const calcRetroGrade = async (datetime, num) => {
     }
   }
 
-
   return {
     key: body.key,
     name: body.name,
     accel,
-    nextSwitches
+    nextSwitches,
     // start,
     // end
-  }
-}
+  };
+};

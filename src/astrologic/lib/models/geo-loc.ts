@@ -1,10 +1,9 @@
-import { isNumeric } from '../validators';
+import { isNumeric } from '../../../lib/validators';
 
 export class GeoLoc {
-
-  lat:number = 0;
-  lng:number = 0;
-  alt:number = 0;
+  lat: number = 0;
+  lng: number = 0;
+  alt: number = 0;
 
   constructor(geoData) {
     if (geoData instanceof Object) {
@@ -44,8 +43,7 @@ export class GeoLoc {
               break;
           }
         }
-        
-      })
+      });
     }
   }
 
@@ -54,5 +52,4 @@ export class GeoLoc {
   longitude = () => this.lng;
 
   altitude = () => this.alt;
-
 }

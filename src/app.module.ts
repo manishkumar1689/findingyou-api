@@ -5,10 +5,11 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { RedisModule } from 'nestjs-redis';
 import { mongo, redisOptions } from './.config';
 import { AstrologicModule } from './astrologic/astrologic.module';
+import { GeoModule } from './geo/geo.module';
 
 @Module({
   imports: [
-  MongooseModule.forRoot(
+    MongooseModule.forRoot(
       `mongodb://${mongo.user}:${mongo.pass}@localhost/${mongo.name}`,
       {
         useNewUrlParser: true,
@@ -16,6 +17,7 @@ import { AstrologicModule } from './astrologic/astrologic.module';
     ),
     RedisModule.register(redisOptions),
     AstrologicModule,
+    GeoModule,
   ],
   controllers: [AppController],
   providers: [AppService],

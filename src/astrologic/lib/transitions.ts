@@ -3,35 +3,39 @@ import { calcJulDate, jdToDateTime, calcAstroWeekDayIndex } from './date-funcs';
 import { JyotishDay } from './models/jyotish-day';
 import { IndianTime } from './models/indian-time';
 import { riseTransAsync } from './sweph-async';
-import { isNumeric } from './validators';
+import { isNumeric } from '../../lib/validators';
 import { ephemerisDefaults } from '../../.config';
 
 interface TimeSet {
-  jd:number,
-  dt:string,
-  after:boolean
+  jd: number;
+  dt: string;
+  after: boolean;
 }
 
 interface TransitionData {
-  rise:TimeSet,
-  set:TimeSet,
-  prevRise:TimeSet,
-  prevSet:TimeSet,
+  rise: TimeSet;
+  set: TimeSet;
+  prevRise: TimeSet;
+  prevSet: TimeSet;
 }
 
 interface TransitionInput {
-  jd:number,
-  planetNum:0,
-  iflag: 0,
-  transType:number,
-  longitude:number,
-  latitude:number,
-  altitude:number,
-  pressure:number,
-  temperature:number,
-};
+  jd: number;
+  planetNum: 0;
+  iflag: 0;
+  transType: number;
+  longitude: number;
+  latitude: number;
+  altitude: number;
+  pressure: number;
+  temperature: number;
+}
 
-export const matchTransData = async (inData:TransitionInput, transType = 0, transKey = 'trans'):Promise<TimeSet> => {
+export const matchTransData = async (
+  inData: TransitionInput,
+  transType = 0,
+  transKey = 'trans',
+): Promise<TimeSet> => {
   let data = { valid: false, transitTime: -1 };
   inData.transType = transType;
   const jd = inData.jd;
@@ -41,8 +45,7 @@ export const matchTransData = async (inData:TransitionInput, transType = 0, tran
       break;
   }
 
-  await riseTransAsync(...Object.values(inData)
-  ).catch(d => {
+  await riseTransAsync(...Object.values(inData)).catch(d => {
     data = d;
     if (!d.error) {
       data.valid = true;
@@ -50,7 +53,7 @@ export const matchTransData = async (inData:TransitionInput, transType = 0, tran
       data.valid = false;
     }
   });
-  let result = { jd: -1, dt: "", after: false };
+  let result = { jd: -1, dt: '', after: false };
   //const offset = Math.floor(jd) < Math.floor(data.transitTime) && transKey === 'set' ? 1 : 0;
   if (data.valid) {
     if (data.transitTime >= 0) {
@@ -58,23 +61,37 @@ export const matchTransData = async (inData:TransitionInput, transType = 0, tran
         jd: data.transitTime,
         dt: jdToDateTime(data.transitTime),
         after: jd > data.transitTime,
-      }
+      };
     }
   }
   return result;
-}
+};
 
 const centerDiscRising = () => {
-  return (swisseph.SE_BIT_DISC_CENTER | swisseph.SE_BIT_NO_REFRACTION) || swisseph.SE_BIT_GEOCTR_NO_ECL_LAT;
-}
+  return (
+    swisseph.SE_BIT_DISC_CENTER | swisseph.SE_BIT_NO_REFRACTION ||
+    swisseph.SE_BIT_GEOCTR_NO_ECL_LAT
+  );
+};
 
-export const calcTransition = async (datetime, geo, planetNum, showInput = true) => {
+export const calcTransition = async (
+  datetime,
+  geo,
+  planetNum,
+  showInput = true,
+) => {
   const jd = calcJulDate(datetime);
   const data = await calcTransitionJd(jd, geo, planetNum, showInput, true);
   return { jd, ...data };
-}
+};
 
-export const calcTransitionJd = async (jd:number, geo, planetNum, showInput = true, showIcMc = false):Promise<TransitionData> => {
+export const calcTransitionJd = async (
+  jd: number,
+  geo,
+  planetNum,
+  showInput = true,
+  showIcMc = false,
+): Promise<TransitionData> => {
   let data = null;
   if (isNumeric(jd)) {
     let valid = false;
@@ -105,18 +122,26 @@ export const calcTransitionJd = async (jd:number, geo, planetNum, showInput = tr
       latitude,
       altitude,
       pressure,
-      temperature
-    }
+      temperature,
+    };
     const offset = centerDiscRising();
     let mc = null;
     let ic = null;
 
-    const set = await matchTransData(inData, swisseph.SE_CALC_SET + offset, 'set');
+    const set = await matchTransData(
+      inData,
+      swisseph.SE_CALC_SET + offset,
+      'set',
+    );
     if (showIcMc) {
       mc = await matchTransData(inData, swisseph.SE_CALC_MTRANSIT, 'mc');
       ic = await matchTransData(inData, swisseph.SE_CALC_ITRANSIT, 'ic');
     }
-    const rise = await matchTransData(inData, swisseph.SE_CALC_RISE + offset, 'rise');
+    const rise = await matchTransData(
+      inData,
+      swisseph.SE_CALC_RISE + offset,
+      'rise',
+    );
 
     if (rise.jd >= -1) {
       valid = true;
@@ -128,38 +153,45 @@ export const calcTransitionJd = async (jd:number, geo, planetNum, showInput = tr
     }
   }
   return data;
-}
+};
 
 export const calcSunTrans = async (datetime, geo) => {
   const jd = calcJulDate(datetime);
   return calcSunTransJd(jd, geo);
-}
+};
 
 export const calcSunTransJd = async (jd, geo) => {
   const prev = await calcTransitionJd(jd - 1, geo, 0, false, false);
   const curr = await calcTransitionJd(jd, geo, 0, false, false);
   const next = await calcTransitionJd(jd + 1, geo, 0, false, false);
-  return { jd, geo, ...curr, prevRise: prev.rise, prevSet: prev.set, nextRise: next.rise };
-}
+  return {
+    jd,
+    geo,
+    ...curr,
+    prevRise: prev.rise,
+    prevSet: prev.set,
+    nextRise: next.rise,
+  };
+};
 
 export const calcJyotishDay = async (datetime, geo) => {
   const sunData = await calcSunTrans(datetime, geo);
   return new JyotishDay(sunData);
-}
+};
 
 export const calcJyotishSunRise = async (datetime, geo) => {
   const jyotishDay = await calcJyotishDay(datetime, geo);
   return jyotishDay.toObject();
-}
+};
 
 export const fetchIndianTimeData = async (datetime, geo) => {
   const jyotishDay = await calcJyotishDay(datetime, geo);
   // { jd, startJd, dayStart, sunData, dayLength, dayBefore, isDaytime }
   // { jd, sunData, startJd, dayStart, jdTime, progress, dayLength, isDaytime, year, dayNum, muhurta, ghatiVal, ghati, vighati, lipta }
   return new IndianTime(jyotishDay);
-}
+};
 
 export const toIndianTime = async (datetime, geo) => {
   const iTime = await fetchIndianTimeData(datetime, geo);
   return iTime.toObject();
-}
+};

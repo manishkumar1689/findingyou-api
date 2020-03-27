@@ -1,4 +1,4 @@
-import { isNumeric, notEmptyString } from '../validators';
+import { isNumeric, notEmptyString } from '../../../lib/validators';
 import { BaseObject } from './base-object';
 import { mapToObject } from '../mappers';
 import {

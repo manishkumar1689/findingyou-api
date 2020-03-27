@@ -49,7 +49,7 @@ import {
   notEmptyString,
   validISODateString,
   inRange,
-} from './validators';
+} from '../../lib/validators';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 
