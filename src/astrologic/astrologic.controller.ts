@@ -170,6 +170,8 @@ export class AstrologicController {
       data = await calcBodiesInHouses(dt, geo, sysRef);
       const vd = await calcVargas(dt, geo, sysRef);
       data.geo = vd.geo;
+      const td = await calcAllTransitions(dt, data.bodies);
+      data.transitions = td.bodies;
       data.vargas = vd.vargas;
       const pd = await calcPanchanga(dt, geo);
       data.yoga = pd.yoga;
@@ -177,10 +179,17 @@ export class AstrologicController {
       data.vara = pd.vara;
       data.hora = pd.hora;
       data.caughadia = pd.caughadia;
-      data.muhurta = pd.muhurta;
-      data.muhurtaRange = pd.muhurtaRange;
-      data.mrityubhaga = await calcMrityubhaga(dt, geo);
-      data.sphuta = await calcSphutaData(dt, geo);
+      data.muhurta = { ...pd.muhurta, values: pd.muhurtaRange.values };
+      const md = await calcMrityubhaga(dt, geo);
+      data.mrityubhaga = {
+        standardRange: md.standardRange,
+        altRange: md.altRange,
+      };
+      const ds = await calcSphutaData(dt, geo);
+      const entries = Object.entries(ds).filter(
+        entry => !(entry[1] instanceof Object),
+      );
+      data.sphutas = Object.fromEntries(entries);
     }
     return res.status(HttpStatus.OK).json(data);
   }
