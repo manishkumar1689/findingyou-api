@@ -176,7 +176,7 @@ export class AstrologicController {
       data.vargas = vd.vargas;
       const pd = await calcPanchanga(dt, geo);
       data.yoga = pd.yoga;
-      data.karan = pd.karana;
+      data.karana = pd.karana;
       data.vara = pd.vara;
       data.hora = pd.hora;
       data.caughadia = pd.caughadia;
