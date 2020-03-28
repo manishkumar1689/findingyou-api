@@ -183,6 +183,14 @@ export const calcMrityubhaga = async (datetime: string, geo) => {
   const { jd, bodies } = bodyData;
   const hd = await fetchHouseDataJd(jd, geo);
   const { ascendant } = hd;
+  const md = calcMrityubhagaValues(bodies, ascendant);
+  return { jd, dt: datetime, ...md };
+};
+
+export const calcMrityubhagaValues = (
+  bodies: Array<Graha>,
+  ascendant: number,
+) => {
   const { orb, mrityu } = mrityubhagaData;
   const { standard, alternative } = mrityu;
   const standardRange = standard.values.map(row => {
@@ -213,7 +221,7 @@ export const calcMrityubhaga = async (datetime: string, geo) => {
     return { lng, sign, signLng, degree, active, ...row };
   });
   const altRange = [];
-  return { jd, dt: datetime, ascendant, standardRange, altRange, bodies };
+  return { ascendant, standardRange, altRange, bodies };
 };
 
 export const calcAllTransitions = async (datetime: string, geo) => {

@@ -32,6 +32,7 @@ import {
   calcHoras,
   calcPanchanga,
   calcMrityubhaga,
+  calcMrityubhagaValues,
   calcSphutaData,
   fetchAllSettings,
 } from './lib/core';
@@ -180,7 +181,7 @@ export class AstrologicController {
       data.hora = pd.hora;
       data.caughadia = pd.caughadia;
       data.muhurta = { ...pd.muhurta, values: pd.muhurtaRange.values };
-      const md = await calcMrityubhaga(dt, geo);
+      const md = await calcMrityubhagaValues(data.bodies, data.ascendant);
       data.mrityubhaga = {
         standardRange: md.standardRange,
         altRange: md.altRange,
