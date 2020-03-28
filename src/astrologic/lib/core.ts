@@ -435,11 +435,13 @@ const addGrahaValues = async data => {
         }
       }
     });
+
     if (data.bodies.length > 0) {
       const withinSignBodies = calcCharaKaraka(data.bodies);
       mergeCharaKarakaToBodies(data.bodies, withinSignBodies);
     }
   }
+
   data = new GrahaSet(data);
   data.matchRelationships();
 };
@@ -764,7 +766,6 @@ const calcGrahaSet = async datetime => {
 */
 export const calcBodiesInHouses = async (datetime, geo, system = 'W') => {
   let grahaSet = await calcGrahaSet(datetime);
-
   const houseData = await fetchHouseData(datetime, geo, system);
 
   grahaSet.mergeHouseData(houseData);

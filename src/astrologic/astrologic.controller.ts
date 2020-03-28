@@ -156,6 +156,35 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  @Get('all/:loc/:dt/:system?')
+  async allByDateGeo(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Param('system') system,
+  ) {
+    let data: any = { valid: false };
+    if (notEmptyString(dt, 6) && notEmptyString(loc, 3)) {
+      const geo = locStringToGeo(loc);
+      const sysRef = notEmptyString(system) ? system : 'W';
+      data = await calcBodiesInHouses(dt, geo, sysRef);
+      const vd = await calcVargas(dt, geo, sysRef);
+      data.geo = vd.geo;
+      data.vargas = vd.vargas;
+      const pd = await calcPanchanga(dt, geo);
+      data.yoga = pd.yoga;
+      data.karan = pd.karana;
+      data.vara = pd.vara;
+      data.hora = pd.hora;
+      data.caughadia = pd.caughadia;
+      data.muhurta = pd.muhurta;
+      data.muhurtaRange = pd.muhurtaRange;
+      data.mrityubhaga = await calcMrityubhaga(dt, geo);
+      data.sphuta = await calcSphutaData(dt, geo);
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
   @Get('vargas/:loc/:dt/:system?')
   async vargasByDateGeo(
     @Res() res,
