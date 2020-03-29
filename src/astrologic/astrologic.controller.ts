@@ -15,6 +15,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { AstrologicService } from './astrologic.service';
+import { GeoService } from './../geo/geo.service';
 import { BodySpeed } from './interfaces/body-speed.interface';
 import { BodySpeedDTO } from './dto/body-speed.dto';
 import {
@@ -46,7 +47,10 @@ import { readEpheFiles } from './lib/files';
 
 @Controller('astrologic')
 export class AstrologicController {
-  constructor(private astrologicService: AstrologicService) {}
+  constructor(
+    private astrologicService: AstrologicService,
+    private geoService: GeoService,
+  ) {}
 
   @Get('juldate/:isodate?')
   async juldate(@Res() res, @Param('isodate') isodate, @Query() query) {
@@ -170,7 +174,11 @@ export class AstrologicController {
       const sysRef = notEmptyString(system) ? system : 'W';
       data = await calcBodiesInHouses(dt, geo, sysRef);
       const vd = await calcVargas(dt, geo, sysRef);
-      data.geo = vd.geo;
+      data.geo = await this.geoService.fetchGeoAndTimezone(
+        geo.lat,
+        geo.lng,
+        dt,
+      );
       const td = await calcAllTransitions(dt, data.bodies);
       data.transitions = td.bodies;
       data.vargas = vd.vargas;
