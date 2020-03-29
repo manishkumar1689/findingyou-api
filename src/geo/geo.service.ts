@@ -58,11 +58,14 @@ export class GeoService {
               };
             });
         } else if (ocean instanceof Object) {
-          const { name, distance } = ocean;
+          const { name } = ocean;
           toponyms = [
             {
-              distance: parseFloat(distance),
               name,
+              fullName: name,
+              type: 'SEA',
+              lat,
+              lng,
             },
           ];
         }
