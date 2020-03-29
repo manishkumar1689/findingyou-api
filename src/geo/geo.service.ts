@@ -50,7 +50,9 @@ export class GeoService {
             .filter(gn => gn.fcode !== 'AREA')
             .map(row => {
               return {
-                name: row.toponymName,
+                name: row.name,
+                fullName: row.toponymName,
+                type: row.fcode,
                 lat: parseFloat(row.lat),
                 lng: parseFloat(row.lng),
               };
