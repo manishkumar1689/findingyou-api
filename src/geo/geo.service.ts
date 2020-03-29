@@ -40,14 +40,13 @@ export class GeoService {
   async fetchGeoData(lat: number, lng: number) {
     const coords = { lat, lng };
     let data = await this.fetchGeoNames('extendedFindNearbyJSON', coords);
-    let cc = '';
     if (data.valid) {
       const tzData = await this.fetchGeoNames('timezoneJSON', coords);
       if (tzData.valid) {
         const { geonames, ocean } = data;
-        let geo = [];
+        let toponyms = [];
         if (geonames instanceof Array) {
-          geo = geonames
+          toponyms = geonames
             .filter(gn => gn.fcode !== 'AREA')
             .map(row => {
               return {
@@ -56,25 +55,22 @@ export class GeoService {
                 lng: parseFloat(row.lng),
               };
             });
-          console.log(geonames);
-          const ccRow: any = geonames.filter(row =>
-            objHasKey(row, 'countryCode'),
-          );
-
-          if (ccRow) {
-            const { countryCode } = ccRow;
-            cc = countryCode;
-          }
         } else if (ocean instanceof Object) {
           const { name, distance } = ocean;
-          geo = [
+          toponyms = [
             {
               distance: parseFloat(distance),
               name,
             },
           ];
         }
-        data = { ...tzData, cc, geo };
+        const { countryCode, countryName, timezoneId } = tzData;
+        const zd = {
+          countryName,
+          cc: countryCode,
+          tz: timezoneId,
+        };
+        data = { ...zd, toponyms };
       }
     }
     return data;
@@ -82,7 +78,7 @@ export class GeoService {
 
   async fetchGeoAndTimezone(lat: number, lng: number, datetime: string) {
     const data = await this.fetchGeoData(lat, lng);
-    const offset = this.checkGmtOffset(data.timezoneId, datetime);
+    const offset = this.checkGmtOffset(data.tz, datetime);
     return { ...data, offset };
   }
 
