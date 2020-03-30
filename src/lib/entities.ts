@@ -1,4 +1,4 @@
-export const updateSubEntity = (source, data) => {
+export const updateSubEntity = (source, data: any) => {
   if (data instanceof Object && source instanceof Object) {
     const entries = Object.entries(data);
     entries.forEach(entry => {
@@ -10,7 +10,7 @@ export const updateSubEntity = (source, data) => {
   return source;
 };
 
-export const updateInSubEntities = (items: any[], refID: string, data) => {
+export const updateInSubEntities = (items: any[], refID: string, data: any) => {
   items.forEach((item, index) => {
     if (item._id.toString() === refID) {
       items[index] = updateSubEntity(item, data);

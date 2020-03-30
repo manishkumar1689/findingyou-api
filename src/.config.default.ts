@@ -35,3 +35,5 @@ export const timezonedb = {
 };
 
 export const hashSalt = '4jyddhd-90';
+
+export const maxResetMinutes = 180;

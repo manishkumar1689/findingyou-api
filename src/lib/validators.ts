@@ -100,3 +100,8 @@ export const validLocationParameter = loc => {
 export const validISODateString = str => {
   return /^\d\d\d\d+-\d\d-\d\d((T|\s)\d\d:\d\d(:\d\d)?)?/.test(str);
 };
+
+export const validEmail = (email: string) => {
+  const rgx = /^(([^<>()\[\]\.,;:\s@\"]+(\.[^<>()\[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i;
+  return email.length > 5 && rgx.test(email);
+};

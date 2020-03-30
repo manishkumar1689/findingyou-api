@@ -25,3 +25,15 @@ export const objectToQueryString = (obj: any): string => {
 export const mapToQueryString = (map: Map<string, any>): string => {
   return objectToQueryString(Object.fromEntries(map));
 };
+
+export const smartCastInt = (item: string, defVal: number = 0) => {
+  let out = defVal;
+  if (typeof item === 'string') {
+    if (item.length > 0) {
+      if (/^\s*\d+(\.\d+)?\s*/.test(item)) {
+        out = parseInt(item, 10);
+      }
+    }
+  }
+  return out;
+};

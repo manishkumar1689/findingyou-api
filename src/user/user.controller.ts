@@ -16,11 +16,13 @@ import { UserService } from './user.service';
 import { MessageService } from '../message/message.service';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { LoginDTO } from './dto/login.dto';
-import { smartCastInt, validEmail } from '../lib/validators';
+import { validEmail } from '../lib/validators';
+import { smartCastInt } from '../lib/converters';
 import { Request } from 'express';
 import { fromBase64, toBase64 } from '../lib/hash';
 import { maxResetMinutes } from '../.config';
 import * as bcrypt from 'bcrypt';
+import { extractDocId, extractSimplified } from 'src/lib/entities';
 
 @Controller('user')
 export class UserController {
