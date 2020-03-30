@@ -28,6 +28,7 @@
     "@nestjs/platform-express": "^7.0.0",
     "@nestjs/swagger": "^4.4.0",
     "@types/mongoose": "^5.7.6",
+    "bcrypt": "^4.0.1",
     "cache-manager-redis-store": "^2.0.0",
     "express-list-routes": "^0.1.4",
     "moment": "^2.24.0",
@@ -39,7 +40,8 @@
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",
     "rxjs": "^6.5.4",
-    "swisseph": "^0.5.13"
+    "swisseph": "^0.5.13",
+    "validator": "^13.0.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^7.0.0",

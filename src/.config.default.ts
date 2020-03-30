@@ -33,3 +33,5 @@ export const geonames = {
 export const timezonedb = {
   apiKey: '0NXJ03JE76B4',
 };
+
+export const hashSalt = '4jyddhd-90';
