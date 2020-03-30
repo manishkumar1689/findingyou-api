@@ -589,7 +589,7 @@ const addSphutaData = async (
   data.houseSign = Math.floor(houseData.houses[0] / 30) + 1;
   const moon = grahaSet.moon();
 
-  data.srIlagna =
+  data.sriLagna =
     ((moon.nakshatra.percent / 100) * 360 + houseData.ascendant) % 360;
 
   data.houseSignPlusNine = ((data.houseSign - 1 + (9 - 1)) % 12) + 1;
