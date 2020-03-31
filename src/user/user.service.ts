@@ -7,6 +7,7 @@ import { hashMapToObject } from '../lib/entities';
 import * as bcrypt from 'bcrypt';
 import { hashSalt } from '../.config';
 import { generateHash } from '../lib/hash';
+import * as moment from 'moment-timezone';
 
 const userSelectPaths = [
   '_id',
@@ -49,10 +50,9 @@ export class UserService {
   async count(
     criteria: any = null,
     activeOnly: boolean = true,
-  ): Promise<User[]> {
+  ): Promise<number> {
     const filterCriteria = this.buildCriteria(criteria, activeOnly);
-    const Users = await this.userModel.count(filterCriteria).exec();
-    return Users;
+    return await this.userModel.count(filterCriteria).exec();
   }
 
   buildCriteria = (criteria: object, activeOnly: boolean): object => {
@@ -62,13 +62,10 @@ export class UserService {
       for (const key of keys) {
         const val = criteria[key];
         switch (key) {
-          case 'role':
-            filter.set(key, val);
-            break;
-          case 'editor':
-            filter.set('role', {
-              $ne: 'artist',
-            });
+          case 'roles':
+            if (val instanceof Array) {
+              filter.set(key, val);
+            }
             break;
           case 'active':
             filter.set(key, val > 0 ? true : false);
@@ -293,7 +290,7 @@ export class UserService {
     return updatedUser;
   }
 
-  async updateStatus(userID, status): Promise<User> {
+  async updateStatus(userID, status: string): Promise<User> {
     const user = await this.userModel.findById(userID);
     if (user) {
       let active = false;
@@ -308,18 +305,26 @@ export class UserService {
         currStatus = current.key;
       }
       if (currStatus !== status) {
-        const statuses = user.status.map(s => {
+        const currDt = new Date();
+        const expiryDate: Date = moment()
+          .add(1, 'year')
+          .toDate()!;
+        const statuses = user.status.map(row => {
           return {
+            role: status,
             current: false,
-            date: s.date,
-            key: s.key,
+            createdAt: row.createdAt,
+            expiresAt: row.expiresAt,
+            modifiedAt: currDt,
           };
         });
-        const currDt = new Date().toISOString();
+
         statuses.push({
+          role: status,
           current: true,
-          date: currDt,
-          key: status,
+          createdAt: currDt,
+          expiresAt: expiryDate,
+          modifiedAt: currDt,
         });
         return await this.userModel.findByIdAndUpdate(
           userID,
@@ -373,7 +378,7 @@ export class UserService {
   async isValidRoleUser(userID: string, role: string): Promise<boolean> {
     const adminUser = await this.getUser(userID);
     if (adminUser) {
-      if (adminUser.role === role) {
+      if (adminUser.roles.includes(role)) {
         return adminUser.active;
       }
     }
@@ -382,5 +387,9 @@ export class UserService {
 
   async isAdminUser(userID: string): Promise<boolean> {
     return await this.isValidRoleUser(userID, 'admin');
+  }
+
+  async isBlocked(userID: string): Promise<boolean> {
+    return await this.isValidRoleUser(userID, 'blocked');
   }
 }

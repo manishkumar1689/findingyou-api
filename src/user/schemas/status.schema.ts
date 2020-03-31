@@ -1,8 +1,7 @@
 import * as mongoose from 'mongoose';
-import { RoleSchema } from './role.schema';
 
 export const StatusSchema = new mongoose.Schema({
-  role: [RoleSchema],
+  role: String,
   current: {
     type: Boolean,
     default: false,

@@ -1,6 +1,5 @@
 import { Document } from 'mongoose';
 import { Status } from './status.interface';
-import { Role } from './role.interface';
 
 export interface User extends Document {
   readonly uid: number;
@@ -9,7 +8,7 @@ export interface User extends Document {
   readonly identifier: string;
   readonly password: string;
   readonly mode: string;
-  readonly role: Role[];
+  readonly roles: string[];
   readonly active: boolean;
   readonly status: Status[];
   readonly token: string;

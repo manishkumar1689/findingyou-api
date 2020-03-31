@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { StatusDTO } from './status.dto';
-import { RoleDTO } from './role.dto';
 
 export class CreateUserDTO {
   @ApiProperty()
@@ -22,7 +21,7 @@ export class CreateUserDTO {
   readonly mode: string;
 
   @ApiProperty()
-  readonly role: RoleDTO[];
+  readonly roles: string[];
 
   @ApiProperty()
   readonly active: boolean;

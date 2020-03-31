@@ -22,7 +22,12 @@ import { Request } from 'express';
 import { fromBase64, toBase64 } from '../lib/hash';
 import { maxResetMinutes } from '../.config';
 import * as bcrypt from 'bcrypt';
-import { extractDocId, extractSimplified } from 'src/lib/entities';
+import {
+  extractDocId,
+  extractSimplified,
+  extractObjectAndMerge,
+  hashMapToObject,
+} from 'src/lib/entities';
 
 @Controller('user')
 export class UserController {
@@ -149,21 +154,6 @@ export class UserController {
         const userID = extractDocId(user);
         const loginDt = await this.userService.registerLogin(userID);
         userData.set('login', loginDt);
-        const submission = await this.submissionService.getSubmissionByUser(
-          userID,
-        );
-        const fileData = matchGeneratedPdfPath(guidToUniqueSeq(userID));
-        let downloadPath = '';
-        let downloadModifed = null;
-        if (fileData.path.length > 5) {
-          downloadPath = fileData.path;
-          downloadModifed = fileData.modified;
-        }
-        if (submission) {
-          userData.set('submission', mapSubmission(submission));
-          userData.set('pdfPath', downloadPath);
-          userData.set('pdfModified', downloadModifed);
-        }
       }
     }
     userData.set('valid', valid);

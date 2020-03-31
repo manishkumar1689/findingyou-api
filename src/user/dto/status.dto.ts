@@ -1,9 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { RoleDTO } from './role.dto';
 
 export class StatusDTO {
   @ApiProperty()
-  readonly role: RoleDTO;
+  readonly role: string;
 
   @ApiProperty()
   readonly current: boolean;

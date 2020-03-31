@@ -1,6 +1,5 @@
 import * as mongoose from 'mongoose';
 import * as validator from 'validator';
-import { RoleSchema } from './role.schema';
 import { StatusSchema } from './status.schema';
 
 export const UserSchema = new mongoose.Schema({
@@ -24,7 +23,7 @@ export const UserSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
-  role: [RoleSchema],
+  roles: [String],
   active: Boolean,
   status: [StatusSchema],
   token: String,
