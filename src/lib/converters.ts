@@ -26,6 +26,20 @@ export const mapToQueryString = (map: Map<string, any>): string => {
   return objectToQueryString(Object.fromEntries(map));
 };
 
+export const smartCastString = (item: any, defVal: string = '') => {
+  let out = defVal;
+  switch (typeof item) {
+    case 'string':
+      out = item;
+      break;
+    case 'number':
+    case 'boolean':
+      out = item.toString();
+      break;
+  }
+  return out;
+};
+
 export const smartCastInt = (item: string, defVal: number = 0) => {
   let out = defVal;
   if (typeof item === 'string') {
@@ -37,3 +51,10 @@ export const smartCastInt = (item: string, defVal: number = 0) => {
   }
   return out;
 };
+
+export const dateTimeSuffix = () =>
+  new Date()
+    .toISOString()
+    .split('.')
+    .shift()
+    .replace(/[:-]/g, '');

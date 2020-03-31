@@ -13,8 +13,8 @@ import {
 } from '@nestjs/common';
 import { MessageService } from './message.service';
 import { CreateMessageDTO } from './dto/create-message.dto';
-import { readSentLog, readSentLogCsv } from '../lib/logger';
-import { smartCastInt, smartCastString, dateTimeSuffix } from '../lib/utils';
+//import { readSentLog, readSentLogCsv } from '../lib/logger';
+import { smartCastInt, smartCastString } from '../lib/converters';
 
 @Controller('Message')
 export class MessageController {
@@ -40,7 +40,10 @@ export class MessageController {
       messageID,
       createMessageDTO,
     );
-    const msg = message instanceof Object? 'Message has been updated successfully' : 'Message not found';
+    const msg =
+      message instanceof Object
+        ? 'Message has been updated successfully'
+        : 'Message not found';
     return res.status(HttpStatus.OK).json({
       msg,
       message,
@@ -68,7 +71,7 @@ export class MessageController {
   async readLog(@Res() res, @Param('limit') limit, @Param('format') format) {
     const limitInt = smartCastInt(limit, 100);
     const returnType = smartCastString(format, 'json');
-    if (returnType === 'json') {
+    /* if (returnType === 'json') {
       const data = await readSentLog(limit);
       return res.status(HttpStatus.OK).json(data);
     } else {
@@ -77,7 +80,6 @@ export class MessageController {
       res.setHeader('Content-disposition', 'attachment; filename=' + filename);
       res.set('Content-Type', 'text/csv');
       return res.status(HttpStatus.OK).end(data);
-    }
+    } */
   }
-
 }

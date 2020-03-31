@@ -1,20 +1,18 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { TranslationDTO } from './translation.dto';
 
-export class CreateMessageDTO {
+export class CreateLexemeDTO {
   @ApiProperty()
   readonly key: string;
 
   @ApiProperty()
-  readonly subject: string;
+  readonly name: string;
 
   @ApiProperty()
-  readonly body: string;
+  readonly original: string;
 
   @ApiProperty()
-  readonly fromName: string;
-
-  @ApiProperty()
-  readonly fromMail: string;
+  readonly translations: TranslationDTO[];
 
   @ApiProperty()
   readonly createdAt: Date;

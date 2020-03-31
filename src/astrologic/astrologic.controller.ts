@@ -44,6 +44,7 @@ import { calcRetroGrade, calcAcceleration } from './lib/astro-motion';
 import { toIndianTime, calcTransition } from './lib/transitions';
 import { generateApiRouteMap } from './lib/route-map';
 import { readEpheFiles } from './lib/files';
+import moment = require('moment');
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -171,18 +172,24 @@ export class AstrologicController {
     let data: any = { valid: false };
     if (notEmptyString(dt, 6) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
-      const sysRef = notEmptyString(system) ? system : 'W';
-      data = await calcBodiesInHouses(dt, geo, sysRef);
-      const vd = await calcVargas(dt, geo, sysRef);
       data.geo = await this.geoService.fetchGeoAndTimezone(
         geo.lat,
         geo.lng,
         dt,
       );
-      const td = await calcAllTransitions(dt, data.bodies);
+      const dtUtc = moment(dt)
+        .add(data.geo.offset, 'seconds')
+        .toISOString()
+        .split('.')
+        .shift();
+      const sysRef = notEmptyString(system) ? system : 'W';
+      data = await calcBodiesInHouses(dtUtc, geo, sysRef);
+      const vd = await calcVargas(dtUtc, geo, sysRef);
+
+      const td = await calcAllTransitions(dtUtc, data.bodies);
       data.transitions = td.bodies;
       data.vargas = vd.vargas;
-      const pd = await calcPanchanga(dt, geo);
+      const pd = await calcPanchanga(dtUtc, geo);
       data.yoga = pd.yoga;
       data.karana = pd.karana;
       data.vara = pd.vara;
@@ -194,7 +201,7 @@ export class AstrologicController {
         standardRange: md.standardRange,
         altRange: md.altRange,
       };
-      const ds = await calcSphutaData(dt, geo);
+      const ds = await calcSphutaData(dtUtc, geo);
       const entries = Object.entries(ds).filter(
         entry => !(entry[1] instanceof Object),
       );

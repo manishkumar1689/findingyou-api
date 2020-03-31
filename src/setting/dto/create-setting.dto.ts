@@ -1,20 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class CreateMessageDTO {
+export class CreateSettingDTO {
   @ApiProperty()
   readonly key: string;
 
   @ApiProperty()
-  readonly subject: string;
+  readonly value: any;
 
   @ApiProperty()
-  readonly body: string;
+  readonly type: string;
 
   @ApiProperty()
-  readonly fromName: string;
-
-  @ApiProperty()
-  readonly fromMail: string;
+  readonly weight: number;
 
   @ApiProperty()
   readonly createdAt: Date;

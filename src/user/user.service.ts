@@ -212,9 +212,8 @@ export class UserService {
   // post a single User
   async addUser(createUserDTO: CreateUserDTO): Promise<User> {
     const userObj = this.transformUserDTO(createUserDTO, true);
-    const top = await this.getTopUid();
-    const saveObj = { uid: top + 1, ...userObj };
-    const newUser = await this.userModel(saveObj);
+    const saveObj = { ...userObj };
+    const newUser = new this.userModel(saveObj);
     return newUser.save();
   }
 
@@ -302,7 +301,7 @@ export class UserService {
       const current = user.status.find(s => s.current);
       let currStatus = '';
       if (current) {
-        currStatus = current.key;
+        currStatus = current.role;
       }
       if (currStatus !== status) {
         const currDt = new Date();

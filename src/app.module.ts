@@ -6,6 +6,8 @@ import { RedisModule } from 'nestjs-redis';
 import { mongo, redisOptions } from './.config';
 import { AstrologicModule } from './astrologic/astrologic.module';
 import { GeoModule } from './geo/geo.module';
+import { UserModule } from './user/user.module';
+import { DictionaryModule } from './dictionary/dictionary.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { GeoModule } from './geo/geo.module';
     RedisModule.register(redisOptions),
     AstrologicModule,
     GeoModule,
+    UserModule,
+    DictionaryModule,
   ],
   controllers: [AppController],
   providers: [AppService],
