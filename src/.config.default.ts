@@ -38,6 +38,10 @@ export const hashSalt = '4jyddhd-90';
 
 export const maxResetMinutes = 180;
 
+export const mailDetails = {
+  fromAddress: 'info@findingyou.co',
+};
+
 export const mailService = {
   provider: 'elasticmail/api',
   userName: '',
