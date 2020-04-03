@@ -73,6 +73,12 @@ export class AstrologicService {
     return data;
   }
 
+  async saveBodySpeedStation(jd:number ,num:number, station:string ) {
+    const bs = await calcStation(jd, num, station);
+    console.log(bs)
+    this.saveBodySpeed(bs);
+  }
+
   async speedPatternsByPlanet(num:number):Promise<Array<BodySpeed>> {
     const data = await this.bodySpeedModel.find({num}).sort({ jd: 1 }).exec();
     let results:Array<BodySpeed> = [];
@@ -94,7 +100,7 @@ export class AstrologicService {
             results.push(prevRow);
             maxMatched = true;
             if (rowsMatched < 4) {
-              calcStation(prevRow.jd, num, 'peak');
+              this.saveBodySpeedStation(prevRow.jd, num, 'peak');
             }
             rowsMatched++;
             maxSpd = -1;
@@ -106,6 +112,9 @@ export class AstrologicService {
           } else if (!minMatched && prevRow instanceof Object) {
             results.push(prevRow);
             minMatched = true;
+            if (rowsMatched < 4) {
+              this.saveBodySpeedStation(prevRow.jd, num, 'retro-peak');
+            }
             rowsMatched++;
             minSpd = 1;
           }
@@ -117,9 +126,16 @@ export class AstrologicService {
           minMatched = false;
           maxSpd = -1;
           minSpd = 1;
+          const rs = prevPolarity < 0 ? 'retro-end' : 'retro-start';
+          if (rowsMatched < 4) {
+            this.saveBodySpeedStation(prevRow.jd, num, rs);
+          }
         }
         prevPolarity = currPolarity;
         prevRow = Object.assign({}, row.toObject());
+        if (rowsMatched >= 4) {
+          rowsMatched = 0;
+        }
       });
     }
     return results;

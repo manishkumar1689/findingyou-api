@@ -135,12 +135,12 @@ export const calcStation = async (jd, num, station) => {
   const returnData = {
     jd: saveJd,
     datetime: jdToDateTime(saveJd),
+    num,
     speed: saveSpd,
     lng: saveLng,
     acceleration: saveAccel,
     station,
   };
-  console.log(returnData);
   return returnData;
 };
 
