@@ -1,7 +1,7 @@
 import { Document } from 'mongoose';
 import { Translation } from './translation.interface';
 
-export interface Message extends Document {
+export interface Lexeme extends Document {
   readonly key: string;
   readonly name: string;
   readonly original: string;

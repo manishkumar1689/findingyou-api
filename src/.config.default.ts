@@ -39,7 +39,9 @@ export const hashSalt = '4jyddhd-90';
 export const maxResetMinutes = 180;
 
 export const mailDetails = {
+  fromName: 'FindingYou Service Desk',
   fromAddress: 'info@findingyou.co',
+  transport: 'smtp://username:password@mailserver.domain',
 };
 
 export const mailService = {

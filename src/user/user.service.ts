@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
+import { MailerService, mail } from '@nest-modules/mailer';
 import { User } from './interfaces/user.interface';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { hashMapToObject } from '../lib/entities';
@@ -28,7 +29,10 @@ const userSelectPaths = [
 
 @Injectable()
 export class UserService {
-  constructor(@InjectModel('User') private readonly userModel: Model<User>) {}
+  constructor(
+    @InjectModel('User') private readonly userModel: Model<User>,
+    private readonly mailerService: MailerService,
+  ) {}
   // fetch all Users
   async getAllUser(
     start: number,

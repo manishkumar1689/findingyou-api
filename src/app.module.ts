@@ -3,11 +3,13 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RedisModule } from 'nestjs-redis';
+import { HandlebarsAdapter, MailerModule } from '@nest-modules/mailer';
 import { mongo, redisOptions } from './.config';
 import { AstrologicModule } from './astrologic/astrologic.module';
 import { GeoModule } from './geo/geo.module';
 import { UserModule } from './user/user.module';
 import { DictionaryModule } from './dictionary/dictionary.module';
+import { mailDetails } from './.config';
 
 @Module({
   imports: [
@@ -18,6 +20,19 @@ import { DictionaryModule } from './dictionary/dictionary.module';
       },
     ),
     RedisModule.register(redisOptions),
+    MailerModule.forRoot({
+      transport: mailDetails.transport,
+      defaults: {
+        from: `"${mailDetails.fromName}" <${mailDetails.fromAddress}>`,
+      },
+      template: {
+        dir: __dirname + '/templates',
+        adapter: new HandlebarsAdapter(), // or new PugAdapter()
+        options: {
+          strict: true,
+        },
+      },
+    }),
     AstrologicModule,
     GeoModule,
     UserModule,
