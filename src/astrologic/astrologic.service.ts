@@ -3,11 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { BodySpeed } from './interfaces/body-speed.interface';
 import { BodySpeedDTO } from './dto/body-speed.dto';
-import {
-  calcRetroGrade,
-  calcAcceleration,
-  calcStation,
-} from './lib/astro-motion';
+import { calcAcceleration, calcStation } from './lib/astro-motion';
 import grahaValues from './lib/settings/graha-values';
 import { calcJulianDate, calcJulDate } from './lib/date-funcs';
 

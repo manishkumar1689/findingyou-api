@@ -40,11 +40,7 @@ import {
 import { calcJulianDate, calcJulDate } from './lib/date-funcs';
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
-import {
-  calcRetroGrade,
-  calcAcceleration,
-  calcStation,
-} from './lib/astro-motion';
+import { calcRetroGrade, calcStation } from './lib/astro-motion';
 import { toIndianTime, calcTransition } from './lib/transitions';
 import { generateApiRouteMap } from './lib/route-map';
 import { readEpheFiles } from './lib/files';
@@ -320,8 +316,8 @@ export class AstrologicController {
     @Param('years') years,
   ) {
     let data: any = { valid: false };
-    let days = isNumeric(years) ? parseInt(years) * 366 : 366;
-    if (notEmptyString(dt, 6) && isNumeric(planet)) {
+    let days = isNumeric(years) ? parseInt(years) * 367 : 367;
+    if (validISODateString(dt) && isNumeric(planet)) {
       const num = parseInt(planet);
       data = await this.astrologicService.savePlanetStations(num, dt, days);
     }

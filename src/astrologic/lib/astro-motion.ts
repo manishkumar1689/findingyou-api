@@ -1,6 +1,8 @@
 import * as swisseph from 'swisseph';
 import { calcUtAsync } from './sweph-async';
-import { jdToDateTime } from './date-funcs';
+import { calcJulDate, jdToDateTime } from './date-funcs';
+import { withinTolerance } from '../../lib/validators';
+import grahaValues from './settings/graha-values';
 
 const calcBodySpeed = async (jd, num, callback) => {
   const flag =
@@ -100,4 +102,118 @@ export const calcStation = async (jd, num, station) => {
     station,
   };
   return returnData;
+};
+
+const calcSwitchover = async (jd, body) => {
+  const { num, yearLength } = body;
+  const max = Math.ceil(body.yearLength);
+  let rate = 0;
+  let refSpeed = null;
+  let polarity = 0;
+  let prevPolarity = 0;
+  let switched = false;
+  let row: any = {
+    spd: 0,
+    lng: 0,
+    jd: 0,
+    polarity: -1,
+  };
+  for (let i = 0; i < max; i++) {
+    const multiplier =
+      rate > 0 ? (rate > 1.25 && refSpeed < 1 ? refSpeed : rate) : 1 / 288;
+    const refJd = jd + i * multiplier;
+    await calcBodySpeed(refJd, num, (spd, lng) => {
+      rate = refSpeed !== null ? refSpeed / spd : 0;
+      polarity = spd < 0 ? -1 : 1;
+      switched = polarity !== prevPolarity && prevPolarity !== 0;
+      if (switched) {
+        row = {
+          spd,
+          dt: jdToDateTime(refJd),
+          jd: refJd,
+          lng,
+          polarity,
+          rate,
+          multiplier,
+        };
+      }
+      refSpeed = spd;
+      prevPolarity = polarity;
+    });
+    if (switched) {
+      break;
+    }
+  }
+  return row;
+};
+
+const calcPeakSpeed = async (jd, body) => {
+  const { num, yearLength } = body;
+  const max = Math.ceil(body.yearLength);
+  let rate = 0;
+  let refSpeed = null;
+  let polarity = 0;
+  let prevPolarity = 0;
+  let row: any = {
+    spd: 0,
+    lng: 0,
+    jd: 0,
+    polarity: -1,
+  };
+  let prevRate = 0;
+  for (let i = 0; i < max; i++) {
+    const multiplier = rate > 0 ? rate : 1 / 288;
+    const refJd = jd + i * multiplier;
+    await calcBodySpeed(refJd, num, (spd, lng) => {
+      rate = refSpeed !== null ? refSpeed / spd : 0;
+      polarity = spd < 0 ? -1 : 1;
+
+      const peaked = prevRate !== 0 && withinTolerance(rate, 1, 0.02);
+      if (peaked) {
+        row = {
+          spd,
+          dt: jdToDateTime(refJd),
+          jd: refJd,
+          lng,
+          polarity,
+          rate,
+          multiplier,
+        };
+      }
+      refSpeed = spd;
+      prevRate = rate;
+    });
+  }
+  return row;
+};
+
+export const calcRetroGrade = async (datetime, num) => {
+  const jd = calcJulDate(datetime);
+  const body = grahaValues.find(b => b.num === num);
+  const accel = await calcAcceleration(jd, body);
+  let nx: any = { jd: 0, lng: 0 };
+  let refJd = jd;
+  const nextSwitches = [];
+
+  for (let i = 0; i < 8; i++) {
+    nx = await calcSwitchover(refJd, body);
+    if (nx) {
+      refJd = nx.jd;
+      nextSwitches.push(nx);
+      nx = await calcPeakSpeed(refJd, body);
+      if (nx) {
+        refJd = nx.jd;
+        nextSwitches.push(nx);
+      }
+    }
+  }
+
+  return {
+    key: body.key,
+    name: body.name,
+    accel,
+    nextSwitches,
+    // start,
+    // end
+  };
 };
