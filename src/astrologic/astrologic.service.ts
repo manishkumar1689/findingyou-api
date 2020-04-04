@@ -3,30 +3,29 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { BodySpeed } from './interfaces/body-speed.interface';
 import { BodySpeedDTO } from './dto/body-speed.dto';
-import { calcRetroGrade, calcAcceleration, calcStation } from './lib/astro-motion'
+import {
+  calcRetroGrade,
+  calcAcceleration,
+  calcStation,
+} from './lib/astro-motion';
 import grahaValues from './lib/settings/graha-values';
 import { calcJulianDate, calcJulDate } from './lib/date-funcs';
 
 @Injectable()
 export class AstrologicService {
-
   constructor(
     @InjectModel('BodySpeed')
     private bodySpeedModel: Model<BodySpeed>,
   ) {}
 
   // post a single Submission
-  async saveBodySpeed(
-    data: BodySpeedDTO,
-  ): Promise<BodySpeed> {
-    const record = await this.bodySpeedModel.findOne({jd: data.jd}).exec();
+  async saveBodySpeed(data: BodySpeedDTO): Promise<BodySpeed> {
+    const record = await this.bodySpeedModel.findOne({ jd: data.jd }).exec();
     if (record instanceof Object) {
       const { _id } = record;
-      await this.bodySpeedModel.findByIdAndUpdate(
-        _id,
-        data,
-        { new: false },
-      ).exec();
+      await this.bodySpeedModel
+        .findByIdAndUpdate(_id, data, { new: false })
+        .exec();
       return await this.bodySpeedModel.findById(_id);
     } else {
       const newBodySpeed = await this.bodySpeedModel.create(data);
@@ -34,38 +33,41 @@ export class AstrologicService {
     }
   }
 
-  async savePlanetStations(num:number, datetime:string, days:number):Promise<any> {
+  async savePlanetStations(
+    num: number,
+    datetime: string,
+    days: number,
+  ): Promise<any> {
     const jd = calcJulDate(datetime);
     const body = grahaValues.find(b => b.num === num);
     let prevSpeed = 0;
-    let data:any = { valid: false };
+    let data: any = { valid: false };
     for (let i = 0; i < days; i++) {
-      
       const refJd = jd + i;
       data = await calcAcceleration(refJd, body);
-      const {start, end} = data;
+      const { start, end } = data;
 
       if (i > 0) {
-        const sd1:BodySpeedDTO = {
+        const sd1: BodySpeedDTO = {
           num,
           speed: start.spd,
           lng: start.lng,
           jd: start.jd,
           datetime: start.dt,
           acceleration: start.spd / prevSpeed,
-          station: 'sample'
+          station: 'sample',
         };
         await this.saveBodySpeed(sd1);
       }
-      
-      const sd2:BodySpeedDTO = {
+
+      const sd2: BodySpeedDTO = {
         num,
         speed: end.spd,
         lng: end.lng,
         jd: end.jd,
         datetime: end.dt,
         acceleration: data.rate,
-        station: 'sample'
+        station: 'sample',
       };
       await this.saveBodySpeed(sd2);
       prevSpeed = end.spd;
@@ -73,15 +75,48 @@ export class AstrologicService {
     return data;
   }
 
-  async saveBodySpeedStation(jd:number ,num:number, station:string ) {
+  async saveBodySpeedStation(
+    jd: number,
+    num: number,
+    station: string,
+  ): Promise<BodySpeed> {
     const bs = await calcStation(jd, num, station);
-    console.log(bs)
-    this.saveBodySpeed(bs);
+    const saved = await this.saveBodySpeed(bs);
+    return saved;
   }
 
-  async speedPatternsByPlanet(num:number):Promise<Array<BodySpeed>> {
-    const data = await this.bodySpeedModel.find({num}).sort({ jd: 1 }).exec();
-    let results:Array<BodySpeed> = [];
+  async nextPrevStation(
+    num: number,
+    jd: number,
+    station: string,
+    prev: boolean,
+  ): Promise<BodySpeed> {
+    const relCondition = prev ? { $lte: jd } : { $gte: jd };
+    const sortDir = prev ? -1 : 1;
+    return await this.bodySpeedModel
+      .findOne({ num, jd: relCondition, station })
+      .sort({ jd: sortDir })
+      .limit(1)
+      .exec();
+  }
+
+  async speedPatternsByPlanet(num: number): Promise<Array<BodySpeed>> {
+    let minJd = 0;
+    const last2 = await this.bodySpeedModel
+      .find({ num, station: { $ne: 'sample' } })
+      .sort({ jd: -1 })
+      .limit(2)
+      .exec();
+
+    if (last2 instanceof Array && last2.length > 1) {
+      minJd = last2[1].jd;
+    }
+    const data = await this.bodySpeedModel
+      .find({ num, station: 'sample', jd: { $gt: minJd } })
+      .sort({ jd: 1 })
+      .limit(5000)
+      .exec();
+    let results: Array<BodySpeed> = [];
     if (data instanceof Array && data.length > 0) {
       let maxSpd = 0;
       let minSpd = 0;
@@ -89,17 +124,17 @@ export class AstrologicService {
       let minMatched = false;
       let currPolarity = 1;
       let prevPolarity = 1;
-      let prevRow:any = null;
+      let prevRow: any = null;
       let rowsMatched = 0;
       data.forEach(row => {
-        currPolarity = row.speed >= 0? 1 : -1;
+        currPolarity = row.speed >= 0 ? 1 : -1;
         if (currPolarity > 0) {
           if (row.speed > maxSpd) {
             maxSpd = row.speed;
           } else if (!maxMatched && prevRow instanceof Object) {
-            results.push(prevRow);
             maxMatched = true;
             if (rowsMatched < 4) {
+              results.push(prevRow);
               this.saveBodySpeedStation(prevRow.jd, num, 'peak');
             }
             rowsMatched++;
@@ -110,26 +145,24 @@ export class AstrologicService {
           if (row.speed < minSpd) {
             minSpd = row.speed;
           } else if (!minMatched && prevRow instanceof Object) {
-            results.push(prevRow);
             minMatched = true;
             if (rowsMatched < 4) {
+              results.push(prevRow);
               this.saveBodySpeedStation(prevRow.jd, num, 'retro-peak');
             }
             rowsMatched++;
             minSpd = 1;
           }
         }
-        if (currPolarity !== prevPolarity) {
-          results.push(row);
+        if (currPolarity !== prevPolarity && prevRow instanceof Object) {
           rowsMatched++;
           maxMatched = false;
           minMatched = false;
           maxSpd = -1;
           minSpd = 1;
           const rs = prevPolarity < 0 ? 'retro-end' : 'retro-start';
-          if (rowsMatched < 4) {
-            this.saveBodySpeedStation(prevRow.jd, num, rs);
-          }
+          this.saveBodySpeedStation(prevRow.jd, num, rs);
+          results.push(row);
         }
         prevPolarity = currPolarity;
         prevRow = Object.assign({}, row.toObject());
@@ -140,5 +173,4 @@ export class AstrologicService {
     }
     return results;
   }
-
 }

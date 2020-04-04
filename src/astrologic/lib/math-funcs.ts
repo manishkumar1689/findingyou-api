@@ -1,8 +1,10 @@
 import vargaValues from './settings/varga-values';
 
 // needs review for other house systems
-export const longitudeMatchesHouseIndex = (deg, longitude) =>
-  longitude >= deg && longitude < deg + 30;
+export const longitudeMatchesHouseIndex = (
+  deg: number,
+  longitude: number,
+): boolean => longitude >= deg && longitude < deg + 30;
 
 export const mapSignToHouse = (deg, sign) => Math.ceil(deg / 30) === sign;
 

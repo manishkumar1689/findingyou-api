@@ -40,7 +40,11 @@ import {
 import { calcJulianDate, calcJulDate } from './lib/date-funcs';
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
-import { calcRetroGrade, calcAcceleration } from './lib/astro-motion';
+import {
+  calcRetroGrade,
+  calcAcceleration,
+  calcStation,
+} from './lib/astro-motion';
 import { toIndianTime, calcTransition } from './lib/transitions';
 import { generateApiRouteMap } from './lib/route-map';
 import { readEpheFiles } from './lib/files';
@@ -330,6 +334,53 @@ export class AstrologicController {
     if (isNumeric(planet)) {
       const num = parseInt(planet);
       data.values = await this.astrologicService.speedPatternsByPlanet(num);
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('planet-station-test/:planet/:startDt/:station')
+  async planetStationTest(
+    @Res() res,
+    @Param('planet') planet,
+    @Param('startDt') startDt,
+    @Param('station') station,
+  ) {
+    let data: any = { valid: false, values: [] };
+    if (isNumeric(planet) && validISODateString(startDt)) {
+      const num = parseInt(planet);
+      const jd = calcJulDate(startDt);
+      const row = await calcStation(jd, num, station);
+      if (row instanceof Object) {
+        const { num, jd, datetime, lng, speed, station } = row;
+        data = { valid: jd > 0, num, jd, datetime, lng, speed, station };
+      }
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('planet-station/:planet/:dt/:station/:mode?')
+  async planetStation(
+    @Res() res,
+    @Param('planet') planet,
+    @Param('dt') dt,
+    @Param('station') station,
+    @Param('mode') mode,
+  ) {
+    let data: any = { valid: false, values: [] };
+    if (isNumeric(planet) && validISODateString(dt)) {
+      const num = parseInt(planet);
+      const jd = calcJulDate(dt);
+      const isPrev = mode === 'prev';
+      const row = await this.astrologicService.nextPrevStation(
+        num,
+        jd,
+        station,
+        isPrev,
+      );
+      if (row instanceof Object) {
+        const { num, jd, datetime, lng, speed, station } = row;
+        data = { valid: jd > 0, num, jd, datetime, lng, speed, station };
+      }
     }
     return res.status(HttpStatus.OK).json(data);
   }
