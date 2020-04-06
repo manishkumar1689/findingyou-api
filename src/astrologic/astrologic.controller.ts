@@ -419,12 +419,20 @@ export class AstrologicController {
       const jd = calcJulDate(dt);
       const current = await calcAcceleration(jd, { num: planet });
       if (current instanceof Object) {
-        const { start } = current;
+        const { start, end } = current;
         if (start instanceof Object) {
-          data.set('current', {
+          data.set('current__spot', {
             ...start,
             retro: start.speed < 0,
             num: planet,
+          });
+          data.set('current__plus-12h', {
+            ...end,
+            retro: end.speed < 0,
+            num: planet,
+            acceleration: current.rate,
+            rising: current.rising,
+            switching: current.switching,
           });
         }
       }
