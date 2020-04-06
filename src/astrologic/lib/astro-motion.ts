@@ -17,7 +17,7 @@ const calcBodySpeed = async (jd, num, callback) => {
 };
 
 export const calcAcceleration = async (jd, body) => {
-  const { num, yearLength } = body;
+  const { num } = body;
   let spds = [];
   for (let i = 0; i < 2; i++) {
     const refJd = jd + i * 0.5;

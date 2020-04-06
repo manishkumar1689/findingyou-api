@@ -40,11 +40,16 @@ import {
 import { calcJulianDate, calcJulDate } from './lib/date-funcs';
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
-import { calcRetroGrade, calcStation } from './lib/astro-motion';
+import {
+  calcRetroGrade,
+  calcStation,
+  calcAcceleration,
+} from './lib/astro-motion';
 import { toIndianTime, calcTransition } from './lib/transitions';
 import { generateApiRouteMap } from './lib/route-map';
 import { readEpheFiles } from './lib/files';
 import moment = require('moment');
+import { start } from 'repl';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -184,7 +189,8 @@ export class AstrologicController {
         .shift();
       const sysRef = notEmptyString(system) ? system : 'W';
       const bd = await calcBodiesInHouses(dtUtc, geo, sysRef);
-      if (bd.jd > 0) {
+      if (bd instanceof Object && bd.jd > 0) {
+        data.valid = true;
         data.jd = bd.jd;
         data = { ...data, ...bd };
       }
@@ -383,6 +389,69 @@ export class AstrologicController {
       }
     }
     return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('planet-stations/:planet/:dt')
+  async planetStationSet(@Res() res, @Param('planet') planet, @Param('dt') dt) {
+    let data = new Map<string, any>();
+    data.set('valid', false);
+    const stations = ['peak', 'retro-start', , 'retro-peak', 'retro-end'];
+    const assignDSRow = (
+      data: Map<string, any>,
+      station: string,
+      mode: string,
+      row: any,
+    ) => {
+      const { num, jd, datetime, lng, speed } = row;
+      const ds = { valid: jd > 0, num, jd, datetime, lng, speed };
+      data.set([mode, station].join('__'), ds);
+    };
+    if (isNumeric(planet) && validISODateString(dt)) {
+      const jd = calcJulDate(dt);
+      const current = await calcAcceleration(jd, { num: planet });
+      data.set('current', {
+        ...current.start,
+        num: planet,
+      });
+      for (const station of stations) {
+        const num = parseInt(planet);
+
+        const row = await this.astrologicService.nextPrevStation(
+          num,
+          jd,
+          station,
+          true,
+        );
+        if (row instanceof Object) {
+          assignDSRow(data, station, 'prev', row);
+        }
+        const row2 = await this.astrologicService.nextPrevStation(
+          num,
+          jd,
+          station,
+          false,
+        );
+        if (row2 instanceof Object) {
+          assignDSRow(data, station, 'next', row2);
+        }
+      }
+    }
+    const results: Array<any> = [];
+    [...data.entries()].forEach(entry => {
+      const [key, row] = entry;
+      if (row instanceof Object) {
+        results.push({
+          station: key,
+          ...row,
+        });
+      }
+    });
+    results.sort((a, b) => a.jd - b.jd);
+
+    return res.status(HttpStatus.OK).json({
+      valid: results.length > 1,
+      results,
+    });
   }
 
   @Get('settings/:filter?')
