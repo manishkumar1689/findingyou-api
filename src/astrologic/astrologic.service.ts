@@ -16,7 +16,9 @@ export class AstrologicService {
 
   // post a single Submission
   async saveBodySpeed(data: BodySpeedDTO): Promise<BodySpeed> {
-    const record = await this.bodySpeedModel.findOne({ jd: data.jd }).exec();
+    const record = await this.bodySpeedModel
+      .findOne({ jd: data.jd, num: data.num })
+      .exec();
     if (record instanceof Object) {
       const { _id } = record;
       await this.bodySpeedModel

@@ -385,7 +385,16 @@ export class AstrologicController {
       );
       if (row instanceof Object) {
         const { num, jd, datetime, lng, speed, station } = row;
-        data = { valid: jd > 0, num, jd, datetime, lng, speed, station };
+        data = {
+          valid: jd > 0,
+          num,
+          jd,
+          datetime,
+          lng,
+          speed,
+          retro: speed < 0,
+          station,
+        };
       }
     }
     return res.status(HttpStatus.OK).json(data);
@@ -403,16 +412,23 @@ export class AstrologicController {
       row: any,
     ) => {
       const { num, jd, datetime, lng, speed } = row;
-      const ds = { valid: jd > 0, num, jd, datetime, lng, speed };
+      const ds = { num, jd, datetime, lng, speed, retro: speed < 0 };
       data.set([mode, station].join('__'), ds);
     };
     if (isNumeric(planet) && validISODateString(dt)) {
       const jd = calcJulDate(dt);
       const current = await calcAcceleration(jd, { num: planet });
-      data.set('current', {
-        ...current.start,
-        num: planet,
-      });
+      if (current instanceof Object) {
+        const { start } = current;
+        if (start instanceof Object) {
+          data.set('current', {
+            ...start,
+            retro: start.speed < 0,
+            num: planet,
+          });
+        }
+      }
+
       for (const station of stations) {
         const num = parseInt(planet);
 
