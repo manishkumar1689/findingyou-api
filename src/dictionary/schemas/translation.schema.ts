@@ -9,4 +9,9 @@ export const TranslationSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  type: {
+    type: String,
+    enum: ['standard', 'full', 'translit', 'short', 'numeric', 'variant'],
+    default: 'standard',
+  },
 });

@@ -15,6 +15,9 @@ export class CreateLexemeDTO {
   readonly translations: TranslationDTO[];
 
   @ApiProperty()
+  readonly lang: TranslationDTO[];
+
+  @ApiProperty()
   readonly createdAt: Date;
 
   @ApiProperty()

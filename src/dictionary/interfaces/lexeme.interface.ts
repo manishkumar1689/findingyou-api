@@ -5,6 +5,7 @@ export interface Lexeme extends Document {
   readonly key: string;
   readonly name: string;
   readonly original: string;
+  readonly lang: string;
   readonly translations: Translation[];
   readonly createdAt: Date;
   readonly modifiedAt: Date;

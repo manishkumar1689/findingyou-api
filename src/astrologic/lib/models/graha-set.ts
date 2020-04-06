@@ -2,13 +2,13 @@ import { isNumeric, notEmptyString } from '../../../lib/validators';
 import { BaseObject } from './base-object';
 import { mapToObject } from '../mappers';
 import {
-  longitudeMatchesHouseIndex,
   mapSignToHouse,
   calcAllVargas,
   calcVargaSet,
   calcInclusiveDistance,
   calcInclusiveTwelfths,
   calcInclusiveNakshatras,
+  matchHouseNum,
 } from '../math-funcs';
 import nakshatraValues from '../settings/nakshatra-values';
 import { Nakshatra } from './nakshatra';
@@ -143,10 +143,7 @@ export class GrahaSet {
 
   mergeHouseData(houseData) {
     this.bodies = this.bodies.map(b => {
-      b.house =
-        houseData.houses.findIndex(deg =>
-          longitudeMatchesHouseIndex(deg, b.longitude),
-        ) + 1;
+      b.house = matchHouseNum(b.longitude, houseData.houses);
       b.ownHouses = b.ownSign.map(s =>
         houseData.houses.findIndex(deg => mapSignToHouse(deg, s)),
       );

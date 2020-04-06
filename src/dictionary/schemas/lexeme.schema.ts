@@ -13,6 +13,12 @@ export const LexemeSchema = new mongoose.Schema({
   original: {
     type: String,
     required: false,
+    default: '',
+  },
+  lang: {
+    type: String,
+    required: true,
+    default: 'en',
   },
   translations: {
     type: [TranslationSchema],

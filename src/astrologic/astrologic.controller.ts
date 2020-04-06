@@ -169,7 +169,7 @@ export class AstrologicController {
     @Param('dt') dt,
     @Param('system') system,
   ) {
-    let data: any = { valid: false };
+    let data: any = { valid: false, jd: -1, geo: {} };
     if (notEmptyString(dt, 6) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       data.geo = await this.geoService.fetchGeoAndTimezone(
@@ -183,7 +183,11 @@ export class AstrologicController {
         .split('.')
         .shift();
       const sysRef = notEmptyString(system) ? system : 'W';
-      data = await calcBodiesInHouses(dtUtc, geo, sysRef);
+      const bd = await calcBodiesInHouses(dtUtc, geo, sysRef);
+      if (bd.jd > 0) {
+        data.jd = bd.jd;
+        data = { ...data, ...bd };
+      }
       const vd = await calcVargas(dtUtc, geo, sysRef);
 
       const td = await calcAllTransitions(dtUtc, data.bodies);
