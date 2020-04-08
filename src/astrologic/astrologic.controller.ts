@@ -402,78 +402,32 @@ export class AstrologicController {
 
   @Get('planet-stations/:planet/:dt')
   async planetStationSet(@Res() res, @Param('planet') planet, @Param('dt') dt) {
-    let data = new Map<string, any>();
-    data.set('valid', false);
-    const stations = ['peak', 'retro-start', , 'retro-peak', 'retro-end'];
-    const assignDSRow = (
-      data: Map<string, any>,
-      station: string,
-      mode: string,
-      row: any,
-    ) => {
-      const { num, jd, datetime, lng, speed } = row;
-      const ds = { num, jd, datetime, lng, speed, retro: speed < 0 };
-      data.set([mode, station].join('__'), ds);
-    };
-    if (isNumeric(planet) && validISODateString(dt)) {
-      const jd = calcJulDate(dt);
-      const current = await calcAcceleration(jd, { num: planet });
-      if (current instanceof Object) {
-        const { start, end } = current;
-        if (start instanceof Object) {
-          data.set('current__spot', {
-            ...start,
-            retro: start.speed < 0,
-            num: planet,
-          });
-          data.set('current__plus-12h', {
-            ...end,
-            retro: end.speed < 0,
-            num: planet,
-            acceleration: current.rate,
-            rising: current.rising,
-            switching: current.switching,
-          });
-        }
-      }
-
-      for (const station of stations) {
-        const num = parseInt(planet);
-
-        const row = await this.astrologicService.nextPrevStation(
-          num,
-          jd,
-          station,
-          true,
-        );
-        if (row instanceof Object) {
-          assignDSRow(data, station, 'prev', row);
-        }
-        const row2 = await this.astrologicService.nextPrevStation(
-          num,
-          jd,
-          station,
-          false,
-        );
-        if (row2 instanceof Object) {
-          assignDSRow(data, station, 'next', row2);
-        }
-      }
+    let results = [];
+    if (isNumeric(planet)) {
+      const num = parseInt(planet);
+      results = await this.astrologicService.planetStations(num, dt);
     }
-    const results: Array<any> = [];
-    [...data.entries()].forEach(entry => {
-      const [key, row] = entry;
-      if (row instanceof Object) {
-        results.push({
-          station: key,
-          ...row,
-        });
-      }
-    });
-    results.sort((a, b) => a.jd - b.jd);
-
     return res.status(HttpStatus.OK).json({
       valid: results.length > 1,
+      results,
+    });
+  }
+
+  @Get('all-planet-stations/:dt')
+  async allPlanetStationSets(@Res() res, @Param('dt') dt) {
+    let rows = new Map<number, any>();
+    const nums = [2, 3, 4, 5, 6, 7, 8, 9];
+    let valid = false;
+    for (const num of nums) {
+      const rs = await this.astrologicService.planetStations(num, dt);
+      if (rs instanceof Object) {
+        rows.set(num, rs);
+        valid = true;
+      }
+    }
+    const results = Object.fromEntries(rows);
+    return res.status(HttpStatus.OK).json({
+      valid,
       results,
     });
   }

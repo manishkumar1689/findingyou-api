@@ -12,6 +12,9 @@ export class CreateLexemeDTO {
   readonly original: string;
 
   @ApiProperty()
+  readonly unicode: string;
+
+  @ApiProperty()
   readonly translations: TranslationDTO[];
 
   @ApiProperty()

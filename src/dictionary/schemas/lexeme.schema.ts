@@ -15,6 +15,12 @@ export const LexemeSchema = new mongoose.Schema({
     required: false,
     default: '',
   },
+
+  unicode: {
+    type: String,
+    required: false,
+    default: '',
+  },
   lang: {
     type: String,
     required: true,

@@ -6,6 +6,7 @@ import { BodySpeedDTO } from './dto/body-speed.dto';
 import { calcAcceleration, calcStation } from './lib/astro-motion';
 import grahaValues from './lib/settings/graha-values';
 import { calcJulianDate, calcJulDate } from './lib/date-funcs';
+import { isNumeric, validISODateString } from 'src/lib/validators';
 
 @Injectable()
 export class AstrologicService {
@@ -169,6 +170,66 @@ export class AstrologicService {
         }
       });
     }
+    return results;
+  }
+
+  async planetStations(num: number, datetime: string): Promise<Array<any>> {
+    let data = new Map<string, any>();
+    data.set('valid', false);
+    const stations = ['peak', 'retro-start', , 'retro-peak', 'retro-end'];
+    const assignDSRow = (
+      data: Map<string, any>,
+      station: string,
+      mode: string,
+      row: any,
+    ) => {
+      const { num, jd, datetime, lng, speed } = row;
+      const ds = { num, jd, datetime, lng, speed, retro: speed < 0 };
+      data.set([mode, station].join('__'), ds);
+    };
+    if (isNumeric(num) && validISODateString(datetime)) {
+      const jd = calcJulDate(datetime);
+      const current = await calcAcceleration(jd, { num });
+      if (current instanceof Object) {
+        const { start, end } = current;
+        if (start instanceof Object) {
+          data.set('current__spot', {
+            ...start,
+            retro: start.speed < 0,
+            num,
+          });
+          data.set('current__plus-12h', {
+            ...end,
+            retro: end.speed < 0,
+            num,
+            acceleration: current.rate,
+            rising: current.rising,
+            switching: current.switching,
+          });
+        }
+      }
+      for (const station of stations) {
+        const row = await this.nextPrevStation(num, jd, station, true);
+        if (row instanceof Object) {
+          assignDSRow(data, station, 'prev', row);
+        }
+        const row2 = await this.nextPrevStation(num, jd, station, false);
+        if (row2 instanceof Object) {
+          assignDSRow(data, station, 'next', row2);
+        }
+      }
+    }
+    const results: Array<any> = [];
+    [...data.entries()].forEach(entry => {
+      const [key, row] = entry;
+      if (row instanceof Object) {
+        results.push({
+          station: key,
+          ...row,
+        });
+      }
+    });
+    results.sort((a, b) => a.jd - b.jd);
     return results;
   }
 }

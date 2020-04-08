@@ -11,6 +11,35 @@ import {
 } from '@nestjs/common';
 import { DictionaryService } from './dictionary.service';
 import { CreateLexemeDTO } from './dto/create-lexeme.dto';
+import { Lexeme } from './interfaces/lexeme.interface';
+import { Translation } from './interfaces/translation.interface';
+import { notEmptyString } from 'src/lib/validators';
+import { TranslationDTO } from './dto/translation.dto';
+
+const mapTranslation = (item: Translation): any => {
+  const keys = ['lang', 'text', 'type'];
+  const mp = new Map<string, any>();
+  keys.forEach(k => {
+    mp.set(k, item[k]);
+  });
+  return Object.fromEntries(mp);
+};
+
+const mapLexeme = (item: Lexeme): any => {
+  const keys = ['key', 'lang', 'name', 'original', 'unicode', 'translations'];
+  const mp = new Map<string, any>();
+  keys.forEach(k => {
+    switch (k) {
+      case 'translations':
+        mp.set(k, item.translations.map(mapTranslation));
+        break;
+      default:
+        mp.set(k, item[k]);
+        break;
+    }
+  });
+  return Object.fromEntries(mp);
+};
 
 @Controller('dictionary')
 export class DictionaryController {
@@ -19,9 +48,9 @@ export class DictionaryController {
   @Get('list/:ref?')
   async listAll(@Res() res, @Param('ref') ref) {
     const filter = new Map<string, string>();
-    if (ref.length > 0) {
+    if (notEmptyString(ref, 1)) {
       const filterName = ref.length < 3 ? 'init' : 'category';
-      const filterVal = ref.length < 3 ? ref : ref + '__';
+      const filterVal = ref;
       filter.set(filterName, filterVal);
     }
     let result: any = { valid: false };
@@ -29,14 +58,14 @@ export class DictionaryController {
       Object.fromEntries(filter),
     );
     if (items instanceof Array) {
-      result = { valid: true, items };
+      result = { valid: true, items: items.map(mapLexeme) };
     }
     return res.status(HttpStatus.OK).send(result);
   }
 
   // add a lexeme
   @Post('create')
-  async addSnippet(@Res() res, @Body() createLexemeDTO: CreateLexemeDTO) {
+  async addLexeme(@Res() res, @Body() createLexemeDTO: CreateLexemeDTO) {
     const lexeme = await this.dictionaryService.addLexeme(createLexemeDTO);
     return res.status(HttpStatus.OK).json({
       message: 'Lexeme has been created successfully',
@@ -44,15 +73,31 @@ export class DictionaryController {
     });
   }
 
-  @Put('edit/:lexemeID')
-  async editSnippet(
+  @Put('edit/:key')
+  async editLexeme(
     @Res() res,
-    @Param('lexemeID') lexemeID,
+    @Param('key') key,
     @Body() createLexemeDTO: CreateLexemeDTO,
   ) {
     const lexeme = await this.dictionaryService.updateLexeme(
-      lexemeID,
+      key,
       createLexemeDTO,
+    );
+    return res.status(HttpStatus.OK).json({
+      message: 'Lexeme has been updated successfully',
+      lexeme,
+    });
+  }
+
+  @Put('add-translation/:key')
+  async addTranslation(
+    @Res() res,
+    @Param('key') key,
+    @Body() translationDTO: TranslationDTO,
+  ) {
+    const lexeme = await this.dictionaryService.saveTranslationByKey(
+      key,
+      translationDTO,
     );
     return res.status(HttpStatus.OK).json({
       message: 'Lexeme has been updated successfully',

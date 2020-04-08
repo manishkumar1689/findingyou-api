@@ -69,6 +69,16 @@ export const extractSimplified = (obj: any, exclude: string[]) => {
   return hashMapToObject(extractObjectAndMerge(matchedVal, data, exclude));
 };
 
+export const extractByKeys = (obj: any, keys: string[]): any => {
+  const mp = new Map<string, any>();
+  if (obj instanceof Object) {
+    keys.forEach(k => {
+      mp.set(k, obj[k]);
+    });
+  }
+  return Object.fromEntries(mp);
+};
+
 export const extractObjectAndMerge = (
   obj: any,
   data: Map<string, any>,
