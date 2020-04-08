@@ -313,8 +313,6 @@ export class AstrologicController {
       const num = parseInt(planet);
       data = await calcRetroGrade(dt, num);
     }
-    console.log(data);
-    //this.AstrologicService.saveBodySpeed(saveData);
     res.send(data);
   }
 

@@ -21,8 +21,8 @@ export const calcAcceleration = async (jd, body) => {
   let spds = [];
   for (let i = 0; i < 2; i++) {
     const refJd = jd + i * 0.5;
-    await calcBodySpeed(refJd, num, (spd, lng) => {
-      spds.push({ spd, lng, jd: refJd, dt: jdToDateTime(refJd) });
+    await calcBodySpeed(refJd, num, (speed, lng) => {
+      spds.push({ speed, lng, jd: refJd, dt: jdToDateTime(refJd) });
     });
   }
   const [start, end] = spds;
