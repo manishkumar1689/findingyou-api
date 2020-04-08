@@ -592,12 +592,12 @@ const addSphutaData = async (
   data.sriLagna =
     ((moon.nakshatra.percent / 100) * 360 + houseData.ascendant) % 360;
 
-  data.houseSignPlusNine = ((data.houseSign - 1 + (9 - 1)) % 12) + 1;
-  const lagnaInduRow = matchInduVal(data.houseSignPlusNine);
+  const houseSignPlusNine = ((data.houseSign - 1 + (9 - 1)) % 12) + 1;
+  const lagnaInduRow = matchInduVal(houseSignPlusNine);
 
-  data.moonSignPlusNine = ((moon.sign - 1 + (9 - 1)) % 12) + 1;
+  const moonSignPlusNine = ((moon.sign - 1 + (9 - 1)) % 12) + 1;
 
-  const moonInduRow = matchInduVal(data.moonSignPlusNine);
+  const moonInduRow = matchInduVal(moonSignPlusNine);
 
   //console.log(lagnaInduRow.value, moonInduRow.value, moon.sign)
 
