@@ -22,11 +22,11 @@ export const calcAcceleration = async (jd, body) => {
   for (let i = 0; i < 2; i++) {
     const refJd = jd + i * 0.5;
     await calcBodySpeed(refJd, num, (speed, lng) => {
-      spds.push({ speed, lng, jd: refJd, dt: jdToDateTime(refJd) });
+      spds.push({ speed, lng, jd: refJd, datetime: jdToDateTime(refJd) });
     });
   }
   const [start, end] = spds;
-  const rate = end.spd / start.spd;
+  const rate = end.speed / start.speed;
   return { start, end, rate, rising: rate >= 1, switching: rate < 0 };
 };
 
