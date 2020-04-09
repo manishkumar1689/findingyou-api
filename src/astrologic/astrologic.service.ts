@@ -52,8 +52,8 @@ export class AstrologicService {
           speed: start.spd,
           lng: start.lng,
           jd: start.jd,
-          datetime: start.dt,
-          acceleration: start.spd / prevSpeed,
+          datetime: start.datetime,
+          acceleration: start.speed / prevSpeed,
           station: 'sample',
         };
         await this.saveBodySpeed(sd1);
@@ -61,10 +61,10 @@ export class AstrologicService {
 
       const sd2: BodySpeedDTO = {
         num,
-        speed: end.spd,
+        speed: end.speed,
         lng: end.lng,
         jd: end.jd,
-        datetime: end.dt,
+        datetime: end.datetime,
         acceleration: data.rate,
         station: 'sample',
       };
