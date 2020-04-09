@@ -63,6 +63,26 @@ export class DictionaryController {
     return res.status(HttpStatus.OK).send(result);
   }
 
+  @Get('categories')
+  async listCategories(@Res() res) {
+    let result: any = { valid: false };
+    const categories = await this.dictionaryService.getCategories();
+    if (categories instanceof Array) {
+      result = { valid: true, categories };
+    }
+    return res.status(HttpStatus.OK).send(result);
+  }
+
+  @Get('categories-keys')
+  async listCategoriesKeys(@Res() res) {
+    let result: any = { valid: false };
+    const categories = await this.dictionaryService.getCategoriesAndKeys();
+    if (categories instanceof Array) {
+      result = { valid: true, categories };
+    }
+    return res.status(HttpStatus.OK).send(result);
+  }
+
   // add a lexeme
   @Post('create')
   async addLexeme(@Res() res, @Body() createLexemeDTO: CreateLexemeDTO) {

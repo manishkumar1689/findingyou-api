@@ -4,6 +4,7 @@ import { Model, Types } from 'mongoose';
 import { Lexeme } from './interfaces/lexeme.interface';
 import { CreateLexemeDTO } from './dto/create-lexeme.dto';
 import { TranslationDTO } from './dto/translation.dto';
+import { CategoryKeys } from './interfaces/category-keys';
 
 @Injectable()
 export class DictionaryService {
@@ -34,6 +35,49 @@ export class DictionaryService {
 
   async getByKey(key: string): Promise<Lexeme> {
     return await this.lexemeModel.findOne({ key }).exec();
+  }
+
+  async getCategoriesKeys(): Promise<Array<any>> {
+    const keyRows = await this.lexemeModel
+      .find({})
+      .select(['key', '-_id'])
+      .exec();
+    let catKeys: Array<string> = [];
+    if (keyRows.length > 0) {
+      catKeys = keyRows.map(kr => kr.key);
+    }
+    return catKeys;
+  }
+
+  async getCategories(): Promise<Array<string>> {
+    const keys = await this.getCategoriesKeys();
+    let categories: Array<string> = [];
+    if (keys.length > 0) {
+      const catKeys = keys.map(k => k.split('__').shift());
+      categories = catKeys.filter((key, ki) => catKeys.indexOf(key) === ki);
+    }
+    return categories;
+  }
+
+  async getCategoriesAndKeys(): Promise<Array<CategoryKeys>> {
+    const keys = await this.getCategoriesKeys();
+    let categoryKeys: Array<CategoryKeys> = [];
+    if (keys.length > 0) {
+      const catKeyPairs = keys.map(k => k.split('__'));
+      const catKeys = catKeyPairs.map(pair => pair[0]);
+      categoryKeys = catKeys
+        .filter((ck, cki) => catKeys.indexOf(ck) === cki)
+        .map(category => {
+          const keys = catKeyPairs
+            .filter(p => p[0] === category)
+            .map(p => p[1]);
+          return {
+            category,
+            keys,
+          };
+        });
+    }
+    return categoryKeys;
   }
 
   // post a single Lexeme
