@@ -84,11 +84,21 @@ export class DictionaryController {
   }
 
   // add a lexeme
-  @Post('create')
-  async addLexeme(@Res() res, @Body() createLexemeDTO: CreateLexemeDTO) {
-    const lexeme = await this.dictionaryService.addLexeme(createLexemeDTO);
+  @Post('save')
+  async saveLexeme(@Res() res, @Body() createLexemeDTO: CreateLexemeDTO) {
+    let lexeme = await this.dictionaryService.getByKey(createLexemeDTO.key);
+    let message = 'Lexeme has been created successfully';
+    if (lexeme) {
+      lexeme = await this.dictionaryService.updateLexeme(
+        createLexemeDTO.key,
+        createLexemeDTO,
+      );
+      message = 'Lexeme has been saved successfully';
+    } else {
+      lexeme = await this.dictionaryService.addLexeme(createLexemeDTO);
+    }
     return res.status(HttpStatus.OK).json({
-      message: 'Lexeme has been created successfully',
+      message,
       lexeme,
     });
   }
