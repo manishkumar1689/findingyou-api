@@ -17,7 +17,7 @@ import { notEmptyString } from 'src/lib/validators';
 import { TranslationDTO } from './dto/translation.dto';
 
 const mapTranslation = (item: Translation): any => {
-  const keys = ['lang', 'text', 'type'];
+  const keys = ['lang', 'text', 'type', 'alpha'];
   const mp = new Map<string, any>();
   keys.forEach(k => {
     mp.set(k, item[k]);
