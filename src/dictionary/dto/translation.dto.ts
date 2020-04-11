@@ -11,5 +11,5 @@ export class TranslationDTO {
   readonly type: string;
 
   @ApiProperty()
-  readonly script: string;
+  readonly alpha: string;
 }

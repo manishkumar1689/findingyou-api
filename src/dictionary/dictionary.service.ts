@@ -83,7 +83,6 @@ export class DictionaryService {
   // post a single Lexeme
   async addLexeme(createLexemeDTO: CreateLexemeDTO): Promise<Lexeme> {
     const newLexeme = new this.lexemeModel(createLexemeDTO);
-    console.log(newLexeme, createLexemeDTO);
     return newLexeme.save();
   }
   // Edit Lexeme details
@@ -109,12 +108,12 @@ export class DictionaryService {
     if (lexeme) {
       const item = lexeme.toObject();
       if (item.translations) {
-        let { lang, text, type, script } = translationDTO;
+        let { lang, text, type, alpha } = translationDTO;
         if (!type) {
           type = 'standard';
         }
-        if (!script) {
-          script = 'lt';
+        if (!alpha) {
+          alpha = 'lt';
         }
         let ti = -1;
         if (item.translations.length > 0) {
@@ -123,9 +122,9 @@ export class DictionaryService {
           );
         }
         if (ti < 0) {
-          item.translations.push({ lang, text, type, script });
+          item.translations.push({ lang, text, type, alpha });
         } else {
-          item.translations[ti] = { lang, text, type, script };
+          item.translations[ti] = { lang, text, type, alpha };
         }
         item.modifiedAt = new Date();
       }
