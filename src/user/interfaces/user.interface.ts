@@ -1,6 +1,8 @@
 import { Document } from 'mongoose';
 import { Status } from './status.interface';
 import { Profile } from './profile.interface';
+import { Placename } from './placename.interface';
+import { Geo } from './geo.interface';
 
 export interface User extends Document {
   readonly fullName: string;
@@ -12,6 +14,8 @@ export interface User extends Document {
   readonly active: boolean;
   readonly test: boolean;
   readonly status: Status[];
+  readonly geo?: Geo;
+  readonly placenames?: Placename[];
   readonly profiles: Profile[];
   readonly preview: string;
   readonly token: string;

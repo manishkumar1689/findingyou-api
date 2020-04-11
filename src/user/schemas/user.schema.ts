@@ -2,9 +2,10 @@ import * as mongoose from 'mongoose';
 import * as validator from 'validator';
 import { StatusSchema } from './status.schema';
 import { ProfileSchema } from './profile.schema';
+import { GeoSchema } from './geo.schema';
+import { PlacenameSchema } from './placename.schema';
 
 export const UserSchema = new mongoose.Schema({
-  uid: Number,
   fullName: String,
   nickName: String,
   identifier: {
@@ -25,7 +26,20 @@ export const UserSchema = new mongoose.Schema({
     required: false,
   },
   roles: [String],
-  profiles: [ProfileSchema],
+  geo: {
+    type: GeoSchema,
+    required: false,
+  },
+  placenames: {
+    type: [PlacenameSchema],
+    default: [],
+    required: false,
+  },
+  profiles: {
+    type: [ProfileSchema],
+    default: [],
+    required: false,
+  },
   preview: {
     type: String,
     required: false,

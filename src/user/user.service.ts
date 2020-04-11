@@ -9,20 +9,19 @@ import * as bcrypt from 'bcrypt';
 import { hashSalt } from '../.config';
 import { generateHash } from '../lib/hash';
 import * as moment from 'moment-timezone';
+import { notEmptyString } from 'src/lib/validators';
 
 const userSelectPaths = [
   '_id',
-  'uid',
-  'firstName',
-  'lastName',
+  'fullName',
+  'nickName',
   'identifier',
   'roles',
   'mode',
   'active',
+  'test',
   'login',
-  'status.key',
-  'status.date',
-  'status.current',
+  'preview',
   'createdAt',
   'modifiedAt',
 ];
@@ -74,8 +73,8 @@ export class UserService {
           case 'active':
             filter.set(key, val > 0 ? true : false);
             break;
-          case 'firstName':
-          case 'lastName':
+          case 'fullName':
+          case 'nickName':
             filter.set(key, new RegExp(val));
             break;
           case 'email':
@@ -119,40 +118,6 @@ export class UserService {
     return user;
   }
 
-  // Get a single User by sequence
-  async findBySeq(seq: number): Promise<string> {
-    let guid = '';
-    const users = await this.userModel
-      .find({})
-      .select('_id')
-      .exec();
-    const matched = users
-      .map(s => {
-        return {
-          num: parseInt(s._id.toString().substring(18), 16),
-          id: s._id,
-        };
-      })
-      .find(s => s.num === seq);
-    if (matched) {
-      guid = matched.id.toString();
-    }
-    return guid;
-  }
-
-  // Get a single User by sequence
-  async guidByUid(uid: number): Promise<string> {
-    let guid = '';
-    const user = await this.userModel
-      .findOne({ uid })
-      .select('_id')
-      .exec();
-    if (user) {
-      guid = user._id.toString();
-    }
-    return guid;
-  }
-
   async findByCriteria(
     criteria: any,
     activeOnly: boolean = true,
@@ -184,19 +149,37 @@ export class UserService {
             : fNameRgx;
 
         switch (key) {
-          case 'firstName':
-          case 'lastName':
+          case 'fullName':
+          case 'nickName':
             filter.set(key, rgx);
             break;
           case 'email':
           case 'identifier':
             filter.set('identifier', rgx);
             break;
+          case 'role':
+            filter.set('roles', {
+              $in: [val],
+            });
+            break;
+          case 'roles':
+            if (notEmptyString(val)) {
+              const roles = val
+                .split(',')
+                .filter(notEmptyString)
+                .map(r => r.trim());
+              if (roles.length > 1) {
+                filter.set('roles', {
+                  $in: val,
+                });
+              }
+            }
+            break;
           case 'usearch':
             filter.set('$or', [
-              { lastName: fNameRgx },
-              { firstName: lNameRgx },
-              { $and: [{ firstName: fNameRgx }, { lastName: lNameRgx }] },
+              { nickName: fNameRgx },
+              { fullName: lNameRgx },
+              { $and: [{ fullName: fNameRgx }, { nickName: lNameRgx }] },
               { identifier: rgx },
             ]);
             break;
@@ -219,21 +202,6 @@ export class UserService {
     const saveObj = { ...userObj };
     const newUser = new this.userModel(saveObj);
     return newUser.save();
-  }
-
-  async getTopUid() {
-    const users = await this.userModel
-      .find({ uid: { $gt: 0 } })
-      .sort({ uid: -1 })
-      .skip(0)
-      .select('_id uid')
-      .limit(1)
-      .exec();
-    let top = 1;
-    if (users.length > 0) {
-      top = users.map(u => u.uid).pop();
-    }
-    return top;
   }
 
   transformUserDTO(createUserDTO: CreateUserDTO, isNew: boolean = false) {

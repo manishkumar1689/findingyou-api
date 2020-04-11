@@ -8,8 +8,4 @@ export const GeoSchema = new mongoose.Schema({
     required: false,
     default: 10,
   },
-  toponyms: {
-    type: Boolean,
-    default: false,
-  },
 });

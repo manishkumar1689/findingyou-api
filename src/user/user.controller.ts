@@ -256,7 +256,7 @@ export class UserController {
         data.set('reset', true);
         data.set('link', resetLink);
         data.set('valid', true);
-        const userName = [user.firstName, user.lastName].join(' ');
+        const userName = [user.fullName, user.nickName].join(' ');
         this.messageService.resetMail(user.identifier, userName, resetLink);
       }
     }

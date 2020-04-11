@@ -1,10 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { StatusDTO } from './status.dto';
+import { GeoDTO } from './geo.dto';
+import { PlacenameDTO } from './placename.dto';
+import { ProfileDTO } from './profile.dto';
 
 export class CreateUserDTO {
-  @ApiProperty()
-  readonly uid: number;
-
   @ApiProperty()
   readonly firstName: string;
 
@@ -31,6 +31,17 @@ export class CreateUserDTO {
 
   @ApiProperty()
   readonly status: StatusDTO[];
+
+  readonly geo?: GeoDTO;
+
+  @ApiProperty()
+  readonly placenames?: PlacenameDTO[];
+
+  @ApiProperty()
+  readonly profiles: ProfileDTO[];
+
+  @ApiProperty()
+  readonly preview: string;
 
   @ApiProperty()
   readonly token: string;
