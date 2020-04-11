@@ -109,9 +109,12 @@ export class DictionaryService {
     if (lexeme) {
       const item = lexeme.toObject();
       if (item.translations) {
-        let { lang, text, type } = translationDTO;
+        let { lang, text, type, script } = translationDTO;
         if (!type) {
           type = 'standard';
+        }
+        if (!script) {
+          script = 'lt';
         }
         let ti = -1;
         if (item.translations.length > 0) {
@@ -120,9 +123,9 @@ export class DictionaryService {
           );
         }
         if (ti < 0) {
-          item.translations.push({ lang, text, type });
+          item.translations.push({ lang, text, type, script });
         } else {
-          item.translations[ti] = { lang, text, type };
+          item.translations[ti] = { lang, text, type, script };
         }
         item.modifiedAt = new Date();
       }

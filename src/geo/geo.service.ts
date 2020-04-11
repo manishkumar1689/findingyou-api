@@ -4,7 +4,12 @@ import { geonamesApiBase, timezonedbApiBase } from './api';
 import { objectToQueryString, mapToQueryString } from '../lib/converters';
 import { AxiosResponse } from 'axios';
 import * as moment from 'moment-timezone';
-import { notEmptyString, isNumeric, objHasKey } from 'src/lib/validators';
+import { notEmptyString, isNumeric } from 'src/lib/validators';
+import {
+  filterDefaultName,
+  filterToponyms,
+  correctOceanTz,
+} from './api/filters';
 
 @Injectable()
 export class GeoService {
@@ -44,13 +49,20 @@ export class GeoService {
       const tzData = await this.fetchGeoNames('timezoneJSON', coords);
       if (tzData.valid) {
         const { geonames, ocean } = data;
+        const { countryCode, countryName, timezoneId } = tzData;
+        const excludeTypes = ['AREA', 'ADM3'];
         let toponyms = [];
         if (geonames instanceof Array) {
           toponyms = geonames
-            .filter(gn => gn.fcode !== 'AREA')
+            .filter(gn => !excludeTypes.includes(gn.fcode))
             .map(row => {
               return {
-                name: row.name,
+                name: filterDefaultName(
+                  row.name,
+                  row.toponymName,
+                  row.fcode,
+                  countryCode,
+                ),
                 fullName: row.toponymName,
                 type: row.fcode,
                 lat: parseFloat(row.lat),
@@ -69,13 +81,16 @@ export class GeoService {
             },
           ];
         }
-        const { countryCode, countryName, timezoneId } = tzData;
+
         const zd = {
           countryName,
           cc: countryCode,
           tz: timezoneId,
         };
-        data = { ...zd, toponyms };
+        data = {
+          ...zd,
+          toponyms: filterToponyms(toponyms),
+        };
       }
     }
     return data;
@@ -84,7 +99,7 @@ export class GeoService {
   async fetchGeoAndTimezone(lat: number, lng: number, datetime: string) {
     const data = await this.fetchGeoData(lat, lng);
     const offset = this.checkGmtOffset(data.tz, datetime);
-    return { ...data, offset };
+    return { ...data, offset: correctOceanTz(data.toponyms, offset) };
   }
 
   async fetchTimezoneOffset(zoneRef: any, datetime: string) {
@@ -123,7 +138,6 @@ export class GeoService {
     let result: any = { valid: false };
     params.set('time', ts);
     const url = timezonedbApiBase + mapToQueryString(params);
-    console.log(url);
     await this.getHttp(url).then(response => {
       if (response instanceof Object) {
         const { data } = response;
@@ -157,6 +171,4 @@ export class GeoService {
     }
     return gmtOffset;
   }
-
-  async matchLocations(search: string) {}
 }

@@ -1,11 +1,12 @@
 import * as mongoose from 'mongoose';
 import * as validator from 'validator';
 import { StatusSchema } from './status.schema';
+import { ProfileSchema } from './profile.schema';
 
 export const UserSchema = new mongoose.Schema({
   uid: Number,
-  firstName: String,
-  lastName: String,
+  fullName: String,
+  nickName: String,
   identifier: {
     type: String,
     required: true,
@@ -24,7 +25,14 @@ export const UserSchema = new mongoose.Schema({
     required: false,
   },
   roles: [String],
+  profiles: [ProfileSchema],
+  preview: {
+    type: String,
+    required: false,
+    default: '',
+  },
   active: Boolean,
+  test: Boolean,
   status: [StatusSchema],
   token: String,
   login: { type: Date, default: null, required: false },

@@ -27,6 +27,9 @@ export class CreateUserDTO {
   readonly active: boolean;
 
   @ApiProperty()
+  readonly test: boolean;
+
+  @ApiProperty()
   readonly status: StatusDTO[];
 
   @ApiProperty()

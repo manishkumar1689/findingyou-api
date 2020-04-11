@@ -9,4 +9,7 @@ export class TranslationDTO {
 
   @ApiProperty()
   readonly type: string;
+
+  @ApiProperty()
+  readonly script: string;
 }

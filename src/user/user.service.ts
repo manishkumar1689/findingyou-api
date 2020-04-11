@@ -16,7 +16,7 @@ const userSelectPaths = [
   'firstName',
   'lastName',
   'identifier',
-  'role',
+  'roles',
   'mode',
   'active',
   'login',
