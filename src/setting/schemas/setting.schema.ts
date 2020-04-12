@@ -12,7 +12,20 @@ export const SettingSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['string', 'date', 'datetime', 'integer', 'float', 'currency', 'boolean', 'array_string', 'array_number', 'array_float'],
+    enum: [
+      'string',
+      'date',
+      'datetime',
+      'integer',
+      'float',
+      'currency',
+      'boolean',
+      'array_string',
+      'array_number',
+      'array_float',
+      'payments',
+      'roles',
+    ],
   },
   weight: {
     type: Number,

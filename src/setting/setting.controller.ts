@@ -19,7 +19,7 @@ export class SettingController {
   constructor(private settingService: SettingService) {}
 
   // add a setting
-  @Post('/create')
+  @Post('create')
   async addSetting(@Res() res, @Body() createSettingDTO: CreateSettingDTO) {
     const setting = await this.settingService.addSetting(createSettingDTO);
     return res.status(HttpStatus.OK).json({
@@ -28,7 +28,7 @@ export class SettingController {
     });
   }
 
-  @Put('/edit/:settingID')
+  @Put('edit/:settingID')
   async editSubmission(
     @Res() res,
     @Param('settingID') userID,

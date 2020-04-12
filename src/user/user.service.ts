@@ -10,6 +10,7 @@ import { hashSalt } from '../.config';
 import { generateHash } from '../lib/hash';
 import * as moment from 'moment-timezone';
 import { notEmptyString } from 'src/lib/validators';
+import roleValues from './settings/roles';
 
 const userSelectPaths = [
   '_id',
@@ -209,29 +210,26 @@ export class UserService {
     let activate = false;
     const dtStr = new Date().toISOString();
     Object.entries(createUserDTO).forEach(entry => {
-      switch (entry[0]) {
+      const [key, val] = entry;
+      switch (key) {
         case 'password':
           if (createUserDTO.password) {
-            userData.set(entry[0], bcrypt.hashSync(entry[1], hashSalt));
+            userData.set(key, bcrypt.hashSync(val, hashSalt));
+          }
+          break;
+        case 'roles':
+          if (val instanceof String) {
+            userData.set('roles', val);
+            //this.setRoles();
           }
           break;
         default:
-          userData.set(entry[0], entry[1]);
-          if (entry[0] === 'active') {
-            activate = true;
-          }
+          userData.set(key, val);
           break;
       }
     });
     if (isNew) {
       userData.set('createdAt', dtStr);
-      if (activate && isNew) {
-        userData.set('status', {
-          key: 'active',
-          current: true,
-          date: dtStr,
-        });
-      }
     }
     userData.set('modifiedAt', dtStr);
     return hashMapToObject(userData);

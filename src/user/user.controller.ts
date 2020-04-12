@@ -14,6 +14,8 @@ import {
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { MessageService } from '../message/message.service';
+import { SettingService } from '../setting/setting.service';
+import { GeoService } from '../geo/geo.service';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { LoginDTO } from './dto/login.dto';
 import { validEmail } from '../lib/validators';
@@ -28,12 +30,16 @@ import {
   extractObjectAndMerge,
   hashMapToObject,
 } from 'src/lib/entities';
+import roleValues from './settings/roles';
+import paymentValues from './settings/payments';
 
 @Controller('user')
 export class UserController {
   constructor(
     private userService: UserService,
     private messageService: MessageService,
+    private settingService: SettingService,
+    private geoService: GeoService,
   ) {}
 
   // add a user
@@ -110,6 +116,20 @@ export class UserController {
       num: users.length,
       items: users,
     });
+  }
+
+  // Fetch a particular user using ID
+  @Get('roles')
+  async listRoles(@Res() res, @Param('userID') userID) {
+    const roles = await this.getRoles();
+    return res.status(HttpStatus.OK).json(roles);
+  }
+
+  // Fetch a particular user using ID
+  @Get('payment-options')
+  async listPaymentOptions(@Res() res, @Param('userID') userID) {
+    const items = await this.getPaymentOptions();
+    return res.status(HttpStatus.OK).json(items);
   }
 
   // Fetch a particular user using ID
@@ -303,5 +323,31 @@ export class UserController {
       message,
       user: userData,
     });
+  }
+
+  async getRoles(): Promise<Array<any>> {
+    const setting = await this.settingService.getByKey('roles');
+    let data: any = {};
+    if (!setting) {
+      data = roleValues;
+    } else if (setting instanceof Object) {
+      if (setting.value instanceof Array) {
+        data = setting.value;
+      }
+    }
+    return data;
+  }
+
+  async getPaymentOptions(): Promise<Array<any>> {
+    const setting = await this.settingService.getByKey('payments');
+    let data: any = {};
+    if (!setting) {
+      data = paymentValues;
+    } else if (setting instanceof Object) {
+      if (setting.value instanceof Array) {
+        data = setting.value;
+      }
+    }
+    return data;
   }
 }

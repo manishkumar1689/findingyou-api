@@ -32,10 +32,15 @@ export class SettingService {
     return setting;
   }
 
-  // Get a single Setting
+  // Match many pattern
   async getByKeyPattern(pattern: string): Promise<Setting[]> {
     const rgx = new RegExp(pattern, 'i');
     return await this.settingModel.find({ key: rgx }).exec();
+  }
+
+  // get a single setting by key
+  async getByKey(key: string): Promise<Setting> {
+    return await this.settingModel.findOne({ key }).exec();
   }
 
   // post a single Setting

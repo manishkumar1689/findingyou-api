@@ -9,6 +9,8 @@ import { AstrologicModule } from './astrologic/astrologic.module';
 import { GeoModule } from './geo/geo.module';
 import { UserModule } from './user/user.module';
 import { DictionaryModule } from './dictionary/dictionary.module';
+import { SettingModule } from './setting/setting.module';
+import { MessageModule } from './message/message.module';
 import { mailDetails } from './.config';
 
 @Module({
@@ -37,6 +39,8 @@ import { mailDetails } from './.config';
     GeoModule,
     UserModule,
     DictionaryModule,
+    SettingModule,
+    MessageModule,
   ],
   controllers: [AppController],
   providers: [AppService],
