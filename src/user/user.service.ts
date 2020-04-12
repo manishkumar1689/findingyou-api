@@ -11,6 +11,8 @@ import { generateHash } from '../lib/hash';
 import * as moment from 'moment-timezone';
 import { notEmptyString } from 'src/lib/validators';
 import roleValues from './settings/roles';
+import { Role } from './interfaces/role.interface';
+import { Status } from './interfaces/status.interface';
 
 const userSelectPaths = [
   '_id',
@@ -197,18 +199,24 @@ export class UserService {
     return users.map(u => u._id);
   }
 
-  // post a single User
-  async addUser(createUserDTO: CreateUserDTO): Promise<User> {
-    const userObj = this.transformUserDTO(createUserDTO, true);
-    const saveObj = { ...userObj };
-    const newUser = new this.userModel(saveObj);
+  // create a single user with basic data
+  async addUser(
+    createUserDTO: CreateUserDTO,
+    roles: Array<Role> = [],
+  ): Promise<User> {
+    const userObj = this.transformUserDTO(createUserDTO, true, roles);
+
+    const newUser = new this.userModel(userObj);
     return newUser.save();
   }
 
-  transformUserDTO(createUserDTO: CreateUserDTO, isNew: boolean = false) {
+  transformUserDTO(
+    createUserDTO: CreateUserDTO,
+    isNew: boolean = false,
+    roles: Array<Role> = [],
+  ) {
     const userData = new Map<string, any>();
-    let activate = false;
-    const dtStr = new Date().toISOString();
+    const dt = new Date();
     Object.entries(createUserDTO).forEach(entry => {
       const [key, val] = entry;
       switch (key) {
@@ -218,9 +226,8 @@ export class UserService {
           }
           break;
         case 'roles':
-          if (val instanceof String) {
+          if (val instanceof Array) {
             userData.set('roles', val);
-            //this.setRoles();
           }
           break;
         default:
@@ -228,10 +235,29 @@ export class UserService {
           break;
       }
     });
-    if (isNew) {
-      userData.set('createdAt', dtStr);
+
+    const roleKeys = userData.get('roles');
+    if (roleKeys instanceof Array) {
+      const statusValues: Array<any> = [];
+      roleKeys.forEach(role => {
+        if (notEmptyString(role, 2) && roles.some(r => r.key === role)) {
+          if (!userData.has('status') && typeof role === 'string') {
+            const status = {
+              role,
+              current: true,
+              createdAt: dt,
+              modifiedAt: dt,
+            };
+            statusValues.push(status);
+          }
+        }
+      });
+      userData.set('status', statusValues);
     }
-    userData.set('modifiedAt', dtStr);
+    if (isNew) {
+      userData.set('createdAt', dt);
+    }
+    userData.set('modifiedAt', dt);
     return hashMapToObject(userData);
   }
 

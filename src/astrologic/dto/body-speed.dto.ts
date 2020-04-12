@@ -1,10 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class BodySpeedDTO {
-
   @ApiProperty()
   readonly jd: number;
 
+  @ApiProperty()
   readonly datetime: string;
 
   @ApiProperty()

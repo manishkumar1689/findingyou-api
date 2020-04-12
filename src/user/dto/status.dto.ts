@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { PaymentDTO } from './payment.dto';
 
 export class StatusDTO {
   @ApiProperty()
@@ -8,7 +9,10 @@ export class StatusDTO {
   readonly current: boolean;
 
   @ApiProperty()
-  readonly expiresAt: Date;
+  readonly payments: PaymentDTO[];
+
+  @ApiProperty()
+  readonly expiresAt?: Date;
 
   @ApiProperty()
   readonly createdAt: Date;

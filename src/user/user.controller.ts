@@ -32,6 +32,7 @@ import {
 } from 'src/lib/entities';
 import roleValues from './settings/roles';
 import paymentValues from './settings/payments';
+import { Role } from './interfaces/role.interface';
 
 @Controller('user')
 export class UserController {
@@ -43,7 +44,7 @@ export class UserController {
   ) {}
 
   // add a user
-  @Post('/create')
+  @Post('create')
   async addUser(@Res() res, @Body() createUserDTO: CreateUserDTO) {
     let msg = 'N/A';
     let userData = {};
@@ -55,7 +56,8 @@ export class UserController {
       msg = 'A user with this email address already exists';
     } else {
       if (validEmail(createUserDTO.identifier)) {
-        const user = await this.userService.addUser(createUserDTO);
+        const roles = await this.getRoles();
+        const user = await this.userService.addUser(createUserDTO, roles);
         if (user) {
           msg = 'User has been created successfully';
           userData = extractSimplified(user, ['password']);
@@ -74,7 +76,7 @@ export class UserController {
     });
   }
 
-  @Put('/edit/:userID')
+  @Put('edit/:userID')
   async editUser(
     @Res() res,
     @Param('userID') userID,
@@ -119,10 +121,17 @@ export class UserController {
   }
 
   // Fetch a particular user using ID
-  @Get('roles')
+  @Get('role-options')
   async listRoles(@Res() res, @Param('userID') userID) {
+    const paymentOpts = await this.getPaymentOptions();
     const roles = await this.getRoles();
-    return res.status(HttpStatus.OK).json(roles);
+    const data = roles.map(role => {
+      const payOpts = paymentOpts.filter(
+        po => po.key.split('__').shift() == role.key,
+      );
+      return { ...role, payOpts };
+    });
+    return res.status(HttpStatus.OK).json(data);
   }
 
   // Fetch a particular user using ID
@@ -225,7 +234,7 @@ export class UserController {
     return res.status(HttpStatus.OK).json(hashMapToObject(userData));
   }
 
-  @Put('/reset-pass/:hash')
+  @Put('reset-pass/:hash')
   async resetPassword(
     @Res() res,
     @Param('hash') hash,
@@ -325,9 +334,26 @@ export class UserController {
     });
   }
 
-  async getRoles(): Promise<Array<any>> {
+  async matchRole(key: string) {
+    const roles = await this.getRoles();
+    let role: Role = {
+      key: '',
+      name: '',
+      overrides: [],
+      adminAccess: false,
+      appAccess: false,
+      permissions: [''],
+    };
+    const matched = roles.find(r => r.key === key);
+    if (matched) {
+      role = matched;
+    }
+    return role;
+  }
+
+  async getRoles(): Promise<Array<Role>> {
     const setting = await this.settingService.getByKey('roles');
-    let data: any = {};
+    let data: Array<Role> = [];
     if (!setting) {
       data = roleValues;
     } else if (setting instanceof Object) {

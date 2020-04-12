@@ -13,6 +13,6 @@ export const StatusSchema = new mongoose.Schema({
     required: false,
   },
   createdAt: { type: Date, default: Date.now },
-  expiresAt: { type: Date, default: Date.now },
+  expiresAt: { type: Date, default: Date.now, required: false },
   modifiedAt: { type: Date, default: Date.now },
 });

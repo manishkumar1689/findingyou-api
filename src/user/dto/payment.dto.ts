@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class Payment {
+export class PaymentDTO {
   @ApiProperty()
   readonly service: string;
 
