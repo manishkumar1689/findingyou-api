@@ -1,5 +1,5 @@
 /*
-Only servces to validate payment options
+Only serves to validate payment options
 */
 
 export interface PaymentOption {

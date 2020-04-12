@@ -8,6 +8,7 @@ import {
   Req,
   Param,
   HttpStatus,
+  Delete,
 } from '@nestjs/common';
 import { DictionaryService } from './dictionary.service';
 import { CreateLexemeDTO } from './dto/create-lexeme.dto';
@@ -133,5 +134,14 @@ export class DictionaryController {
       message: 'Lexeme has been updated successfully',
       lexeme,
     });
+  }
+
+  @Delete('delete/:key/:user')
+  async deleteLexeme(@Res() res, @Param('key') key, @Param('user') user) {
+    let data: any = { valid: false, message: 'not authorised' };
+    if (user.length > 10) {
+      data = await this.dictionaryService.deleteLexemeByKey(key);
+    }
+    return res.status(HttpStatus.OK).json(data);
   }
 }

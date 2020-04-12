@@ -5,6 +5,7 @@ import { Lexeme } from './interfaces/lexeme.interface';
 import { CreateLexemeDTO } from './dto/create-lexeme.dto';
 import { TranslationDTO } from './dto/translation.dto';
 import { CategoryKeys } from './interfaces/category-keys';
+import { hashMapToObject } from 'src/lib/entities';
 
 @Injectable()
 export class DictionaryService {
@@ -131,5 +132,20 @@ export class DictionaryService {
       await this.updateLexeme(key, item);
       return await this.getByKey(key);
     }
+  }
+
+  async deleteLexemeByKey(key: string) {
+    const lexeme = await this.getByKey(key);
+    const mp = new Map<string, any>();
+    if (lexeme) {
+      this.lexemeModel.deleteOne({ key }).exec();
+      mp.set('valid', true);
+      mp.set('lexeme', lexeme);
+      mp.set('message', 'Successfully deleted');
+    } else {
+      mp.set('valid', false);
+      mp.set('message', 'Lexeme with this key not found');
+    }
+    return hashMapToObject(mp);
   }
 }
