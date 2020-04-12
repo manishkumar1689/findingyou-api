@@ -6,8 +6,8 @@ export const BodySpeedSchema = new mongoose.Schema({
     required: true,
   },
   datetime: {
-    type: Date, 
-    required: true
+    type: Date,
+    required: true,
   },
   num: {
     type: Number,
@@ -27,6 +27,6 @@ export const BodySpeedSchema = new mongoose.Schema({
   },
   station: {
     type: String,
-    enum : ['sample', 'peak','retro-start','retro-peak','retro-end'],
+    enum: ['sample', 'peak', 'retro-start', 'retro-peak', 'retro-end'],
   },
 });
