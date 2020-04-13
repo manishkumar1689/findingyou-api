@@ -224,7 +224,7 @@ export class UserService {
         case 'password':
           if (createUserDTO.password) {
             //userData.set(key, bcrypt.hashSync(val, hashSalt));
-            const tsSalt = dt.getTime() % 32;
+            const tsSalt = dt.getTime() % 16;
             userData.set(key, bcrypt.hashSync(val, tsSalt));
           }
           break;
