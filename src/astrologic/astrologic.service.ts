@@ -173,10 +173,14 @@ export class AstrologicService {
     return results;
   }
 
-  async planetStations(num: number, datetime: string): Promise<Array<any>> {
+  async planetStations(
+    num: number,
+    datetime: string,
+    fetchCurrent = false,
+  ): Promise<Array<any>> {
     let data = new Map<string, any>();
     data.set('valid', false);
-    const stations = ['peak', 'retro-start', , 'retro-peak', 'retro-end'];
+    const stations = ['peak', 'retro-start', 'retro-peak', 'retro-end'];
     const assignDSRow = (
       data: Map<string, any>,
       station: string,
@@ -189,23 +193,25 @@ export class AstrologicService {
     };
     if (isNumeric(num) && validISODateString(datetime)) {
       const jd = calcJulDate(datetime);
-      const current = await calcAcceleration(jd, { num });
-      if (current instanceof Object) {
-        const { start, end } = current;
-        if (start instanceof Object) {
-          data.set('current__spot', {
-            ...start,
-            retro: start.speed < 0,
-            num,
-          });
-          data.set('current__plus-12h', {
-            ...end,
-            retro: end.speed < 0,
-            num,
-            acceleration: current.rate,
-            rising: current.rising,
-            switching: current.switching,
-          });
+      if (fetchCurrent) {
+        const current = await calcAcceleration(jd, { num });
+        if (current instanceof Object) {
+          const { start, end } = current;
+          if (start instanceof Object) {
+            data.set('current__spot', {
+              ...start,
+              retro: start.speed < 0,
+              num,
+            });
+            data.set('current__plus-12h', {
+              ...end,
+              retro: end.speed < 0,
+              num,
+              acceleration: current.rate,
+              rising: current.rising,
+              switching: current.switching,
+            });
+          }
         }
       }
       for (const station of stations) {

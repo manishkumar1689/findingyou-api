@@ -33,6 +33,9 @@ import {
 import roleValues from './settings/roles';
 import paymentValues from './settings/payments';
 import { Role } from './interfaces/role.interface';
+import { EditStatusDTO } from './dto/edit-status.dto';
+import { PaymentOption } from './interfaces/payment-option.interface';
+import { RemoveStatusDTO } from './dto/remove-status.dto';
 
 @Controller('user')
 export class UserController {
@@ -142,7 +145,7 @@ export class UserController {
   }
 
   // Fetch a particular user using ID
-  @Get('/item/:userID')
+  @Get('item/:userID')
   async getUser(@Res() res, @Param('userID') userID) {
     const user = await this.userService.getUser(userID);
     if (!user) {
@@ -189,6 +192,49 @@ export class UserController {
     return res.status(HttpStatus.OK).json(hashMapToObject(userData));
   }
 
+  // Fetch a particular user using ID
+  @Post('edit-status')
+  async editStatus(@Res() res, @Body() editStatusDTO: EditStatusDTO) {
+    const roles = await this.getRoles();
+    const paymentOptions = await this.getPaymentOptions();
+    const { user, role, paymentOption, payment, expiryDate } = editStatusDTO;
+    let expiryDt = null;
+    if (expiryDate) {
+      expiryDt = new Date(expiryDate);
+    }
+    const matchedPO = paymentOptions.find(po => po.key === paymentOption);
+    let data: any = { valid: false };
+    if (roles.some(r => r.key === role)) {
+      const userData = await this.userService.updateStatus(
+        user,
+        role,
+        roles,
+        matchedPO,
+        payment,
+        expiryDt,
+      );
+      data = {
+        valid: true,
+        userData,
+      };
+    }
+
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  // Fetch a particular user using ID
+  @Post('remove-status')
+  async removeStatus(@Res() res, @Body() removeStatusDTO: RemoveStatusDTO) {
+    const { user, role } = removeStatusDTO;
+
+    const userData = await this.userService.removeStatus(user, role);
+    const data = {
+      valid: userData instanceof Object,
+      userData,
+    };
+    return res.status(HttpStatus.OK).json(data);
+  }
+
   async matchUserByHash(hash: string) {
     const idStr = fromBase64(hash);
     let user = null;
@@ -210,7 +256,7 @@ export class UserController {
     return { user, matched };
   }
 
-  @Get('/reset/:hash')
+  @Get('reset/:hash')
   async resetMatch(@Res() res, @Param('hash') hash) {
     const { user, matched } = await this.matchUserByHash(hash);
     const userData = new Map<string, any>();
@@ -292,12 +338,12 @@ export class UserController {
     return res.status(HttpStatus.OK).json(hashMapToObject(data));
   }
 
-  @Put('/reset/:userID')
+  @Put('reset/:userID')
   async reset(@Res() res, @Param('userID') userID) {
     return this.triggerResetRequest(userID, res);
   }
 
-  @Post('/reset-request')
+  @Post('reset-request')
   async resetRequest(@Res() res, @Body() loginDTO: LoginDTO) {
     const user = await this.userService.findOneByEmail(loginDTO.email);
     let userID = '';
@@ -313,7 +359,7 @@ export class UserController {
     }
   }
 
-  @Put('/status/:userID/:status')
+  /*   @Put('status/:userID/:status')
   async updateStatus(
     @Res() res,
     @Param('userID') userID,
@@ -332,7 +378,7 @@ export class UserController {
       message,
       user: userData,
     });
-  }
+  } */
 
   async matchRole(key: string) {
     const roles = await this.getRoles();
@@ -364,9 +410,9 @@ export class UserController {
     return data;
   }
 
-  async getPaymentOptions(): Promise<Array<any>> {
+  async getPaymentOptions(): Promise<Array<PaymentOption>> {
     const setting = await this.settingService.getByKey('payments');
-    let data: any = {};
+    let data: Array<PaymentOption> = [];
     if (!setting) {
       data = paymentValues;
     } else if (setting instanceof Object) {

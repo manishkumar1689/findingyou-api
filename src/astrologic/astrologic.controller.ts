@@ -398,12 +398,22 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('planet-stations/:planet/:dt')
-  async planetStationSet(@Res() res, @Param('planet') planet, @Param('dt') dt) {
+  @Get('planet-stations/:planet/:dt:/current?')
+  async planetStationSet(
+    @Res() res,
+    @Param('planet') planet,
+    @Param('dt') dt,
+    @Param('current') current,
+  ) {
     let results = [];
     if (isNumeric(planet)) {
       const num = parseInt(planet);
-      results = await this.astrologicService.planetStations(num, dt);
+      const showCurrent = current === 'current';
+      results = await this.astrologicService.planetStations(
+        num,
+        dt,
+        showCurrent,
+      );
     }
     return res.status(HttpStatus.OK).json({
       valid: results.length > 1,
@@ -411,13 +421,22 @@ export class AstrologicController {
     });
   }
 
-  @Get('all-planet-stations/:dt')
-  async allPlanetStationSets(@Res() res, @Param('dt') dt) {
+  @Get('all-planet-stations/:dt/:current?')
+  async allPlanetStationSets(
+    @Res() res,
+    @Param('dt') dt,
+    @Param('current') current,
+  ) {
     let rows = new Map<number, any>();
     const nums = [2, 3, 4, 5, 6, 7, 8, 9];
     let valid = false;
+    const showCurrent = current === 'current';
     for (const num of nums) {
-      const rs = await this.astrologicService.planetStations(num, dt);
+      const rs = await this.astrologicService.planetStations(
+        num,
+        dt,
+        showCurrent,
+      );
       if (rs instanceof Object) {
         rows.set(num, rs);
         valid = true;
@@ -433,12 +452,6 @@ export class AstrologicController {
   @Get('settings/:filter?')
   async listSettings(@Res() res, @Param('filter') filter) {
     const data = fetchAllSettings(filter);
-    return res.status(HttpStatus.OK).json(data);
-  }
-
-  @Get('routes')
-  async routes(@Res() res) {
-    const data = await generateApiRouteMap();
     return res.status(HttpStatus.OK).json(data);
   }
 }

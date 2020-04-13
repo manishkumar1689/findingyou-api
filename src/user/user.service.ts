@@ -4,7 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { MailerService, mail } from '@nest-modules/mailer';
 import { User } from './interfaces/user.interface';
 import { CreateUserDTO } from './dto/create-user.dto';
-import { hashMapToObject } from '../lib/entities';
+import { hashMapToObject, extractObject } from '../lib/entities';
 import * as bcrypt from 'bcrypt';
 import { hashSalt } from '../.config';
 import { generateHash } from '../lib/hash';
@@ -13,6 +13,9 @@ import { notEmptyString } from 'src/lib/validators';
 import roleValues from './settings/roles';
 import { Role } from './interfaces/role.interface';
 import { Status } from './interfaces/status.interface';
+import { Payment } from './interfaces/payment.interface';
+import { PaymentOption } from './interfaces/payment-option.interface';
+import { PaymentDTO } from './dto/payment.dto';
 
 const userSelectPaths = [
   '_id',
@@ -94,7 +97,7 @@ export class UserService {
   };
 
   // Get a single User
-  async getUser(userID): Promise<User> {
+  async getUser(userID: string): Promise<User> {
     const user = await this.userModel
       .findById(userID)
       .select(userSelectPaths.join(' '))
@@ -288,52 +291,127 @@ export class UserService {
     return updatedUser;
   }
 
-  async updateStatus(userID, status: string): Promise<User> {
+  async updateStatus(
+    userID,
+    statusKey: string,
+    roles: Array<Role> = [],
+    paymentOption: PaymentOption = null,
+    payData: PaymentDTO = null,
+    expiryDt: Date = null,
+  ): Promise<User> {
     const user = await this.userModel.findById(userID);
-    if (user) {
-      let active = false;
-      switch (status) {
-        case 'active':
-          active = true;
-          break;
+    const validRole = roles.some(r => r.key === statusKey);
+    if (user && validRole) {
+      const userObj = extractObject(user);
+      let payment = null;
+      if (payData instanceof Object) {
+        const { service, ref, amount, curr, createdAt } = payData;
+        payment = { service, ref, amount, curr, createdAt };
       }
-      const current = user.status.find(s => s.current);
-      let currStatus = '';
-      if (current) {
-        currStatus = current.role;
+      const currDt = new Date();
+      let expiryDate = null;
+      if (expiryDt instanceof Date) {
+        expiryDate = expiryDt;
+      } else if (paymentOption instanceof Object) {
+        const { period, duration } = paymentOption;
+        if (duration > 0 && notEmptyString(period)) {
+          expiryDate = moment()
+            .add(duration, period)
+            .toDate()!;
+        }
       }
-      if (currStatus !== status) {
-        const currDt = new Date();
-        const expiryDate: Date = moment()
-          .add(1, 'year')
-          .toDate()!;
-        const statuses = user.status.map(row => {
-          return {
-            role: status,
-            current: false,
-            createdAt: row.createdAt,
-            expiresAt: row.expiresAt,
-            modifiedAt: currDt,
-          };
-        });
+      const { status } = userObj;
+      let statuses = status instanceof Array ? status : [];
+      const currIndex = statuses.findIndex(
+        s => s.role === statusKey && s.current,
+      );
+      let newPayments: Array<Payment> = [];
+      if (payment instanceof Object) {
+        if (currIndex < 0) {
+          const prevPayments = statuses[currIndex].payments;
+          if (prevPayments instanceof Array) {
+            newPayments = [...prevPayments, payment];
+          } else {
+            newPayments = [payment];
+          }
+        } else {
+          newPayments = [payment];
+        }
+      }
 
-        statuses.push({
-          role: status,
+      if (currIndex < 0) {
+        const newStatus = {
+          role: statusKey,
           current: true,
+          payments: newPayments,
           createdAt: currDt,
           expiresAt: expiryDate,
           modifiedAt: currDt,
-        });
-        return await this.userModel.findByIdAndUpdate(
-          userID,
-          {
-            active,
-            status: statuses,
-            modifiedAt: currDt,
-          },
-          { new: true },
-        );
+        };
+        statuses.push(newStatus);
+      } else {
+        const currStatus = statuses[currIndex];
+        const editedStatus = {
+          role: currStatus.role,
+          current: true,
+          payments: newPayments,
+          createdAt: currStatus.createdAt,
+          expiresAt: expiryDate,
+          modifiedAt: currDt,
+        };
+        statuses[currIndex] = editedStatus;
       }
+      statuses = statuses.map(st => {
+        if (st.expiresAt) {
+          switch (st.role) {
+            case 'active':
+              break;
+            default:
+              st.current = moment(currDt) <= moment(st.expiresAt);
+              break;
+          }
+        }
+        return st;
+      });
+      const newRoles = statuses.filter(st => st.current).map(st => st.role);
+      let active =
+        newRoles.length > 0 && newRoles.includes('blocked') === false;
+      return await this.userModel.findByIdAndUpdate(
+        userID,
+        {
+          active,
+          roles: newRoles,
+          status: statuses,
+          modifiedAt: currDt,
+        },
+        { new: true },
+      );
+    }
+  }
+
+  async removeStatus(userID, statusKey: string): Promise<User> {
+    const user = await this.userModel.findById(userID);
+    if (user) {
+      const userObj = extractObject(user);
+      const currDt = new Date();
+      const { status } = userObj;
+      let statuses = status instanceof Array ? status : [];
+      statuses = statuses.filter(
+        s => s.role !== statusKey && notEmptyString(s.role),
+      );
+      const newRoles = statuses.filter(st => st.current).map(st => st.role);
+      let active =
+        newRoles.length > 0 && newRoles.includes('blocked') === false;
+      return await this.userModel.findByIdAndUpdate(
+        userID,
+        {
+          active,
+          roles: newRoles,
+          status: statuses,
+          modifiedAt: currDt,
+        },
+        { new: true },
+      );
     }
   }
 
