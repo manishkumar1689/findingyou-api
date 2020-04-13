@@ -355,8 +355,8 @@ export class UserService {
     }
   }
 
-  async registerLogin(userID: string) {
-    const loginDt = new Date().toDateString();
+  async registerLogin(userID: string): Promise<string> {
+    const loginDt = new Date().toISOString();
     const user = await this.userModel.findByIdAndUpdate(userID, {
       login: loginDt,
     });
