@@ -152,7 +152,7 @@ export class UserController {
   }
 
   // Fetch a particular user using ID
-  @Post('/login')
+  @Post('login')
   async login(@Res() res, @Body() loginDTO: LoginDTO) {
     const user = await this.userService.findOneByEmail(loginDTO.email, false);
     const userData = new Map<string, any>();

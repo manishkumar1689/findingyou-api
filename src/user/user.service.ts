@@ -207,6 +207,7 @@ export class UserService {
     const userObj = this.transformUserDTO(createUserDTO, true, roles);
 
     const newUser = new this.userModel(userObj);
+    console.log(newUser);
     return newUser.save();
   }
 
@@ -222,7 +223,9 @@ export class UserService {
       switch (key) {
         case 'password':
           if (createUserDTO.password) {
-            userData.set(key, bcrypt.hashSync(val, hashSalt));
+            //userData.set(key, bcrypt.hashSync(val, hashSalt));
+            const tsSalt = dt.getTime() % 32;
+            userData.set(key, bcrypt.hashSync(val, tsSalt));
           }
           break;
         case 'roles':
