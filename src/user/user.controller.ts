@@ -31,11 +31,14 @@ import {
   hashMapToObject,
 } from 'src/lib/entities';
 import roleValues from './settings/roles';
-import paymentValues from './settings/payments';
+import paymentValues from './settings/payments-options';
+import countryValues from './settings/countries';
+import permissionValues from './settings/permissions';
 import { Role } from './interfaces/role.interface';
 import { EditStatusDTO } from './dto/edit-status.dto';
 import { PaymentOption } from './interfaces/payment-option.interface';
 import { RemoveStatusDTO } from './dto/remove-status.dto';
+import { CountryOption } from './interfaces/country-option.interface';
 
 @Controller('user')
 export class UserController {
@@ -125,7 +128,7 @@ export class UserController {
 
   // Fetch a particular user using ID
   @Get('role-options')
-  async listRoles(@Res() res, @Param('userID') userID) {
+  async listRoles(@Res() res) {
     const paymentOpts = await this.getPaymentOptions();
     const roles = await this.getRoles();
     const data = roles.map(role => {
@@ -139,9 +142,27 @@ export class UserController {
 
   // Fetch a particular user using ID
   @Get('payment-options')
-  async listPaymentOptions(@Res() res, @Param('userID') userID) {
+  async listPaymentOptions(@Res() res) {
     const items = await this.getPaymentOptions();
     return res.status(HttpStatus.OK).json(items);
+  }
+
+  @Get('country-options')
+  async listCountryOptions(@Res() res) {
+    const data = {
+      valid: countryValues instanceof Array,
+      items: countryValues,
+    };
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('permissions')
+  async listPermissions(@Res() res) {
+    const data = {
+      valid: permissionValues instanceof Array,
+      items: permissionValues,
+    };
+    return res.status(HttpStatus.OK).json(data);
   }
 
   // Fetch a particular user using ID
@@ -415,6 +436,27 @@ export class UserController {
     let data: Array<PaymentOption> = [];
     if (!setting) {
       data = paymentValues;
+    } else if (setting instanceof Object) {
+      if (setting.value instanceof Array) {
+        data = setting.value.map(st => {
+          if (!st.isFallback) {
+            st.isFallback = false;
+          }
+          if (!st.ccodes) {
+            st.ccodes = [];
+          }
+          return st;
+        });
+      }
+    }
+    return data;
+  }
+
+  async getCountryOptions(): Promise<Array<CountryOption>> {
+    const setting = await this.settingService.getByKey('countries');
+    let data: Array<CountryOption> = [];
+    if (!setting) {
+      data = countryValues;
     } else if (setting instanceof Object) {
       if (setting.value instanceof Array) {
         data = setting.value;
