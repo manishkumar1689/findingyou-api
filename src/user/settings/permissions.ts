@@ -4,7 +4,7 @@ These permissions are enforced in code. The value list is for reference in the a
 
 const permissionValues = [
   {
-    key: 'super',
+    key: 'all',
     name: 'Global permissions',
   },
   {
@@ -14,6 +14,14 @@ const permissionValues = [
   {
     key: 'basic_account',
     name: 'Basic account',
+  },
+  {
+    key: 'basic_search',
+    name: 'Basic search',
+  },
+  {
+    key: 'advanced_search',
+    name: 'Advanced search',
   },
   {
     key: 'image_upload',
@@ -30,6 +38,10 @@ const permissionValues = [
   {
     key: 'private_profiles',
     name: 'Add private profiles',
+  },
+  {
+    key: 'advanced_matching',
+    name: 'Advanced matchmaking',
   },
   {
     key: 'advanced_charting',
