@@ -36,6 +36,7 @@ import {
   calcMrityubhagaValues,
   calcSphutaData,
   fetchAllSettings,
+  calcCompactChartData,
 } from './lib/core';
 import { calcJulianDate, calcJulDate } from './lib/date-funcs';
 import { chartData } from './lib/chart';
@@ -216,6 +217,16 @@ export class AstrologicController {
         entry => !(entry[1] instanceof Object),
       );
       data.sphutas = Object.fromEntries(entries);
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('compact/:loc/:dt')
+  async compactDataSet(@Res() res, @Param('loc') loc, @Param('dt') dt) {
+    let data: any = { valid: false };
+    if (validISODateString(dt) && notEmptyString(loc, 3)) {
+      const geo = locStringToGeo(loc);
+      data = await calcCompactChartData(dt, geo);
     }
     return res.status(HttpStatus.OK).json(data);
   }

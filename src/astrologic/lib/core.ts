@@ -50,6 +50,7 @@ import {
   validISODateString,
   inRange,
 } from '../../lib/validators';
+import { hashMapToObject } from 'src/lib/entities';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 
@@ -64,7 +65,7 @@ export const calcUpagrahas = async (datetime, geo, showPeriods = false) => {
     periodLength,
     dayBefore,
     periodHours,
-    isDaytime,
+    isDayTime,
     weekDay,
   } = await calcJyotishSunRise(datetime, geo);
   const eighthJd = periodLength / 8;
@@ -72,7 +73,7 @@ export const calcUpagrahas = async (datetime, geo, showPeriods = false) => {
   const periods = showPeriods
     ? await calcUpagrahaPeriods(startJd, eighthJd, geo)
     : [];
-  const sectionKey = isDaytime ? 'daytime' : 'nighttime';
+  const sectionKey = isDayTime ? 'daytime' : 'nighttime';
   const upaRow = upagrahaData[sectionKey].find(row => row.day === weekDay);
   let values = [];
   for (const ref of upagrahaData.refs) {
@@ -97,7 +98,7 @@ export const calcUpagrahas = async (datetime, geo, showPeriods = false) => {
     eighth,
     weekDay,
     values,
-    isDaytime,
+    isDayTime,
   };
   if (showPeriods) {
     out.periods = periods;
@@ -549,6 +550,28 @@ export const calcSphutaData = async (datetime: string, geo) => {
   return { ...data };
 };
 
+export const calcCompactChartData = async (datetime: string, geo) => {
+  const grahaSet = await calcGrahaSet(datetime);
+  const grahas = grahaSet.bodies.map(simplifyGraha);
+  let hdW = await fetchHouseData(datetime, geo, 'W');
+  hdW.houses = hdW.houses.splice(0, 1);
+  let hdP = await fetchHouseData(datetime, geo, 'P');
+  hdP.houses = hdP.houses.splice(0, 6);
+  const houseData = { ...hdW, pHouses: hdP.houses };
+  const upagrahas = await calcUpagrahas(datetime, geo);
+  const indianTimeData = await fetchIndianTimeData(datetime, geo);
+  const sunAtSunRise = await calcSunJd(indianTimeData.dayStart());
+  return {
+    jd: grahaSet.jd,
+    grahas,
+    ...houseData,
+    indianTime: indianTimeData.toValues(),
+    sun: indianTimeData.sunData(),
+    upagrahas,
+    sunAtSunRise: simplifyGraha(sunAtSunRise),
+  };
+};
+
 const matchInduVal = (houseNum: number) => {
   const matchedGraha = rashiValues.find(r => r.num === houseNum);
   let indu = {
@@ -602,7 +625,7 @@ const addSphutaData = async (
   //console.log(lagnaInduRow.value, moonInduRow.value, moon.sign)
 
   data.induLagna =
-    ((lagnaInduRow.value + moonInduRow.value + moon.sign) % 12) + 1;
+    ((lagnaInduRow.value + moonInduRow.value + moon.sign) % 12) - 1;
 
   const sunAtSunRise = await calcSunJd(iTime.dayStart());
 
@@ -1012,6 +1035,57 @@ export const calcPanchanga = async (datetime, geo) => {
     muhurtaRange,
     kalam,
   };
+};
+
+const simplifyGraha = (graha: Graha) => {
+  const keys = [
+    'num',
+    'key',
+    'longitude',
+    'latitude',
+    'distance',
+    'longitudeSpeed',
+    'latitudeSpeed',
+    'distanceSpeed',
+    'sign',
+    'nakshatra',
+    'ruler',
+    'relationship',
+    'isOwnSign',
+    'isMulaTrikon',
+    'charaKarakaMode',
+    'charaKaraka',
+    'house',
+    'padaNum',
+    'percent',
+    'akshara',
+    'isExalted',
+    'isDebilitated',
+  ];
+  const nakshatraKeys = [
+    'index',
+    'ruler',
+    'goal',
+    'sex',
+    'yoni',
+    'nadi',
+    'within',
+  ];
+  const mp = new Map<string, any>();
+  keys.forEach(k => {
+    switch (k) {
+      case 'nakshatra':
+        mp.set(k, simplifyObject(graha.nakshatra, nakshatraKeys));
+        break;
+      case 'relationship':
+        mp.set(k, graha.relationship.compound);
+        break;
+      default:
+        mp.set(k, graha[k]);
+        break;
+    }
+  });
+  return hashMapToObject(mp);
 };
 
 export const fetchAllSettings = (filter: string) => {

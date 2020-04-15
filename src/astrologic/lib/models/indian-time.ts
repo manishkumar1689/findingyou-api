@@ -1,6 +1,7 @@
-import * as moment from "moment";
+import * as moment from 'moment';
 import { BaseObject } from './base-object';
-import { JyotishDay } from "./jyotish-day";
+import { JyotishDay } from './jyotish-day';
+import { hashMapToObject } from 'src/lib/entities';
 
 export class IndianTime extends BaseObject {
   /*
@@ -25,7 +26,7 @@ export class IndianTime extends BaseObject {
 
   date = null;
 
-  constructor(jDay:JyotishDay) {
+  constructor(jDay: JyotishDay) {
     super();
     if (jDay instanceof JyotishDay) {
       this._jDay = jDay;
@@ -55,6 +56,8 @@ export class IndianTime extends BaseObject {
 
   prevSet = () => this._sunData.set;
 
+  nextRise = () => this._sunData.nextRise;
+
   isDayTime = () => this._jDay.isDayTime();
 
   dayBefore = () => this._jDay.dayBefore();
@@ -72,13 +75,43 @@ export class IndianTime extends BaseObject {
   vighatiVal = () => {
     const remainder = this.ghatiVal() % 1;
     return remainder * 60;
-  }
+  };
 
   vighati = () => Math.floor(this.vighatiVal());
 
   lipta = () => {
     const remainder = this.vighatiVal() % 1;
     return remainder * 60;
+  };
+
+  sunData() {
+    const keys = ['prevRise', 'prevSet', 'rise', 'set', 'nextRise'];
+    const mp = new Map<string, any>();
+    keys.forEach(key => {
+      mp.set(key, this[key]().jd);
+    });
+    return hashMapToObject(mp);
   }
 
+  toValues() {
+    const keys = [
+      'year',
+      'dayNum',
+      'progress',
+      'dayLength',
+      'isDayTime',
+      'dayBefore',
+      'dayStart',
+      'ghatiVal',
+      'muhurta',
+      'ghati',
+      'vighati',
+      'lipta',
+    ];
+    const mp = new Map<string, any>();
+    keys.forEach(key => {
+      mp.set(key, this[key]());
+    });
+    return hashMapToObject(mp);
+  }
 }
