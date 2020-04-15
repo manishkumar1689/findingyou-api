@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { SettingService } from './setting.service';
 import { CreateSettingDTO } from './dto/create-setting.dto';
+import { notEmptyString } from 'src/lib/validators';
 
 @Controller('setting')
 export class SettingController {
@@ -29,17 +30,42 @@ export class SettingController {
   }
 
   @Put('edit/:settingID')
-  async editSubmission(
+  async editSetting(
     @Res() res,
-    @Param('settingID') userID,
+    @Param('settingID') settingID,
     @Body() createSettingDTO: CreateSettingDTO,
   ) {
     const setting = await this.settingService.updateSetting(
-      userID,
+      settingID,
       createSettingDTO,
     );
     return res.status(HttpStatus.OK).json({
       message: 'Setting has been updated successfully',
+      setting,
+    });
+  }
+
+  @Put('edit-by-key/:key/:userID')
+  async editSettingByKey(
+    @Res() res,
+    @Param('key') key,
+    @Param('userID') userID,
+    @Body() createSettingDTO: CreateSettingDTO,
+  ) {
+    let setting: any = {};
+    let message = 'Invalid key or user ID';
+    if (notEmptyString(userID, 9)) {
+      const matchedSetting = await this.settingService.getByKey(key);
+      setting = await this.settingService.updateSetting(
+        matchedSetting._id,
+        createSettingDTO,
+      );
+      if (setting) {
+        message = 'Setting has been updated successfully';
+      }
+    }
+    return res.status(HttpStatus.OK).json({
+      message,
       setting,
     });
   }
