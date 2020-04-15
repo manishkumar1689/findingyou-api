@@ -426,6 +426,7 @@ const addGrahaValues = async data => {
     const num = swisseph[body.ref];
     const flag =
       swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SIDEREAL + swisseph.SEFLG_SPEED;
+    const dV = await calcDeclination(data.jd, body.num);
     await calcUtAsync(data.jd, num, flag).catch(async result => {
       if (result instanceof Object) {
         if (!result.error) {
@@ -437,6 +438,7 @@ const addGrahaValues = async data => {
             neutral: body.neutral,
             enemies: body.enemies,
             ...result,
+            declination: dV.value,
           });
           if (!data.valid) {
             data.valid = true;
@@ -453,6 +455,30 @@ const addGrahaValues = async data => {
 
   data = new GrahaSet(data);
   data.matchRelationships();
+};
+
+interface DeclinationResult {
+  valid: boolean;
+  value: number;
+}
+
+const calcDeclination = async (
+  jd: number,
+  num: number,
+): Promise<DeclinationResult> => {
+  const flag =
+    swisseph.SEFLG_SWIEPH | swisseph.SEFLG_SPEED | swisseph.SEFLG_EQUATORIAL;
+  let data = { valid: false, value: 0 };
+  await calcUtAsync(jd, num, flag).catch(async result => {
+    if (result instanceof Object) {
+      if (!result.error) {
+        if (result instanceof Object) {
+          data = { valid: true, value: result.declination };
+        }
+      }
+    }
+  });
+  return data;
 };
 
 const mergeCharaKarakaToBodies = (bodies, withinSignBodies) => {
@@ -567,7 +593,7 @@ export const calcCompactChartData = async (datetime: string, geo) => {
     ...houseData,
     indianTime: indianTimeData.toValues(),
     sun: indianTimeData.sunData(),
-    upagrahas,
+    upagrahas: upagrahas.values.map(mapUpagraha),
     sunAtSunRise: simplifyGraha(sunAtSunRise),
   };
 };
@@ -1037,6 +1063,15 @@ export const calcPanchanga = async (datetime, geo) => {
   };
 };
 
+export const getAyanamshas = (jd: number) => {
+  //const iflag = swisseph.SEFLG_SWIEPH | SEFLG_SPEED | SEFLG_EQUATORIAL);
+};
+
+const mapUpagraha = upagraha => {
+  const keys = ['parts', 'value', 'jd', 'upagraha'];
+  return simplifyObject(upagraha, keys);
+};
+
 const simplifyGraha = (graha: Graha) => {
   const keys = [
     'num',
@@ -1047,13 +1082,13 @@ const simplifyGraha = (graha: Graha) => {
     'longitudeSpeed',
     'latitudeSpeed',
     'distanceSpeed',
+    'declination',
     'sign',
     'nakshatra',
     'ruler',
     'relationship',
     'isOwnSign',
     'isMulaTrikon',
-    'charaKarakaMode',
     'charaKaraka',
     'house',
     'padaNum',
@@ -1062,15 +1097,7 @@ const simplifyGraha = (graha: Graha) => {
     'isExalted',
     'isDebilitated',
   ];
-  const nakshatraKeys = [
-    'index',
-    'ruler',
-    'goal',
-    'sex',
-    'yoni',
-    'nadi',
-    'within',
-  ];
+  const nakshatraKeys = ['index', 'within'];
   const mp = new Map<string, any>();
   keys.forEach(k => {
     switch (k) {

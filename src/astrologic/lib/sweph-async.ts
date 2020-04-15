@@ -1,4 +1,4 @@
-import * as util from "util";
+import * as util from 'util';
 import * as swisseph from 'swisseph';
 
 export const calcAsync = util.promisify(swisseph.calc);
@@ -15,3 +15,4 @@ export const fixstar2MagAsync = util.promisify(swisseph.swe_fixstar2_mag);
 
 export const getHouses = util.promisify(swisseph.swe_houses_ex);
 
+export const getAyanamsa = util.promisify(swisseph.swe_get_ayanamsa_ut);

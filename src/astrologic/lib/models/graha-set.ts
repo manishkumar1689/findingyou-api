@@ -31,6 +31,7 @@ export class Graha extends BaseObject {
   longitude: number = 0;
   latitude: number = 0;
   distance: number = 1;
+  declination?: number = null;
   longitudeSpeed: number = 0;
   latitudeSpeed: number = 0;
   distanceSpeed: number = 0;
