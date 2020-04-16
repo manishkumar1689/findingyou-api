@@ -352,6 +352,7 @@ const processBodyResult = (result: any, body: any) => {
       rel.natural = 'enemy';
     }
   }
+  result.mulaTrikon = body.mulaTrikon;
   result.relationship = rel;
   result.withinSign = result.longitude % 30;
   result.isOwnSign = body.ownSign.indexOf(result.sign) >= 0;
@@ -583,8 +584,9 @@ export const calcSphutaData = async (datetime: string, geo) => {
 export const calcCompactChartData = async (datetime: string, geo) => {
   const grahaSet = await calcGrahaSet(datetime);
   const { jd } = grahaSet;
-  const grahas = grahaSet.bodies.map(simplifyGraha);
   let hdW = await fetchHouseData(datetime, geo, 'W');
+  grahaSet.mergeHouseData(hdW);
+  const grahas = grahaSet.bodies.map(simplifyGraha);
   hdW.houses = hdW.houses.splice(0, 1);
   let hdP = await fetchHouseData(datetime, geo, 'P');
   hdP.houses = hdP.houses.splice(0, 6);
@@ -1123,6 +1125,8 @@ const simplifyGraha = (graha: Graha) => {
     'isMulaTrikon',
     'charaKaraka',
     'house',
+    'ownHouses',
+    'ownSignHouses',
     'padaNum',
     'percent',
     'akshara',

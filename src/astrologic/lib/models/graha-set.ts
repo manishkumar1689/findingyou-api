@@ -38,6 +38,7 @@ export class Graha extends BaseObject {
   rflag: number = 0;
   sign: number = 0;
   calc: string = '';
+  ownSignHouses: Array<number> = [];
   nakshatra = new Nakshatra();
   ruler = '';
   friends = [];
@@ -145,9 +146,23 @@ export class GrahaSet {
   mergeHouseData(houseData) {
     this.bodies = this.bodies.map(b => {
       b.house = matchHouseNum(b.longitude, houseData.houses);
-      b.ownHouses = b.ownSign.map(s =>
-        houseData.houses.findIndex(deg => mapSignToHouse(deg, s)),
+      if (b.mulaTrikon) {
+        b.ownSign.sort((s1, s2) => (s1 === b.mulaTrikon ? 1 : -1));
+      }
+      b.ownHouses = b.ownSign.map(sign =>
+        mapSignToHouse(sign, houseData.houses),
       );
+
+      b.ownSignHouses = b.ownSign
+        .map(sn => {
+          const gr2 = this.bodies.find(b => b.num === sn);
+          let hn = -1;
+          if (gr2) {
+            hn = gr2.house;
+          }
+          return hn;
+        })
+        .filter(hn => hn > 0);
       return b;
     });
     return this;

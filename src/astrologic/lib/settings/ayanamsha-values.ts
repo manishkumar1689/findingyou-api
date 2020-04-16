@@ -42,7 +42,6 @@ const ayanamshaValues = [
   { key: 'galcent_cochrane', value: 40 },
   { key: 'galequ_fiorenza', value: 41 },
   { key: 'valens_moon', value: 42 },
-  { key: 'user', value: 255 },
 ];
 
 export default ayanamshaValues;

@@ -17,8 +17,16 @@ export const matchHouseNum = (lng: number, houses: Array<number>): number => {
   return matchedIndex + 1;
 };
 
-export const mapSignToHouse = (deg: number, sign: number): boolean =>
-  Math.ceil(deg / 30) === sign;
+export const mapSignToHouse = (sign: number, houses: Array<number>): number => {
+  const numH = houses.length;
+  let hn = 0;
+  if (numH > 0) {
+    const diff = houses[0] / 30;
+    const hnr = (sign - diff) % numH;
+    hn = hnr < 1 ? hnr + numH : hnr;
+  }
+  return hn;
+};
 
 export const calcVargaValue = (lng, num) => (lng * num) % 360;
 

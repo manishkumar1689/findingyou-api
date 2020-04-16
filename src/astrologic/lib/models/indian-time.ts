@@ -102,7 +102,6 @@ export class IndianTime extends BaseObject {
       'isDayTime',
       'dayBefore',
       'dayStart',
-      'ghatiVal',
       'muhurta',
       'ghati',
       'vighati',
