@@ -9,6 +9,7 @@ import {
   fixedStar2UtAsync,
   fixstar2MagAsync,
   getHouses,
+  getAyanamsa,
 } from './sweph-async';
 import { calcJulDate, jdToDateTime } from './date-funcs';
 import {
@@ -51,6 +52,7 @@ import {
   inRange,
 } from '../../lib/validators';
 import { hashMapToObject } from 'src/lib/entities';
+import { NumValue } from '../interfaces/num-value';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 
@@ -578,6 +580,7 @@ export const calcSphutaData = async (datetime: string, geo) => {
 
 export const calcCompactChartData = async (datetime: string, geo) => {
   const grahaSet = await calcGrahaSet(datetime);
+  const { jd } = grahaSet;
   const grahas = grahaSet.bodies.map(simplifyGraha);
   let hdW = await fetchHouseData(datetime, geo, 'W');
   hdW.houses = hdW.houses.splice(0, 1);
@@ -586,16 +589,66 @@ export const calcCompactChartData = async (datetime: string, geo) => {
   const houseData = { ...hdW, pHouses: hdP.houses };
   const upagrahas = await calcUpagrahas(datetime, geo);
   const indianTimeData = await fetchIndianTimeData(datetime, geo);
-  const sunAtSunRise = await calcSunJd(indianTimeData.dayStart());
+  //const sunAtSunRise = await calcSunJd(indianTimeData.dayStart());
+  const ayanamshas = await calcAyanamshas(jd);
+  const sphutaObj = await addSphutaData(
+    grahaSet,
+    hdW,
+    indianTimeData,
+    upagrahas,
+  );
+  const sphutas = Object.entries(sphutaObj)
+    .filter(entry => entry[0] !== 'grahaSet')
+    .map(entry => {
+      const [key, value] = entry;
+      return {
+        key,
+        value,
+      };
+    });
   return {
-    jd: grahaSet.jd,
+    jd,
     grahas,
     ...houseData,
     indianTime: indianTimeData.toValues(),
     sun: indianTimeData.sunData(),
+    ayanamshas,
     upagrahas: upagrahas.values.map(mapUpagraha),
-    sunAtSunRise: simplifyGraha(sunAtSunRise),
+    sphutas,
   };
+};
+
+const calcAyanamshas = async (jd: number): Promise<Array<NumValue>> => {
+  const ayaNums = [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    15,
+    16,
+    21,
+    22,
+    23,
+    25,
+    26,
+  ];
+  //const iflag = swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SIDEREAL;
+  const iflag = swisseph.SEFLG_SIDEREAL;
+  return ayaNums.map(num => {
+    const result = getAyanamsa(jd, iflag + num * 1024);
+    const { ayanamsa } = result;
+    return {
+      num,
+      value: ayanamsa,
+    };
+  });
 };
 
 const matchInduVal = (houseNum: number) => {
@@ -1061,10 +1114,6 @@ export const calcPanchanga = async (datetime, geo) => {
     muhurtaRange,
     kalam,
   };
-};
-
-export const getAyanamshas = (jd: number) => {
-  //const iflag = swisseph.SEFLG_SWIEPH | SEFLG_SPEED | SEFLG_EQUATORIAL);
 };
 
 const mapUpagraha = upagraha => {

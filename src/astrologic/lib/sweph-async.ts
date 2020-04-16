@@ -15,4 +15,4 @@ export const fixstar2MagAsync = util.promisify(swisseph.swe_fixstar2_mag);
 
 export const getHouses = util.promisify(swisseph.swe_houses_ex);
 
-export const getAyanamsa = util.promisify(swisseph.swe_get_ayanamsa_ut);
+export const getAyanamsa = swisseph.swe_get_ayanamsa_ex_ut;
