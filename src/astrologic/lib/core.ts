@@ -1147,7 +1147,7 @@ const simplifyGraha = (graha: Graha) => {
   return hashMapToObject(mp);
 };
 
-export const fetchAllSettings = (filter: string) => {
+export const fetchAllSettings = (filters: Array<string> = []) => {
   const settings: any = {
     starValues,
     asteroidValues,
@@ -1172,9 +1172,17 @@ export const fetchAllSettings = (filter: string) => {
     induValues,
   };
 
-  if (notEmptyString(filter, 4)) {
+  if (filters.length > 0) {
     const keys = Object.keys(settings);
-    if (keys.includes(filter)) {
+    if (filters.length > 1) {
+      const mp = new Map<string, any>();
+      filters.forEach(fk => {
+        mp.set(fk, settings[fk]);
+      });
+      const obj = hashMapToObject(mp);
+      return { valid: true, ...obj };
+    } else if (filters.length === 1) {
+      const filter = filters.shift();
       return { valid: true, [filter]: settings[filter] };
     } else {
       return { valid: false };

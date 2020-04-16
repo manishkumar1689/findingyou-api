@@ -462,7 +462,11 @@ export class AstrologicController {
 
   @Get('settings/:filter?')
   async listSettings(@Res() res, @Param('filter') filter) {
-    const data = fetchAllSettings(filter);
+    let filters: Array<string> = [];
+    if (notEmptyString(filter, 3)) {
+      filters = filter.split(',');
+    }
+    const data = fetchAllSettings(filters);
     return res.status(HttpStatus.OK).json(data);
   }
 }

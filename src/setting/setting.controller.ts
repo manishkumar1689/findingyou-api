@@ -14,6 +14,7 @@ import {
 import { SettingService } from './setting.service';
 import { CreateSettingDTO } from './dto/create-setting.dto';
 import { notEmptyString } from 'src/lib/validators';
+import { extractDocId } from 'src/lib/entities';
 
 @Controller('setting')
 export class SettingController {
@@ -56,12 +57,14 @@ export class SettingController {
     let message = 'Invalid key or user ID';
     if (notEmptyString(userID, 9)) {
       const matchedSetting = await this.settingService.getByKey(key);
-      setting = await this.settingService.updateSetting(
-        matchedSetting._id,
-        createSettingDTO,
-      );
-      if (setting) {
-        message = 'Setting has been updated successfully';
+      if (matchedSetting) {
+        setting = await this.settingService.updateSetting(
+          extractDocId(matchedSetting),
+          createSettingDTO,
+        );
+        if (setting) {
+          message = 'Setting has been updated successfully';
+        }
       }
     }
     return res.status(HttpStatus.OK).json({
