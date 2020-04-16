@@ -35,6 +35,7 @@ import horaValues from './settings/hora-values';
 import ghatiValues from './settings/ghati-values';
 import caughadiaData from './settings/caughadia-data';
 import muhurtaValues from './settings/muhurta-values';
+import ayanamshaValues from './settings/ayanamsha-values';
 import kalamData from './settings/kalam-data';
 import mrityubhagaData from './settings/mrityubhaga-data';
 import rashiValues from './settings/rashi-values';
@@ -53,6 +54,7 @@ import {
 } from '../../lib/validators';
 import { hashMapToObject } from 'src/lib/entities';
 import { NumValue } from '../interfaces/num-value';
+import { KeyValue } from '../interfaces/key-value';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 
@@ -618,34 +620,15 @@ export const calcCompactChartData = async (datetime: string, geo) => {
   };
 };
 
-const calcAyanamshas = async (jd: number): Promise<Array<NumValue>> => {
-  const ayaNums = [
-    0,
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    15,
-    16,
-    21,
-    22,
-    23,
-    25,
-    26,
-  ];
-  //const iflag = swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SIDEREAL;
+const calcAyanamshas = async (jd: number): Promise<Array<KeyValue>> => {
   const iflag = swisseph.SEFLG_SIDEREAL;
-  return ayaNums.map(num => {
-    const result = getAyanamsa(jd, iflag + num * 1024);
+  return ayanamshaValues.map(row => {
+    const { key, value } = row;
+    swisseph.swe_set_sid_mode(value, 0, 0);
+    const result = getAyanamsa(jd, iflag);
     const { ayanamsa } = result;
     return {
-      num,
+      key,
       value: ayanamsa,
     };
   });
