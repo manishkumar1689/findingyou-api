@@ -1,12 +1,3 @@
-const charaKaraka = [
-  "AK",
-  "AmK",
-  "BK",
-  "MK",
-  "PiK",
-  "PK",
-  "GK",
-  "DK"
-];
+const charaKaraka = ['DK', 'GK', 'PK', 'PiK', 'MK', 'BK', 'AmK', 'AK'];
 
-export default charaKaraka.reverse();
+export default charaKaraka;

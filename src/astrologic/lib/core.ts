@@ -451,13 +451,12 @@ const addGrahaValues = async data => {
         }
       }
     });
-
-    if (data.bodies.length > 0) {
-      const withinSignBodies = calcCharaKaraka(data.bodies);
-      mergeCharaKarakaToBodies(data.bodies, withinSignBodies);
-    }
   }
 
+  if (data.bodies.length > 0) {
+    const withinSignBodies = calcCharaKaraka(data.bodies);
+    mergeCharaKarakaToBodies(data.bodies, withinSignBodies);
+  }
   data = new GrahaSet(data);
   data.matchRelationships();
 };
@@ -783,6 +782,9 @@ const applyCharaKaraka = (body, index) => {
   if (index < charakarakaValues.length) {
     body.ck = charakarakaValues[index];
   }
+  if (body.key === 've') {
+    console.log(body, index);
+  }
   return body;
 };
 
@@ -792,8 +794,9 @@ Add charaKara data
 @return Array<Object>
 */
 const calcCharaKaraka = bodies => {
+  const validModes = ['forward', 'reverse'];
   let withinSignBodies = bodies
-    .filter(b => b.charaKarakaMode !== 'none')
+    .filter(b => validModes.includes(b.charaKarakaMode))
     .map(b => {
       const deg =
         b.charaKarakaMode === 'reverse' ? 30 - b.withinSign : b.withinSign;

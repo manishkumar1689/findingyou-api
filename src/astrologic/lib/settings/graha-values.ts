@@ -22,6 +22,7 @@ const grahaValues = [
     mulaTrikon: 5,
     mulaTrikonDegrees: [0, 10],
     debilitated: 7,
+    charaKarakaMode: 'forward',
   },
   {
     num: 1,
@@ -46,6 +47,7 @@ const grahaValues = [
     mulaTrikon: 2,
     mulaTrikonDegrees: [4, 30],
     debilitated: 8,
+    charaKarakaMode: 'forward',
   },
   {
     num: 2,
@@ -71,6 +73,7 @@ const grahaValues = [
     mulaTrikonDegrees: [16, 20],
     debilitated: 12,
     yearLength: 87.9691,
+    charaKarakaMode: 'forward',
   },
   {
     num: 3,
@@ -96,6 +99,7 @@ const grahaValues = [
     mulaTrikonDegrees: [0, 15],
     debilitated: 6,
     yearLength: 224.701,
+    charaKarakaMode: 'forward',
   },
   {
     num: 4,
@@ -121,6 +125,7 @@ const grahaValues = [
     mulaTrikonDegrees: [0, 12],
     debilitated: 4,
     yearLength: 686.971,
+    charaKarakaMode: 'forward',
   },
   {
     num: 5,
@@ -146,6 +151,7 @@ const grahaValues = [
     mulaTrikonDegrees: [0, 10],
     debilitated: 10,
     yearLength: 4332.5029764,
+    charaKarakaMode: 'forward',
   },
   {
     num: 6,
@@ -171,6 +177,7 @@ const grahaValues = [
     mulaTrikonDegrees: [0, 20],
     debilitated: 1,
     yearLength: 10758.97600962,
+    charaKarakaMode: 'forward',
   },
   {
     num: 101,
