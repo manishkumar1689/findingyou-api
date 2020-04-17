@@ -1126,7 +1126,6 @@ const simplifyGraha = (graha: Graha) => {
     'charaKaraka',
     'house',
     'ownHouses',
-    'ownSignHouses',
     'padaNum',
     'percent',
     'akshara',
