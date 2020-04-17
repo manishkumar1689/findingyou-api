@@ -123,7 +123,7 @@ export class GrahaSet {
     }
   }
 
-  get(key) {
+  get(key: any): Graha {
     let matchFunc = b => false;
     if (isNumeric(key)) {
       matchFunc = b => b.num === parseInt(key);

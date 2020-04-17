@@ -23,6 +23,14 @@ export class DictionaryService {
           case 'category':
             filter.set('key', new RegExp('^' + v + '__'));
             break;
+          case 'categories':
+            if (v instanceof Array) {
+              filter.set('key', new RegExp('^(' + v.join('|') + ')__'));
+            }
+            break;
+          case 'subcategory':
+            filter.set('key', new RegExp('^' + v + '_'));
+            break;
           case 'init':
             filter.set('key', new RegExp('^' + v));
             break;
