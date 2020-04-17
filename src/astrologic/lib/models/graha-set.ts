@@ -146,16 +146,14 @@ export class GrahaSet {
     this.bodies = this.bodies.map(b => {
       b.house = matchHouseNum(b.longitude, houseData.houses);
       if (b.mulaTrikon) {
-        const mulaIndex = b.ownSign.indexOf(b.mulaTrikon);
-
-        if (mulaIndex >= 0) {
-          const mulaH = b.ownSign.splice(mulaIndex, 1);
-          b.ownSign = [...mulaH, ...b.ownSign];
+        if (b.ownSign.indexOf(b.mulaTrikon) > 0) {
+          b.ownSign.reverse();
         }
       }
       b.ownHouses = b.ownSign.map(sign =>
         mapSignToHouse(sign, houseData.houses),
       );
+      console.log(b.ownSign, b.ownHouses, b.mulaTrikon);
       return b;
     });
     return this;
