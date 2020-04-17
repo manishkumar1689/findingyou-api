@@ -153,7 +153,6 @@ export class GrahaSet {
       b.ownHouses = b.ownSign.map(sign =>
         mapSignToHouse(sign, houseData.houses),
       );
-      console.log(b.ownSign, b.ownHouses, b.mulaTrikon);
       return b;
     });
     return this;
