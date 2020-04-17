@@ -150,7 +150,7 @@ export class GrahaSet {
 
         if (mulaIndex >= 0) {
           const mulaH = b.ownSign.splice(mulaIndex, 1);
-          b.ownSign = [mulaH, ...b.ownSign];
+          b.ownSign = [...mulaH, ...b.ownSign];
         }
       }
       b.ownHouses = b.ownSign.map(sign =>
