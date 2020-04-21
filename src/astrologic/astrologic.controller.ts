@@ -221,12 +221,18 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('compact/:loc/:dt')
-  async compactDataSet(@Res() res, @Param('loc') loc, @Param('dt') dt) {
+  @Get('compact/:loc/:dt/:topo?')
+  async compactDataSet(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Param('topo') topo,
+  ) {
     let data: any = { valid: false };
     if (validISODateString(dt) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
-      data = await calcCompactChartData(dt, geo);
+      const applyTopo = topo === 'topo';
+      data = await calcCompactChartData(dt, geo, applyTopo);
     }
     return res.status(HttpStatus.OK).json(data);
   }

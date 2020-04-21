@@ -421,11 +421,14 @@ export const fetchHouseData = async (
   return houseData;
 };
 
-const addGrahaValues = async data => {
+const addGrahaValues = async (data, applyTopo = false) => {
   for (const body of grahaValues) {
     const num = swisseph[body.ref];
-    const flag =
+    let flag =
       swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SIDEREAL + swisseph.SEFLG_SPEED;
+    if (applyTopo) {
+      flag += swisseph.SEFLG_TOPOCTR;
+    }
     const dV = await calcDeclination(data.jd, body.num);
     await calcUtAsync(data.jd, num, flag).catch(async result => {
       if (result instanceof Object) {
@@ -516,7 +519,11 @@ const addAsteroids = async data => {
 @param mode:string (all|core|asteroids)
 @param showBodyConfig:boolean
 */
-export const calcAllBodies = async (datetime: string, mode: string = 'all') => {
+export const calcAllBodies = async (
+  datetime: string,
+  mode: string = 'all',
+  applyTopo = false,
+) => {
   let data = { valid: false, jd: 0, bodies: [] };
   if (validISODateString(datetime)) {
     data.jd = calcJulDate(datetime);
@@ -524,7 +531,7 @@ export const calcAllBodies = async (datetime: string, mode: string = 'all') => {
     const showAsteroids = mode === 'asteroids' || mode === 'all';
     //swisseph.swe_set_sid_mode(swisseph.SE_SIDM_TRUE_CITRA, 0, 0);
     if (showCore) {
-      await addGrahaValues(data);
+      await addGrahaValues(data, applyTopo);
     }
 
     if (showAsteroids) {
@@ -580,7 +587,7 @@ export const calcCompactChartData = async (
   geo: GeoPos,
   applyTopo = false,
 ) => {
-  const grahaSet = await calcGrahaSet(datetime, applyTopo ? geo : null);
+  const grahaSet = await calcGrahaSet(datetime, geo, applyTopo);
   const { jd } = grahaSet;
   let hdW = await fetchHouseData(datetime, geo, 'W');
   grahaSet.mergeHouseData(hdW);
@@ -839,11 +846,13 @@ const calcAprakasa = (sunLng = 0) => {
   return items;
 };
 
-const calcGrahaSet = async (datetime, geo: any = null) => {
-  if (geo instanceof Object) {
+const calcGrahaSet = async (datetime, geo: any = null, applyTopo = false) => {
+  if (applyTopo && geo instanceof Object) {
     swisseph.swe_set_topo(geo.lng, geo.lat, geo.alt);
+  } else {
+    swisseph.swe_set_topo(0, 0, 0);
   }
-  const bodyData = await calcAllBodies(datetime, 'core');
+  const bodyData = await calcAllBodies(datetime, 'core', applyTopo);
   return new GrahaSet(bodyData);
 };
 
