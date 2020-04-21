@@ -49,13 +49,14 @@ export class Graha extends BaseObject {
   mulaTrikon: -1;
   isMulaTrikon = false;
   mulaTrikonDegrees: 0;
-  exalted = false;
+  exalted = 0;
   exaltedDegree = 0;
-  debilitated = false;
+  debilitated = 0;
   ownSign = [];
   charaKarakaMode = 'standard';
   charaKaraka = '';
-  house = 11;
+  ckNum = 0;
+  house = 0;
   ownHouses = [];
   padaNum = 0;
   percent = 0;

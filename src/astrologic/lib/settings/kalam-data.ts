@@ -20,6 +20,9 @@ sunrise
 7. 15:00 - 15:00
 8: 16:30 - 18:00
 sunset
+
+dict prefix: graha__chaya_kalam
+
 */
 
 const kalamData = {
@@ -33,10 +36,10 @@ const kalamData = {
     { day: 6, rahu: 3, yama: 6, gulika: 1 },
   ],
   dict: {
-    rahu: "Rahu kāla",
-    yama: "Yamaghaṇṭa",
-    gulika: "Gulika kāla"
-  }
+    rahu: 'rk',
+    yama: 'yk',
+    gulika: 'gk',
+  },
 };
 
 export default kalamData;

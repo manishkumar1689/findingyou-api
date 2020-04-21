@@ -210,7 +210,6 @@ export const calcRetroGrade = async (datetime, num) => {
 
   return {
     key: body.key,
-    name: body.name,
     accel,
     nextSwitches,
     // start,

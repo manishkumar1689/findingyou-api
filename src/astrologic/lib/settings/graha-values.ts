@@ -1,8 +1,42 @@
+/*
+Mercury	2	87.9691 days
+Venus	3	224.701 days
+Mars	4	686.971 days
+Jupiter	5	11.862 years
+Saturn	6	29.4571 years
+Rahu	11	18.6129 years	(always retrograde, but goes direct every month for a few hours)
+Uranus	7	84.0205 years
+Neptune	8	164.8 years
+Pluto	9	247.94 years
+  { num: 0, yearLength: 0 },
+  { num: 1, yearLength: 0 },
+  { num: 2, yearLength: 87.9691 },
+  { num: 3, yearLength: 224.701 },
+  { num: 4, yearLength: 686.971 },
+  { num: 5, yearLength: 4332.5029764 },
+  { num: 6, yearLength: 10758.97600962 },
+  { num: 101, yearLength: 0 },
+  { num: 102, yearLength: 0 },
+  { num: 7, yearLength: 30687.649644 }
+  { num: 8, yearLength: 60191.914560000005 },
+  { num: 9, yearLength: 90558.151068 }
+
+  prefixes:
+
+  key: graha__[subkey]_[key]
+  guna: guna
+  dosha: kuta__nadi
+  mature: guna
+  gender: gender
+  dhatu: dhatu
+  bhuta: bhuta
+*/
+
 const grahaValues = [
   {
     num: 0,
     jyNum: 1,
-    name: 'Sun',
+    subkey: 'a_01',
     ref: 'SE_SUN',
     key: 'su',
     icon: '☉',
@@ -10,9 +44,9 @@ const grahaValues = [
     gender: 'm',
     bhuta: '',
     guna: 'sat',
-    caste: 'kṣatriya',
-    dhatu: 'mūla',
-    dosha: ['pitta'],
+    caste: 2,
+    dhatu: 2,
+    dosha: ['2_2'],
     friends: ['mo', 'ma', 'ju'],
     neutral: ['me'],
     enemies: ['ve', 'sa'],
@@ -27,7 +61,7 @@ const grahaValues = [
   {
     num: 1,
     jyNum: 2,
-    name: 'Moon',
+    subkey: 'a_02',
     key: 'mo',
     ref: 'SE_MOON',
     icon: '☾',
@@ -35,9 +69,9 @@ const grahaValues = [
     gender: 'f',
     bhuta: '',
     guna: 'sat',
-    caste: 'vaishya',
-    dhatu: 'dhatu',
-    dosha: ['vata', 'kapha'],
+    caste: 3,
+    dhatu: 1,
+    dosha: ['2_1', '2_3'],
     friends: ['su', 'me'],
     neutral: ['ma', 'ju', 've', 'sa'],
     enemies: [],
@@ -52,17 +86,17 @@ const grahaValues = [
   {
     num: 2,
     jyNum: 4,
-    name: 'Mercury',
+    subkey: 'a_04',
     key: 'me',
     ref: 'SE_MERCURY',
     icon: '☿',
     nature: ['b', 'm'],
     gender: 'n',
-    bhuta: 'earth',
+    bhuta: 'prithvi',
     guna: 'raj',
-    caste: 'vaishya',
-    dhatu: 'jiva',
-    dosha: ['vata', 'pitta', 'kapha'],
+    caste: 3,
+    dhatu: 3,
+    dosha: ['2_1', '2_2', '2_3'],
     friends: ['su', 've'],
     neutral: ['ma', 'ju', 'sa'],
     enemies: ['mo'],
@@ -78,17 +112,17 @@ const grahaValues = [
   {
     num: 3,
     jyNum: 6,
-    name: 'Venus',
+    subkey: 'a_06',
     key: 've',
     ref: 'SE_VENUS',
     icon: '♀',
     nature: ['b'],
     gender: 'f',
-    bhuta: 'water',
+    bhuta: 'jala',
     guna: 'raj',
-    caste: 'brahmin',
-    dhatu: 'mūla',
-    dosha: ['kapha', 'vata'],
+    caste: 1,
+    dhatu: 2,
+    dosha: ['2_3', '2_1'],
     friends: ['me', 'sa'],
     neutral: ['ma', 'ju'],
     enemies: ['su', 'mo'],
@@ -104,17 +138,17 @@ const grahaValues = [
   {
     num: 4,
     jyNum: 3,
-    name: 'Mars',
+    subkey: 'a_03',
     key: 'ma',
     ref: 'SE_MARS',
     icon: '♂',
     nature: ['m'],
-    gender: 'n',
-    bhuta: 'fire',
+    gender: 'm',
+    bhuta: 'agni',
     guna: 'tam',
-    caste: 'kṣatriya',
-    dhatu: 'dhatu',
-    dosha: ['pitta'],
+    caste: 2,
+    dhatu: 1,
+    dosha: ['2_2'],
     friends: ['su', 'mo', 'ju'],
     neutral: ['ve', 'sa'],
     enemies: ['me'],
@@ -130,17 +164,17 @@ const grahaValues = [
   {
     num: 5,
     jyNum: 5,
-    name: 'Jupiter',
+    subkey: 'a_05',
     key: 'ju',
     ref: 'SE_JUPITER',
     icon: '♃',
     nature: ['b'],
-    gender: 'n',
+    gender: 'm',
     bhuta: 'akasha',
     guna: 'sat',
-    caste: 'brahmin',
-    dhatu: 'jiva',
-    dosha: ['kapha'],
+    caste: 1,
+    dhatu: 3,
+    dosha: ['2_3'],
     friends: ['su', 'mo', 'ma'],
     neutral: ['sa'],
     enemies: ['me', 've'],
@@ -156,17 +190,17 @@ const grahaValues = [
   {
     num: 6,
     jyNum: 7,
-    name: 'Saturn',
+    subkey: 'a_07',
     key: 'sa',
     ref: 'SE_SATURN',
     icon: '♄',
     nature: ['m'],
     gender: 'n',
-    bhuta: 'air',
+    bhuta: 'vayu',
     guna: 'tam',
-    caste: 'sudra',
-    dhatu: 'dhatu',
-    dosha: ['vata'],
+    caste: 4,
+    dhatu: 1,
+    dosha: ['2_1'],
     friends: ['me', 've'],
     neutral: ['ju'],
     enemies: ['su', 'mo', 'ma'],
@@ -182,18 +216,18 @@ const grahaValues = [
   {
     num: 101,
     jyNum: 8,
-    name: 'Rahu',
+    subkey: 'a_08',
     key: 'ra',
     ref: 'SE_TRUE_NODE',
     altRef: 'SE_MEAN_NODE',
     icon: '☊',
-    nature: ['b', 'm'],
+    nature: ['m'],
     gender: 'n',
     bhuta: '',
     guna: 'tam',
-    caste: 'outcaste',
-    dhatu: 'dhatu',
-    dosha: ['vata'],
+    caste: 5,
+    dhatu: 1,
+    dosha: ['2_1'],
     friends: [],
     neutral: [],
     enemies: [],
@@ -208,19 +242,19 @@ const grahaValues = [
   {
     num: 102,
     jyNum: 9,
-    name: 'Ketu',
+    subkey: 'a_09',
     key: 'ke',
     ref: 'SE_TRUE_NODE',
     altRef: 'SE_MEAN_NODE',
     icon: '☋',
     calc: 'opposite',
-    nature: ['b', 'm'],
+    nature: ['m'],
     gender: 'n',
     bhuta: '',
     guna: 'tam',
-    caste: 'outcaste',
-    dhatu: 'jiva',
-    dosha: ['pitta'],
+    caste: 5,
+    dhatu: 3,
+    dosha: ['2_2'],
     friends: [],
     neutral: [],
     enemies: [],
@@ -234,7 +268,7 @@ const grahaValues = [
   },
   {
     num: 7,
-    name: 'Uranus',
+    subkey: 'a_10',
     key: 'ur',
     ref: 'SE_URANUS',
     icon: '♅',
@@ -246,7 +280,7 @@ const grahaValues = [
   },
   {
     num: 8,
-    name: 'Neptune',
+    subkey: 'a_11',
     key: 'ne',
     ref: 'SE_NEPTUNE',
     icon: '♆',
@@ -258,7 +292,7 @@ const grahaValues = [
   },
   {
     num: 9,
-    name: 'Pluto',
+    subkey: 'a_12',
     key: 'pl',
     ref: 'SE_PLUTO',
     icon: '♇',
@@ -269,5 +303,44 @@ const grahaValues = [
     yearLength: 90558.151068,
   },
 ];
+
+/* const planetYears = [
+  { num: 2, v: 87.9691, u: 'days' },
+  { num: 3, v: 224.701, u: 'days' },
+  { num: 4, v: 686.971, u: 'days' },
+  { num: 5, v: 11.862, u: 'years' },
+  { num: 6, v: 29.4571, u: 'years' },
+  { num: 7, v: 84.020, u: 'years' },
+  { num: 11, v: 18.6129, u: 'years' },
+  { num: 8, v: 164.8, u: 'years' },
+  { num: 9, v: 247.94, u: 'years' }
+];
+ */
+/* const merged = grahas.map(b => {
+  b.hasAltRef = b.hasOwnProperty('altRef');
+  b.hasCalc = b.hasOwnProperty('calc')
+  if (!b.hasOwnProperty('friends')) {
+    b.friends = [];
+  }
+  if (!b.hasOwnProperty('neutral')) {
+    b.neutral = [];
+  }
+  if (!b.hasOwnProperty('enemies')) {
+    b.enemies = [];
+  }
+  if (!b.hasOwnProperty('charaKarakaMode')) {
+    b.charaKarakaMode = 'standard';
+  }
+  const plRow = planetYears.find(p => p.num === b.num);
+  b.yearLength = 0;
+  if (plRow) {
+    let v = parseFloat(plRow.v);
+    if (plRow.u === 'years') {
+      v *= 365.2422;
+    }
+    b.yearLength = v;
+  }
+  return b;
+}); */
 
 export default grahaValues;

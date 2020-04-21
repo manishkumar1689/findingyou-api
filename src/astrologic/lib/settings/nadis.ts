@@ -1,7 +1,12 @@
+/*
+prefix:
+key: kuta__nadi
+*/
+
 const nNata = [
-  { name: "vāta", key: "vt" },
-  { name: "pitta", key: "pt" },
-  { name: "kapha", key: "kp" },
+  { key: '2_1', refKey: 'vt' },
+  { key: '2_2', refKey: 'pt' },
+  { key: '2_3', refKey: 'kp' },
 ];
 
 export default nNata;

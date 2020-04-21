@@ -1,11 +1,8 @@
 import * as swisseph from 'swisseph';
-import { dmsToDegrees, decDegToDms, degAsDms } from './converters';
+import { dmsToDegrees, degAsDms } from './converters';
 import { simplifyObject } from './mappers';
 import {
-  calcAsync,
   calcUtAsync,
-  riseTransAsync,
-  fixedStarUtAsync,
   fixedStar2UtAsync,
   fixstar2MagAsync,
   getHouses,
@@ -13,11 +10,8 @@ import {
 } from './sweph-async';
 import { calcJulDate, jdToDateTime } from './date-funcs';
 import {
-  calcTransition,
   calcTransitionJd,
   calcJyotishSunRise,
-  calcSunTrans,
-  matchTransData,
   fetchIndianTimeData,
 } from './transitions';
 import starValues from './settings/star-values';
@@ -55,6 +49,7 @@ import {
 import { hashMapToObject } from 'src/lib/entities';
 import { NumValue } from '../interfaces/num-value';
 import { KeyValue } from '../interfaces/key-value';
+import { GeoPos } from '../interfaces/geo-pos';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 
@@ -438,7 +433,7 @@ const addGrahaValues = async data => {
           processBodyResult(result, body);
           data.bodies.push({
             num: num,
-            name: body.name,
+            name: body.subkey,
             friends: body.friends,
             neutral: body.neutral,
             enemies: body.enemies,
@@ -550,7 +545,7 @@ const calcBodyJd = async (jd: number, key: string) => {
         processBodyResult(result, body);
         data = {
           num: body.num,
-          name: body.name,
+          name: body.subkey,
           friends: body.friends,
           ...result,
         };
@@ -580,8 +575,12 @@ export const calcSphutaData = async (datetime: string, geo) => {
   return { ...data };
 };
 
-export const calcCompactChartData = async (datetime: string, geo) => {
-  const grahaSet = await calcGrahaSet(datetime);
+export const calcCompactChartData = async (
+  datetime: string,
+  geo: GeoPos,
+  applyTopo = false,
+) => {
+  const grahaSet = await calcGrahaSet(datetime, applyTopo ? geo : null);
   const { jd } = grahaSet;
   let hdW = await fetchHouseData(datetime, geo, 'W');
   grahaSet.mergeHouseData(hdW);
@@ -774,21 +773,6 @@ const matchTithiNum = (bodies, multiplier = 1) => {
 };
 
 /*
-@param body:Object
-@param index:int
-*/
-const applyCharaKaraka = (body, index) => {
-  body.ck = '';
-  if (index < charakarakaValues.length) {
-    body.ck = charakarakaValues[index];
-  }
-  if (body.key === 've') {
-    console.log(body, index);
-  }
-  return body;
-};
-
-/*
 Add charaKara data
 @param bodies:Array<Object>
 @return Array<Object>
@@ -806,7 +790,10 @@ const calcCharaKaraka = bodies => {
       };
     });
   withinSignBodies.sort((a, b) => a.deg - b.deg);
-  return withinSignBodies.map(applyCharaKaraka);
+  return withinSignBodies.map((b, index) => {
+    b.ck = index < charakarakaValues.length ? charakarakaValues[index] : '';
+    return b;
+  });
 };
 
 /*
@@ -846,13 +833,16 @@ const calcAprakasa = (sunLng = 0) => {
     prevVal = value;
     items.push({
       value,
-      name: row.name,
+      num: row.num,
     });
   });
   return items;
 };
 
-const calcGrahaSet = async datetime => {
+const calcGrahaSet = async (datetime, geo: any = null) => {
+  if (geo instanceof Object) {
+    swisseph.swe_set_topo(geo.lng, geo.lat, geo.alt);
+  }
   const bodyData = await calcAllBodies(datetime, 'core');
   return new GrahaSet(bodyData);
 };

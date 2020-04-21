@@ -5,7 +5,7 @@ export class GeoLoc {
   lng: number = 0;
   alt: number = 0;
 
-  constructor(geoData) {
+  constructor(geoData: any = null) {
     if (geoData instanceof Object) {
       Object.entries(geoData).forEach(entry => {
         const [key, value] = entry;
@@ -34,12 +34,13 @@ export class GeoLoc {
               this.lat = flVal;
               break;
             case 'lng':
+            case 'lon':
             case 'longitude':
               this.lng = flVal;
               break;
             case 'alt':
             case 'altitude':
-              this.lng = flVal;
+              this.alt = flVal;
               break;
           }
         }
@@ -47,9 +48,15 @@ export class GeoLoc {
     }
   }
 
-  latitude = () => this.lat;
+  get latitude() {
+    return this.lat;
+  }
 
-  longitude = () => this.lng;
+  get longitude() {
+    return this.lng;
+  }
 
-  altitude = () => this.alt;
+  get altitude() {
+    return this.alt;
+  }
 }

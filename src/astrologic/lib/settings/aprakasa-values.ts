@@ -1,18 +1,30 @@
+// base key graha__chaya_aprakasha_
+
 const apValues = [
   {
-    name: 'Dhūma', offset: { deg: 133, min: 20 }, ref: { obj: "su", op: "+" }
+    num: 1,
+    offset: { deg: 133, min: 20 },
+    ref: { obj: 'su', op: '+' },
   },
   {
-    name: 'Vyatīpāta', offset: { deg: 360, min: 0 }, ref: { obj: "-", op: "-" }
+    num: 2,
+    offset: { deg: 360, min: 0 },
+    ref: { obj: '-', op: '-' },
   },
   {
-    name: 'Pariveṣa', offset: { deg: 180, min: 0 }, ref: { obj: "-", op: "+" }
+    num: 3,
+    offset: { deg: 180, min: 0 },
+    ref: { obj: '-', op: '+' },
   },
   {
-    name: 'Indracāpa', offset: { deg: 360, min: 0 }, ref: { obj: "-", op: "-" }
+    num: 4,
+    offset: { deg: 360, min: 0 },
+    ref: { obj: '-', op: '-' },
   },
   {
-    name: 'Upaketu', offset: { deg: 16, min: 40 }, ref: { obj: "-", op: "+" }
+    num: 5,
+    offset: { deg: 16, min: 40 },
+    ref: { obj: '-', op: '+' },
   },
 ];
 

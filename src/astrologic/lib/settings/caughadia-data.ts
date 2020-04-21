@@ -1,3 +1,9 @@
+/*
+dict prefixes:
+num: caughadia
+result: guna
+*/
+
 const caughadiaData = {
   values: [
     /* Daytime:   (sunset - sunrise) / 8. 
@@ -15,14 +21,13 @@ const caughadiaData = {
        Friday starts with "cala", nightime with "roga",
        Saturday starts with "kāla", nightime with "lābha",
        */
-    { num: 1, name: "udvega", ruler: "su", night: "śubha", res: "aśubha", result: "inauspicious" },
-    { num: 2, name: "cala", ruler: "ve", night: "roga", res: "sāmānya", result: "average" },
-    { num: 3, name: "lābha", ruler: "me", night: "kāla", res: "śubha ", result: "auspicious" },
-    { num: 4, name: "amṛta", ruler: "mo", night: "udvega", res: "śubha", result: "auspicious" },
-    { num: 5, name: "kāla", ruler: "sa", night: "amṛta", res: "aśubha", result: "inauspicious" },
-    { num: 6, name: "śubha", ruler: "ju", night: "", res: "śubha", result: "auspicious" },
-    { num: 7, name: "roga", ruler: "ma", night: "lābha", res: "aśubha", result: "inauspicious" },
-
+    { num: 1, ruler: 'su', result: 'm' },
+    { num: 2, ruler: 've', result: 'n' },
+    { num: 3, ruler: 'me', result: 'b' },
+    { num: 4, ruler: 'mo', result: 'b' },
+    { num: 5, ruler: 'sa', result: 'm' },
+    { num: 6, ruler: 'ju', result: 'b' },
+    { num: 7, ruler: 'ma', result: 'm' },
   ],
   days: [
     { day: 0, dayStart: 1, nightStart: 6 },
@@ -32,8 +37,7 @@ const caughadiaData = {
     { day: 4, dayStart: 6, nightStart: 4 },
     { day: 5, dayStart: 2, nightStart: 7 },
     { day: 6, dayStart: 5, nightStart: 3 },
-  ]
-}
+  ],
+};
 
 export default caughadiaData;
-
