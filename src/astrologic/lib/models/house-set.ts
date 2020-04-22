@@ -1,18 +1,16 @@
-
 export class HouseSet {
-  
-  jd:number = 0;
-  houses:Array<number> = [];
-  ascendant:number = 0;
-  mc:number = 0;
-  armc:number = 0;
-  vertex:number = 0;
-  equatorialAscendant:number = 0;
+  jd: number = 0;
+  houses: Array<number> = [];
+  ascendant: number = 0;
+  mc: number = 0;
+  armc: number = 0;
+  vertex: number = 0;
+  /* equatorialAscendant: number = 0;
   kochCoAscendant:number = 0;
   munkaseyCoAscendant:number = 0;
-  munkaseyPolarAscendant:number = 0;
+  munkaseyPolarAscendant:number = 0; */
 
-  constructor(houseData:any = null) {
+  constructor(houseData: any = null) {
     if (houseData instanceof Object) {
       Object.entries(houseData).forEach(entry => {
         const [key, value] = entry;
@@ -23,21 +21,27 @@ export class HouseSet {
               this.houses = value;
             }
             break;
-          default:
-            this[key] = value;
+          case 'jd':
+          case 'ascendant':
+          case 'mc':
+          case 'armc':
+          case 'vertex':
+            if (typeof value === 'number') {
+              this[key] = value;
+            }
             break;
         }
-      })
+      });
     }
   }
 
   count = () => this.houses.length;
 
-  rangeByNum(num) {
+  rangeByNum(num: number) {
     if (num > 0 && num <= this.houses.length) {
       const index = num - 1;
       const nextIndex = num % this.houses.length;
-      return [this.houses[index], this.houses[nextIndex]]
+      return [this.houses[index], this.houses[nextIndex]];
     } else {
       return [0, 0];
     }
@@ -50,5 +54,4 @@ export class HouseSet {
   end(num) {
     return this.rangeByNum(num)[1];
   }
-
 }

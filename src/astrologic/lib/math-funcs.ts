@@ -30,6 +30,9 @@ export const mapSignToHouse = (sign: number, houses: Array<number>): number => {
 
 export const calcVargaValue = (lng, num) => (lng * num) % 360;
 
+export const subtractLng360 = (lng: number, offset: number = 0) =>
+  (lng - offset) % 360;
+
 export const calcAllVargas = lng => {
   return vargaValues.map(v => {
     const value = calcVargaValue(lng, v.num);

@@ -22,6 +22,10 @@ export const ChartSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
+  jd: {
+    type: Number,
+    required: true,
+  },
   geo: {
     type: GeoSchema,
     required: true,
@@ -31,7 +35,7 @@ export const ChartSchema = new mongoose.Schema({
     required: true,
   },
   houses: {
-    type: HouseSystemSchema,
+    type: [HouseSystemSchema],
     required: false,
   },
   sunTransitions: {

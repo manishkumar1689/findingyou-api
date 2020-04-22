@@ -5,15 +5,14 @@ import {
   mapSignToHouse,
   calcAllVargas,
   calcVargaSet,
-  calcInclusiveDistance,
   calcInclusiveTwelfths,
-  calcInclusiveNakshatras,
   matchHouseNum,
 } from '../math-funcs';
 import nakshatraValues from '../settings/nakshatra-values';
 import { Nakshatra } from './nakshatra';
 import { Relationship } from './relationship';
 import maitriData from '../settings/maitri-data';
+import { GeoPos } from 'src/astrologic/interfaces/geo-pos';
 
 export class Graha extends BaseObject {
   num: number = -1;
@@ -28,13 +27,17 @@ export class Graha extends BaseObject {
   caste: string = '';
   dhatu: string = '';
   dosha: string = '';
-  longitude: number = 0;
-  latitude: number = 0;
+  lng: number = 0;
+  lat: number = 0;
+  topo: GeoPos = {
+    lng: 0,
+    lat: 0,
+  };
   distance: number = 1;
   declination?: number = null;
-  longitudeSpeed: number = 0;
-  latitudeSpeed: number = 0;
-  distanceSpeed: number = 0;
+  lngSpeed: number = 0;
+  latSpeed: number = 0;
+  dstSpeed: number = 0;
   rflag: number = 0;
   sign: number = 0;
   calc: string = '';
@@ -74,6 +77,33 @@ export class Graha extends BaseObject {
           case 'relationship':
             this.relationship = new Relationship(value);
             break;
+          case 'longitude':
+          case 'lon':
+            if (typeof value === 'number') {
+              this.lng = value;
+            }
+            break;
+          case 'latitude':
+          case 'lat':
+            if (typeof value === 'number') {
+              this.lat = value;
+            }
+            break;
+          case 'longitudeSpeed':
+            if (typeof value === 'number') {
+              this.lngSpeed = value;
+            }
+            break;
+          case 'latitudeSpeed':
+            if (typeof value === 'number') {
+              this.latSpeed = value;
+            }
+            break;
+          case 'distanceSpeed':
+            if (typeof value === 'number') {
+              this.dstSpeed = value;
+            }
+            break;
           default:
             this[key] = value;
             break;
@@ -85,6 +115,26 @@ export class Graha extends BaseObject {
     }
   }
 
+  get longitude() {
+    return this.lng;
+  }
+
+  get latitude() {
+    return this.lat;
+  }
+
+  get longitudeSpeed() {
+    return this.lngSpeed;
+  }
+
+  get latitudeSpeed() {
+    return this.latSpeed;
+  }
+
+  get distanceSpeed() {
+    return this.dstSpeed;
+  }
+
   /*
 Calculate pachanga values for a body 
 @parma body:Object
@@ -92,7 +142,7 @@ Calculate pachanga values for a body
   applyPanchanga = () => {
     this.nakshatra.degrees = 360 / nakshatraValues.length;
     const padaDegrees = this.nakshatra.degrees / 4;
-    this.nakshatra.within = this.longitude % this.nakshatra.degrees;
+    this.nakshatra.within = this.lng % this.nakshatra.degrees;
     const padaFrac = this.nakshatra.within / padaDegrees;
     const padaIndex = Math.floor(padaFrac);
     this.padaNum = padaIndex + 1;
@@ -223,10 +273,10 @@ export class GrahaSet {
   }
 
   getVargaSet() {
-    return this.bodies.map(b => calcVargaSet(b.longitude, b.num, b.key));
+    return this.bodies.map(b => calcVargaSet(b.lng, b.num, b.key));
   }
 
-  getFullVargaSet(lagnaLng) {
+  getFullVargaSet(lagnaLng: number) {
     const lagnaVarga = calcVargaSet(lagnaLng, -1, 'as');
     const vargas = this.getVargaSet();
     return [lagnaVarga, ...vargas];

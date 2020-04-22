@@ -5,6 +5,15 @@ export const SubjectSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  type: {
+    type: String,
+    required: true,
+    default: 'person',
+  },
+  gender: {
+    type: String,
+    required: true,
+  },
   eventType: {
     type: String,
     required: true,

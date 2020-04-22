@@ -221,18 +221,20 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('compact/:loc/:dt/:topo?')
+  @Get('compact/:loc/:dt/:ayanamsha?')
   async compactDataSet(
     @Res() res,
     @Param('loc') loc,
     @Param('dt') dt,
-    @Param('topo') topo,
+    @Param('ayanamsha') ayanamsha,
   ) {
     let data: any = { valid: false };
     if (validISODateString(dt) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
-      const applyTopo = topo === 'topo';
-      data = await calcCompactChartData(dt, geo, applyTopo);
+      const ayanamshaKey = notEmptyString(ayanamsha, 3)
+        ? ayanamsha.toLowerCase().replace(/-/g, '_')
+        : '';
+      data = await calcCompactChartData(dt, geo, ayanamshaKey);
     }
     return res.status(HttpStatus.OK).json(data);
   }
@@ -264,7 +266,7 @@ export class AstrologicController {
     if (notEmptyString(dt, 6) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const showPeriods = test === 'test';
-      data = await calcUpagrahas(dt, geo, showPeriods);
+      data = await calcUpagrahas(dt, geo, 0, showPeriods);
     }
     return res.status(HttpStatus.OK).json(data);
   }
