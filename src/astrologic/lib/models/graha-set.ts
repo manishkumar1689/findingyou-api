@@ -254,6 +254,7 @@ export class GrahaSet {
   }
 
   mergeHouseData(houseData) {
+    console.log(houseData);
     this.bodies = this.bodies.map(b => {
       b.house = matchHouseNum(b.longitude, houseData.houses);
       if (b.mulaTrikon) {

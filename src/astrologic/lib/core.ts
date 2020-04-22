@@ -642,7 +642,7 @@ export const calcCompactChartData = async (
 
   const firstHouseLng = getFirstHouseLng(hdP);
   const wHouses = expandWholeHouses(firstHouseLng);
-  const hdW = { ...hdP, wHouses };
+  const hdW = { ...hdP, houses: wHouses };
   grahaSet.mergeHouseData(hdW);
   grahaSet.matchRelationships();
   const houses = [
