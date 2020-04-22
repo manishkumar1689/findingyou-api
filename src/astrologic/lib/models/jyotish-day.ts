@@ -2,23 +2,6 @@ import { BaseObject } from './base-object';
 import { calcAstroWeekDayIndex } from '../date-funcs';
 
 export class JyotishDay extends BaseObject {
-  /*
-  const { rise, set, prevRise, prevSet, nextRise } = sunData;
-    
-    const dayBefore = jd < rise.jd;
-    const afterSunSet = jd > set.jd;
-    const dayStart = dayBefore ? prevRise.jd : rise.jd;
-  
-    const dayLength = dayBefore ? rise.jd - prevRise.jd : nextRise.jd - rise.jd;
-    const startJd = dayBefore ? prevSet.jd : afterSunSet ? set.jd : rise.jd;
-    const periodLength = dayBefore ? rise.jd - prevSet.jd : afterSunSet ? nextRise.jd - set.jd : set.jd - rise.jd;
-  
-    const periodHours = periodLength * 24;
-    const isDaytime = jd > (rise.jd + diffOffset) && jd < set.jd;
-    const weekDay = calcAstroWeekDayIndex(datetime, !dayBefore);
-    return { jd, startJd, dayStart, sunData, periodLength, dayLength, dayBefore, periodHours, isDaytime, weekDay };
-  */
-
   jd = 0;
 
   sunData = null;

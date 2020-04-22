@@ -14,6 +14,7 @@ import {
   calcTransitionJd,
   calcJyotishSunRise,
   fetchIndianTimeData,
+  SunTransitionData,
 } from './transitions';
 import starValues from './settings/star-values';
 import asteroidValues from './settings/asteroid-values';
@@ -133,6 +134,15 @@ const calcMuhurtaIndex = async (datetime: string, geo) => {
     datetime,
     geo,
   );
+  return calcMuhurtaIndexJyotish(jd, sunData, dayLength, dayBefore);
+};
+
+const calcMuhurtaIndexJyotish = (
+  jd: number,
+  sunData: SunTransitionData,
+  dayLength = 0,
+  dayBefore = false,
+) => {
   const { prevRise, rise } = sunData;
   const dayStart = dayBefore ? prevRise.jd : rise.jd;
   const dayProgress = (jd - dayStart) / dayLength;
@@ -359,7 +369,6 @@ const processBodyResult = (result: any, body: any) => {
       result[attr] = body[attr];
     }
   });
-  console.log(result);
 
   return result;
 };
@@ -1080,7 +1089,7 @@ export const calcPanchanga = async (datetime, geo) => {
 
   const moon = grahaSet.moon();
 
-  const sunMoonAngle = relativeAngle(sun.longitude, moon.longitude);
+  const sunMoonAngle = relativeAngle(sun.lng, moon.lng);
 
   const tithiVal = sunMoonAngle / (360 / 30);
   const tithiPercent = (tithiVal % 1) * 100;
@@ -1094,7 +1103,7 @@ export const calcPanchanga = async (datetime, geo) => {
 
   const numYogas = yogaValues.length;
   const yogaDeg = 360 / numYogas;
-  const yogaVal = (sun.longitude + moon.longitude) / yogaDeg;
+  const yogaVal = (sun.longitude + moon.lng) / yogaDeg;
   const yogaIndex = Math.floor(yogaVal);
   let yogaRow = {};
   if (yogaIndex < numYogas) {

@@ -5,8 +5,9 @@ import { IndianTime } from './models/indian-time';
 import { riseTransAsync } from './sweph-async';
 import { isNumeric } from '../../lib/validators';
 import { ephemerisDefaults } from '../../.config';
+import { GeoLoc } from './models/geo-loc';
 
-interface TimeSet {
+export interface TimeSet {
   jd: number;
   dt: string;
   after: boolean;
@@ -17,6 +18,16 @@ interface TransitionData {
   set: TimeSet;
   prevRise: TimeSet;
   prevSet: TimeSet;
+}
+
+export interface SunTransitionData {
+  jd: number;
+  geo: GeoLoc;
+  rise: TimeSet;
+  set: TimeSet;
+  prevRise: TimeSet;
+  prevSet: TimeSet;
+  nextRise: TimeSet;
 }
 
 interface TransitionInput {
@@ -160,7 +171,7 @@ export const calcSunTrans = async (datetime, geo) => {
   return calcSunTransJd(jd, geo);
 };
 
-export const calcSunTransJd = async (jd, geo) => {
+export const calcSunTransJd = async (jd, geo): Promise<SunTransitionData> => {
   const prev = await calcTransitionJd(jd - 1, geo, 0, false, false);
   const curr = await calcTransitionJd(jd, geo, 0, false, false);
   const next = await calcTransitionJd(jd + 1, geo, 0, false, false);
@@ -186,8 +197,6 @@ export const calcJyotishSunRise = async (datetime, geo) => {
 
 export const fetchIndianTimeData = async (datetime, geo) => {
   const jyotishDay = await calcJyotishDay(datetime, geo);
-  // { jd, startJd, dayStart, sunData, dayLength, dayBefore, isDaytime }
-  // { jd, sunData, startJd, dayStart, jdTime, progress, dayLength, isDaytime, year, dayNum, muhurta, ghatiVal, ghati, vighati, lipta }
   return new IndianTime(jyotishDay);
 };
 

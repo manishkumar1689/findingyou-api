@@ -36,6 +36,8 @@ export class IndianTime extends BaseObject {
     }
   }
 
+  jyotish = () => this._jDay;
+
   jd = () => this._jDay.jd;
 
   geo = () => this._jDay.geo;
