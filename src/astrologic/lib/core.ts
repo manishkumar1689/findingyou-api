@@ -310,7 +310,7 @@ export const calcAllStars = async (datetime: string) => {
   return data;
 };
 
-const matchNakshatra = (deg: number) => {
+export const matchNakshatra = (deg: number) => {
   let row = { index: -1, num: 0, percent: 0, ruler: '' };
   const nkVal = deg / (360 / nakshatraValues.length);
   const index = Math.floor(nkVal);
@@ -336,39 +336,15 @@ const processBodyResult = (result: any, body: any) => {
       result.longitude = (result.longitude + 180) % 360;
       break;
   }
-  result.sign = Math.floor(result.longitude / 30) + 1;
-  result.nakshatra = matchNakshatra(result.longitude);
-  const ruler = grahaValues.find(b => b.ownSign.includes(result.sign));
-  let rel = {
-    natural: '',
-  };
-  if (ruler) {
-    result.ruler = ruler.key;
-    if (body.friends.includes(ruler.key)) {
-      rel.natural = 'friend';
-    } else if (body.neutral.includes(ruler.key)) {
-      rel.natural = 'neutral';
-    } else if (body.enemies.includes(ruler.key)) {
-      rel.natural = 'enemy';
-    }
-  }
+
   result.mulaTrikon = body.mulaTrikon;
-  result.relationship = rel;
-  result.withinSign = result.longitude % 30;
-  result.isOwnSign = body.ownSign.indexOf(result.sign) >= 0;
-  result.isMulaTrikon =
-    result.sign === body.mulaTrikon &&
-    inRange(result.withinSign, body.mulaTrikonDegrees);
-  result.isExalted =
-    result.sign === body.exalted &&
-    inRange(result.withinSign, [0, body.exaltedDegree + 1]);
-  result.isDebilitated =
-    result.sign === body.debilitated &&
-    inRange(result.withinSign, [0, body.exaltedDegree + 1]);
   const attrKeys = [
     'key',
     'ownSign',
     'charaKarakaMode',
+    'exaltedDegree',
+    'mulaTrikonDegrees',
+    'exalted',
     'jyNum',
     'icon',
     'bhuta',
@@ -383,6 +359,7 @@ const processBodyResult = (result: any, body: any) => {
       result[attr] = body[attr];
     }
   });
+  console.log(result);
 
   return result;
 };
@@ -476,8 +453,7 @@ const addGrahaValues = async (data, applyTopo = false) => {
   }
 
   if (data.bodies.length > 0) {
-    const withinSignBodies = calcCharaKaraka(data.bodies);
-    mergeCharaKarakaToBodies(data.bodies, withinSignBodies);
+    applyCharaKarakas(data.bodies);
   }
 
   data = new GrahaSet(data);
@@ -645,6 +621,7 @@ export const calcCompactChartData = async (
       b.topo.lng = subtractLng360(b.topo.lng, ayanamsha.value);
       return b;
     });
+    applyCharaKarakas(grahaSet.bodies);
   }
 
   const hdP = await fetchHouseData(datetime, geo, 'P');
@@ -658,7 +635,7 @@ export const calcCompactChartData = async (
   const wHouses = expandWholeHouses(firstHouseLng);
   const hdW = { ...hdP, wHouses };
   grahaSet.mergeHouseData(hdW);
-
+  grahaSet.matchRelationships();
   const houses = [
     { system: 'P', values: hdP.houses.splice(0, 6) },
     { system: 'W', values: [firstHouseLng] },
@@ -869,6 +846,11 @@ const matchTithiNum = (bodies, multiplier = 1) => {
   );
   const tithiVal = sunMoonAngle / (360 / 30);
   return Math.floor(tithiVal) + 1;
+};
+
+const applyCharaKarakas = bodies => {
+  const withinSignBodies = calcCharaKaraka(bodies);
+  mergeCharaKarakaToBodies(bodies, withinSignBodies);
 };
 
 /*
@@ -1233,7 +1215,10 @@ const simplifyGraha = (graha: Graha) => {
   keys.forEach(k => {
     switch (k) {
       case 'nakshatra':
-        mp.set(k, simplifyObject(graha.nakshatra, nakshatraKeys));
+        mp.set(k, {
+          num: graha.nakshatra.num,
+          within: graha.nakshatra.within,
+        });
         break;
       case 'relationship':
         mp.set(k, graha.relationship.compound);

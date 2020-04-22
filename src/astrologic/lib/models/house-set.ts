@@ -3,7 +3,6 @@ export class HouseSet {
   houses: Array<number> = [];
   ascendant: number = 0;
   mc: number = 0;
-  armc: number = 0;
   vertex: number = 0;
   /* equatorialAscendant: number = 0;
   kochCoAscendant:number = 0;
@@ -24,7 +23,6 @@ export class HouseSet {
           case 'jd':
           case 'ascendant':
           case 'mc':
-          case 'armc':
           case 'vertex':
             if (typeof value === 'number') {
               this[key] = value;

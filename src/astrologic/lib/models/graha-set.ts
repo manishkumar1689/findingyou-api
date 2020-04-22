@@ -1,4 +1,4 @@
-import { isNumeric, notEmptyString } from '../../../lib/validators';
+import { isNumeric, notEmptyString, inRange } from '../../../lib/validators';
 import { BaseObject } from './base-object';
 import { mapToObject } from '../mappers';
 import {
@@ -8,7 +8,9 @@ import {
   calcInclusiveTwelfths,
   matchHouseNum,
 } from '../math-funcs';
+import { matchNakshatra } from '../core';
 import nakshatraValues from '../settings/nakshatra-values';
+import grahaValues from '../settings/graha-values';
 import { Nakshatra } from './nakshatra';
 import { Relationship } from './relationship';
 import maitriData from '../settings/maitri-data';
@@ -38,19 +40,12 @@ export class Graha extends BaseObject {
   lngSpeed: number = 0;
   latSpeed: number = 0;
   dstSpeed: number = 0;
-  rflag: number = 0;
-  sign: number = 0;
   calc: string = '';
-  nakshatra = new Nakshatra();
-  ruler = '';
   friends = [];
   neutral = [];
   enemies = [];
   relationship = new Relationship();
-  withinSign = 0;
-  isOwnSign = false;
   mulaTrikon: -1;
-  isMulaTrikon = false;
   mulaTrikonDegrees: 0;
   exalted = 0;
   exaltedDegree = 0;
@@ -61,9 +56,6 @@ export class Graha extends BaseObject {
   ckNum = 0;
   house = 0;
   ownHouses = [];
-  padaNum = 0;
-  percent = 0;
-  akshara = null;
 
   constructor(body: any = null) {
     super();
@@ -71,12 +63,6 @@ export class Graha extends BaseObject {
       Object.entries(body).forEach(entry => {
         const [key, value] = entry;
         switch (key) {
-          case 'nakshatra':
-            this.nakshatra = new Nakshatra(value);
-            break;
-          case 'relationship':
-            this.relationship = new Relationship(value);
-            break;
           case 'longitude':
           case 'lon':
             if (typeof value === 'number') {
@@ -104,15 +90,23 @@ export class Graha extends BaseObject {
               this.dstSpeed = value;
             }
             break;
+          case 'sign':
+          case 'nakshatra':
+            break;
           default:
             this[key] = value;
             break;
         }
       });
-      if (this.nakshatra instanceof Object) {
-        this.applyPanchanga();
-      }
     }
+  }
+
+  get sign() {
+    return Math.floor(this.lng / 30) + 1;
+  }
+
+  get nakshatra(): Nakshatra {
+    return new Nakshatra(matchNakshatra(this.lng));
   }
 
   get longitude() {
@@ -135,24 +129,90 @@ export class Graha extends BaseObject {
     return this.dstSpeed;
   }
 
+  get nakshatraDegrees() {
+    return 360 / nakshatraValues.length;
+  }
+
+  get padaDegrees() {
+    return this.nakshatraDegrees / 4;
+  }
+
+  get ruler(): string {
+    let str = '';
+    const rk = grahaValues.find(b => b.ownSign.includes(this.sign));
+    if (rk) {
+      str = rk.key;
+    }
+    return str;
+  }
+
+  get natural(): string {
+    let natural = '';
+    if (this.ruler.length > 1) {
+      if (this.friends.includes(this.ruler)) {
+        natural = 'friend';
+      } else if (this.neutral.includes(this.ruler)) {
+        natural = 'neutral';
+      } else if (this.enemies.includes(this.ruler)) {
+        natural = 'enemy';
+      }
+    }
+    return natural;
+  }
+
   /*
 Calculate pachanga values for a body 
 @parma body:Object
 */
-  applyPanchanga = () => {
-    this.nakshatra.degrees = 360 / nakshatraValues.length;
-    const padaDegrees = this.nakshatra.degrees / 4;
-    this.nakshatra.within = this.lng % this.nakshatra.degrees;
-    const padaFrac = this.nakshatra.within / padaDegrees;
-    const padaIndex = Math.floor(padaFrac);
-    this.padaNum = padaIndex + 1;
-    this.percent = padaFrac * 25;
-    this.akshara = this.nakshatra.aksharas[padaIndex];
-    return this;
-  };
+  get padaFrac() {
+    return this.nakshatra.within / this.padaDegrees;
+  }
+
+  get padaIndex() {
+    return Math.floor(this.padaFrac);
+  }
+
+  get padaNum() {
+    return this.padaIndex + 1;
+  }
+
+  get percent() {
+    return this.padaFrac * 25;
+  }
+
+  get akshara() {
+    return this.nakshatra.aksharas[this.padaIndex];
+  }
+
+  get withinSign() {
+    return this.lng % 30;
+  }
+  get isOwnSign(): boolean {
+    return this.ownSign.indexOf(this.sign) >= 0;
+  }
+  get isMulaTrikon(): boolean {
+    return (
+      this.sign === this.mulaTrikon &&
+      inRange(this.withinSign, this.mulaTrikonDegrees)
+    );
+  }
+
+  get isExalted(): boolean {
+    return (
+      this.sign === this.exalted &&
+      inRange(this.withinSign, [0, this.exaltedDegree + 1])
+    );
+  }
+
+  get isDebilitated(): boolean {
+    return (
+      this.sign === this.debilitated &&
+      inRange(this.withinSign, [0, this.exaltedDegree + 1])
+    );
+  }
 
   calcVargas() {
-    return calcAllVargas(this.longitude);
+    return calcAllVargas(this.lng);
   }
 
   hasRuler = () => notEmptyString(this.ruler, 1);
@@ -162,7 +222,7 @@ export class GrahaSet {
   jd = null;
   bodies: Array<Graha> = [];
 
-  constructor(bodyData) {
+  constructor(bodyData: any = null) {
     if (bodyData instanceof Object) {
       const { jd, bodies } = bodyData;
       if (jd) {
@@ -284,22 +344,12 @@ export class GrahaSet {
 
   matchRelationships() {
     this.bodies = this.bodies.map(b => {
-      /* const mapRelation = obRef => {
-        const ob = this.bodies.find(b2 => b2.key === obRef);
-        let valid = false;
-        if (ob) {
-          valid = ob.sign === b.sign;
-        }
-        return valid;
-      };
-      b.friends = b.friends.filter(mapRelation);
-      b.neutral = b.neutral.filter(mapRelation);
-      b.enemies = b.enemies.filter(mapRelation); */
       const rulerSign = this.get(b.ruler).sign;
 
       const numSteps = calcInclusiveTwelfths(b.sign, rulerSign);
       const isTempFriend = maitriData.temporary.friend.includes(numSteps);
       const isTempEnemy = maitriData.temporary.enemy.includes(numSteps);
+      b.relationship.natural = b.natural;
       b.relationship.temporary = isTempFriend
         ? 'friend'
         : isTempEnemy
