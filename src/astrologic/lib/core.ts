@@ -582,11 +582,13 @@ export const calcSphutaData = async (datetime: string, geo) => {
   const houseData = await fetchHouseData(datetime, geo);
   const upagrahas = await calcUpagrahas(datetime, geo);
   const indianTimeData = await fetchIndianTimeData(datetime, geo);
-  const data = await addSphutaData(
+  const sunAtSunRise = await calcSunJd(indianTimeData.dayStart());
+  const data = addSphutaData(
     grahaSet,
     houseData,
     indianTimeData,
     upagrahas,
+    sunAtSunRise,
   );
   return { ...data };
 };
@@ -655,14 +657,14 @@ export const calcCompactChartData = async (
 
   const upagrahas = await calcUpagrahas(datetime, geo, ayanamsha.value);
   const indianTimeData = await fetchIndianTimeData(datetime, geo);
-  //const sunAtSunRise = await calcSunJd(indianTimeData.dayStart());
+  const sunAtSunRise = await calcSunJd(indianTimeData.dayStart());
 
-  const sphutaObj = await addSphutaData(
+  const sphutaObj = addSphutaData(
     grahaSet,
     hdP,
     indianTimeData,
     upagrahas,
-    ayanamshas,
+    sunAtSunRise,
   );
   const excludeKeys = ['grahaSet'];
   const grahaKeys = ['yogi', 'avayogi'];
@@ -691,6 +693,7 @@ export const calcCompactChartData = async (
   return {
     jd,
     datetime,
+    geo,
     ayanamsha,
     grahas,
     ...houseData,
@@ -745,12 +748,12 @@ const subtractCycleInclusive = (one, two, radix) => {
   return ((one - 1 - two + radix) % radix) + 1;
 };
 
-const addSphutaData = async (
+const addSphutaData = (
   grahaSet: GrahaSet,
   houseData,
   iTime,
   upagrahas,
-  ayanamshas: Array<KeyValue> = [],
+  sunAtSunRise,
 ) => {
   const { bodies } = grahaSet;
   let data: any = { grahaSet };
@@ -773,8 +776,6 @@ const addSphutaData = async (
   ); */
   data.induLagna =
     ((lagnaInduRow.value + moonInduRow.value + moon.sign) % 12) - 1;
-
-  const sunAtSunRise = await calcSunJd(iTime.dayStart());
 
   data.ghatiLagna = (iTime.ghatiVal() * 30 + sunAtSunRise.longitude) % 360;
 

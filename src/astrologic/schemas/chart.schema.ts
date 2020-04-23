@@ -48,7 +48,7 @@ export const ChartSchema = new mongoose.Schema({
     required: false,
     default: [],
   },
-  objectMatches: {
+  objects: {
     type: [ObjectMatchSchema],
     required: false,
     default: [],
