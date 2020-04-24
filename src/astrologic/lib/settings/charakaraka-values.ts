@@ -1,3 +1,3 @@
-const charaKaraka = ['DK', 'GK', 'PK', 'PiK', 'MK', 'BK', 'AmK', 'AK'];
+const charaKaraka = ['AK', 'AmK', 'BK', 'MK', 'PiK', 'PK', 'GK', 'DK'];
 
 export default charaKaraka;

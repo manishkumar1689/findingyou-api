@@ -15,6 +15,7 @@ import {
   calcJyotishSunRise,
   fetchIndianTimeData,
   SunTransitionData,
+  TransitionData,
 } from './transitions';
 import starValues from './settings/star-values';
 import asteroidValues from './settings/asteroid-values';
@@ -51,6 +52,7 @@ import {
 import { hashMapToObject } from 'src/lib/entities';
 import { KeyValue } from '../interfaces/key-value';
 import { GeoPos } from '../interfaces/geo-pos';
+import { IndianTime } from './models/indian-time';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 
@@ -76,10 +78,11 @@ export const calcUpagrahas = async (
   const eighthJd = periodLength / 8;
   const eighth = periodHours / 8;
   const periods = showPeriods
-    ? await calcUpagrahaPeriods(startJd, eighthJd, geo)
+    ? await calcUpagrahaPeriods(startJd, eighthJd, geo, ayanamshaValue)
     : [];
   const sectionKey = isDayTime ? 'daytime' : 'nighttime';
   const upaRow = upagrahaData[sectionKey].find(row => row.day === weekDay);
+
   let values = [];
   for (const ref of upagrahaData.refs) {
     const partIndex = upaRow.parts.findIndex(b => b === ref.body);
@@ -173,7 +176,12 @@ const calcDayMuhurtas = async (datetime: string, geo) => {
   return { jd, values, muhurtaLength, dayStart };
 };
 
-const calcUpagrahaPeriods = async (startJd: number, eighthJd: number, geo) => {
+const calcUpagrahaPeriods = async (
+  startJd: number,
+  eighthJd: number,
+  geo,
+  ayanamshaValue: number,
+) => {
   let periods = [];
   for (let i = 0; i < 9; i++) {
     const periodJd = startJd + i * eighthJd;
@@ -184,8 +192,8 @@ const calcUpagrahaPeriods = async (startJd: number, eighthJd: number, geo) => {
       startJd: periodJd,
       midJd: midPeriodJd,
       dt: jdToDateTime(periodJd),
-      ascendant: hd.ascendant,
-      midAscendant: hd2.ascendant,
+      ascendant: subtractLng360(hd.ascendant, ayanamshaValue),
+      midAscendant: subtractLng360(hd2.ascendant, ayanamshaValue),
       index: i,
       num: i + 1,
     });
@@ -240,11 +248,19 @@ export const calcMrityubhagaValues = (
 };
 
 export const calcAllTransitions = async (datetime: string, geo) => {
-  let data = {
-    jd: calcJulDate(datetime),
-    bodies: [],
+  const jd = calcJulDate(datetime);
+  const bodies = await calcAllTransitionsJd(jd, geo);
+  return {
+    jd,
+    bodies,
   };
-  const bodies = [
+};
+
+export const calcAllTransitionsJd = async (
+  jd: number,
+  geo,
+): Promise<Array<TransitionData>> => {
+  const bodyKeys = [
     'SE_SUN',
     'SE_MOON',
     'SE_MERCURY',
@@ -256,16 +272,17 @@ export const calcAllTransitions = async (datetime: string, geo) => {
     'SE_NEPTUNE',
     'SE_PLUTO',
   ];
-  for (const body of bodies) {
+  const bodies: Array<TransitionData> = [];
+  for (const body of bodyKeys) {
     const num = swisseph[body];
-    const bodyData = await calcTransitionJd(data.jd, geo, num, false, true);
-    data.bodies.push({
+    const bodyData = await calcTransitionJd(jd, geo, num, false, false);
+    bodies.push({
       num,
       body,
       ...bodyData,
     });
   }
-  return data;
+  return bodies;
 };
 
 export const calcStarPos = async (datetime: string, starname: string) => {
@@ -380,15 +397,17 @@ export const fetchHouseDataJd = async (
   mode = 'RAW',
 ): Promise<HouseSet> => {
   let iflag = swisseph.SEFLG_SWIEPH;
+  let sid_mode_num = 0;
   if (notEmptyString(mode, 3) && mode !== 'RAW') {
     iflag += swisseph.SEFLG_SIDEREAL;
     const sid_mode_key = notEmptyString(mode, 2)
       ? ['SE_SIDM', mode.toUpperCase()].join('_')
       : '';
     if (sid_mode_key.length > 8 && swisseph.hasOwnProperty(sid_mode_key)) {
-      swisseph.swe_set_sid_mode(swisseph[sid_mode_key], 0, 0);
+      sid_mode_num = swisseph[sid_mode_key];
     }
   }
+  swisseph.swe_set_sid_mode(sid_mode_num, 0, 0);
   let houseData: any = { jd };
   await getHouses(jd, iflag, geo.lat, geo.lng, system).catch(res => {
     if (res instanceof Object) {
@@ -497,7 +516,7 @@ const mergeCharaKarakaToBodies = (bodies, withinSignBodies) => {
   bodies = bodies.map(b => {
     const wb = withinSignBodies.find(sb => sb.key === b.key);
     if (wb) {
-      b.charaKaraka = wb.ck;
+      b.charaKaraka = wb.num;
     }
     return b;
   });
@@ -611,8 +630,9 @@ export const calcCompactChartData = async (
   ayanamsaKey = '',
 ) => {
   const grahaSet = await calcGrahaSet(datetime, geo, true);
-
   const { jd } = grahaSet;
+  const transitions = await calcAllTransitionsJd(jd, geo);
+  grahaSet.mergeTransitions(transitions);
   const ayanamshas = await calcAyanamshas(jd);
   const ayanamsha = {
     value: 0,
@@ -625,7 +645,16 @@ export const calcCompactChartData = async (
       ayanamsha.key = ayanamsaKey;
     }
   }
-  const applyAyanamsha = ayanamsha.value !== 0;
+
+  const hdP = await fetchHouseData(datetime, geo, 'P');
+  const firstHouseLng = getFirstHouseLng(hdP);
+  const hdW = Object.assign({}, hdP);
+  hdW.houses = expandWholeHouses(firstHouseLng);
+  const upagrahas = await calcUpagrahas(datetime, geo, ayanamsha.value);
+  const indianTimeData = await fetchIndianTimeData(datetime, geo);
+  grahaSet.mergeSunTransitions(indianTimeData.sunData());
+  const sunAtSunRise = await calcSunJd(indianTimeData.dayStart());
+  /* const applyAyanamsha = ayanamsha.value !== 0;
   if (applyAyanamsha) {
     grahaSet.bodies = grahaSet.bodies.map(b => {
       b.lng = subtractLng360(b.lng, ayanamsha.value);
@@ -633,10 +662,6 @@ export const calcCompactChartData = async (
       return b;
     });
     applyCharaKarakas(grahaSet.bodies);
-  }
-
-  const hdP = await fetchHouseData(datetime, geo, 'P');
-  if (applyAyanamsha) {
     hdP.ascendant = subtractLng360(hdP.ascendant, ayanamsha.value);
     hdP.mc = subtractLng360(hdP.mc, ayanamsha.value);
     hdP.houses = hdP.houses.map(h => subtractLng360(h, ayanamsha.value));
@@ -655,10 +680,6 @@ export const calcCompactChartData = async (
 
   const grahas = grahaSet.bodies.map(simplifyGraha);
 
-  const upagrahas = await calcUpagrahas(datetime, geo, ayanamsha.value);
-  const indianTimeData = await fetchIndianTimeData(datetime, geo);
-  const sunAtSunRise = await calcSunJd(indianTimeData.dayStart());
-
   const sphutaObj = addSphutaData(
     grahaSet,
     hdP,
@@ -666,7 +687,8 @@ export const calcCompactChartData = async (
     upagrahas,
     sunAtSunRise,
   );
-  const excludeKeys = ['grahaSet'];
+  const numValueKeys = ['santanaTithi'];
+  const excludeKeys = ['grahaSet', 'houseSign', ...numValueKeys];
   const grahaKeys = ['yogi', 'avayogi'];
   const sphutas = Object.entries(sphutaObj)
     .filter(
@@ -690,18 +712,127 @@ export const calcCompactChartData = async (
         value,
       };
     });
+  const numValues = numValueKeys.map(key => {
+    const value = sphutaObj[key];
+    return {
+      key,
+      value,
+    };
+  }); */
+  const {
+    grahas,
+    sphutas,
+    ascendant,
+    mc,
+    vertex,
+    houses,
+    numValues,
+    objects,
+  } = calcCompactVariantSet(
+    grahaSet,
+    hdW,
+    indianTimeData,
+    upagrahas,
+    ayanamsha,
+    sunAtSunRise,
+  );
   return {
     jd,
     datetime,
     geo,
     ayanamsha,
     grahas,
-    ...houseData,
+    ascendant,
+    mc,
+    vertex,
+    houses,
     indianTime: indianTimeData.toValues(),
-    sun: indianTimeData.sunData(),
     ayanamshas,
     upagrahas: upagrahas.values.map(mapUpagraha),
     sphutas,
+    numValues,
+    objects,
+  };
+};
+
+const calcCompactVariantSet = (
+  grahaSet: GrahaSet,
+  hdP: HouseSet,
+  indianTimeData: IndianTime,
+  upagrahas,
+  ayanamsha: KeyValue,
+  sunAtSunRise,
+) => {
+  const applyAyanamsha = ayanamsha.value !== 0;
+  if (applyAyanamsha) {
+    grahaSet.bodies = grahaSet.bodies.map(b => {
+      b.lng = subtractLng360(b.lng, ayanamsha.value);
+      b.topo.lng = subtractLng360(b.topo.lng, ayanamsha.value);
+      return b;
+    });
+    hdP.ascendant = subtractLng360(hdP.ascendant, ayanamsha.value);
+    hdP.mc = subtractLng360(hdP.mc, ayanamsha.value);
+    hdP.houses = hdP.houses.map(h => subtractLng360(h, ayanamsha.value));
+  }
+  applyCharaKarakas(grahaSet.bodies);
+
+  const firstHouseLng = getFirstHouseLng(hdP);
+  const wHouses = expandWholeHouses(firstHouseLng);
+  const hdW = { ...hdP, houses: wHouses };
+  grahaSet.mergeHouseData(hdW);
+  grahaSet.matchRelationships();
+  const houses = [
+    { system: 'P', values: hdP.houses.splice(0, 6) },
+    { system: 'W', values: [firstHouseLng] },
+  ];
+  const houseData = { ...hdP, houses };
+
+  const grahas = grahaSet.bodies.map(simplifyGraha);
+
+  const sphutaObj = addSphutaData(
+    grahaSet,
+    hdP,
+    indianTimeData,
+    upagrahas,
+    sunAtSunRise,
+  );
+  const numValueKeys = ['santanaTithi'];
+  const excludeKeys = ['grahaSet', 'houseSign', ...numValueKeys];
+  const grahaKeys = ['yogi', 'avayogi'];
+  const sphutas = Object.entries(sphutaObj)
+    .filter(
+      entry => excludeKeys.includes(entry[0]) === false && isNumeric(entry[1]),
+    )
+    .map(entry => {
+      const [key, value] = entry;
+      return {
+        key,
+        value,
+      };
+    });
+
+  const objects = Object.entries(sphutaObj)
+    .filter(entry => grahaKeys.includes(entry[0]))
+    .map(entry => {
+      const [key, value] = entry;
+      return {
+        key,
+        type: 'graha',
+        value,
+      };
+    });
+  const numValues = numValueKeys.map(key => {
+    const value = sphutaObj[key];
+    return {
+      key,
+      value,
+    };
+  });
+  return {
+    grahas,
+    sphutas,
+    ...houseData,
+    numValues,
     objects,
   };
 };
@@ -758,7 +889,7 @@ const addSphutaData = (
   const { bodies } = grahaSet;
   let data: any = { grahaSet };
   const grahaLngs = grahaSet.longitudes();
-  data.houseSign = Math.floor(houseData.houses[0] / 30) + 1;
+  data.houseSign = Math.floor(houseData.ascendant / 30) + 1;
   const moon = grahaSet.moon();
 
   data.sriLagna =
@@ -770,12 +901,10 @@ const addSphutaData = (
   const moonSignPlusNine = ((moon.sign - 1 + (9 - 1)) % 12) + 1;
 
   const moonInduRow = matchInduVal(moonSignPlusNine);
-  /* console.log(
-    { lagnaInduRow, moonInduRow, moon },
-    lagnaInduRow.value + moonInduRow.value + moon.sign,
-  ); */
-  data.induLagna =
+
+  const induLagnaSign =
     ((lagnaInduRow.value + moonInduRow.value + moon.sign) % 12) - 1;
+  data.induLagna = (induLagnaSign - 1) * 30 + grahaSet.moon().withinSign;
 
   data.ghatiLagna = (iTime.ghatiVal() * 30 + sunAtSunRise.longitude) % 360;
 
@@ -859,8 +988,10 @@ const matchTithiNum = (bodies, multiplier = 1) => {
 };
 
 const applyCharaKarakas = bodies => {
-  const withinSignBodies = calcCharaKaraka(bodies);
-  mergeCharaKarakaToBodies(bodies, withinSignBodies);
+  if (bodies.some(b => isNumeric(b.withinSign))) {
+    const withinSignBodies = calcCharaKaraka(bodies);
+    mergeCharaKarakaToBodies(bodies, withinSignBodies);
+  }
 };
 
 /*
@@ -880,9 +1011,10 @@ const calcCharaKaraka = bodies => {
         deg,
       };
     });
-  withinSignBodies.sort((a, b) => a.deg - b.deg);
+  withinSignBodies.sort((a, b) => b.deg - a.deg);
   return withinSignBodies.map((b, index) => {
     b.ck = index < charakarakaValues.length ? charakarakaValues[index] : '';
+    b.num = index + 1;
     return b;
   });
 };
@@ -1188,9 +1320,12 @@ export const calcPanchanga = async (datetime, geo) => {
   };
 };
 
-const mapUpagraha = upagraha => {
-  const keys = ['parts', 'value', 'jd', 'upagraha'];
-  return simplifyObject(upagraha, keys);
+const mapUpagraha = obj => {
+  const { key, upagraha } = obj;
+  return {
+    key,
+    value: upagraha,
+  };
 };
 
 const simplifyGraha = (graha: Graha) => {
@@ -1219,8 +1354,9 @@ const simplifyGraha = (graha: Graha) => {
     'akshara',
     'isExalted',
     'isDebilitated',
+    'transitions',
   ];
-  const nakshatraKeys = ['index', 'within'];
+
   const mp = new Map<string, any>();
   keys.forEach(k => {
     switch (k) {

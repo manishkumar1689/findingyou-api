@@ -9,12 +9,14 @@ import {
   matchHouseNum,
 } from '../math-funcs';
 import { matchNakshatra } from '../core';
+import { TransitionData } from '../transitions';
 import nakshatraValues from '../settings/nakshatra-values';
 import grahaValues from '../settings/graha-values';
 import { Nakshatra } from './nakshatra';
 import { Relationship } from './relationship';
 import maitriData from '../settings/maitri-data';
-import { GeoPos } from 'src/astrologic/interfaces/geo-pos';
+import { GeoPos } from '../../interfaces/geo-pos';
+import { BodyTransition } from 'src/astrologic/interfaces/body-transition';
 
 export class Graha extends BaseObject {
   num: number = -1;
@@ -52,10 +54,11 @@ export class Graha extends BaseObject {
   debilitated = 0;
   ownSign = [];
   charaKarakaMode = 'standard';
-  charaKaraka = '';
+  charaKaraka = 0;
   ckNum = 0;
   house = 0;
   ownHouses = [];
+  transitions: Array<BodyTransition> = [];
 
   constructor(body: any = null) {
     super();
@@ -211,6 +214,10 @@ Calculate pachanga values for a body
     );
   }
 
+  setTransitions(transitions: Array<BodyTransition> = []) {
+    this.transitions = transitions;
+  }
+
   calcVargas() {
     return calcAllVargas(this.lng);
   }
@@ -218,6 +225,9 @@ Calculate pachanga values for a body
   hasRuler = () => notEmptyString(this.ruler, 1);
 }
 
+/*
+Set of grahas with extra methods to add houses and other attributes that require comparisons with other grahas
+*/
 export class GrahaSet {
   jd = null;
   bodies: Array<Graha> = [];
@@ -254,7 +264,6 @@ export class GrahaSet {
   }
 
   mergeHouseData(houseData) {
-    console.log(houseData);
     this.bodies = this.bodies.map(b => {
       b.house = matchHouseNum(b.longitude, houseData.houses);
       if (b.mulaTrikon) {
@@ -272,7 +281,7 @@ export class GrahaSet {
 
   getBodies = () => this.bodies;
 
-  getRuler(key) {
+  getRuler(key: string) {
     const body = this.get(key);
     let rulerKey = '';
     if (body) {
@@ -341,6 +350,28 @@ export class GrahaSet {
     const lagnaVarga = calcVargaSet(lagnaLng, -1, 'as');
     const vargas = this.getVargaSet();
     return [lagnaVarga, ...vargas];
+  }
+
+  mergeTransitions(transitionSets: Array<TransitionData> = []) {
+    const keys = ['set', 'rise'];
+    transitionSets.forEach(trSet => {
+      const trs = keys.map(key => {
+        const trRow = trSet[key];
+        const { jd, dt } = trRow;
+        return { type: key, jd, datetime: dt };
+      });
+      this.get(trSet.num).setTransitions(trs);
+    });
+  }
+
+  mergeSunTransitions(transitions: Array<BodyTransition>) {
+    const sun = this.sun();
+    const currKeys = sun.transitions.map(tr => tr.type);
+    transitions.forEach(bt => {
+      if (!currKeys.includes(bt.type)) {
+        sun.transitions.push(bt);
+      }
+    });
   }
 
   matchRelationships() {

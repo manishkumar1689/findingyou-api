@@ -53,6 +53,9 @@ export class GeoService {
         const excludeTypes = ['AREA', 'ADM3'];
         let toponyms = [];
         if (geonames instanceof Array) {
+          if (geonames.length > 2) {
+            excludeTypes.push('CONT');
+          }
           toponyms = geonames
             .filter(gn => !excludeTypes.includes(gn.fcode))
             .map(row => {

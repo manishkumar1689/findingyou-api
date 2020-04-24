@@ -264,7 +264,6 @@ const grahaValues = [
     mulaTrikon: 8,
     mulaTrikonDegrees: [0, 20],
     debilitated: 2,
-    charaKarakaMode: 'none',
   },
   {
     num: 7,

@@ -13,15 +13,19 @@ export interface TimeSet {
   after: boolean;
 }
 
-interface TransitionData {
+export interface TransitionData {
   rise: TimeSet;
   set: TimeSet;
   prevRise: TimeSet;
   prevSet: TimeSet;
+  num?: number;
+  body?: string;
+  valid?: boolean;
 }
 
 export interface SunTransitionData {
   jd: number;
+  datetime?: Date;
   geo: GeoLoc;
   rise: TimeSet;
   set: TimeSet;
@@ -168,7 +172,8 @@ export const calcTransitionJd = async (
 
 export const calcSunTrans = async (datetime, geo) => {
   const jd = calcJulDate(datetime);
-  return calcSunTransJd(jd, geo);
+  const transData = await calcSunTransJd(jd, geo);
+  return { ...transData, datetime };
 };
 
 export const calcSunTransJd = async (jd, geo): Promise<SunTransitionData> => {

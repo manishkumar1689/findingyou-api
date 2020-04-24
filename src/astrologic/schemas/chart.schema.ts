@@ -1,11 +1,12 @@
 import * as mongoose from 'mongoose';
 import { SubjectSchema } from './subject.schema';
 import { GeoSchema } from 'src/user/schemas/geo.schema';
+import { PlacenameSchema } from 'src/user/schemas/placename.schema';
 import { BaseGrahaSchema } from './base-graha.schema';
 import { HouseSystemSchema } from './house-system.schema';
-import { GrahaTransitionSchema } from './graha-transition.schema';
-import { SphutaSchema } from './sphuta.schema';
 import { ObjectMatchSchema } from './object-match.schema';
+import { ITimeSchema } from './i-time.schema';
+import { KeyNumValueSchema } from './upagraha.schema';
 const { ObjectId } = mongoose.Schema.Types;
 
 export const ChartSchema = new mongoose.Schema({
@@ -13,6 +14,10 @@ export const ChartSchema = new mongoose.Schema({
     type: ObjectId,
     required: true,
     ref: 'User',
+  },
+  isDefaultBirthChart: {
+    type: Boolean,
+    default: true,
   },
   subject: {
     type: SubjectSchema,
@@ -30,6 +35,31 @@ export const ChartSchema = new mongoose.Schema({
     type: GeoSchema,
     required: true,
   },
+  placenames: {
+    type: [PlacenameSchema],
+    required: false,
+    default: [],
+  },
+  tz: {
+    type: String,
+    required: false,
+  },
+  tzOffset: {
+    type: Number,
+    required: true,
+  },
+  ascendant: {
+    type: String,
+    required: false,
+  },
+  mc: {
+    type: String,
+    required: false,
+  },
+  vertex: {
+    type: String,
+    required: false,
+  },
   grahas: {
     type: [BaseGrahaSchema],
     required: true,
@@ -38,13 +68,22 @@ export const ChartSchema = new mongoose.Schema({
     type: [HouseSystemSchema],
     required: false,
   },
-  sunTransitions: {
-    type: [GrahaTransitionSchema],
+  indianTime: {
+    type: ITimeSchema,
+    required: false,
+  },
+  upagrahas: {
+    type: [KeyNumValueSchema],
     required: false,
     default: [],
   },
   sphutas: {
-    type: [SphutaSchema],
+    type: [KeyNumValueSchema],
+    required: false,
+    default: [],
+  },
+  numValues: {
+    type: [KeyNumValueSchema],
     required: false,
     default: [],
   },

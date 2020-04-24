@@ -22,8 +22,4 @@ export const GrahaTransitionSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
-  lng: {
-    type: Number,
-    required: true,
-  },
 });

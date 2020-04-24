@@ -1,6 +1,6 @@
 import * as mongoose from 'mongoose';
 
-export const SphutaSchema = new mongoose.Schema({
+export const KeyNumValueSchema = new mongoose.Schema({
   key: {
     type: String,
     required: true,

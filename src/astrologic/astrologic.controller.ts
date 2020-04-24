@@ -16,8 +16,8 @@ import {
 } from '@nestjs/common';
 import { AstrologicService } from './astrologic.service';
 import { GeoService } from './../geo/geo.service';
-import { BodySpeed } from './interfaces/body-speed.interface';
-import { BodySpeedDTO } from './dto/body-speed.dto';
+import { Chart } from './interfaces/chart.interface';
+import { CreateChartDTO } from './dto/create-chart.dto';
 import {
   isNumeric,
   validISODateString,
@@ -50,7 +50,6 @@ import { toIndianTime, calcTransition } from './lib/transitions';
 import { generateApiRouteMap } from './lib/route-map';
 import { readEpheFiles } from './lib/files';
 import moment = require('moment');
-import { start } from 'repl';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -82,6 +81,28 @@ export class AstrologicController {
       functions,
     };
     res.send(data);
+  }
+
+  @Post('create-chart')
+  async createChart(@Res() res, @Body() chartDTO: CreateChartDTO) {
+    const chart = await this.astrologicService.createChart(chartDTO);
+    res.send({
+      valid: chart instanceof Object,
+      chart,
+    });
+  }
+
+  @Put('edit-chart/:chartID')
+  async updateChart(
+    @Res() res,
+    @Param('chartID') chartID,
+    @Body() chartDTO: CreateChartDTO,
+  ) {
+    const chart = await this.astrologicService.updateChart(chartID, chartDTO);
+    res.send({
+      valid: chart instanceof Object,
+      chart,
+    });
   }
 
   @Get('swisseph/files')

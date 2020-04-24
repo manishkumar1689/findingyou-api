@@ -1,5 +1,7 @@
 import * as mongoose from 'mongoose';
 import { GrahaTransitionSchema } from './graha-transition.schema';
+import { LngLatSchema } from './lng-lat.schema';
+import { VariantSchema } from './variant.schema';
 
 export const BaseGrahaSchema = new mongoose.Schema({
   key: {
@@ -18,21 +20,21 @@ export const BaseGrahaSchema = new mongoose.Schema({
     type: Number,
     required: false,
   },
-  speed: {
+  topo: {
+    type: LngLatSchema,
+    required: false,
+  },
+  lngSpeed: {
     type: Number,
     required: false,
   },
-  sign: {
+  declination: {
     type: Number,
     required: false,
   },
-  house: {
-    type: Number,
-    required: false,
-  },
-  relationship: {
-    type: String,
-    required: false,
+  variants: {
+    type: [VariantSchema],
+    default: [],
   },
   transitions: {
     type: [GrahaTransitionSchema],

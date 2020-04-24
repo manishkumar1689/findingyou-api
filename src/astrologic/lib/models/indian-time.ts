@@ -2,6 +2,7 @@ import * as moment from 'moment';
 import { BaseObject } from './base-object';
 import { JyotishDay } from './jyotish-day';
 import { hashMapToObject } from 'src/lib/entities';
+import { BodyTransition } from 'src/astrologic/interfaces/body-transition';
 
 export class IndianTime extends BaseObject {
   /*
@@ -56,7 +57,7 @@ export class IndianTime extends BaseObject {
 
   prevRise = () => this._sunData.prevRise;
 
-  prevSet = () => this._sunData.set;
+  prevSet = () => this._sunData.prevSet;
 
   nextRise = () => this._sunData.nextRise;
 
@@ -88,11 +89,15 @@ export class IndianTime extends BaseObject {
 
   sunData() {
     const keys = ['prevRise', 'prevSet', 'rise', 'set', 'nextRise'];
-    const mp = new Map<string, any>();
-    keys.forEach(key => {
-      mp.set(key, this[key]().jd);
+    const items: Array<BodyTransition> = keys.map(type => {
+      const tr = this[type]();
+      return {
+        type,
+        jd: tr.jd,
+        datetime: tr.dt,
+      };
     });
-    return hashMapToObject(mp);
+    return items;
   }
 
   toValues() {

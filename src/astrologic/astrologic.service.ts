@@ -2,20 +2,56 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { BodySpeed } from './interfaces/body-speed.interface';
+import { Chart } from './interfaces/chart.interface';
 import { BodySpeedDTO } from './dto/body-speed.dto';
 import { calcAcceleration, calcStation } from './lib/astro-motion';
 import grahaValues from './lib/settings/graha-values';
-import { calcJulianDate, calcJulDate } from './lib/date-funcs';
+import { calcJulDate } from './lib/date-funcs';
 import { isNumeric, validISODateString } from 'src/lib/validators';
+import { CreateChartDTO } from './dto/create-chart.dto';
 
 @Injectable()
 export class AstrologicService {
   constructor(
-    @InjectModel('BodySpeed')
-    private bodySpeedModel: Model<BodySpeed>,
+    @InjectModel('BodySpeed') private bodySpeedModel: Model<BodySpeed>,
+    @InjectModel('Chart') private chartModel: Model<Chart>,
   ) {}
 
-  // post a single Submission
+  async createChart(data: CreateChartDTO) {
+    let isNew = true;
+    if (data.isDefaultBirthChart) {
+      const chart = await this.chartModel
+        .findOne({
+          user: data.user,
+          isDefaultBirthChart: true,
+        })
+        .exec();
+      if (chart instanceof Object) {
+        const { _id } = chart;
+        isNew = false;
+        await this.chartModel
+          .findByIdAndUpdate(_id, data, { new: false })
+          .exec();
+        return await this.chartModel.findById(_id);
+      }
+    }
+    if (isNew) {
+      return this.chartModel.create(data);
+    }
+  }
+
+  // update existing with unique chartID
+  async updateChart(chartID: string, data: CreateChartDTO) {
+    const chart = await this.chartModel.findById(chartID).exec();
+    if (chart instanceof Object) {
+      await this.chartModel
+        .findByIdAndUpdate(chartID, data, { new: false })
+        .exec();
+      return await this.chartModel.findById(chartID);
+    }
+  }
+
+  // save a single body speed record
   async saveBodySpeed(data: BodySpeedDTO): Promise<BodySpeed> {
     const record = await this.bodySpeedModel
       .findOne({ jd: data.jd, num: data.num })
@@ -30,6 +66,25 @@ export class AstrologicService {
       const newBodySpeed = await this.bodySpeedModel.create(data);
       return newBodySpeed.save();
     }
+  }
+
+  async listByUser(userID: string) {
+    return await this.chartModel
+      .find({ user: userID })
+      .sort({ isDefaultBirthChart: -1 })
+      .exec();
+  }
+
+  async list(criteria: Map<string, any> = new Map<string, any>()) {
+    const filter = Object.fromEntries(criteria);
+    return await this.chartModel
+      .find(filter)
+      .sort({ isDefaultBirthChart: -1 })
+      .exec();
+  }
+
+  async deleteChart(chartID: string) {
+    return await this.chartModel.deleteOne({ _id: chartID });
   }
 
   async savePlanetStations(
