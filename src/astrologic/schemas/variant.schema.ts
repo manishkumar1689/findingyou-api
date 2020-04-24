@@ -8,7 +8,7 @@ import charakarakaValues from '../lib/settings/charakaraka-values';
 */
 export const VariantSchema = new mongoose.Schema({
   num: {
-    type: Number, // ayanamsha number, -1 = none applied
+    type: Number, // ayanamsha number, 0 = none applied
     required: true,
   },
   sign: {

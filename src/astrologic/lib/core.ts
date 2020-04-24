@@ -638,7 +638,7 @@ export const calcCompactChartData = async (
     value: 0,
     key: '',
   };
-  if (notEmptyString(ayanamsaKey, 3)) {
+  if (notEmptyString(ayanamsaKey, 3) && ayanamsaKey !== 'top') {
     const aRow = ayanamshas.find(a => a.key === ayanamsaKey);
     if (aRow) {
       ayanamsha.value = aRow.value;
@@ -647,78 +647,13 @@ export const calcCompactChartData = async (
   }
 
   const hdP = await fetchHouseData(datetime, geo, 'P');
-  const firstHouseLng = getFirstHouseLng(hdP);
-  const hdW = Object.assign({}, hdP);
-  hdW.houses = expandWholeHouses(firstHouseLng);
   const upagrahas = await calcUpagrahas(datetime, geo, ayanamsha.value);
   const indianTimeData = await fetchIndianTimeData(datetime, geo);
   grahaSet.mergeSunTransitions(indianTimeData.sunData());
   const sunAtSunRise = await calcSunJd(indianTimeData.dayStart());
-  /* const applyAyanamsha = ayanamsha.value !== 0;
-  if (applyAyanamsha) {
-    grahaSet.bodies = grahaSet.bodies.map(b => {
-      b.lng = subtractLng360(b.lng, ayanamsha.value);
-      b.topo.lng = subtractLng360(b.topo.lng, ayanamsha.value);
-      return b;
-    });
-    applyCharaKarakas(grahaSet.bodies);
-    hdP.ascendant = subtractLng360(hdP.ascendant, ayanamsha.value);
-    hdP.mc = subtractLng360(hdP.mc, ayanamsha.value);
-    hdP.houses = hdP.houses.map(h => subtractLng360(h, ayanamsha.value));
-  }
 
-  const firstHouseLng = getFirstHouseLng(hdP);
-  const wHouses = expandWholeHouses(firstHouseLng);
-  const hdW = { ...hdP, houses: wHouses };
-  grahaSet.mergeHouseData(hdW);
-  grahaSet.matchRelationships();
-  const houses = [
-    { system: 'P', values: hdP.houses.splice(0, 6) },
-    { system: 'W', values: [firstHouseLng] },
-  ];
-  const houseData = { ...hdP, houses };
+  const calcVariants = ayanamsaKey === 'top';
 
-  const grahas = grahaSet.bodies.map(simplifyGraha);
-
-  const sphutaObj = addSphutaData(
-    grahaSet,
-    hdP,
-    indianTimeData,
-    upagrahas,
-    sunAtSunRise,
-  );
-  const numValueKeys = ['santanaTithi'];
-  const excludeKeys = ['grahaSet', 'houseSign', ...numValueKeys];
-  const grahaKeys = ['yogi', 'avayogi'];
-  const sphutas = Object.entries(sphutaObj)
-    .filter(
-      entry => excludeKeys.includes(entry[0]) === false && isNumeric(entry[1]),
-    )
-    .map(entry => {
-      const [key, value] = entry;
-      return {
-        key,
-        value,
-      };
-    });
-
-  const objects = Object.entries(sphutaObj)
-    .filter(entry => grahaKeys.includes(entry[0]))
-    .map(entry => {
-      const [key, value] = entry;
-      return {
-        key,
-        type: 'graha',
-        value,
-      };
-    });
-  const numValues = numValueKeys.map(key => {
-    const value = sphutaObj[key];
-    return {
-      key,
-      value,
-    };
-  }); */
   const {
     grahas,
     sphutas,
@@ -729,19 +664,52 @@ export const calcCompactChartData = async (
     numValues,
     objects,
   } = calcCompactVariantSet(
+    ayanamsha,
     grahaSet,
-    hdW,
+    hdP,
     indianTimeData,
     upagrahas,
-    ayanamsha,
     sunAtSunRise,
   );
+  const variants: Array<Map<string, any>> = grahaSet.bodies.map(gr =>
+    mapToVariantMap(gr, 0),
+  );
+  if (calcVariants) {
+    const coreAyanamshas = ['true_citra', 'lahiri'];
+    let prevAyaVal = 0;
+    coreAyanamshas.forEach(ak => {
+      const ar = ayanamshas.find(a => a.key === ak);
+      if (ar) {
+        ayanamsha.value = ar.value - prevAyaVal;
+        ayanamsha.key = ak;
+        prevAyaVal = ayanamsha.value;
+        const aya = ayanamshaValues.find(a => a.key === ak);
+        const av = calcCompactVariantSet(
+          ayanamsha,
+          grahaSet,
+          hdP,
+          indianTimeData,
+          upagrahas,
+          sunAtSunRise,
+        );
+        av.grahas.forEach(gr => {
+          const variant = mapToVariantMap(gr, aya.value);
+          variants.push(variant);
+        });
+      }
+    });
+  }
   return {
     jd,
     datetime,
     geo,
     ayanamsha,
-    grahas,
+    grahas: grahas.map(gr => {
+      gr.variants = variants
+        .filter(v => v.get('key') === gr.key)
+        .map(mapToVariant);
+      return gr;
+    }),
     ascendant,
     mc,
     vertex,
@@ -755,12 +723,37 @@ export const calcCompactChartData = async (
   };
 };
 
+const mapToVariant = (mp: Map<string, any>) => {
+  const obj = Object.fromEntries(mp);
+  const { num, sign, house, nakshatra, relationship, charaKaraka } = obj;
+  return { num, sign, house, nakshatra, relationship, charaKaraka };
+};
+
+const mapToVariantMap = (gr: any, ayanamsaNum: number) => {
+  const variant: Map<string, any> = new Map();
+  if (gr instanceof Object) {
+    console.log(gr.key, gr.lng);
+    variant.set('num', ayanamsaNum);
+    variant.set('key', gr.key);
+    variant.set('sign', gr.sign);
+    variant.set('house', gr.house);
+    const compRel =
+      gr.relationship instanceof Object
+        ? gr.relationship.compound
+        : gr.relationship;
+    variant.set('relationship', compRel);
+    variant.set('nakshatra', gr.nakshatra.num);
+    variant.set('charaKaraka', gr.charaKaraka);
+  }
+  return variant;
+};
+
 const calcCompactVariantSet = (
+  ayanamsha: KeyValue,
   grahaSet: GrahaSet,
   hdP: HouseSet,
   indianTimeData: IndianTime,
   upagrahas,
-  ayanamsha: KeyValue,
   sunAtSunRise,
 ) => {
   const applyAyanamsha = ayanamsha.value !== 0;
@@ -791,7 +784,7 @@ const calcCompactVariantSet = (
 
   const sphutaObj = addSphutaData(
     grahaSet,
-    hdP,
+    hdW,
     indianTimeData,
     upagrahas,
     sunAtSunRise,
@@ -1355,6 +1348,7 @@ const simplifyGraha = (graha: Graha) => {
     'isExalted',
     'isDebilitated',
     'transitions',
+    'variants',
   ];
 
   const mp = new Map<string, any>();

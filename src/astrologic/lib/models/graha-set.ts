@@ -18,6 +18,15 @@ import maitriData from '../settings/maitri-data';
 import { GeoPos } from '../../interfaces/geo-pos';
 import { BodyTransition } from 'src/astrologic/interfaces/body-transition';
 
+interface VariantSet {
+  num: number;
+  sign: number;
+  house: number;
+  nakshatra: number;
+  relationship: string;
+  charaKaraka: number;
+}
+
 export class Graha extends BaseObject {
   num: number = -1;
   name: string = '';
@@ -59,6 +68,7 @@ export class Graha extends BaseObject {
   house = 0;
   ownHouses = [];
   transitions: Array<BodyTransition> = [];
+  variants?: Array<VariantSet> = [];
 
   constructor(body: any = null) {
     super();
@@ -401,7 +411,12 @@ export class GrahaSet {
       const compoundKeys = compoundMatches
         .filter(cm => cm.values.some(v => v))
         .map(cm => cm.key);
-      b.relationship.compound = compoundKeys.length > 0 ? compoundKeys[0] : '';
+      b.relationship.compound =
+        compoundKeys.length > 0
+          ? compoundKeys[0]
+          : b.isOwnSign
+          ? 'ownSign'
+          : '';
       return b;
     });
   }

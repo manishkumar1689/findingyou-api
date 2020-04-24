@@ -303,43 +303,4 @@ const grahaValues = [
   },
 ];
 
-/* const planetYears = [
-  { num: 2, v: 87.9691, u: 'days' },
-  { num: 3, v: 224.701, u: 'days' },
-  { num: 4, v: 686.971, u: 'days' },
-  { num: 5, v: 11.862, u: 'years' },
-  { num: 6, v: 29.4571, u: 'years' },
-  { num: 7, v: 84.020, u: 'years' },
-  { num: 11, v: 18.6129, u: 'years' },
-  { num: 8, v: 164.8, u: 'years' },
-  { num: 9, v: 247.94, u: 'years' }
-];
- */
-/* const merged = grahas.map(b => {
-  b.hasAltRef = b.hasOwnProperty('altRef');
-  b.hasCalc = b.hasOwnProperty('calc')
-  if (!b.hasOwnProperty('friends')) {
-    b.friends = [];
-  }
-  if (!b.hasOwnProperty('neutral')) {
-    b.neutral = [];
-  }
-  if (!b.hasOwnProperty('enemies')) {
-    b.enemies = [];
-  }
-  if (!b.hasOwnProperty('charaKarakaMode')) {
-    b.charaKarakaMode = 'standard';
-  }
-  const plRow = planetYears.find(p => p.num === b.num);
-  b.yearLength = 0;
-  if (plRow) {
-    let v = parseFloat(plRow.v);
-    if (plRow.u === 'years') {
-      v *= 365.2422;
-    }
-    b.yearLength = v;
-  }
-  return b;
-}); */
-
 export default grahaValues;
