@@ -675,14 +675,14 @@ export const calcCompactChartData = async (
     mapToVariantMap(gr, 0),
   );
   if (calcVariants) {
-    const coreAyanamshas = ['true_citra', 'lahiri'];
+    const coreAyanamshas = ['true_citra', 'lahiri', 'ushashashi'];
     let prevAyaVal = 0;
     coreAyanamshas.forEach(ak => {
       const ar = ayanamshas.find(a => a.key === ak);
       if (ar) {
         ayanamsha.value = ar.value - prevAyaVal;
         ayanamsha.key = ak;
-        prevAyaVal = ayanamsha.value;
+        prevAyaVal = ar.value;
         const aya = ayanamshaValues.find(a => a.key === ak);
         const av = calcCompactVariantSet(
           ayanamsha,
@@ -692,6 +692,7 @@ export const calcCompactChartData = async (
           upagrahas,
           sunAtSunRise,
         );
+
         av.grahas.forEach(gr => {
           const variant = mapToVariantMap(gr, aya.value);
           variants.push(variant);
@@ -732,7 +733,6 @@ const mapToVariant = (mp: Map<string, any>) => {
 const mapToVariantMap = (gr: any, ayanamsaNum: number) => {
   const variant: Map<string, any> = new Map();
   if (gr instanceof Object) {
-    console.log(gr.key, gr.lng);
     variant.set('num', ayanamsaNum);
     variant.set('key', gr.key);
     variant.set('sign', gr.sign);
@@ -780,7 +780,7 @@ const calcCompactVariantSet = (
   ];
   const houseData = { ...hdP, houses };
 
-  const grahas = grahaSet.bodies.map(simplifyGraha);
+  const grahas = grahaSet.bodies.map(cleanGraha);
 
   const sphutaObj = addSphutaData(
     grahaSet,
@@ -1321,8 +1321,12 @@ const mapUpagraha = obj => {
   };
 };
 
-const simplifyGraha = (graha: Graha) => {
-  const keys = [
+const cleanGraha = (graha: Graha) => {
+  return simplifyGraha(graha, true);
+};
+
+const simplifyGraha = (graha: Graha, fullMode = false) => {
+  let keys = [
     'num',
     'key',
     'lng',
@@ -1331,25 +1335,30 @@ const simplifyGraha = (graha: Graha) => {
     'lngSpeed',
     'latSpeed',
     'topo',
-    'dstSpeed',
     'declination',
-    'sign',
-    'nakshatra',
-    'ruler',
-    'relationship',
-    'isOwnSign',
-    'isMulaTrikon',
-    'charaKaraka',
-    'house',
-    'ownHouses',
-    'padaNum',
-    'percent',
-    'akshara',
-    'isExalted',
-    'isDebilitated',
-    'transitions',
-    'variants',
   ];
+
+  if (fullMode) {
+    const extraKeys = [
+      'sign',
+      'nakshatra',
+      'ruler',
+      'relationship',
+      'isOwnSign',
+      'isMulaTrikon',
+      'charaKaraka',
+      'house',
+      'ownHouses',
+      'padaNum',
+      'percent',
+      'akshara',
+      'isExalted',
+      'isDebilitated',
+    ];
+    keys = [...keys, ...extraKeys];
+  }
+  const setKeys = ['transitions', 'variants'];
+  keys = [...keys, ...setKeys];
 
   const mp = new Map<string, any>();
   keys.forEach(k => {
