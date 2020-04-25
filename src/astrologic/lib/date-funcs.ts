@@ -139,3 +139,11 @@ export const calcAstroWeekDayIndex = (datetime, afterSunrise = true) => {
     .subtract(daySubtract, 'day')
     .weekday();
 };
+
+export const applyTzOffsetToDateString = (dt, offsetSecs: number) => {
+  return moment(dt)
+    .add(offsetSecs, 'seconds')
+    .toISOString()
+    .split('.')
+    .shift();
+};

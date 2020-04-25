@@ -628,6 +628,7 @@ export const calcCompactChartData = async (
   datetime: string,
   geo: GeoPos,
   ayanamsaKey = '',
+  topKeys = [],
 ) => {
   const grahaSet = await calcGrahaSet(datetime, geo, true);
   const { jd } = grahaSet;
@@ -676,12 +677,15 @@ export const calcCompactChartData = async (
   );
   let sphutaSet = [];
   if (calcVariants) {
-    const coreAyanamshas = ['true_citra', 'lahiri', 'ushashashi'];
+    const coreAyanamshas =
+      topKeys.length > 0 ? topKeys : ['true_citra', 'lahiri'];
+
     let prevAyaVal = 0;
     sphutaSet = [{ num: 0, items: sphutas }];
     coreAyanamshas.forEach(ak => {
       const ar = ayanamshas.find(a => a.key === ak);
       if (ar) {
+        // apply difference from last ayanamsha offset
         ayanamsha.value = ar.value - prevAyaVal;
         ayanamsha.key = ak;
         prevAyaVal = ar.value;
@@ -1063,11 +1067,8 @@ const calcAprakasa = (sunLng = 0) => {
 const calcGrahaSet = async (datetime, geo: any = null, applyTopo = false) => {
   if (applyTopo && geo instanceof Object) {
     swisseph.swe_set_topo(geo.lng, geo.lat, geo.alt);
-  } /* else {
-    swisseph.swe_set_topo(0, 0, 0);
-  } */
+  }
   const bodyData = await calcAllBodies(datetime, 'core', applyTopo);
-
   return new GrahaSet(bodyData);
 };
 

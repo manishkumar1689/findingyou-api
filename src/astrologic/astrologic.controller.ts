@@ -38,18 +38,16 @@ import {
   fetchAllSettings,
   calcCompactChartData,
 } from './lib/core';
-import { calcJulianDate, calcJulDate } from './lib/date-funcs';
+import {
+  calcJulianDate,
+  calcJulDate,
+  applyTzOffsetToDateString,
+} from './lib/date-funcs';
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
-import {
-  calcRetroGrade,
-  calcStation,
-  calcAcceleration,
-} from './lib/astro-motion';
+import { calcRetroGrade, calcStation } from './lib/astro-motion';
 import { toIndianTime, calcTransition } from './lib/transitions';
-import { generateApiRouteMap } from './lib/route-map';
 import { readEpheFiles } from './lib/files';
-import moment = require('moment');
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -204,11 +202,7 @@ export class AstrologicController {
         geo.lng,
         dt,
       );
-      const dtUtc = moment(dt)
-        .add(data.geo.offset, 'seconds')
-        .toISOString()
-        .split('.')
-        .shift();
+      const dtUtc = applyTzOffsetToDateString(dt, data.geo.offset);
       const sysRef = notEmptyString(system) ? system : 'W';
       const bd = await calcBodiesInHouses(dtUtc, geo, sysRef);
       if (bd instanceof Object && bd.jd > 0) {
@@ -242,20 +236,70 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('compact/:loc/:dt/:ayanamsha?')
+  @Get('compact/:loc/:dt/:ayanamshaMode?/:topList?')
   async compactDataSet(
     @Res() res,
     @Param('loc') loc,
     @Param('dt') dt,
-    @Param('ayanamsha') ayanamsha,
+    @Param('ayanamshaMode') ayanamshaMode,
+    @Param('topList') topList,
   ) {
     let data: any = { valid: false };
     if (validISODateString(dt) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
-      const ayanamshaKey = notEmptyString(ayanamsha, 3)
-        ? ayanamsha.toLowerCase().replace(/-/g, '_')
+      const geoInfo = await this.geoService.fetchGeoAndTimezone(
+        geo.lat,
+        geo.lng,
+        dt,
+      );
+      const dtUtc = applyTzOffsetToDateString(dt, geoInfo.offset);
+      const ayanamshaKey = notEmptyString(ayanamshaMode, 3)
+        ? ayanamshaMode.toLowerCase().replace(/-/g, '_')
         : '';
-      data = await calcCompactChartData(dt, geo, ayanamshaKey);
+      const topMode = ayanamshaKey === 'top';
+      const topKeys =
+        topMode && notEmptyString(topList, 5) ? topList.split(',') : [];
+      data = await calcCompactChartData(dtUtc, geo, ayanamshaKey, topKeys);
+      data = {
+        tzOffset: geoInfo.offset,
+        tz: geoInfo.tz,
+        placenames: geoInfo.toponyms,
+        ...data,
+      };
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Post('save-user-chart')
+  async saveUserChart(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Param('ayanamshaMode') ayanamshaMode,
+    @Param('topList') topList,
+  ) {
+    let data: any = { valid: false };
+    if (validISODateString(dt) && notEmptyString(loc, 3)) {
+      const geo = locStringToGeo(loc);
+      const geoInfo = await this.geoService.fetchGeoAndTimezone(
+        geo.lat,
+        geo.lng,
+        dt,
+      );
+      const dtUtc = applyTzOffsetToDateString(dt, geoInfo.offset);
+      const ayanamshaKey = notEmptyString(ayanamshaMode, 3)
+        ? ayanamshaMode.toLowerCase().replace(/-/g, '_')
+        : '';
+      const topMode = ayanamshaKey === 'top';
+      const topKeys =
+        topMode && notEmptyString(topList, 5) ? topList.split(',') : [];
+      data = await calcCompactChartData(dtUtc, geo, ayanamshaKey, topKeys);
+      data = {
+        tzOffset: geoInfo.offset,
+        tz: geoInfo.tz,
+        placenames: geoInfo.toponyms,
+        ...data,
+      };
     }
     return res.status(HttpStatus.OK).json(data);
   }
