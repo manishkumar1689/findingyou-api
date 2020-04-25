@@ -674,9 +674,11 @@ export const calcCompactChartData = async (
   const variants: Array<Map<string, any>> = grahaSet.bodies.map(gr =>
     mapToVariantMap(gr, 0),
   );
+  let sphutaSet = [];
   if (calcVariants) {
     const coreAyanamshas = ['true_citra', 'lahiri', 'ushashashi'];
     let prevAyaVal = 0;
+    sphutaSet = [{ num: 0, items: sphutas }];
     coreAyanamshas.forEach(ak => {
       const ar = ayanamshas.find(a => a.key === ak);
       if (ar) {
@@ -697,8 +699,11 @@ export const calcCompactChartData = async (
           const variant = mapToVariantMap(gr, aya.value);
           variants.push(variant);
         });
+        sphutaSet.push({ num: aya.value, items: av.sphutas });
       }
     });
+  } else {
+    sphutaSet = sphutas;
   }
   return {
     jd,
@@ -709,7 +714,7 @@ export const calcCompactChartData = async (
       gr.variants = variants
         .filter(v => v.get('key') === gr.key)
         .map(mapToVariant);
-      return gr;
+      return cleanBodyObj(gr);
     }),
     ascendant,
     mc,
@@ -718,7 +723,7 @@ export const calcCompactChartData = async (
     indianTime: indianTimeData.toValues(),
     ayanamshas,
     upagrahas: upagrahas.values.map(mapUpagraha),
-    sphutas,
+    sphutas: sphutaSet,
     numValues,
     objects,
   };
@@ -1321,47 +1326,22 @@ const mapUpagraha = obj => {
   };
 };
 
-const cleanGraha = (graha: Graha) => {
-  return simplifyGraha(graha, true);
+const cleanBodyObj = (body: any) => {
+  const mp = new Map<string, any>();
+  if (body instanceof Object) {
+    const objKeys = Object.keys(body);
+    coreGrahaKeys(false).forEach(k => {
+      if (objKeys.includes(k)) {
+        mp.set(k, body[k]);
+      }
+    });
+  }
+  return hashMapToObject(mp);
 };
 
-const simplifyGraha = (graha: Graha, fullMode = false) => {
-  let keys = [
-    'num',
-    'key',
-    'lng',
-    'lat',
-    'distance',
-    'lngSpeed',
-    'latSpeed',
-    'topo',
-    'declination',
-  ];
-
-  if (fullMode) {
-    const extraKeys = [
-      'sign',
-      'nakshatra',
-      'ruler',
-      'relationship',
-      'isOwnSign',
-      'isMulaTrikon',
-      'charaKaraka',
-      'house',
-      'ownHouses',
-      'padaNum',
-      'percent',
-      'akshara',
-      'isExalted',
-      'isDebilitated',
-    ];
-    keys = [...keys, ...extraKeys];
-  }
-  const setKeys = ['transitions', 'variants'];
-  keys = [...keys, ...setKeys];
-
+const cleanGraha = (graha: Graha) => {
   const mp = new Map<string, any>();
-  keys.forEach(k => {
+  coreGrahaKeys(true).forEach(k => {
     switch (k) {
       case 'nakshatra':
         mp.set(k, {
@@ -1378,6 +1358,38 @@ const simplifyGraha = (graha: Graha, fullMode = false) => {
     }
   });
   return hashMapToObject(mp);
+};
+
+export const coreGrahaKeys = (fullMode = false) => {
+  const headKeys = [
+    'num',
+    'key',
+    'lng',
+    'lat',
+    'lngSpeed',
+    'topo',
+    'declination',
+  ];
+  const extraKeys = fullMode
+    ? [
+        'sign',
+        'nakshatra',
+        'ruler',
+        'relationship',
+        'isOwnSign',
+        'isMulaTrikon',
+        'charaKaraka',
+        'house',
+        'ownHouses',
+        'padaNum',
+        'percent',
+        'akshara',
+        'isExalted',
+        'isDebilitated',
+      ]
+    : [];
+  const setKeys = ['transitions', 'variants'];
+  return [...headKeys, ...extraKeys, ...setKeys];
 };
 
 export const fetchAllSettings = (filters: Array<string> = []) => {
