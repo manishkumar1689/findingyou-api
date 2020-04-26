@@ -33,12 +33,14 @@ import {
 import roleValues from './settings/roles';
 import paymentValues from './settings/payments-options';
 import countryValues from './settings/countries';
+import preferenceOptions from './settings/preference-options';
 import permissionValues from './settings/permissions';
 import { Role } from './interfaces/role.interface';
 import { EditStatusDTO } from './dto/edit-status.dto';
 import { PaymentOption } from './interfaces/payment-option.interface';
 import { RemoveStatusDTO } from './dto/remove-status.dto';
 import { CountryOption } from './interfaces/country-option.interface';
+import { PreferenceOption } from './interfaces/preference-option.interface';
 
 @Controller('user')
 export class UserController {
@@ -173,6 +175,19 @@ export class UserController {
       throw new NotFoundException('User does not exist!');
     }
     return res.status(HttpStatus.OK).json(user);
+  }
+
+  // Fetch preference options
+  @Get('preference-options')
+  async listPreferenceOptions(@Res() res) {
+    const prefOpts = await this.getPreferenceOptions();
+    const data = { valid: false, num: 0, items: [] };
+    if (prefOpts instanceof Array) {
+      data.num = prefOpts.length;
+      data.valid = data.num > 0;
+      data.items = prefOpts;
+    }
+    return res.status(HttpStatus.OK).json(data);
   }
 
   // Fetch a particular user using ID
@@ -458,6 +473,19 @@ export class UserController {
     if (!setting) {
       data = countryValues;
     } else if (setting instanceof Object) {
+      if (setting.value instanceof Array) {
+        data = setting.value;
+      }
+    }
+    return data;
+  }
+
+  async getPreferenceOptions(): Promise<Array<PreferenceOption>> {
+    const setting = await this.settingService.getByKey('preference-options');
+    let data: Array<PreferenceOption> = [];
+    if (!setting) {
+      data = preferenceOptions;
+    } else {
       if (setting.value instanceof Array) {
         data = setting.value;
       }
