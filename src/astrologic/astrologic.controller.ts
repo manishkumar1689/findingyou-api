@@ -16,12 +16,14 @@ import {
 } from '@nestjs/common';
 import { AstrologicService } from './astrologic.service';
 import { GeoService } from './../geo/geo.service';
+import { UserService } from './../user/user.service';
 import { Chart } from './interfaces/chart.interface';
 import { CreateChartDTO } from './dto/create-chart.dto';
 import {
   isNumeric,
   validISODateString,
   notEmptyString,
+  emptyString,
 } from '../lib/validators';
 import { locStringToGeo } from './lib/converters';
 import {
@@ -42,18 +44,21 @@ import {
   calcJulianDate,
   calcJulDate,
   applyTzOffsetToDateString,
+  toShortTzAbbr,
 } from './lib/date-funcs';
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
 import { calcRetroGrade, calcStation } from './lib/astro-motion';
 import { toIndianTime, calcTransition } from './lib/transitions';
 import { readEpheFiles } from './lib/files';
+import { ChartInputDTO } from './dto/chart-input.dto';
 
 @Controller('astrologic')
 export class AstrologicController {
   constructor(
     private astrologicService: AstrologicService,
     private geoService: GeoService,
+    private userService: UserService,
   ) {}
 
   @Get('juldate/:isodate?')
@@ -271,35 +276,60 @@ export class AstrologicController {
   }
 
   @Post('save-user-chart')
-  async saveUserChart(
-    @Res() res,
-    @Param('loc') loc,
-    @Param('dt') dt,
-    @Param('ayanamshaMode') ayanamshaMode,
-    @Param('topList') topList,
-  ) {
+  async saveUserChart(@Res() res, @Body() inData: ChartInputDTO) {
     let data: any = { valid: false };
-    if (validISODateString(dt) && notEmptyString(loc, 3)) {
-      const geo = locStringToGeo(loc);
-      const geoInfo = await this.geoService.fetchGeoAndTimezone(
-        geo.lat,
-        geo.lng,
-        dt,
-      );
-      const dtUtc = applyTzOffsetToDateString(dt, geoInfo.offset);
-      const ayanamshaKey = notEmptyString(ayanamshaMode, 3)
-        ? ayanamshaMode.toLowerCase().replace(/-/g, '_')
-        : '';
-      const topMode = ayanamshaKey === 'top';
-      const topKeys =
-        topMode && notEmptyString(topList, 5) ? topList.split(',') : [];
-      data = await calcCompactChartData(dtUtc, geo, ayanamshaKey, topKeys);
-      data = {
-        tzOffset: geoInfo.offset,
-        tz: geoInfo.tz,
-        placenames: geoInfo.toponyms,
-        ...data,
-      };
+    const { user, datetime, lat, lng, alt, isDefaultBirthChart } = inData;
+    let { name, type, gender, eventType, roddenScale } = inData;
+    const userRecord = await this.userService.getUser(user);
+    if (userRecord instanceof Object) {
+      if (userRecord.active) {
+        if (validISODateString(datetime) && isNumeric(lat) && isNumeric(lng)) {
+          const geo = { lat, lng, alt };
+          if (isDefaultBirthChart) {
+            name = userRecord.nickName;
+            type = 'person';
+            eventType = 'birth';
+            gender = userRecord.gender;
+            if (emptyString(roddenScale, 3)) {
+              roddenScale = 'certificate';
+            }
+          }
+          const subject = {
+            name,
+            type,
+            gender,
+            eventType,
+            roddenScale,
+          };
+          const geoInfo = await this.geoService.fetchGeoAndTimezone(
+            geo.lat,
+            geo.lng,
+            datetime,
+          );
+          const dtUtc = applyTzOffsetToDateString(datetime, geoInfo.offset);
+          const chartData = await calcCompactChartData(dtUtc, geo, 'top');
+          if (chartData instanceof Object) {
+            data.valid = true;
+            data.shortTz = toShortTzAbbr(dtUtc, geoInfo.tz);
+            data.chart = {
+              user,
+              subject,
+              tz: geoInfo.tz,
+              tzOffset: geoInfo.offset,
+              placenames: geoInfo.toponyms.map(tp => {
+                return {
+                  name: tp.name,
+                  fullName: tp.fullName,
+                  type: tp.type,
+                  geo: { lat: tp.lat, lng: tp.lng },
+                };
+              }),
+              ...chartData,
+            };
+            this.astrologicService.createChart(data.chart);
+          }
+        }
+      }
     }
     return res.status(HttpStatus.OK).json(data);
   }

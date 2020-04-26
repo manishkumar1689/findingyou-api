@@ -45,11 +45,11 @@ export class HouseSet {
     }
   }
 
-  start(num) {
+  start(num: number) {
     return this.rangeByNum(num)[0];
   }
 
-  end(num) {
+  end(num: number) {
     return this.rangeByNum(num)[1];
   }
 }

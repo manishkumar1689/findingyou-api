@@ -8,6 +8,7 @@ import { ITimeDTO } from './i-time.dto';
 import { KeyNumValueDTO } from './key-num-value.dto';
 import { ObjectMatchDTO } from './object-match.dto';
 import { VariantDTO } from './variant.dto';
+import { VariantSetDTO } from './variant-set.dto';
 
 export class CreateChartDTO {
   @ApiProperty()
@@ -38,22 +39,28 @@ export class CreateChartDTO {
   readonly tzOffset: number;
 
   @ApiProperty()
-  readonly grahas: Array<BaseGrahaDTO>;
+  readonly ascendant: number;
 
   @ApiProperty()
-  readonly houses: Array<HouseSystemDTO>;
+  readonly mc: number;
+
+  @ApiProperty()
+  readonly vertex: number;
+
+  @ApiProperty()
+  readonly grahas: BaseGrahaDTO[];
+
+  @ApiProperty()
+  readonly houses: HouseSystemDTO[];
 
   @ApiProperty()
   indianTime: ITimeDTO;
 
   @ApiProperty()
-  variants: Array<VariantDTO>;
+  upagrahas: KeyNumValueDTO[];
 
   @ApiProperty()
-  upagrahas: Array<KeyNumValueDTO>;
-
-  @ApiProperty()
-  sphutas: Array<KeyNumValueDTO>;
+  sphutas: VariantSetDTO[];
 
   @ApiProperty()
   keyValues: Array<KeyNumValueDTO>;

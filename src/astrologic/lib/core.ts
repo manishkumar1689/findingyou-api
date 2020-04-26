@@ -1,6 +1,5 @@
 import * as swisseph from 'swisseph';
 import { dmsToDegrees, degAsDms } from './converters';
-import { simplifyObject } from './mappers';
 import {
   calcUtAsync,
   fixedStar2UtAsync,
@@ -20,7 +19,6 @@ import {
 import starValues from './settings/star-values';
 import asteroidValues from './settings/asteroid-values';
 import grahaValues from './settings/graha-values';
-import charakarakaValues from './settings/charakaraka-values';
 import nakshatraValues from './settings/nakshatra-values';
 import aprakasaValues from './settings/aprakasa-values';
 import upagrahaData from './settings/upagraha-data';
@@ -480,12 +478,8 @@ const addGrahaValues = async (data, applyTopo = false) => {
     }
   }
 
-  if (data.bodies.length > 0) {
-    applyCharaKarakas(data.bodies);
-  }
-
   data = new GrahaSet(data);
-  data.matchRelationships();
+  data.matchValues();
 };
 
 interface DeclinationResult {
@@ -510,16 +504,6 @@ const calcDeclination = async (
     }
   });
   return data;
-};
-
-const mergeCharaKarakaToBodies = (bodies, withinSignBodies) => {
-  bodies = bodies.map(b => {
-    const wb = withinSignBodies.find(sb => sb.key === b.key);
-    if (wb) {
-      b.charaKaraka = wb.num;
-    }
-    return b;
-  });
 };
 
 const addAsteroids = async data => {
@@ -678,7 +662,7 @@ export const calcCompactChartData = async (
   let sphutaSet = [];
   if (calcVariants) {
     const coreAyanamshas =
-      topKeys.length > 0 ? topKeys : ['true_citra', 'lahiri'];
+      topKeys.length > 0 ? topKeys : ['true_citra', 'lahiri', 'krishnamurti'];
 
     let prevAyaVal = 0;
     sphutaSet = [{ num: 0, items: sphutas }];
@@ -776,13 +760,12 @@ const calcCompactVariantSet = (
     hdP.mc = subtractLng360(hdP.mc, ayanamsha.value);
     hdP.houses = hdP.houses.map(h => subtractLng360(h, ayanamsha.value));
   }
-  applyCharaKarakas(grahaSet.bodies);
 
   const firstHouseLng = getFirstHouseLng(hdP);
   const wHouses = expandWholeHouses(firstHouseLng);
-  const hdW = { ...hdP, houses: wHouses };
+  const hdW = new HouseSet({ ...hdP, houses: wHouses });
   grahaSet.mergeHouseData(hdW);
-  grahaSet.matchRelationships();
+  grahaSet.matchValues();
   const houses = [
     { system: 'P', values: hdP.houses.splice(0, 6) },
     { system: 'W', values: [firstHouseLng] },
@@ -987,38 +970,6 @@ const matchTithiNum = (bodies, multiplier = 1) => {
   );
   const tithiVal = sunMoonAngle / (360 / 30);
   return Math.floor(tithiVal) + 1;
-};
-
-const applyCharaKarakas = bodies => {
-  if (bodies.some(b => isNumeric(b.withinSign))) {
-    const withinSignBodies = calcCharaKaraka(bodies);
-    mergeCharaKarakaToBodies(bodies, withinSignBodies);
-  }
-};
-
-/*
-Add charaKara data
-@param bodies:Array<Object>
-@return Array<Object>
-*/
-const calcCharaKaraka = bodies => {
-  const validModes = ['forward', 'reverse'];
-  let withinSignBodies = bodies
-    .filter(b => validModes.includes(b.charaKarakaMode))
-    .map(b => {
-      const deg =
-        b.charaKarakaMode === 'reverse' ? 30 - b.withinSign : b.withinSign;
-      return {
-        key: b.key,
-        deg,
-      };
-    });
-  withinSignBodies.sort((a, b) => b.deg - a.deg);
-  return withinSignBodies.map((b, index) => {
-    b.ck = index < charakarakaValues.length ? charakarakaValues[index] : '';
-    b.num = index + 1;
-    return b;
-  });
 };
 
 /*
@@ -1398,7 +1349,6 @@ export const fetchAllSettings = (filters: Array<string> = []) => {
     starValues,
     asteroidValues,
     grahaValues,
-    charakarakaValues,
     nakshatraValues,
     aprakasaValues,
     upagrahaData,

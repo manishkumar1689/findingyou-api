@@ -25,13 +25,21 @@ export const VariantSchema = new mongoose.Schema({
   },
   relationship: {
     type: String,
-    enum: ['archEnemy', 'enemy', 'neutral', 'friend', 'bestFriend', 'ownSign'],
+    enum: [
+      'archEnemy',
+      'enemy',
+      'neutral',
+      'friend',
+      'bestFriend',
+      'ownSign',
+      '',
+    ],
     required: false,
   },
   charaKaraka: {
     type: Number,
     required: false,
     default: 0,
-    // ['DK', 'GK', 'PK', 'PiK', 'MK', 'BK', 'AmK', 'AK'
+    // 'DK', 'GK', 'PK', 'PiK', 'MK', 'BK', 'AmK', 'AK'
   },
 });

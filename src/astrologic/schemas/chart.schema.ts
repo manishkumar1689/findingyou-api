@@ -7,6 +7,7 @@ import { HouseSystemSchema } from './house-system.schema';
 import { ObjectMatchSchema } from './object-match.schema';
 import { ITimeSchema } from './i-time.schema';
 import { KeyNumValueSchema } from './upagraha.schema';
+import { VariantSetSchema } from './variant-set.schema';
 const { ObjectId } = mongoose.Schema.Types;
 
 export const ChartSchema = new mongoose.Schema({
@@ -78,7 +79,7 @@ export const ChartSchema = new mongoose.Schema({
     default: [],
   },
   sphutas: {
-    type: [KeyNumValueSchema],
+    type: [VariantSetSchema],
     required: false,
     default: [],
   },

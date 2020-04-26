@@ -11,20 +11,29 @@ import {
 import { matchNakshatra } from '../core';
 import { TransitionData } from '../transitions';
 import nakshatraValues from '../settings/nakshatra-values';
+import charakarakaValues from '../settings/charakaraka-values';
 import grahaValues from '../settings/graha-values';
 import { Nakshatra } from './nakshatra';
 import { Relationship } from './relationship';
 import maitriData from '../settings/maitri-data';
 import { GeoPos } from '../../interfaces/geo-pos';
 import { BodyTransition } from 'src/astrologic/interfaces/body-transition';
+import { HouseSet } from './house-set';
 
-interface VariantSet {
+interface VariantGroup {
   num: number;
   sign: number;
   house: number;
   nakshatra: number;
   relationship: string;
   charaKaraka: number;
+}
+
+interface withinSignBody {
+  key: string;
+  deg: number;
+  num?: number;
+  ck?: string;
 }
 
 export class Graha extends BaseObject {
@@ -68,7 +77,7 @@ export class Graha extends BaseObject {
   house = 0;
   ownHouses = [];
   transitions: Array<BodyTransition> = [];
-  variants?: Array<VariantSet> = [];
+  variants?: Array<VariantGroup> = [];
 
   constructor(body: any = null) {
     super();
@@ -273,7 +282,7 @@ export class GrahaSet {
     }
   }
 
-  mergeHouseData(houseData) {
+  mergeHouseData(houseData: HouseSet) {
     this.bodies = this.bodies.map(b => {
       b.house = matchHouseNum(b.longitude, houseData.houses);
       if (b.mulaTrikon) {
@@ -318,15 +327,20 @@ export class GrahaSet {
 
   rahu = () => this.get('ra');
 
+  matchValues() {
+    this.matchRelationships();
+    this.applyCharaKarakas();
+  }
+
   longitudes() {
     let map = new Map();
     this.bodies.forEach(b => {
-      map.set(b.key, b.longitude);
+      map.set(b.key, b.lng);
     });
     return mapToObject(map);
   }
 
-  matchLng = (key, retVal = -1) => {
+  matchLng = (key: any, retVal = -1) => {
     const body = this.get(key);
     if (body) {
       return body.longitude;
@@ -334,7 +348,7 @@ export class GrahaSet {
     return retVal;
   };
 
-  addBodyLngs(keys) {
+  addBodyLngs(keys: Array<any>) {
     return keys.map(k => this.matchLng(k, 0)).reduce((a, b) => a + b, 0) % 360;
   }
 
@@ -417,6 +431,48 @@ export class GrahaSet {
           : b.isOwnSign
           ? 'ownSign'
           : '';
+      return b;
+    });
+  }
+
+  applyCharaKarakas() {
+    if (this.bodies.some(b => isNumeric(b.withinSign))) {
+      const withinSignBodies = this.calcCharaKaraka();
+      this.mergeCharaKarakaToBodies(withinSignBodies);
+    }
+  }
+
+  /*
+  Add charaKara data
+  @return Array<Object>
+  */
+  calcCharaKaraka() {
+    const validModes = ['forward', 'reverse'];
+    const withinSignBodies = this.bodies
+      .filter(b => validModes.includes(b.charaKarakaMode))
+      .map(b => {
+        const deg =
+          b.charaKarakaMode === 'reverse' ? 30 - b.withinSign : b.withinSign;
+        return {
+          key: b.key,
+          deg,
+        };
+      });
+    withinSignBodies.sort((a, b) => b.deg - a.deg);
+    return withinSignBodies.map((b, index) => {
+      const ck =
+        index < charakarakaValues.length ? charakarakaValues[index] : '';
+      const num = index + 1;
+      return { ...b, ck, num };
+    });
+  }
+
+  mergeCharaKarakaToBodies(withinSignBodies: Array<any>) {
+    this.bodies = this.bodies.map(b => {
+      const wb = withinSignBodies.find(sb => sb.key === b.key);
+      if (wb) {
+        b.charaKaraka = wb.num;
+      }
       return b;
     });
   }

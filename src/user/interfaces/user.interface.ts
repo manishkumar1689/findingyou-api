@@ -3,6 +3,7 @@ import { Status } from './status.interface';
 import { Profile } from './profile.interface';
 import { Placename } from './placename.interface';
 import { Geo } from './geo.interface';
+import { Preference } from './preference.interface';
 
 export interface User extends Document {
   readonly fullName: string;
@@ -16,6 +17,8 @@ export interface User extends Document {
   readonly status: Status[];
   readonly geo?: Geo;
   readonly placenames?: Placename[];
+  readonly gender: string;
+  readonly preferences: Preference[];
   readonly profiles: Profile[];
   readonly preview: string;
   readonly token: string;

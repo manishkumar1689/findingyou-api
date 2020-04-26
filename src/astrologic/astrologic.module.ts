@@ -7,6 +7,8 @@ import { ChartSchema } from './schemas/chart.schema';
 import { BodySpeedSchema } from './schemas/body-speed.schema';
 import { LexemeSchema } from '../dictionary/schemas/lexeme.schema';
 import { DictionaryService } from './../dictionary/dictionary.service';
+import { UserService } from './../user/user.service';
+import { UserSchema } from '../user/schemas/user.schema';
 
 @Module({
   imports: [
@@ -15,9 +17,10 @@ import { DictionaryService } from './../dictionary/dictionary.service';
       { name: 'BodySpeed', schema: BodySpeedSchema },
       { name: 'Chart', schema: ChartSchema },
       { name: 'Lexeme', schema: LexemeSchema },
+      { name: 'User', schema: UserSchema },
     ]),
   ],
   controllers: [AstrologicController],
-  providers: [AstrologicService, GeoService, DictionaryService],
+  providers: [AstrologicService, GeoService, DictionaryService, UserService],
 })
 export class AstrologicModule {}

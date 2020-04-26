@@ -1,5 +1,5 @@
 import * as swisseph from 'swisseph';
-import * as moment from 'moment';
+import * as moment from 'moment-timezone';
 import { isNumeric, isInteger, validISODateString } from '../../lib/validators';
 
 export const defaultDateParts = { year: 0, month: 0, day: 0, hour: 0 };
@@ -147,3 +147,6 @@ export const applyTzOffsetToDateString = (dt, offsetSecs: number) => {
     .split('.')
     .shift();
 };
+
+export const toShortTzAbbr = (dt, timezoneRef: string) =>
+  moment.tz(dt, timezoneRef).format('z');

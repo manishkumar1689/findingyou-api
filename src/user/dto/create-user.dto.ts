@@ -3,6 +3,7 @@ import { StatusDTO } from './status.dto';
 import { GeoDTO } from './geo.dto';
 import { PlacenameDTO } from './placename.dto';
 import { ProfileDTO } from './profile.dto';
+import { PreferenceDTO } from './preference.dto';
 
 export class CreateUserDTO {
   @ApiProperty()
@@ -36,6 +37,9 @@ export class CreateUserDTO {
 
   @ApiProperty()
   readonly placenames?: PlacenameDTO[];
+
+  @ApiProperty()
+  readonly preferences: PreferenceDTO[];
 
   @ApiProperty()
   readonly profiles: ProfileDTO[];

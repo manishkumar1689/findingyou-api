@@ -4,6 +4,7 @@ import { StatusSchema } from './status.schema';
 import { ProfileSchema } from './profile.schema';
 import { GeoSchema } from './geo.schema';
 import { PlacenameSchema } from './placename.schema';
+import { PreferenceSchema } from './preference.schema';
 
 export const UserSchema = new mongoose.Schema({
   fullName: String,
@@ -30,13 +31,25 @@ export const UserSchema = new mongoose.Schema({
     type: GeoSchema,
     required: false,
   },
+
   placenames: {
     type: [PlacenameSchema],
     default: [],
     required: false,
   },
+  gender: {
+    type: String,
+    enum: ['f', 'm', '-', 'nb', 'tf', 'tm'],
+    default: '-',
+    required: false,
+  },
   profiles: {
     type: [ProfileSchema],
+    default: [],
+    required: false,
+  },
+  preferences: {
+    type: [PreferenceSchema],
     default: [],
     required: false,
   },
