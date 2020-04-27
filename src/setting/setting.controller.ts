@@ -65,6 +65,15 @@ export class SettingController {
         if (setting) {
           message = 'Setting has been updated successfully';
         }
+      } else {
+        const settingDTO = {
+          ...createSettingDTO,
+          key,
+        };
+        setting = await this.settingService.addSetting(settingDTO);
+        if (setting) {
+          message = 'Setting has been created successfully';
+        }
       }
     }
     return res.status(HttpStatus.OK).json({

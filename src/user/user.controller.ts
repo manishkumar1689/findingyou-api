@@ -481,7 +481,7 @@ export class UserController {
   }
 
   async getPreferenceOptions(): Promise<Array<PreferenceOption>> {
-    const setting = await this.settingService.getByKey('preference-options');
+    const setting = await this.settingService.getByKey('preference_options');
     let data: Array<PreferenceOption> = [];
     if (!setting) {
       data = preferenceOptions;
