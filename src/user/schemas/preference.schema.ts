@@ -13,7 +13,7 @@ export const PreferenceSchema = new mongoose.Schema({
   type: {
     type: String,
     enum: [
-      'string', // key string stored, e.g. f/m for gende
+      'string', // key string stored, e.g. f/m for gender
       'integer', // number stored as integer
       'scale', // integer interpreted on a scale e.g. -2 to 2 for degree of agreement (with 0 being neutral)
       'key_scale', // set of keys which arbitary integer values on a custom scale

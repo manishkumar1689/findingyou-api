@@ -31,7 +31,6 @@ export const UserSchema = new mongoose.Schema({
     type: GeoSchema,
     required: false,
   },
-
   placenames: {
     type: [PlacenameSchema],
     default: [],

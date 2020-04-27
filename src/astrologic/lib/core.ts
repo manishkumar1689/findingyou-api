@@ -758,16 +758,20 @@ const calcCompactVariantSet = (
     });
     hdP.ascendant = subtractLng360(hdP.ascendant, ayanamsha.value);
     hdP.mc = subtractLng360(hdP.mc, ayanamsha.value);
-    hdP.houses = hdP.houses.map(h => subtractLng360(h, ayanamsha.value));
+
+    if (hdP.houses.length > 0) {
+      hdP.houses = hdP.houses.map(h => subtractLng360(h, ayanamsha.value));
+    }
   }
 
   const firstHouseLng = getFirstHouseLng(hdP);
+
   const wHouses = expandWholeHouses(firstHouseLng);
   const hdW = new HouseSet({ ...hdP, houses: wHouses });
   grahaSet.mergeHouseData(hdW);
   grahaSet.matchValues();
   const houses = [
-    { system: 'P', values: hdP.houses.splice(0, 6) },
+    { system: 'P', values: hdP.houses.slice(0, 6) },
     { system: 'W', values: [firstHouseLng] },
   ];
   const houseData = { ...hdP, houses };
