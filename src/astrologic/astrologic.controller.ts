@@ -258,6 +258,7 @@ export class AstrologicController {
         dt,
       );
       const dtUtc = applyTzOffsetToDateString(dt, geoInfo.offset);
+
       const ayanamshaKey = notEmptyString(ayanamshaMode, 3)
         ? ayanamshaMode.toLowerCase().replace(/-/g, '_')
         : '';

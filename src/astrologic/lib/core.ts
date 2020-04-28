@@ -663,7 +663,6 @@ export const calcCompactChartData = async (
   if (calcVariants) {
     const coreAyanamshas =
       topKeys.length > 0 ? topKeys : ['true_citra', 'lahiri', 'krishnamurti'];
-
     let prevAyaVal = 0;
     sphutaSet = [{ num: 0, items: sphutas }];
     coreAyanamshas.forEach(ak => {
@@ -682,7 +681,6 @@ export const calcCompactChartData = async (
           upagrahas,
           sunAtSunRise,
         );
-
         av.grahas.forEach(gr => {
           const variant = mapToVariantMap(gr, aya.value);
           variants.push(variant);
