@@ -28,7 +28,6 @@ export class GeoService {
       queryString = objectToQueryString(queryParams);
     }
     const url = [geonamesApiBase, method].join('/') + queryString;
-
     await this.getHttp(url).then(response => {
       if (response instanceof Object) {
         const { data } = response;
@@ -48,10 +47,41 @@ export class GeoService {
     if (data.valid) {
       const tzData = await this.fetchGeoNames('timezoneJSON', coords);
       if (tzData.valid) {
-        const { geonames, ocean } = data;
+        const { ocean, address } = data;
+        let { geonames } = data;
         const { countryCode, countryName, timezoneId } = tzData;
         const excludeTypes = ['AREA', 'ADM3'];
         let toponyms = [];
+        const hasToponyms = geonames instanceof Array && geonames.length;
+        if (!hasToponyms && address instanceof Object) {
+          const keyMap = {
+            adminName1: 'ADM1',
+            adminName2: 'ADM2',
+            placename: 'PPLL',
+            street: 'STRT',
+            postalcode: 'PSCD',
+          };
+          geonames = Object.entries(keyMap)
+            .filter(entry => {
+              const [k, v] = entry;
+              let valid = address.hasOwnProperty(k);
+              if (valid) {
+                valid = notEmptyString(address[k]);
+              }
+              return valid;
+            })
+            .map(entry => {
+              const [key, fcode] = entry;
+              const name = address[key];
+              return {
+                lat,
+                lng,
+                name,
+                toponymName: name,
+                fcode,
+              };
+            });
+        }
         if (geonames instanceof Array) {
           if (geonames.length > 2) {
             excludeTypes.push('CONT');

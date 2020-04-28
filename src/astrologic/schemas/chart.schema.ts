@@ -4,10 +4,10 @@ import { GeoSchema } from 'src/user/schemas/geo.schema';
 import { PlacenameSchema } from 'src/user/schemas/placename.schema';
 import { BaseGrahaSchema } from './base-graha.schema';
 import { HouseSystemSchema } from './house-system.schema';
-import { ObjectMatchSchema } from './object-match.schema';
 import { ITimeSchema } from './i-time.schema';
 import { KeyNumValueSchema } from './upagraha.schema';
 import { VariantSetSchema } from './variant-set.schema';
+import { ObjectMatchSetSchema } from './object-match-set.schema';
 const { ObjectId } = mongoose.Schema.Types;
 
 export const ChartSchema = new mongoose.Schema({
@@ -73,6 +73,11 @@ export const ChartSchema = new mongoose.Schema({
     type: ITimeSchema,
     required: false,
   },
+  ayanamshas: {
+    type: [KeyNumValueSchema],
+    required: false,
+    default: [],
+  },
   upagrahas: {
     type: [KeyNumValueSchema],
     required: false,
@@ -89,7 +94,7 @@ export const ChartSchema = new mongoose.Schema({
     default: [],
   },
   objects: {
-    type: [ObjectMatchSchema],
+    type: [ObjectMatchSetSchema],
     required: false,
     default: [],
   },

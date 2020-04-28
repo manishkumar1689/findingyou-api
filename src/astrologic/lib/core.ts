@@ -659,6 +659,12 @@ export const calcCompactChartData = async (
   const variants: Array<Map<string, any>> = grahaSet.bodies.map(gr =>
     mapToVariantMap(gr, 0),
   );
+  const objectSets = [
+    {
+      num: 0,
+      items: objects,
+    },
+  ];
   let sphutaSet = [];
   if (calcVariants) {
     const coreAyanamshas =
@@ -686,6 +692,7 @@ export const calcCompactChartData = async (
           variants.push(variant);
         });
         sphutaSet.push({ num: aya.value, items: av.sphutas });
+        objectSets.push({ num: aya.value, items: av.objects });
       }
     });
   } else {
@@ -711,7 +718,7 @@ export const calcCompactChartData = async (
     upagrahas: upagrahas.values.map(mapUpagraha),
     sphutas: sphutaSet,
     numValues,
-    objects,
+    objects: objectSets,
   };
 };
 

@@ -6,9 +6,8 @@ import { BaseGrahaDTO } from './base-graha.dto';
 import { HouseSystemDTO } from './house-system.dto';
 import { ITimeDTO } from './i-time.dto';
 import { KeyNumValueDTO } from './key-num-value.dto';
-import { ObjectMatchDTO } from './object-match.dto';
-import { VariantDTO } from './variant.dto';
 import { VariantSetDTO } from './variant-set.dto';
+import { ObjectMatchSetDTO } from './object-match-set.dto';
 
 export class CreateChartDTO {
   @ApiProperty()
@@ -54,7 +53,10 @@ export class CreateChartDTO {
   readonly houses: HouseSystemDTO[];
 
   @ApiProperty()
-  indianTime: ITimeDTO;
+  readonly indianTime: ITimeDTO;
+
+  @ApiProperty()
+  readonly ayanamshas: KeyNumValueDTO[];
 
   @ApiProperty()
   upagrahas: KeyNumValueDTO[];
@@ -66,5 +68,5 @@ export class CreateChartDTO {
   keyValues: Array<KeyNumValueDTO>;
 
   @ApiProperty()
-  objects: Array<ObjectMatchDTO>;
+  objects: Array<ObjectMatchSetDTO>;
 }
