@@ -278,10 +278,11 @@ export class AstrologicController {
 
   @Post('save-user-chart')
   async saveUserChart(@Res() res, @Body() inData: ChartInputDTO) {
-    let data: any = { valid: false };
+    let data: any = { valid: false, message: '', chart: null };
     const { user, datetime, lat, lng, alt, isDefaultBirthChart } = inData;
     let { name, type, gender, eventType, roddenScale } = inData;
     const userRecord = await this.userService.getUser(user);
+
     if (userRecord instanceof Object) {
       if (userRecord.active) {
         if (validISODateString(datetime) && isNumeric(lat) && isNumeric(lng)) {
@@ -290,7 +291,9 @@ export class AstrologicController {
             name = userRecord.nickName;
             type = 'person';
             eventType = 'birth';
-            gender = userRecord.gender;
+            if (notEmptyString(userRecord.gender, 1)) {
+              gender = userRecord.gender;
+            }
             if (emptyString(roddenScale, 3)) {
               roddenScale = 'certificate';
             }
@@ -328,9 +331,17 @@ export class AstrologicController {
               ...chartData,
             };
             this.astrologicService.createChart(data.chart);
+          } else {
+            data.message = 'Invalid input values';
           }
+        } else {
+          data.message = 'Invalid date, time, latitude or longitude';
         }
+      } else {
+        data.message = 'User account is inactive';
       }
+    } else {
+      data.message = 'User account cannot be verified';
     }
     return res.status(HttpStatus.OK).json(data);
   }
