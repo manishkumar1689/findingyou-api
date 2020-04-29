@@ -19,6 +19,7 @@ export class AstrologicService {
 
   async createChart(data: CreateChartDTO) {
     let isNew = true;
+    console.log(data.isDefaultBirthChart);
     if (data.isDefaultBirthChart) {
       const chart = await this.chartModel
         .findOne({
@@ -26,6 +27,7 @@ export class AstrologicService {
           isDefaultBirthChart: true,
         })
         .exec();
+
       if (chart instanceof Object) {
         const { _id } = chart;
         isNew = false;
@@ -49,6 +51,15 @@ export class AstrologicService {
         .exec();
       return await this.chartModel.findById(chartID);
     }
+  }
+
+  // get chart by ID
+  async getChart(chartID: string) {
+    return await this.chartModel.findById(chartID).exec();
+  }
+
+  async getChartsByUser(userID: string) {
+    return await this.chartModel.find({ user: userID }).exec();
   }
 
   // save a single body speed record

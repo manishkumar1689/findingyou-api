@@ -102,8 +102,9 @@ export class AstrologicController {
     @Body() chartDTO: CreateChartDTO,
   ) {
     const chart = await this.astrologicService.updateChart(chartID, chartDTO);
+    const valid = chart instanceof Object;
     res.send({
-      valid: chart instanceof Object,
+      valid,
       chart,
     });
   }
@@ -313,10 +314,10 @@ export class AstrologicController {
           const dtUtc = applyTzOffsetToDateString(datetime, geoInfo.offset);
           const chartData = await calcCompactChartData(dtUtc, geo, 'top');
           if (chartData instanceof Object) {
-            data.valid = true;
             data.shortTz = toShortTzAbbr(dtUtc, geoInfo.tz);
             data.chart = {
               user,
+              isDefaultBirthChart,
               subject,
               tz: geoInfo.tz,
               tzOffset: geoInfo.offset,
@@ -330,7 +331,15 @@ export class AstrologicController {
               }),
               ...chartData,
             };
-            this.astrologicService.createChart(data.chart);
+            const saved = await this.astrologicService.createChart(data.chart);
+            if (saved instanceof Object) {
+              const { _id } = saved;
+              const strId = _id instanceof Object ? _id.toString() : _id;
+              if (notEmptyString(strId, 8)) {
+                data.chart = { _id: strId, ...data.chart };
+                data.valid = true;
+              }
+            }
           } else {
             data.message = 'Invalid input values';
           }
@@ -344,6 +353,21 @@ export class AstrologicController {
       data.message = 'User account cannot be verified';
     }
     return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('chart/:chartID')
+  async fetchChart(@Res() res, @Param('chartID') chartID: string) {
+    const data: any = { valid: false, shortTz: '', chart: null, user: null };
+    const chart = await this.astrologicService.getChart(chartID);
+    if (chart instanceof Object) {
+      data.chart = chart;
+      let user = null;
+      const userID = chart.user.toString();
+      user = await this.userService.getUser(userID);
+      data.shortTz = toShortTzAbbr(chart.datetime, chart.tz);
+      data.valid = true;
+    }
+    return data;
   }
 
   @Get('vargas/:loc/:dt/:system?')

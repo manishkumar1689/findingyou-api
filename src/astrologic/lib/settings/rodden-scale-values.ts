@@ -51,8 +51,8 @@ const roddenScaleValues = [
   },
   {
     key: 'CR',
-    name: 'Rectified from biography time',
-    description: `Rectified time from a time given in a biography or newspaper (?)`,
+    name: 'Rectified from cautious time',
+    description: `Rectified time from a cautious time`,
   },
   {
     key: 'DD',
@@ -72,7 +72,7 @@ const roddenScaleValues = [
   {
     key: 'XR',
     name: 'Rectified from know date / unknown time',
-    description: `"Rectified time from unknown time, with only date known"`,
+    description: `Rectified time from unknown time, with only date known`,
   },
   {
     key: 'XX',
