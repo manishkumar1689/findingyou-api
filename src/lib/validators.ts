@@ -36,12 +36,12 @@ export const isNumeric = inval => isNumber(inval) || numRgx.test(inval);
 export const isInteger = inval =>
   isNumber(inval) ? inval % 1 === 0 : intRgx.test(inval);
 
-export const approximate = (inval, precision = 6) => {
+export const approximate = (inval: number, precision = 6) => {
   const multiplier = Math.pow(10, precision);
   return Math.floor(inval * multiplier) / multiplier;
 };
 
-export const isApprox = (iv1, iv2, precision) =>
+export const isApprox = (iv1: number, iv2: number, precision: number) =>
   approximate(iv1, precision) === approximate(iv2, precision);
 
 export const numericStringInRange = (numStr, min = -180, max = 180) => {
@@ -62,12 +62,17 @@ export const inRange = (num, range) => {
   return valid;
 };
 
-export const withinTolerance = (num, target, tolerance) => {
+export const withinTolerance = (
+  num: number | string,
+  target: number | string,
+  tolerance: number | string,
+) => {
   let valid = false;
   if (isNumeric(num) && isNumeric(target) && isNumeric(tolerance)) {
-    num = parseFloat(num);
-    target = parseFloat(target);
-    tolerance = parseFloat(tolerance);
+    num = typeof num === 'string' ? parseFloat(num) : num;
+    target = typeof target === 'string' ? parseFloat(target) : target;
+    tolerance =
+      typeof tolerance === 'string' ? parseFloat(tolerance) : tolerance;
     valid = num >= target - tolerance && num <= target + tolerance;
   }
   return valid;

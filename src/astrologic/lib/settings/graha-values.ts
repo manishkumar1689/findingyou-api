@@ -267,6 +267,7 @@ const grahaValues = [
   },
   {
     num: 7,
+    jyNum: 27,
     subkey: 'a_10',
     key: 'ur',
     ref: 'SE_URANUS',
@@ -279,6 +280,7 @@ const grahaValues = [
   },
   {
     num: 8,
+    jyNum: 28,
     subkey: 'a_11',
     key: 'ne',
     ref: 'SE_NEPTUNE',
@@ -291,6 +293,7 @@ const grahaValues = [
   },
   {
     num: 9,
+    jyNum: 29,
     subkey: 'a_12',
     key: 'pl',
     ref: 'SE_PLUTO',

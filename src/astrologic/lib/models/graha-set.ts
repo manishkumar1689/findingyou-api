@@ -259,6 +259,7 @@ export class GrahaSet {
       }
       if (bodies instanceof Array) {
         this.bodies = bodies.map(b => new Graha(b));
+        this.bodies.sort((a, b) => a.jyNum - b.jyNum);
       }
     }
   }
@@ -377,13 +378,16 @@ export class GrahaSet {
   }
 
   mergeTransitions(transitionSets: Array<TransitionData> = []) {
-    const keys = ['set', 'rise'];
+    const keys = ['set', 'rise', 'mc', 'ic'];
     transitionSets.forEach(trSet => {
-      const trs = keys.map(key => {
-        const trRow = trSet[key];
-        const { jd, dt } = trRow;
-        return { type: key, jd, datetime: dt };
-      });
+      const trKeys = Object.keys(trSet);
+      const trs = keys
+        .filter(k => trKeys.includes(k))
+        .map(key => {
+          const trRow = trSet[key];
+          const { jd, dt } = trRow;
+          return { type: key, jd, datetime: dt };
+        });
       this.get(trSet.num).setTransitions(trs);
     });
   }

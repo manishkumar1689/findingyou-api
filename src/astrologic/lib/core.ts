@@ -273,7 +273,7 @@ export const calcAllTransitionsJd = async (
   const bodies: Array<TransitionData> = [];
   for (const body of bodyKeys) {
     const num = swisseph[body];
-    const bodyData = await calcTransitionJd(jd, geo, num, false, false);
+    const bodyData = await calcTransitionJd(jd, geo, num, false, true);
     bodies.push({
       num,
       body,
