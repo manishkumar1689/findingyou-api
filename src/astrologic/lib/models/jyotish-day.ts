@@ -1,5 +1,5 @@
 import { BaseObject } from './base-object';
-import { calcAstroWeekDayIndex } from '../date-funcs';
+import { calcAstroWeekDayIndex, jdToDateTime } from '../date-funcs';
 
 export class JyotishDay extends BaseObject {
   jd = 0;
@@ -28,7 +28,9 @@ export class JyotishDay extends BaseObject {
 
   nextRise = () => this.sunData.nextRise;
 
-  dayBefore = () => this.jd < this.rise().jd;
+  dayBefore = () => {
+    return this.jd < this.rise().jd;
+  };
 
   afterSunSet = () => this.jd > this.set().jd;
 
@@ -64,8 +66,9 @@ export class JyotishDay extends BaseObject {
   progress = () => this.jdTime() / this.dayLength();
 
   isDayTime = () => {
-    const diffOffset =
-      this.set().jd - this.rise().jd < 0 ? 0 - this.dayLength() : 0;
-    return this.jd > this.rise().jd + diffOffset && this.jd < this.set().jd;
+    return (
+      (this.jd > this.rise().jd && this.jd < this.set().jd) ||
+      (this.jd > this.prevRise().jd && this.jd < this.prevSet().jd)
+    );
   };
 }

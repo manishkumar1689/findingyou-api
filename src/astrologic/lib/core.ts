@@ -613,6 +613,7 @@ export const calcCompactChartData = async (
   geo: GeoPos,
   ayanamsaKey = '',
   topKeys = [],
+  tzOffset = 0,
 ) => {
   const grahaSet = await calcGrahaSet(datetime, geo, true);
   const { jd } = grahaSet;
@@ -633,7 +634,7 @@ export const calcCompactChartData = async (
 
   const hdP = await fetchHouseData(datetime, geo, 'P');
   const upagrahas = await calcUpagrahas(datetime, geo, ayanamsha.value);
-  const indianTimeData = await fetchIndianTimeData(datetime, geo);
+  const indianTimeData = await fetchIndianTimeData(datetime, geo, tzOffset);
   grahaSet.mergeSunTransitions(indianTimeData.sunData());
   const sunAtSunRise = await calcSunJd(indianTimeData.dayStart());
 

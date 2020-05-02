@@ -312,7 +312,12 @@ export class AstrologicController {
             datetime,
           );
           const dtUtc = applyTzOffsetToDateString(datetime, geoInfo.offset);
-          const chartData = await calcCompactChartData(dtUtc, geo, 'top');
+          const chartData = await calcCompactChartData(
+            dtUtc,
+            geo,
+            'top',
+            geoInfo.offset,
+          );
           if (chartData instanceof Object) {
             data.shortTz = toShortTzAbbr(dtUtc, geoInfo.tz);
             data.chart = {

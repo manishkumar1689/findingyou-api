@@ -19,7 +19,6 @@ export class AstrologicService {
 
   async createChart(data: CreateChartDTO) {
     let isNew = true;
-    console.log(data.isDefaultBirthChart);
     if (data.isDefaultBirthChart) {
       const chart = await this.chartModel
         .findOne({

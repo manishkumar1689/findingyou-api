@@ -157,7 +157,6 @@ export const calcTransitionJd = async (
       swisseph.SE_CALC_RISE + offset,
       'rise',
     );
-
     if (rise.jd >= -1) {
       valid = true;
     }
@@ -170,10 +169,10 @@ export const calcTransitionJd = async (
   return data;
 };
 
-export const calcSunTrans = async (datetime, geo) => {
+export const calcSunTrans = async (datetime, geo, tzOffset = 0) => {
   const jd = calcJulDate(datetime);
   const transData = await calcSunTransJd(jd, geo);
-  return { ...transData, datetime };
+  return { ...transData, datetime, tzOffset };
 };
 
 export const calcSunTransJd = async (jd, geo): Promise<SunTransitionData> => {
@@ -190,8 +189,8 @@ export const calcSunTransJd = async (jd, geo): Promise<SunTransitionData> => {
   };
 };
 
-export const calcJyotishDay = async (datetime, geo) => {
-  const sunData = await calcSunTrans(datetime, geo);
+export const calcJyotishDay = async (datetime, geo, tzOffset = 0) => {
+  const sunData = await calcSunTrans(datetime, geo, tzOffset);
   return new JyotishDay(sunData);
 };
 
@@ -200,8 +199,8 @@ export const calcJyotishSunRise = async (datetime, geo) => {
   return jyotishDay.toObject();
 };
 
-export const fetchIndianTimeData = async (datetime, geo) => {
-  const jyotishDay = await calcJyotishDay(datetime, geo);
+export const fetchIndianTimeData = async (datetime, geo, tzOffset = 0) => {
+  const jyotishDay = await calcJyotishDay(datetime, geo, tzOffset);
   return new IndianTime(jyotishDay);
 };
 

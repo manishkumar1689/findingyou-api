@@ -143,7 +143,7 @@ export const calcAstroWeekDayIndex = (datetime, afterSunrise = true) => {
 export const applyTzOffsetToDateString = (dt, offsetSecs: number) => {
   return moment
     .utc(dt)
-    .add(offsetSecs, 'seconds')
+    .subtract(offsetSecs, 'seconds')
     .toISOString()
     .split('.')
     .shift();
