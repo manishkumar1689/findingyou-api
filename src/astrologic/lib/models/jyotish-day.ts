@@ -66,9 +66,13 @@ export class JyotishDay extends BaseObject {
   progress = () => this.jdTime() / this.dayLength();
 
   isDayTime = () => {
+    const after = this.rise().jd < this.set().jd;
+    const riseJd = after ? this.rise().jd : this.prevRise().jd;
+    const prevAfter = this.prevRise().jd < this.prevSet().jd;
+    const prevRiseJd = prevAfter ? this.prevRise().jd : this.prevRise().jd - 1;
     return (
-      (this.jd > this.rise().jd && this.jd < this.set().jd) ||
-      (this.jd > this.prevRise().jd && this.jd < this.prevSet().jd)
+      (this.jd > riseJd && this.jd < this.set().jd) ||
+      (this.jd > prevRiseJd && this.jd < this.prevSet().jd)
     );
   };
 }

@@ -52,6 +52,7 @@ import { calcRetroGrade, calcStation } from './lib/astro-motion';
 import { toIndianTime, calcTransition } from './lib/transitions';
 import { readEpheFiles } from './lib/files';
 import { ChartInputDTO } from './dto/chart-input.dto';
+import { smartCastInt } from 'src/lib/converters';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -373,6 +374,36 @@ export class AstrologicController {
       data.valid = true;
     }
     return data;
+  }
+
+  @Get('charts-by-user/:userID/:start?/:limit?')
+  async fetchChartsByUser(
+    @Res() res,
+    @Param('userID') userID: string,
+    @Param('start') start = '0',
+    @Param('limit') limit = '20',
+  ) {
+    const data: any = { valid: false, items: [], message: 'invalid user ID' };
+    const user = await this.userService.getUser(userID);
+    if (user instanceof Object) {
+      if (user.active) {
+        const startVal = smartCastInt(start, 0);
+        const limitVal = smartCastInt(limit, 20);
+        const charts = await this.astrologicService.getChartsByUser(
+          userID,
+          startVal,
+          limitVal,
+        );
+        if (charts instanceof Array) {
+          data.items = charts;
+          data.valid = true;
+          data.message = 'OK';
+        } else {
+          data.message = 'Inactive account';
+        }
+      }
+    }
+    return res.status(HttpStatus.OK).json(data);
   }
 
   @Get('vargas/:loc/:dt/:system?')

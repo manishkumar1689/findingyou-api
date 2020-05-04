@@ -69,4 +69,10 @@ export class CreateChartDTO {
 
   @ApiProperty()
   objects: Array<ObjectMatchSetDTO>;
+
+  @ApiProperty()
+  readonly createdAt: Date;
+
+  @ApiProperty()
+  readonly modifiedAt: Date;
 }

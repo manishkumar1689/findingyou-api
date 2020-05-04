@@ -57,8 +57,13 @@ export class AstrologicService {
     return await this.chartModel.findById(chartID).exec();
   }
 
-  async getChartsByUser(userID: string) {
-    return await this.chartModel.find({ user: userID }).exec();
+  async getChartsByUser(userID: string, start = 0, limit = 20) {
+    return await this.chartModel
+      .find({ user: userID })
+      .sort({ isDefaultBirthChart: -1 })
+      .skip(start)
+      .limit(limit)
+      .exec();
   }
 
   // save a single body speed record

@@ -98,4 +98,12 @@ export const ChartSchema = new mongoose.Schema({
     required: false,
     default: [],
   },
+  createdAt: {
+    type: Date,
+    default: new Date(),
+  },
+  modifiedAt: {
+    type: Date,
+    default: new Date(),
+  },
 });

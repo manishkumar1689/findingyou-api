@@ -176,8 +176,8 @@ export const calcSunTrans = async (datetime, geo, tzOffset = 0) => {
 };
 
 export const calcSunTransJd = async (jd, geo): Promise<SunTransitionData> => {
-  const prev = await calcTransitionJd(jd - 1, geo, 0, false, false);
   const curr = await calcTransitionJd(jd, geo, 0, false, false);
+  const prev = await calcTransitionJd(jd - 1, geo, 0, false, false);
   const next = await calcTransitionJd(jd + 1, geo, 0, false, false);
   return {
     jd,

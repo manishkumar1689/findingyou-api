@@ -4,6 +4,7 @@ export const SubjectSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
+    default: '',
   },
   type: {
     type: String,
@@ -13,10 +14,12 @@ export const SubjectSchema = new mongoose.Schema({
   gender: {
     type: String,
     required: true,
+    default: '-',
   },
   eventType: {
     type: String,
     required: true,
+    default: 'birth',
   },
   roddenScale: {
     type: String,
