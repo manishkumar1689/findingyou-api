@@ -20,7 +20,7 @@ export class AstrologicService {
 
   async createChart(data: CreateChartDTO) {
     let isNew = true;
-    this.adjustDatetimeByServerTz(data);
+    data = this.adjustDatetimeByServerTz(data);
     if (data.isDefaultBirthChart) {
       const chart = await this.chartModel
         .findOne({
@@ -48,9 +48,11 @@ export class AstrologicService {
       const adjustedDate = moment
         .utc(data.datetime)
         .subtract(tzMins, 'minutes')
-        .toISOString();
+        .toISOString()
+        .replace(/\.\w+$/, '');
       data = { ...data, datetime: new Date(adjustedDate) };
     }
+    return data;
   }
 
   // update existing with unique chartID
