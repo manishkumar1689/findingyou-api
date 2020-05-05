@@ -217,7 +217,6 @@ export class UserService {
     const userObj = this.transformUserDTO(createUserDTO, true, roles);
 
     const newUser = new this.userModel(userObj);
-    console.log(newUser);
     return newUser.save();
   }
 

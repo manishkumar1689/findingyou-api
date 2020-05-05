@@ -257,6 +257,7 @@ export const calcAllTransitions = async (datetime: string, geo) => {
 export const calcAllTransitionsJd = async (
   jd: number,
   geo,
+  jdOffset = 0,
 ): Promise<Array<TransitionData>> => {
   const bodyKeys = [
     'SE_SUN',
@@ -273,7 +274,13 @@ export const calcAllTransitionsJd = async (
   const bodies: Array<TransitionData> = [];
   for (const body of bodyKeys) {
     const num = swisseph[body];
-    const bodyData = await calcTransitionJd(jd, geo, num, false, true);
+    const bodyData = await calcTransitionJd(
+      jd + jdOffset,
+      geo,
+      num,
+      false,
+      true,
+    );
     bodies.push({
       num,
       body,
@@ -573,8 +580,8 @@ const calcBodyJd = async (jd: number, key: string) => {
   }
   return new Graha(data);
 };
-
-const calcSunJd = async jd => calcBodyJd(jd, 'su');
+const jdOffset = 0;
+const calcSunJd = async (jd: number) => calcBodyJd(jd, 'su');
 
 const fetchRashiSet = () => new RashiSet();
 
@@ -616,8 +623,12 @@ export const calcCompactChartData = async (
   tzOffset = 0,
 ) => {
   const grahaSet = await calcGrahaSet(datetime, geo, true);
+
+  const jdOffset = 0;
   const { jd } = grahaSet;
-  const transitions = await calcAllTransitionsJd(jd, geo);
+  const dayFracOffset = tzOffset / 86400;
+  const dayStartJd = Math.floor(jd + 0.5) - 0.5 - dayFracOffset;
+  const transitions = await calcAllTransitionsJd(dayStartJd, geo, 0);
   grahaSet.mergeTransitions(transitions);
   const ayanamshas = await calcAyanamshas(jd);
   const ayanamsha = {

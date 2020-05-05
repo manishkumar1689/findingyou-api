@@ -267,7 +267,13 @@ export class AstrologicController {
       const topMode = ayanamshaKey === 'top';
       const topKeys =
         topMode && notEmptyString(topList, 5) ? topList.split(',') : [];
-      data = await calcCompactChartData(dtUtc, geo, ayanamshaKey, topKeys);
+      data = await calcCompactChartData(
+        dtUtc,
+        geo,
+        ayanamshaKey,
+        topKeys,
+        geoInfo.offset,
+      );
       data = {
         tzOffset: geoInfo.offset,
         tz: geoInfo.tz,

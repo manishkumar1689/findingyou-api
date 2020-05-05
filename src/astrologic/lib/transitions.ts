@@ -54,11 +54,11 @@ export const matchTransData = async (
   let data = { valid: false, transitTime: -1 };
   inData.transType = transType;
   const jd = inData.jd;
-  switch (transKey) {
+  /* switch (transKey) {
     case 'rise':
       inData.jd -= 0.5;
       break;
-  }
+  } */
 
   await riseTransAsync(...Object.values(inData)).catch(d => {
     data = d;
@@ -175,7 +175,11 @@ export const calcSunTrans = async (datetime, geo, tzOffset = 0) => {
   return { ...transData, datetime, tzOffset };
 };
 
-export const calcSunTransJd = async (jd, geo): Promise<SunTransitionData> => {
+export const calcSunTransJd = async (
+  jd,
+  geo,
+  jdOffset = 0,
+): Promise<SunTransitionData> => {
   const curr = await calcTransitionJd(jd, geo, 0, false, false);
   const prev = await calcTransitionJd(jd - 1, geo, 0, false, false);
   const next = await calcTransitionJd(jd + 1, geo, 0, false, false);

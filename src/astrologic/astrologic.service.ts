@@ -9,6 +9,7 @@ import grahaValues from './lib/settings/graha-values';
 import { calcJulDate } from './lib/date-funcs';
 import { isNumeric, validISODateString } from 'src/lib/validators';
 import { CreateChartDTO } from './dto/create-chart.dto';
+import moment = require('moment');
 
 @Injectable()
 export class AstrologicService {
@@ -19,6 +20,7 @@ export class AstrologicService {
 
   async createChart(data: CreateChartDTO) {
     let isNew = true;
+    this.adjustDatetimeByServerTz(data);
     if (data.isDefaultBirthChart) {
       const chart = await this.chartModel
         .findOne({
@@ -26,7 +28,6 @@ export class AstrologicService {
           isDefaultBirthChart: true,
         })
         .exec();
-
       if (chart instanceof Object) {
         const { _id } = chart;
         isNew = false;
@@ -41,10 +42,22 @@ export class AstrologicService {
     }
   }
 
+  adjustDatetimeByServerTz(data: any = null) {
+    const tzMins = new Date().getTimezoneOffset();
+    if (tzMins !== 0 && data instanceof Object) {
+      const adjustedDate = moment
+        .utc(data.datetime)
+        .subtract(tzMins, 'minutes')
+        .toISOString();
+      data = { ...data, datetime: new Date(adjustedDate) };
+    }
+  }
+
   // update existing with unique chartID
   async updateChart(chartID: string, data: CreateChartDTO) {
     const chart = await this.chartModel.findById(chartID).exec();
     if (chart instanceof Object) {
+      this.adjustDatetimeByServerTz(data);
       await this.chartModel
         .findByIdAndUpdate(chartID, data, { new: false })
         .exec();
