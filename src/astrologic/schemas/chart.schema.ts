@@ -24,6 +24,11 @@ export const ChartSchema = new mongoose.Schema({
     type: SubjectSchema,
     required: true,
   },
+  parent: {
+    type: ObjectId,
+    required: true,
+    ref: 'Chart',
+  },
   datetime: {
     type: Date,
     required: true,

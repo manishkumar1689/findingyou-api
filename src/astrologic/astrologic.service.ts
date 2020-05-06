@@ -73,12 +73,25 @@ export class AstrologicService {
   }
 
   async getChartsByUser(userID: string, start = 0, limit = 20) {
-    return await this.chartModel
+    const first = await this.chartModel
+      .findOne({ user: userID, isDefaultBirthChart: true })
+      .exec();
+    const others = await this.chartModel
       .find({ user: userID })
-      .sort({ isDefaultBirthChart: -1 })
+      .sort({ modifiedAt: -1 })
       .skip(start)
       .limit(limit)
       .exec();
+    const charts: Array<Chart> = [];
+    if (first) {
+      charts.push(first);
+    }
+    if (others.length > 0) {
+      others.forEach(c => {
+        charts.push(c);
+      });
+    }
+    return charts;
   }
 
   // save a single body speed record

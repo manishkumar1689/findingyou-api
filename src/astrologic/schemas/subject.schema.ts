@@ -6,6 +6,10 @@ export const SubjectSchema = new mongoose.Schema({
     required: true,
     default: '',
   },
+  notes: {
+    type: String,
+    required: false,
+  },
   type: {
     type: String,
     required: true,

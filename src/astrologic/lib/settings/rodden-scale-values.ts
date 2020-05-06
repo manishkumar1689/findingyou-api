@@ -1,31 +1,37 @@
 const roddenScaleValues = [
   {
     key: 'AAA',
+    enabled: true,
     name: 'Highly accurate',
     description: `Birthtime (moment the baby leaves the mother's body and/or time of first breath) clocked to the second with a highly accurate clock`,
   },
   {
     key: 'AA',
+    enabled: true,
     name: 'Recorded time',
     description: `"Data as recorded by the family or state. This includes BC (birth certificate), and BR (birth record), that which is not an official document but a quote of the birth record from the Registrar or Bureau of Records, the baptismal certificate, family Bible, or baby book. These data reflect the best available accuracy.Taeger data groups: 1*,1F"`,
   },
   {
     key: 'AAR',
+    enabled: true,
     name: 'Rectified from recorded time',
     description: `Rectified time from a recorded time`,
   },
   {
     key: 'AAX',
+    enabled: true,
     name: 'Official untimed source',
     description: `"Date from an official source, but no time (??? Same as AX ???)"`,
   },
   {
     key: 'AX',
+    enabled: true,
     name: 'Documented untimed source',
     description: `"Records without a time, such as church records, etc. (same as AAX???)"`,
   },
   {
     key: 'A',
+    enabled: true,
     name: 'Fairly Accurate',
     description: `"Data as quoted by the person, kin, friend, or associate. These data all come from someone's memory, family legend, or hearsay. "`,
   },
@@ -36,11 +42,13 @@ const roddenScaleValues = [
   },
   {
     key: 'B',
+    enabled: true,
     name: 'Biography',
     description: `"Biography or autobiography. When these data are substantiated by a quote that qualifies the information, they are considered reliable. "`,
   },
   {
     key: 'BR',
+    enabled: true,
     name: 'Rectified from biography time',
     description: `Rectified time from a time given in a biography or newspaper (?)`,
   },
@@ -66,6 +74,7 @@ const roddenScaleValues = [
   },
   {
     key: 'X',
+    enabled: true,
     name: 'No known time',
     description: `Data with no time of birth. Untimed data may be of interest in the examination of planetary patterns. (not for rectified time as it used to)`,
   },
@@ -81,11 +90,13 @@ const roddenScaleValues = [
   },
   {
     key: 'XXR',
+    enabled: true,
     name: 'Rectified from no date/time knowledge',
     description: `"Rectified date and time from unknown date and time (like Jesus, Buddha, etc)"`,
   },
   {
     key: 'R',
+    enabled: true,
     name: 'Rectified from unspecified ',
     description: `Rectified time from unspecified data rating. Rectified times that don't start from an approximate time`,
   },
