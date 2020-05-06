@@ -5,6 +5,9 @@ export class SubjectDTO {
   readonly name: string;
 
   @ApiProperty()
+  readonly notes?: string;
+
+  @ApiProperty()
   readonly type: string;
 
   @ApiProperty()

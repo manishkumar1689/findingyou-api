@@ -20,6 +20,9 @@ export class CreateChartDTO {
   readonly subject: SubjectDTO;
 
   @ApiProperty()
+  readonly parent?: string;
+
+  @ApiProperty()
   readonly datetime: Date;
 
   @ApiProperty()

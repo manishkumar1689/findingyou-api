@@ -5,7 +5,13 @@ Simple DTO for core input data required to construct a chart
 */
 export class ChartInputDTO {
   @ApiProperty()
+  readonly _id?: string;
+
+  @ApiProperty()
   readonly user: string;
+
+  @ApiProperty()
+  readonly parent: string;
 
   @ApiProperty()
   readonly datetime: string;
@@ -24,6 +30,9 @@ export class ChartInputDTO {
 
   @ApiProperty()
   readonly name?: string;
+
+  @ApiProperty()
+  readonly notes?: string;
 
   @ApiProperty()
   readonly type?: string;

@@ -303,7 +303,7 @@ export class AstrologicController {
               gender = userRecord.gender;
             }
             if (emptyString(roddenScale, 3)) {
-              roddenScale = 'certificate';
+              roddenScale = 'XX';
             }
           }
           const subject = {
@@ -343,7 +343,15 @@ export class AstrologicController {
               }),
               ...chartData,
             };
-            const saved = await this.astrologicService.createChart(data.chart);
+            let saved = null;
+            if (notEmptyString(inData._id, 8)) {
+              saved = await this.astrologicService.updateChart(
+                inData._id,
+                data.chart,
+              );
+            } else {
+              saved = await this.astrologicService.createChart(data.chart);
+            }
             if (saved instanceof Object) {
               const { _id } = saved;
               const strId = _id instanceof Object ? _id.toString() : _id;

@@ -13,6 +13,7 @@ export interface Chart extends Document {
   readonly user: string;
   readonly isDefaultBirthChart: boolean;
   readonly subject: Subject;
+  readonly parent?: string;
   readonly datetime: Date;
   readonly jd: number;
   readonly geo: Geo;
