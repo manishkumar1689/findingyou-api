@@ -26,6 +26,7 @@ export const SettingSchema = new mongoose.Schema({
       'payments',
       'preferences',
       'roles',
+      'lookup_set',
     ],
   },
   weight: {

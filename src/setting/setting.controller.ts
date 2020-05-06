@@ -98,4 +98,14 @@ export class SettingController {
     }
     return res.status(HttpStatus.OK).json(setting);
   }
+
+  // Fetch a particular setting using ID
+  @Get('by-key/:key')
+  async getByKey(@Res() res, @Param('key') key) {
+    const setting = await this.settingService.getByKey(key);
+    if (!setting) {
+      throw new NotFoundException('Setting does not exist!');
+    }
+    return res.status(HttpStatus.OK).json(setting);
+  }
 }
