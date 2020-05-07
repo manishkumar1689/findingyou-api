@@ -60,4 +60,17 @@ export class GeoController {
     }
     return res.send(data);
   }
+
+  @Get('placename/:search')
+  async byPlacename(@Res() res, @Param('search') search) {
+    const data = { valid: false, items: [] };
+    if (search.length > 1) {
+      const items = await this.geoService.searchByPlaceName(search);
+      if (items instanceof Array) {
+        data.items = items;
+        data.valid = true;
+      }
+    }
+    return res.send(data);
+  }
 }

@@ -10,6 +10,8 @@ import {
   filterToponyms,
   correctOceanTz,
 } from './api/filters';
+import { fchmodSync } from 'fs';
+import { toDateParts } from 'src/astrologic/lib/date-funcs';
 
 @Injectable()
 export class GeoService {
@@ -203,5 +205,69 @@ export class GeoService {
       }
     }
     return gmtOffset;
+  }
+
+  async searchByPlaceName(placename: string, cc = '') {
+    const mp = new Map<string, string>();
+    mp.set('q', decodeURI(placename));
+    if (notEmptyString(cc)) {
+      mp.set('countryBias', cc.toUpperCase());
+    }
+    //mp.set('fuzzy', '0.9');
+    let items = [];
+    const data = await this.fetchGeoNames('searchJSON', Object.fromEntries(mp));
+    const fcs = ['PPL', 'PPLX', 'PPLA1', 'PPLA2', 'PPLA3', 'PPLC', 'ADM3'];
+    if (data instanceof Object) {
+      const { geonames } = data;
+      if (geonames instanceof Array) {
+        items = geonames
+          .filter(tp => fcs.includes(tp.fcode))
+          .map(fc => {
+            const {
+              lat,
+              lng,
+              name,
+              toponymName,
+              adminName1,
+              countryName,
+              population,
+              fcode,
+            } = fc;
+            let country = countryName;
+            let region = adminName1;
+            switch (fc.countryCode) {
+              case 'US':
+              case 'USA':
+                country = 'USA';
+                break;
+              case 'GB':
+              case 'UK':
+                country = 'UK';
+                break;
+            }
+            const regSlug = fc.adminName1.toLowerCase();
+            switch (regSlug) {
+              case 'scotland':
+              case 'wales':
+              case 'northern ireland':
+              case 'england':
+                country = adminName1;
+                region = '';
+                break;
+            }
+            return {
+              lat,
+              lng,
+              name,
+              fullName: toponymName,
+              country,
+              region,
+              pop: population,
+              fcode,
+            };
+          });
+      }
+    }
+    return items;
   }
 }
