@@ -1,5 +1,5 @@
 import * as swisseph from 'swisseph';
-import { calcJulDate, jdToDateTime, calcAstroWeekDayIndex } from './date-funcs';
+import { calcJulDate, jdToDateTime } from './date-funcs';
 import { JyotishDay } from './models/jyotish-day';
 import { IndianTime } from './models/indian-time';
 import { riseTransAsync } from './sweph-async';

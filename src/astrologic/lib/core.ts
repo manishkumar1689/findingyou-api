@@ -72,6 +72,7 @@ export const calcUpagrahas = async (
     periodHours,
     isDayTime,
     weekDay,
+    afterSunSet,
   } = await calcJyotishSunRise(datetime, geo);
   const eighthJd = periodLength / 8;
   const eighth = periodHours / 8;
@@ -79,8 +80,8 @@ export const calcUpagrahas = async (
     ? await calcUpagrahaPeriods(startJd, eighthJd, geo, ayanamshaValue)
     : [];
   const sectionKey = isDayTime ? 'daytime' : 'nighttime';
-  const upaRow = upagrahaData[sectionKey].find(row => row.day === weekDay);
 
+  const upaRow = upagrahaData[sectionKey].find(row => row.day === weekDay);
   let values = [];
   for (const ref of upagrahaData.refs) {
     const partIndex = upaRow.parts.findIndex(b => b === ref.body);
@@ -644,6 +645,7 @@ export const calcCompactChartData = async (
   }
 
   const hdP = await fetchHouseData(datetime, geo, 'P');
+
   const upagrahas = await calcUpagrahas(datetime, geo, ayanamsha.value);
   const indianTimeData = await fetchIndianTimeData(datetime, geo, tzOffset);
   grahaSet.mergeSunTransitions(indianTimeData.sunData());

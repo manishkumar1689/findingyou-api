@@ -29,7 +29,7 @@ export class JyotishDay extends BaseObject {
   nextRise = () => this.sunData.nextRise;
 
   dayBefore = () => {
-    return this.jd < this.rise().jd;
+    return this.jd < this.rise().jd && !this.isDayTime();
   };
 
   afterSunSet = () => this.jd > this.set().jd;
@@ -46,14 +46,18 @@ export class JyotishDay extends BaseObject {
       ? this.prevSet().jd
       : this.afterSunSet()
       ? this.set().jd
-      : this.rise().jd;
+      : this.rise().jd < this.jd
+      ? this.rise().jd
+      : this.prevRise().jd;
 
   periodLength = () =>
     this.dayBefore()
       ? this.rise().jd - this.prevSet().jd
       : this.afterSunSet()
       ? this.nextRise().jd - this.set().jd
-      : this.set().jd - this.rise().jd;
+      : this.rise().jd < this.jd
+      ? this.set().jd - this.rise().jd
+      : this.set().jd - this.prevRise().jd;
 
   periodHours = () => this.periodLength() * 24;
 
