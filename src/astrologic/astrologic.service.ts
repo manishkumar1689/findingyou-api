@@ -10,6 +10,7 @@ import { calcJulDate } from './lib/date-funcs';
 import { isNumeric, validISODateString } from 'src/lib/validators';
 import { CreateChartDTO } from './dto/create-chart.dto';
 import moment = require('moment');
+import { dateTimeSuffix } from 'src/lib/converters';
 
 @Injectable()
 export class AstrologicService {
@@ -20,7 +21,8 @@ export class AstrologicService {
 
   async createChart(data: CreateChartDTO) {
     let isNew = true;
-    data = this.adjustDatetimeByServerTz(data);
+    const adjustedDate = this.adjustDatetimeByServerTz(data);
+    const saveData = { ...data, datetime: adjustedDate };
     if (data.isDefaultBirthChart) {
       const chart = await this.chartModel
         .findOne({
@@ -32,36 +34,45 @@ export class AstrologicService {
         const { _id } = chart;
         isNew = false;
         await this.chartModel
-          .findByIdAndUpdate(_id, data, { new: false })
+          .findByIdAndUpdate(_id, saveData, { new: false })
           .exec();
         return await this.chartModel.findById(_id);
       }
     }
     if (isNew) {
-      return this.chartModel.create(data);
+      return this.chartModel.create(saveData);
     }
   }
 
   adjustDatetimeByServerTz(data: any = null) {
     const tzMins = new Date().getTimezoneOffset();
     if (tzMins !== 0 && data instanceof Object) {
-      const adjustedDate = moment
+      /* const adjustedDate = moment
         .utc(data.datetime)
         .subtract(tzMins, 'minutes')
         .toISOString()
-        .replace(/\.\w+$/, '');
+        .replace(/:\.\w+$/, ':00Z'); */
+      const adjustedDate = moment
+        .utc(data.datetime)
+        .toISOString()
+        .replace(/\.\w+$/, '.00Z');
+
       data = { ...data, datetime: new Date(adjustedDate) };
     }
-    return data;
+    return data.datetime;
   }
 
   // update existing with unique chartID
   async updateChart(chartID: string, data: CreateChartDTO) {
     const chart = await this.chartModel.findById(chartID).exec();
     if (chart instanceof Object) {
-      this.adjustDatetimeByServerTz(data);
+      const adjustedDate = this.adjustDatetimeByServerTz(data);
       await this.chartModel
-        .findByIdAndUpdate(chartID, data, { new: false })
+        .findByIdAndUpdate(
+          chartID,
+          { ...data, datetime: adjustedDate, modifiedAt: new Date() },
+          { new: false },
+        )
         .exec();
       return await this.chartModel.findById(chartID);
     }

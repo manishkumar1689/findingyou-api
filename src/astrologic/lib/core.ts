@@ -624,8 +624,6 @@ export const calcCompactChartData = async (
   tzOffset = 0,
 ) => {
   const grahaSet = await calcGrahaSet(datetime, geo, true);
-
-  const jdOffset = 0;
   const { jd } = grahaSet;
   const dayFracOffset = tzOffset / 86400;
   const dayStartJd = Math.floor(jd + 0.5) - 0.5 - dayFracOffset;
