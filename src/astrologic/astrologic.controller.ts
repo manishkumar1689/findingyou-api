@@ -395,14 +395,14 @@ export class AstrologicController {
     @Res() res,
     @Param('userID') userID: string,
     @Param('start') start = '0',
-    @Param('limit') limit = '20',
+    @Param('limit') limit = '100',
   ) {
     const data: any = { valid: false, items: [], message: 'invalid user ID' };
     const user = await this.userService.getUser(userID);
     if (user instanceof Object) {
       if (user.active) {
         const startVal = smartCastInt(start, 0);
-        const limitVal = smartCastInt(limit, 20);
+        const limitVal = smartCastInt(limit, 100);
         const charts = await this.astrologicService.getChartsByUser(
           userID,
           startVal,
