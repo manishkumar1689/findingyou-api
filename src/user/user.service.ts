@@ -458,17 +458,29 @@ export class UserService {
   }
 
   async isValidRoleUser(userID: string, role: string): Promise<boolean> {
-    const adminUser = await this.getUser(userID);
-    if (adminUser) {
-      if (adminUser.roles.includes(role)) {
-        return adminUser.active;
-      }
+    const user = await this.getUser(userID);
+    if (user) {
+      return this.hasRole(user, role);
     }
     return false;
   }
 
+  hasRole(user: User, role: string): boolean {
+    let valid = false;
+    if (user.roles.includes(role)) {
+      return user.active;
+    }
+    return valid;
+  }
+
+  hasAdminRole(user: User): boolean {
+    const adminRoles = ['admin', 'superadmin'];
+    return adminRoles.some(role => this.hasRole(user, role));
+  }
+
   async isAdminUser(userID: string): Promise<boolean> {
-    return await this.isValidRoleUser(userID, 'admin');
+    const user = await this.getUser(userID);
+    return this.hasAdminRole(user);
   }
 
   async isBlocked(userID: string): Promise<boolean> {

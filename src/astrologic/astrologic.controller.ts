@@ -17,7 +17,6 @@ import {
 import { AstrologicService } from './astrologic.service';
 import { GeoService } from './../geo/geo.service';
 import { UserService } from './../user/user.service';
-import { Chart } from './interfaces/chart.interface';
 import { CreateChartDTO } from './dto/create-chart.dto';
 import {
   isNumeric,
@@ -415,6 +414,38 @@ export class AstrologicController {
         } else {
           data.message = 'Inactive account';
         }
+      }
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Delete('delete-chart/:userID/:chartID')
+  async deleteChart(
+    @Res() res,
+    @Param('userID') userID: string,
+    @Param('chartID') chartID: string,
+  ) {
+    const data: any = { valid: false, message: 'invalid user ID' };
+    const user = await this.userService.getUser(userID);
+    if (user instanceof Object) {
+      if (user.active) {
+        const chart = await this.astrologicService.getChart(chartID);
+        if (chart instanceof Object) {
+          if (
+            chart.user.toString() === userID ||
+            this.userService.hasAdminRole(user)
+          ) {
+            this.astrologicService.deleteChart(chartID);
+            data.valid = true;
+            data.message = 'Chart deleted';
+          } else {
+            data.message = 'Permission denied';
+          }
+        } else {
+          data.message = 'Chart not found';
+        }
+      } else {
+        data.message = 'Inactive account';
       }
     }
     return res.status(HttpStatus.OK).json(data);
