@@ -34,7 +34,13 @@ export class JyotishDay extends BaseObject {
 
   afterSunSet = () => this.jd > this.set().jd;
 
-  dayStart = () => (this.dayBefore() ? this.prevRise().jd : this.rise().jd);
+  dayStart = () => {
+    return this.dayBefore()
+      ? this.prevRise().jd
+      : this.rise().jd < this.jd
+      ? this.rise().jd
+      : this.prevRise().jd;
+  };
 
   dayLength = () =>
     this.dayBefore()
