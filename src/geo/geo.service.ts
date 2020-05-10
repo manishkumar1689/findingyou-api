@@ -196,8 +196,8 @@ export class GeoService {
   checkGmtOffset(zoneName: string, datetime: any): number {
     let gmtOffset = 0;
     if (notEmptyString(zoneName, 4)) {
-      const mom = moment.utc(datetime).tz(zoneName),
-        parts = mom.format('Z').split(':');
+      const mom = moment.utc(datetime).tz(zoneName);
+      const parts = mom.format('Z').split(':');
       if (parts.length > 1) {
         const hrs = parseInt(parts[0].replace('+', '')) * 3600;
         const mins = parseInt(parts[1]) * 60;

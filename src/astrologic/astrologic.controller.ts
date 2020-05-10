@@ -525,10 +525,27 @@ export class AstrologicController {
 
   @Get('indian-time/:loc/:dt')
   async indianTimeByGeo(@Res() res, @Param('loc') loc, @Param('dt') dt) {
-    let data: any = { valid: false };
+    const data: any = {
+      valid: false,
+      localDateTime: '',
+      tzOffset: null,
+      tz: null,
+      indianTime: null,
+    };
     if (notEmptyString(dt, 6) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
-      data = await toIndianTime(dt, geo);
+      const geoInfo = await this.geoService.fetchGeoAndTimezone(
+        geo.lat,
+        geo.lng,
+        dt,
+      );
+      const dtUtc = applyTzOffsetToDateString(dt, geoInfo.offset);
+      data.localDateTime = dt;
+      data.tzOffset = geoInfo.offset;
+      data.tz = geoInfo.tz;
+
+      data.indianTime = await toIndianTime(dtUtc, geo);
+      data.valid = true;
     }
     return res.status(HttpStatus.OK).json(data);
   }
