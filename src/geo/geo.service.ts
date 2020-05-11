@@ -213,16 +213,17 @@ export class GeoService {
     if (notEmptyString(cc)) {
       mp.set('countryBias', cc.toUpperCase());
     }
-    //mp.set('fuzzy', '0.9');
+    mp.set('fuzzy', '0.5');
     let items = [];
     const data = await this.fetchGeoNames('searchJSON', Object.fromEntries(mp));
     const fcs = ['PPL', 'PPLX', 'PPLA1', 'PPLA2', 'PPLA3', 'PPLC', 'ADM3'];
     if (data instanceof Object) {
       const { geonames } = data;
+      const keys: Array<string> = [];
       if (geonames instanceof Array) {
-        items = geonames
+        const entries = geonames
           .filter(tp => fcs.includes(tp.fcode))
-          .map(fc => {
+          .forEach(fc => {
             const {
               lat,
               lng,
@@ -255,16 +256,20 @@ export class GeoService {
                 region = '';
                 break;
             }
-            return {
-              lat,
-              lng,
-              name,
-              fullName: toponymName,
-              country,
-              region,
-              pop: population,
-              fcode,
-            };
+            const key = [toponymName, region, country].join(' ').toLowerCase();
+            if (!keys.includes(key)) {
+              keys.push(key);
+              items.push({
+                lat,
+                lng,
+                name,
+                fullName: toponymName,
+                region,
+                country,
+                pop: population,
+                fcode,
+              });
+            }
           });
       }
     }
