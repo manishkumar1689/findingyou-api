@@ -530,7 +530,6 @@ export class AstrologicController {
       localDateTime: '',
       tzOffset: null,
       tz: null,
-      indianTime: null,
     };
     if (notEmptyString(dt, 6) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);

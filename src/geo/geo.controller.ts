@@ -73,4 +73,17 @@ export class GeoController {
     }
     return res.send(data);
   }
+
+  @Get('address/:search')
+  async byFuzzyAddress(@Res() res, @Param('search') search) {
+    const data = { valid: false, items: [] };
+    if (search.length > 1) {
+      const result = await this.geoService.searchByFuzzyAddress(search);
+      if (result.items instanceof Array) {
+        data.items = result.items;
+        data.valid = true;
+      }
+    }
+    return res.send(data);
+  }
 }

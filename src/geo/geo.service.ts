@@ -1,5 +1,5 @@
 import { Injectable, HttpService } from '@nestjs/common';
-import { geonames, timezonedb } from '../.config';
+import { geonames, timezonedb, googleGeo } from '../.config';
 import { geonamesApiBase, timezonedbApiBase } from './api';
 import { objectToQueryString, mapToQueryString } from '../lib/converters';
 import { AxiosResponse } from 'axios';
@@ -207,16 +207,47 @@ export class GeoService {
     return gmtOffset;
   }
 
+  async searchByFuzzyAddress(placename: string, geo: any = null) {
+    const apiBase =
+      'https://maps.googleapis.com/maps/api/place/autocomplete/json?key=' +
+      googleGeo.apiKey +
+      '&types=(cities)&input=';
+    const url = apiBase + placename;
+    const output = { valid: false, items: [], url };
+    await this.getHttp(url).then(response => {
+      if (response) {
+        const { data } = response;
+        if (data instanceof Object) {
+          console.log(data);
+          const { predictions } = data;
+          if (predictions instanceof Array) {
+            output.items = predictions;
+          }
+        }
+      }
+    });
+    return output;
+  }
+
   async searchByPlaceName(placename: string, cc = '') {
     const mp = new Map<string, string>();
     mp.set('q', decodeURI(placename));
     if (notEmptyString(cc)) {
       mp.set('countryBias', cc.toUpperCase());
     }
-    mp.set('fuzzy', '0.5');
+    mp.set('fuzzy', '1');
     let items = [];
     const data = await this.fetchGeoNames('searchJSON', Object.fromEntries(mp));
-    const fcs = ['PPL', 'PPLX', 'PPLA1', 'PPLA2', 'PPLA3', 'PPLC', 'ADM3'];
+    const fcs = [
+      'PPL',
+      'PPLX',
+      'PPLA',
+      'PPLA1',
+      'PPLA2',
+      'PPLA3',
+      'PPLC',
+      'ADM3',
+    ];
     if (data instanceof Object) {
       const { geonames } = data;
       const keys: Array<string> = [];
@@ -272,6 +303,7 @@ export class GeoService {
             }
           });
       }
+      items.sort((a, b) => b.pop - a.pop);
     }
     return items;
   }
