@@ -218,7 +218,6 @@ export class GeoService {
       if (response) {
         const { data } = response;
         if (data instanceof Object) {
-          console.log(data);
           const { predictions } = data;
           if (predictions instanceof Array) {
             output.items = predictions;
