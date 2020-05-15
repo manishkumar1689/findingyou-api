@@ -51,7 +51,7 @@ import { calcRetroGrade, calcStation } from './lib/astro-motion';
 import { toIndianTime, calcTransition } from './lib/transitions';
 import { readEpheFiles } from './lib/files';
 import { ChartInputDTO } from './dto/chart-input.dto';
-import { smartCastInt } from 'src/lib/converters';
+import { smartCastInt, sanitize } from 'src/lib/converters';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -348,8 +348,17 @@ export class AstrologicController {
               const numToponyms = placenames.length;
               const [place, country] = locality.split(',').map(s => s.trim());
               if (numToponyms > 0) {
-                placenames[numToponyms - 1].name = place;
-                placenames[numToponyms - 1].fullName = place;
+                let locIndex = numToponyms - 1;
+                if (['PSCD', 'STRT'].includes(placenames[locIndex].type)) {
+                  const li = placenames.findLastIndex(pl =>
+                    pl.type.startsWith('PP'),
+                  );
+                  if (li >= 0) {
+                    locIndex = li;
+                  }
+                }
+                placenames[locIndex].name = place;
+                placenames[locIndex].fullName = place;
                 if (numToponyms < 2) {
                   placenames.unshift({
                     name: country,
@@ -360,6 +369,19 @@ export class AstrologicController {
                 }
               }
             }
+
+            let slugs = placenames.map((pl, index) => {
+              return { index, slug: sanitize(pl.name) };
+            });
+
+            slugs = slugs.forEach(item => {
+              const oi = slugs.find(
+                sl => sl.slug === item.slug && sl.index < item.index,
+              );
+              if (oi) {
+                placenames.splice(oi.index, 1);
+              }
+            });
 
             data.chart = {
               user,

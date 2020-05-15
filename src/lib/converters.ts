@@ -58,3 +58,10 @@ export const dateTimeSuffix = () =>
     .split('.')
     .shift()
     .replace(/[:-]/g, '');
+
+export const sanitize = (str: string, separator = '-') => {
+  return str
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, separator);
+};
