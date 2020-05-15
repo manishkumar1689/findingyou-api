@@ -10,7 +10,8 @@ import {
   Param,
 } from '@nestjs/common';
 import { GeoService } from './geo.service';
-import { isNumeric } from '../lib/validators';
+import { isNumeric, validISODateString } from '../lib/validators';
+import { locStringToGeo } from 'src/astrologic/lib/converters';
 
 @Controller('geo')
 export class GeoController {
@@ -81,6 +82,21 @@ export class GeoController {
       const result = await this.geoService.searchByFuzzyAddress(search);
       if (result.items instanceof Array) {
         data.items = result.items;
+        data.valid = true;
+      }
+    }
+    return res.send(data);
+  }
+
+  @Get('timezonedb/:loc/:dt')
+  async timezoneDb(@Res() res, @Param('loc') loc, @Param('dt') dt) {
+    const data = { valid: false, result: {} };
+    console.log(dt);
+    if (validISODateString(dt)) {
+      const geo = locStringToGeo(loc);
+      const result = await this.geoService.fetchTimezoneOffset(geo, dt);
+      if (result instanceof Object) {
+        data.result = result;
         data.valid = true;
       }
     }

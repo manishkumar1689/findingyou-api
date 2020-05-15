@@ -286,7 +286,15 @@ export class AstrologicController {
   @Post('save-user-chart')
   async saveUserChart(@Res() res, @Body() inData: ChartInputDTO) {
     let data: any = { valid: false, message: '', chart: null };
-    const { user, datetime, lat, lng, alt, isDefaultBirthChart } = inData;
+    const {
+      user,
+      datetime,
+      lat,
+      lng,
+      alt,
+      isDefaultBirthChart,
+      locality,
+    } = inData;
     let { name, type, gender, eventType, roddenScale } = inData;
     const userRecord = await this.userService.getUser(user);
 
@@ -326,20 +334,40 @@ export class AstrologicController {
           );
           if (chartData instanceof Object) {
             data.shortTz = toShortTzAbbr(dtUtc, geoInfo.tz);
+
+            const placenames = geoInfo.toponyms.map(tp => {
+              return {
+                name: tp.name,
+                fullName: tp.fullName,
+                type: tp.type,
+                geo: { lat: tp.lat, lng: tp.lng },
+              };
+            });
+
+            if (notEmptyString(locality)) {
+              const numToponyms = placenames.length;
+              const [place, country] = locality.split(',').map(s => s.trim());
+              if (numToponyms > 0) {
+                placenames[numToponyms - 1].name = place;
+                placenames[numToponyms - 1].fullName = place;
+                if (numToponyms < 2) {
+                  placenames.unshift({
+                    name: country,
+                    fullName: country,
+                    type: 'ADM1',
+                    geo: { lat: geo.lat, lng: geo.lng },
+                  });
+                }
+              }
+            }
+
             data.chart = {
               user,
               isDefaultBirthChart,
               subject,
               tz: geoInfo.tz,
               tzOffset: geoInfo.offset,
-              placenames: geoInfo.toponyms.map(tp => {
-                return {
-                  name: tp.name,
-                  fullName: tp.fullName,
-                  type: tp.type,
-                  geo: { lat: tp.lat, lng: tp.lng },
-                };
-              }),
+              placenames,
               ...chartData,
             };
             let saved = null;
