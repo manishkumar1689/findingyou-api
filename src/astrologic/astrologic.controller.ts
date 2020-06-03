@@ -350,11 +350,12 @@ export class AstrologicController {
               if (numToponyms > 0) {
                 let locIndex = numToponyms - 1;
                 if (['PSCD', 'STRT'].includes(placenames[locIndex].type)) {
-                  const li = placenames.findLastIndex(pl =>
-                    pl.type.startsWith('PP'),
-                  );
+                  const li = placenames
+                    .slice()
+                    .reverse()
+                    .findIndex(pl => pl.type.startsWith('PP'));
                   if (li >= 0) {
-                    locIndex = li;
+                    locIndex = numToponyms - 1 - li;
                   }
                 }
                 placenames[locIndex].name = place;
