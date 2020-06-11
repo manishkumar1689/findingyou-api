@@ -957,6 +957,7 @@ const addSphutaData = (
 
   // bṛghu bindu    -> my chart= 189.5      -> formula= Version1=(Moon degree+Rahu degree) / 2, counting from Rahu --- Version2=(Moon degree+Rahu degree) / 2 (shortest distance) less 180
   data.brghuBindu = ((grahaLngs.mo + grahaLngs.ra) / 2) % 360;
+  data.sunLngAtSunRise = sunAtSunRise.longitude;
   return data;
 };
 
