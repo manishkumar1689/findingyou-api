@@ -779,10 +779,7 @@ const calcCompactVariantSet = (
     if (hdP.houses.length > 0) {
       hdP.houses = hdP.houses.map(h => subtractLng360(h, ayanamsha.value));
     }
-    sunAtSunRise.longitude = subtractLng360(
-      sunAtSunRise.longitude,
-      ayanamsha.value,
-    );
+    sunAtSunRise.lng = subtractLng360(sunAtSunRise.lng, ayanamsha.value);
   }
 
   const firstHouseLng = getFirstHouseLng(hdP);
@@ -920,10 +917,10 @@ const addSphutaData = (
 
   const bhava = iTime.ghatiVal() / 5;
 
-  data.bhavaLagna = (sunAtSunRise.longitude + bhava * 30) % 360;
+  data.bhavaLagna = (sunAtSunRise.lng + bhava * 30) % 360;
   //data.ghatiAsDegree = indianTimeData.ghatiVal * 6;
 
-  data.horaLagna = (sunAtSunRise.longitude + iTime.progress() * 720) % 360;
+  data.horaLagna = (sunAtSunRise.lng + iTime.progress() * 720) % 360;
 
   data.varnadaLagna = calcVarnadaLagna(data, houseData);
 
@@ -961,7 +958,7 @@ const addSphutaData = (
 
   // bṛghu bindu    -> my chart= 189.5      -> formula= Version1=(Moon degree+Rahu degree) / 2, counting from Rahu --- Version2=(Moon degree+Rahu degree) / 2 (shortest distance) less 180
   data.brghuBindu = ((grahaLngs.mo + grahaLngs.ra) / 2) % 360;
-  data.sunLngAtSunRise = sunAtSunRise.longitude;
+  data.sunLngAtSunRise = sunAtSunRise.lng;
   return data;
 };
 
