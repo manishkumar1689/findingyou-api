@@ -779,6 +779,10 @@ const calcCompactVariantSet = (
     if (hdP.houses.length > 0) {
       hdP.houses = hdP.houses.map(h => subtractLng360(h, ayanamsha.value));
     }
+    sunAtSunRise.longitude = subtractLng360(
+      sunAtSunRise.longitude,
+      ayanamsha.value,
+    );
   }
 
   const firstHouseLng = getFirstHouseLng(hdP);
