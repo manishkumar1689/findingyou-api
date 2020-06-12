@@ -561,12 +561,14 @@ export const calcAllBodies = async (
   return data;
 };
 
-const calcBodyJd = async (jd: number, key: string) => {
+const calcBodyJd = async (jd: number, key: string, sideralMode = true) => {
   let data: any = {};
-
   const body = grahaValues.find(b => b.key === key);
   if (body) {
-    await calcUtAsync(jd, body.num, swisseph.SEFLG_SIDEREAL).catch(result => {
+    const gFlag = sideralMode
+      ? swisseph.SEFLG_SIDEREAL
+      : swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SPEED;
+    await calcUtAsync(jd, body.num, gFlag).catch(result => {
       if (result instanceof Object) {
         result.valid = !result.error;
         processBodyResult(result, body);
@@ -582,7 +584,8 @@ const calcBodyJd = async (jd: number, key: string) => {
   return new Graha(data);
 };
 const jdOffset = 0;
-const calcSunJd = async (jd: number) => calcBodyJd(jd, 'su');
+const calcSunJd = async (jd: number, sideralMode = true) =>
+  calcBodyJd(jd, 'su', sideralMode);
 
 const fetchRashiSet = () => new RashiSet();
 
@@ -593,7 +596,8 @@ export const calcSphutaData = async (datetime: string, geo) => {
   const houseData = await fetchHouseData(datetime, geo);
   const upagrahas = await calcUpagrahas(datetime, geo);
   const indianTimeData = await fetchIndianTimeData(datetime, geo);
-  const sunAtSunRise = await calcSunJd(indianTimeData.dayStart());
+  const sunAtSunRise = await calcSunJd(indianTimeData.dayStart(), false);
+
   const data = addSphutaData(
     grahaSet,
     houseData,
@@ -647,10 +651,8 @@ export const calcCompactChartData = async (
   const upagrahas = await calcUpagrahas(datetime, geo, ayanamsha.value);
   const indianTimeData = await fetchIndianTimeData(datetime, geo, tzOffset);
   grahaSet.mergeSunTransitions(indianTimeData.sunData());
-  const sunAtSunRise = await calcSunJd(indianTimeData.dayStart());
-
+  const sunAtSunRise = await calcSunJd(indianTimeData.dayStart(), false);
   const calcVariants = ayanamsaKey === 'top';
-
   const {
     grahas,
     sphutas,
