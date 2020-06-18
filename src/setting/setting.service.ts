@@ -31,7 +31,6 @@ export class SettingService {
   async getCustom(): Promise<Setting[]> {
     const Settings = await this.settingModel
       .find({ type: 'custom' })
-      .select({ key: 1, value: 1, _id: 0 })
       .sort({ weight: 1 })
       .exec();
     return Settings;
