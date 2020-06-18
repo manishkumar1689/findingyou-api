@@ -89,6 +89,13 @@ export class SettingController {
     return res.status(HttpStatus.OK).json(settings);
   }
 
+  // Retrieve settings list
+  @Get('list-custom')
+  async getCustomSetting(@Res() res) {
+    const settings = await this.settingService.getCustom();
+    return res.status(HttpStatus.OK).json(settings);
+  }
+
   // Fetch a particular setting using ID
   @Get('item/:settingID')
   async getSetting(@Res() res, @Param('settingID') settingID) {

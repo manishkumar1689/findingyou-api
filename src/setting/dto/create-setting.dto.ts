@@ -11,6 +11,9 @@ export class CreateSettingDTO {
   readonly type: string;
 
   @ApiProperty()
+  readonly notes: string;
+
+  @ApiProperty()
   readonly weight: number;
 
   @ApiProperty()

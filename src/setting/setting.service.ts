@@ -26,6 +26,17 @@ export class SettingService {
       .exec();
     return Settings;
   }
+
+  // fetch all Settings with keys and values only
+  async getCustom(): Promise<Setting[]> {
+    const Settings = await this.settingModel
+      .find({ type: 'custom' })
+      .select({ key: 1, value: 1, _id: 0 })
+      .sort({ weight: 1 })
+      .exec();
+    return Settings;
+  }
+
   // Get a single Setting
   async getSetting(settingID): Promise<Setting> {
     const setting = await this.settingModel.findById(settingID).exec();

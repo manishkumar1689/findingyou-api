@@ -27,7 +27,12 @@ export const SettingSchema = new mongoose.Schema({
       'preferences',
       'roles',
       'lookup_set',
+      'custom',
     ],
+  },
+  notes: {
+    type: String,
+    required: false,
   },
   weight: {
     type: Number,
