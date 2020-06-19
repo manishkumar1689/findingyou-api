@@ -3,6 +3,7 @@ import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Setting } from './interfaces/setting.interface';
 import { CreateSettingDTO } from './dto/create-setting.dto';
+import { extractObject } from 'src/lib/entities';
 
 @Injectable()
 export class SettingService {
@@ -71,9 +72,13 @@ export class SettingService {
     settingID,
     createSettingDTO: CreateSettingDTO,
   ): Promise<Setting> {
+    const settingDTO = {
+      ...createSettingDTO,
+      modifiedAt: new Date(),
+    } as CreateSettingDTO;
     const updatedSetting = await this.settingModel.findByIdAndUpdate(
       settingID,
-      createSettingDTO,
+      settingDTO,
       { new: true },
     );
     return updatedSetting;
