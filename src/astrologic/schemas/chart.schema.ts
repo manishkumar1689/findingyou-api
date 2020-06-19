@@ -24,6 +24,7 @@ export const ChartSchema = new mongoose.Schema({
     type: SubjectSchema,
     required: true,
   },
+  // versioning, e.g. variant birth details
   parent: {
     type: ObjectId,
     required: false,
