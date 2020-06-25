@@ -10,8 +10,7 @@ import {
   filterToponyms,
   correctOceanTz,
 } from './api/filters';
-import { fchmodSync } from 'fs';
-import { toDateParts } from 'src/astrologic/lib/date-funcs';
+import { GeoPos } from 'src/astrologic/interfaces/geo-pos';
 
 @Injectable()
 export class GeoService {
@@ -135,6 +134,16 @@ export class GeoService {
     const data = await this.fetchGeoData(lat, lng);
     const offset = this.checkGmtOffset(data.tz, datetime);
     return { ...data, offset: correctOceanTz(data.toponyms, offset) };
+  }
+
+  async fetchTzData(coords: GeoPos, datetime: string) {
+    const tz = await this.fetchGeoNames('timezoneJSON', coords);
+    const { timezoneId } = tz;
+    const tzoData = await this.fetchTimezoneOffset(timezoneId, datetime);
+    return {
+      tz: tz.timezoneId,
+      tzOffset: tzoData.offset,
+    };
   }
 
   async fetchTimezoneOffset(zoneRef: any, datetime: string) {

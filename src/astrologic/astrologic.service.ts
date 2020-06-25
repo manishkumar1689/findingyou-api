@@ -64,6 +64,36 @@ export class AstrologicService {
     return data.datetime;
   }
 
+  assignBaseChart(data: any) {
+    const mp = new Map<string, any>();
+    if (data instanceof Object) {
+      Object.entries(data).forEach(entry => {
+        const [key, value] = entry;
+        switch (key) {
+          case 'datetime':
+          case 'jd':
+          case 'geo':
+          case 'tz':
+          case 'tzOffset':
+          case 'ascendant':
+          case 'mc':
+          case 'vertex':
+          case 'grahas':
+          case 'houses':
+          case 'indianTime':
+          case 'ayanamshas':
+          case 'upagrahas':
+          case 'sphutas':
+          case 'numValues':
+          case 'objects':
+            mp.set(key, value);
+            break;
+        }
+      });
+    }
+    return Object.fromEntries(mp);
+  }
+
   // update existing with unique chartID
   async updateChart(chartID: string, data: CreateChartDTO) {
     const chart = await this.chartModel.findById(chartID).exec();
@@ -96,6 +126,9 @@ export class AstrologicService {
       .count({ _id: { $in: [c1, c2] } })
       .exec();
     let result: any = { valid: false };
+
+    const nowDt = new Date();
+    pairedDTO = { ...pairedDTO, modifiedAt: nowDt };
     if (numCharts === 2) {
       const currPairedChart = await this.pairedChartModel
         .findOne({
@@ -107,6 +140,7 @@ export class AstrologicService {
         const { _id } = currPairedChart;
         result = this.pairedChartModel.findByIdAndUpdate(_id, pairedDTO);
       } else {
+        pairedDTO = { ...pairedDTO, createdAt: nowDt };
         const pairedChart = await this.pairedChartModel.create(pairedDTO);
         result = await pairedChart.save();
       }
@@ -115,7 +149,10 @@ export class AstrologicService {
   }
 
   async getPairedByUser(userID: string) {
-    return await this.pairedChartModel.find({ user: userID }).exec();
+    return await this.pairedChartModel
+      .find({ user: userID })
+      .populate(['c1', 'c2'])
+      .exec();
   }
 
   async getPairedByChart(chartID: string) {

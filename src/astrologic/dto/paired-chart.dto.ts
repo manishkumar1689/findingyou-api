@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { TagDTO } from './tag.dto';
-import { CreateChartDTO } from './create-chart.dto';
+import { BaseChartDTO } from './base-chart.dto';
 
 export class PairedChartDTO {
   @ApiProperty()
@@ -10,13 +10,15 @@ export class PairedChartDTO {
   @ApiProperty()
   readonly c2: string;
   @ApiProperty()
-  readonly timespace: CreateChartDTO;
+  readonly timespace: BaseChartDTO;
+  @ApiProperty()
+  readonly midMode: string;
   @ApiProperty()
   readonly tags: TagDTO[];
   @ApiProperty()
   readonly notes: string;
   @ApiProperty()
-  readonly createdAt: Date;
+  readonly createdAt?: Date;
   @ApiProperty()
-  readonly modifiedAt: Date;
+  readonly modifiedAt?: Date;
 }

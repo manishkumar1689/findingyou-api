@@ -19,4 +19,7 @@ export class PairedChartInputDTO {
 
   @ApiProperty()
   readonly notes: string;
+
+  @ApiProperty()
+  readonly mode: string;
 }

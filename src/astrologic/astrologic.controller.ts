@@ -45,6 +45,7 @@ import {
   applyTzOffsetToDateString,
   toShortTzAbbr,
   jdToDateTime,
+  utcDate,
 } from './lib/date-funcs';
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
@@ -55,6 +56,7 @@ import { ChartInputDTO } from './dto/chart-input.dto';
 import { smartCastInt, sanitize } from 'src/lib/converters';
 import { PairedChartInputDTO } from './dto/paired-chart-input.dto';
 import { midPointSurface, medianLatlng } from './lib/math-funcs';
+import { PairedChartDTO } from './dto/paired-chart.dto';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -288,6 +290,11 @@ export class AstrologicController {
 
   @Post('save-user-chart')
   async saveUserChart(@Res() res, @Body() inData: ChartInputDTO) {
+    const data = await this.saveChartData(inData);
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  async saveChartData(inData: ChartInputDTO, save = true) {
     let data: any = { valid: false, message: '', chart: null };
     const {
       user,
@@ -397,13 +404,15 @@ export class AstrologicController {
               ...chartData,
             };
             let saved = null;
-            if (notEmptyString(inData._id, 8)) {
-              saved = await this.astrologicService.updateChart(
-                inData._id,
-                data.chart,
-              );
-            } else {
-              saved = await this.astrologicService.createChart(data.chart);
+            if (save) {
+              if (notEmptyString(inData._id, 8)) {
+                saved = await this.astrologicService.updateChart(
+                  inData._id,
+                  data.chart,
+                );
+              } else {
+                saved = await this.astrologicService.createChart(data.chart);
+              }
             }
             if (saved instanceof Object) {
               const { _id } = saved;
@@ -425,59 +434,65 @@ export class AstrologicController {
     } else {
       data.message = 'User account cannot be verified';
     }
-    return res.status(HttpStatus.OK).json(data);
+    return data;
   }
 
   @Post('save-paired')
   async savePairedChart(@Res() res, @Body() inData: PairedChartInputDTO) {
     const c1 = await this.astrologicService.getChart(inData.c1);
     const c2 = await this.astrologicService.getChart(inData.c2);
+    const midMode = inData.mode === 'surface' ? 'surface' : 'median';
     if (c1 && c2) {
       const midJd = (c1.jd + c2.jd) / 2;
       const midLng = midPointSurface(c1.geo, c2.geo);
     }
-  }
-
-  @Get('calc-paired/:c1/:c2/:mode?')
-  async calcPairedChart(
-    @Res() res,
-    @Param('c1') c1: string,
-    @Param('c2') c2: string,
-    @Param('mode') mode: string,
-  ) {
-    const chart1 = await this.astrologicService.getChart(c1);
-    const chart2 = await this.astrologicService.getChart(c2);
-
-    const midMode = mode === 'median' ? 'median' : 'surface';
-    let data: any = { valid: false };
-    const validC1 = chart1 instanceof Object;
-    const validC2 = chart2 instanceof Object;
+    const validC1 = c1 instanceof Object;
+    const validC2 = c2 instanceof Object;
 
     if (validC1 && validC2) {
-      const midJd = (chart1.jd + chart2.jd) / 2;
+      const midJd = (c1.jd + c2.jd) / 2;
       const datetime = jdToDateTime(midJd);
       const mid =
         midMode === 'surface'
-          ? midPointSurface(chart1.geo, chart2.geo)
-          : medianLatlng(chart1.geo, chart2.geo);
-      const geoInfo = await this.geoService.fetchGeoAndTimezone(
-        mid.lat,
-        mid.lng,
-        datetime,
-      );
+          ? midPointSurface(c1.geo, c2.geo)
+          : medianLatlng(c1.geo, c2.geo);
       const dtUtc = applyTzOffsetToDateString(datetime, 0);
-      data = await calcCompactChartData(
+      const { tz, tzOffset } = await this.geoService.fetchTzData(mid, dtUtc);
+      const tsData = await calcCompactChartData(
         dtUtc,
         { ...mid, alt: 0 },
         'top',
         [],
-        geoInfo.offset,
+        tzOffset,
       );
-
+      const { user } = inData;
+      let { notes, tags } = inData;
+      if (!tags) {
+        tags = [];
+      }
+      if (!notes) {
+        notes = '';
+      }
+      const baseChart = {
+        ...tsData,
+        datetime: utcDate(dtUtc),
+        tz,
+        tzOffset,
+      };
+      const pairedDTO = {
+        user,
+        c1: inData.c1,
+        c2: inData.c2,
+        timespace: this.astrologicService.assignBaseChart(baseChart),
+        midMode,
+        notes,
+        tags,
+      } as PairedChartDTO;
+      const paired = await this.astrologicService.savePaired(pairedDTO);
       return res.json({
-        c1: { datetime: chart1.datetime, geo: chart1.geo },
-        c2: { datetime: chart2.datetime, geo: chart2.geo },
-        timespace: data,
+        valid: true,
+        paired,
+        msg: `saved`,
       });
     } else {
       const invalidKeys = [];
@@ -493,6 +508,68 @@ export class AstrologicController {
         msg: `Chart IDs not matched ${chartIds}`,
       });
     }
+  }
+
+  @Get('calc-paired/:loc1/:dt1/:loc2/:dt2/:mode?')
+  async calcPairedChart(
+    @Res() res,
+    @Param('loc1') loc1: string,
+    @Param('dt1') dt1: string,
+    @Param('loc2') loc2: string,
+    @Param('dt2') dt2: string,
+    @Param('mode') mode: string,
+  ) {
+    const midMode = mode === 'median' ? 'median' : 'surface';
+
+    let data: any = { valid: false };
+    const validC1 = validISODateString(dt1) && notEmptyString(loc1);
+    const validC2 = validISODateString(dt2) && notEmptyString(loc2);
+
+    if (validC1 && validC2) {
+      const geo1 = locStringToGeo(loc1);
+      const geo2 = locStringToGeo(loc2);
+      const jd1 = calcJulDate(dt1);
+      const jd2 = calcJulDate(dt2);
+      const midJd = (jd2 + jd1) / 2;
+      const datetime = jdToDateTime(midJd);
+      const mid =
+        midMode === 'surface'
+          ? midPointSurface(geo1, geo2)
+          : medianLatlng(geo1, geo2);
+
+      const dtUtc = applyTzOffsetToDateString(datetime, 0);
+      const { tz, tzOffset } = await this.geoService.fetchTzData(mid, dtUtc);
+      data = await calcCompactChartData(
+        dtUtc,
+        { ...mid, alt: 0 },
+        'top',
+        [],
+        tzOffset,
+      );
+
+      return res.json({
+        c1: {
+          jd: jd1,
+          geo: geo1,
+        },
+        c2: { jd: jd2, geo: geo2 },
+        timespace: data,
+      });
+    } else {
+      return res.json({
+        valid: false,
+        msg: `Invalid dates or coordinates`,
+      });
+    }
+  }
+
+  @Get('paired/:userID')
+  async getPairedByUser(@Res() res, @Param('userID') userID: string) {
+    const items = await this.astrologicService.getPairedByUser(userID);
+    return res.json({
+      valid: true,
+      items,
+    });
   }
 
   @Get('chart/:chartID')

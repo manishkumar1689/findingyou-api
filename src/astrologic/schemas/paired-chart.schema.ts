@@ -1,5 +1,5 @@
 import * as mongoose from 'mongoose';
-import { ChartSchema } from './chart.schema';
+import { BaseChartSchema } from './base-chart.schema';
 import { TagSchema } from './tag.schema';
 const { ObjectId } = mongoose.Schema.Types;
 
@@ -20,8 +20,12 @@ export const PairedChartSchema = new mongoose.Schema({
     ref: 'Chart',
   },
   timespace: {
-    type: ChartSchema,
+    type: BaseChartSchema,
     required: false,
+  },
+  midMode: {
+    type: String,
+    default: 'median',
   },
   tags: {
     type: [TagSchema],

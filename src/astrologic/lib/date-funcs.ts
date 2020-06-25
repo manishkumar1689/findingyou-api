@@ -149,5 +149,9 @@ export const applyTzOffsetToDateString = (dt, offsetSecs: number) => {
     .shift();
 };
 
+export const utcDate = (dt: Date | string) => {
+  return moment.utc(dt);
+};
+
 export const toShortTzAbbr = (dt, timezoneRef: string) =>
   moment.tz(dt, timezoneRef).format('z');
