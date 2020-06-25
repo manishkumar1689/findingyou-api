@@ -10,13 +10,15 @@ import { calcJulDate } from './lib/date-funcs';
 import { isNumeric, validISODateString } from 'src/lib/validators';
 import { CreateChartDTO } from './dto/create-chart.dto';
 import moment = require('moment');
-import { dateTimeSuffix } from 'src/lib/converters';
+import { PairedChartDTO } from './dto/paired-chart.dto';
+import { PairedChart } from './interfaces/paired-chart.interface';
 
 @Injectable()
 export class AstrologicService {
   constructor(
     @InjectModel('BodySpeed') private bodySpeedModel: Model<BodySpeed>,
     @InjectModel('Chart') private chartModel: Model<Chart>,
+    @InjectModel('PairedChart') private pairedChartModel: Model<PairedChart>,
   ) {}
 
   async createChart(data: CreateChartDTO) {
@@ -81,6 +83,42 @@ export class AstrologicService {
   // get chart by ID
   async getChart(chartID: string) {
     return await this.chartModel.findById(chartID).exec();
+  }
+
+  async savePaired(pairedDTO: PairedChartDTO) {
+    const { c1, c2 } = pairedDTO;
+    const numCharts = await this.chartModel
+      .count({ _id: { $in: [c1, c2] } })
+      .exec();
+    let result: any = { valid: false };
+    if (numCharts === 2) {
+      const currPairedChart = await this.pairedChartModel
+        .findOne({
+          c1,
+          c2,
+        })
+        .exec();
+      if (currPairedChart) {
+        const { _id } = currPairedChart;
+        result = this.pairedChartModel.findByIdAndUpdate(_id, pairedDTO);
+      } else {
+        const pairedChart = await this.pairedChartModel.create(pairedDTO);
+        result = await pairedChart.save();
+      }
+    }
+    return result;
+  }
+
+  async getPairedByUser(userID: string) {
+    return await this.pairedChartModel.find({ user: userID }).exec();
+  }
+
+  async getPairedByChart(chartID: string) {
+    return await this.pairedChartModel
+      .find({
+        $or: [{ c1: chartID }, { c2: chartID }],
+      })
+      .exec();
   }
 
   async getChartsByUser(userID: string, start = 0, limit = 20) {

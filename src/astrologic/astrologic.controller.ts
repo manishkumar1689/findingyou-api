@@ -44,6 +44,7 @@ import {
   calcJulDate,
   applyTzOffsetToDateString,
   toShortTzAbbr,
+  jdToDateTime,
 } from './lib/date-funcs';
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
@@ -52,6 +53,8 @@ import { toIndianTime, calcTransition } from './lib/transitions';
 import { readEpheFiles } from './lib/files';
 import { ChartInputDTO } from './dto/chart-input.dto';
 import { smartCastInt, sanitize } from 'src/lib/converters';
+import { PairedChartInputDTO } from './dto/paired-chart-input.dto';
+import { midPointSurface, medianLatlng } from './lib/math-funcs';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -423,6 +426,55 @@ export class AstrologicController {
       data.message = 'User account cannot be verified';
     }
     return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Post('save-paired')
+  async savePairedChart(@Res() res, @Body() inData: PairedChartInputDTO) {
+    const c1 = await this.astrologicService.getChart(inData.c1);
+    const c2 = await this.astrologicService.getChart(inData.c2);
+    if (c1 && c2) {
+      const midJd = (c1.jd + c2.jd) / 2;
+      const midLng = midPointSurface(c1.geo, c2.geo);
+    }
+  }
+
+  @Get('calc-paired/:c1/:c2/:mode?')
+  async calcPairedChart(
+    @Res() res,
+    @Param('c1') c1: string,
+    @Param('c2') c2: string,
+    @Param('mode') mode: string,
+  ) {
+    const chart1 = await this.astrologicService.getChart(c1);
+    const chart2 = await this.astrologicService.getChart(c2);
+    const midMode = mode === 'median' ? 'median' : 'surface';
+    let data: any = { valid: false };
+    if (chart1 && chart2) {
+      const midJd = (chart1.jd + chart2.jd) / 2;
+      const datetime = jdToDateTime(midJd);
+      const mid =
+        midMode === 'surface'
+          ? midPointSurface(chart1.geo, chart2.geo)
+          : medianLatlng(chart1.geo, chart2.geo);
+      const geoInfo = await this.geoService.fetchGeoAndTimezone(
+        mid.lat,
+        mid.lng,
+        datetime,
+      );
+      const dtUtc = applyTzOffsetToDateString(datetime, 0);
+      data = await calcCompactChartData(
+        dtUtc,
+        { ...mid, alt: 0 },
+        'top',
+        [],
+        geoInfo.offset,
+      );
+    }
+    return res.json({
+      c1: { datetime: chart1.datetime, geo: chart1.geo },
+      c2: { datetime: chart2.datetime, geo: chart2.geo },
+      timespace: data,
+    });
   }
 
   @Get('chart/:chartID')

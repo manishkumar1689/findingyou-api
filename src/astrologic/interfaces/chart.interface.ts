@@ -31,6 +31,7 @@ export interface Chart extends Document {
   readonly sphutas: VariantSet[];
   readonly numValues: KeyNumValue[];
   readonly objects: ObjectMatchSet[];
+  readonly notes: string;
   readonly createdAt: Date;
   readonly modifiedAt: Date;
 }

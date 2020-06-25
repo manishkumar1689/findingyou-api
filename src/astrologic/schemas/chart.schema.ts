@@ -104,6 +104,11 @@ export const ChartSchema = new mongoose.Schema({
     required: false,
     default: [],
   },
+  notes: {
+    type: String,
+    required: false,
+    default: '',
+  },
   createdAt: {
     type: Date,
     default: new Date(),
