@@ -81,8 +81,13 @@ export class AstrologicService {
   }
 
   // get chart by ID
-  async getChart(chartID: string) {
-    return await this.chartModel.findById(chartID).exec();
+  async getChart(chartID: string): Promise<Chart> {
+    let chart = null;
+    await this.chartModel
+      .findById(chartID)
+      .then(c => (chart = c))
+      .catch(console.log);
+    return chart;
   }
 
   async savePaired(pairedDTO: PairedChartDTO) {

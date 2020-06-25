@@ -447,9 +447,13 @@ export class AstrologicController {
   ) {
     const chart1 = await this.astrologicService.getChart(c1);
     const chart2 = await this.astrologicService.getChart(c2);
+
     const midMode = mode === 'median' ? 'median' : 'surface';
     let data: any = { valid: false };
-    if (chart1 && chart2) {
+    const validC1 = chart1 instanceof Object;
+    const validC2 = chart2 instanceof Object;
+
+    if (validC1 && validC2) {
       const midJd = (chart1.jd + chart2.jd) / 2;
       const datetime = jdToDateTime(midJd);
       const mid =
@@ -469,12 +473,26 @@ export class AstrologicController {
         [],
         geoInfo.offset,
       );
+
+      return res.json({
+        c1: { datetime: chart1.datetime, geo: chart1.geo },
+        c2: { datetime: chart2.datetime, geo: chart2.geo },
+        timespace: data,
+      });
+    } else {
+      const invalidKeys = [];
+      if (!validC1) {
+        invalidKeys.push(c1);
+      }
+      if (!validC2) {
+        invalidKeys.push(c2);
+      }
+      const chartIds = invalidKeys.join(', ');
+      return res.json({
+        valid: false,
+        msg: `Chart IDs not matched ${chartIds}`,
+      });
     }
-    return res.json({
-      c1: { datetime: chart1.datetime, geo: chart1.geo },
-      c2: { datetime: chart2.datetime, geo: chart2.geo },
-      timespace: data,
-    });
   }
 
   @Get('chart/:chartID')
