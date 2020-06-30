@@ -572,6 +572,15 @@ export class AstrologicController {
     });
   }
 
+  @Get('paired-by-chart/:chartID')
+  async getPairedByChart(@Res() res, @Param('chartID') chartID: string) {
+    const items = await this.astrologicService.getPairedByChart(chartID);
+    return res.json({
+      valid: true,
+      items,
+    });
+  }
+
   @Get('chart/:chartID')
   async fetchChart(@Res() res, @Param('chartID') chartID: string) {
     const data: any = { valid: false, shortTz: '', chart: null, user: null };

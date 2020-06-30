@@ -12,6 +12,7 @@ import { CreateChartDTO } from './dto/create-chart.dto';
 import moment = require('moment');
 import { PairedChartDTO } from './dto/paired-chart.dto';
 import { PairedChart } from './interfaces/paired-chart.interface';
+import { mapPairedCharts } from './lib/mappers';
 
 @Injectable()
 export class AstrologicService {
@@ -149,18 +150,30 @@ export class AstrologicService {
   }
 
   async getPairedByUser(userID: string) {
-    return await this.pairedChartModel
+    const items = await this.pairedChartModel
       .find({ user: userID })
       .populate(['c1', 'c2'])
+      .sort([['modifiedAt', -1]])
+      .populate(['c1', 'c2'])
       .exec();
+    return items.map(mapPairedCharts);
   }
 
-  async getPairedByChart(chartID: string) {
-    return await this.pairedChartModel
+  async getPairedByChart(chartID: string, sort = 'modifiedAt') {
+    let sortDir = -1;
+    switch (sort) {
+      case 'subject.name':
+        sortDir = 1;
+        break;
+    }
+    const items = await this.pairedChartModel
       .find({
         $or: [{ c1: chartID }, { c2: chartID }],
       })
+      .sort([[sort, sortDir]])
+      .populate(['c1', 'c2'])
       .exec();
+    return items.map(mapPairedCharts);
   }
 
   async getChartsByUser(userID: string, start = 0, limit = 20) {
