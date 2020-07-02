@@ -531,6 +531,22 @@ export class AstrologicController {
     }
   }
 
+  @Delete('delete-paired/:pairedID/:userID')
+  async deletePairedChart(
+    @Res() res,
+    @Param('pairedID') pairedID: string,
+    @Param('userID') userID: string,
+    ) {
+    const data = {valid: false, pairedID: ''};
+    if (this.userService.isAdminUser(userID)) {
+      const deleted = await this.astrologicService.deletePaired(pairedID);
+      if (deleted) {
+        data.pairedID = deleted;
+      }
+    }
+    return data;
+  }
+
   @Get('calc-paired/:loc1/:dt1/:loc2/:dt2/:mode?')
   async calcPairedChart(
     @Res() res,

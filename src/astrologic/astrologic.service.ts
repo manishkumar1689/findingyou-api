@@ -176,6 +176,11 @@ export class AstrologicService {
     return items.map(mapPairedCharts);
   }
 
+  async deletePaired(pairedID: string) {
+    await this.pairedChartModel.findByIdAndDelete(pairedID);
+    return pairedID;
+  }
+
   async getChartsByUser(userID: string, start = 0, limit = 20) {
     const first = await this.chartModel
       .findOne({ user: userID, isDefaultBirthChart: true })
