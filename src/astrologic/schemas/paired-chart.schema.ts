@@ -1,6 +1,7 @@
 import * as mongoose from 'mongoose';
 import { BaseChartSchema } from './base-chart.schema';
 import { TagSchema } from './tag.schema';
+import { GeoSchema } from 'src/user/schemas/geo.schema';
 const { ObjectId } = mongoose.Schema.Types;
 
 export const PairedChartSchema = new mongoose.Schema({
@@ -21,6 +22,18 @@ export const PairedChartSchema = new mongoose.Schema({
   },
   timespace: {
     type: BaseChartSchema,
+    required: false,
+  },
+  surfaceGeo: {
+    type: GeoSchema,
+    required: false,
+  },
+  surfaceAscendant: {
+    type: Number,
+    required: false,
+  },
+  surfaceTzOffset: {
+    type: Number,
     required: false,
   },
   midMode: {

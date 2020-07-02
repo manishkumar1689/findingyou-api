@@ -448,13 +448,17 @@ export class AstrologicController {
     }
     const validC1 = c1 instanceof Object;
     const validC2 = c2 instanceof Object;
-
+    let surfaceGeo = {lat:0,lng:0};
+    let surfaceAscendant = 0;
+    let surfaceTzOffset = 0;
     if (validC1 && validC2) {
       const midJd = (c1.jd + c2.jd) / 2;
       const datetime = jdToDateTime(midJd);
+
+      surfaceGeo = midPointSurface(c1.geo, c2.geo);
       const mid =
         midMode === 'surface'
-          ? midPointSurface(c1.geo, c2.geo)
+          ? surfaceGeo
           : medianLatlng(c1.geo, c2.geo);
       const dtUtc = applyTzOffsetToDateString(datetime, 0);
       const { tz, tzOffset } = await this.geoService.fetchTzData(mid, dtUtc);
@@ -465,6 +469,20 @@ export class AstrologicController {
         [],
         tzOffset,
       );
+      let surfaceTzOffset = 0;
+      if (midMode !== 'surface') {
+        const surfaceTime = await this.geoService.fetchTzData(surfaceGeo, dtUtc);
+        const surfaceData = await fetchHouseData(
+          dtUtc,
+          {...surfaceGeo, alt:0 },
+          'W'
+        );
+        if (surfaceData instanceof Object) {
+          surfaceAscendant = surfaceData.ascendant;
+          surfaceTzOffset = surfaceTime.tzOffset;
+          console.log(surfaceAscendant,surfaceTime)
+        }
+      }
       const { user } = inData;
       let { notes, tags } = inData;
       if (!tags) {
@@ -484,6 +502,9 @@ export class AstrologicController {
         c1: inData.c1,
         c2: inData.c2,
         timespace: this.astrologicService.assignBaseChart(baseChart),
+        surfaceGeo,
+        surfaceAscendant,
+        surfaceTzOffset,
         midMode,
         notes,
         tags,
