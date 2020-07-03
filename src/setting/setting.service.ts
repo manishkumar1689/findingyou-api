@@ -67,6 +67,18 @@ export class SettingService {
     const newSetting = new this.settingModel(createSettingDTO);
     return newSetting.save();
   }
+  // post a single Setting
+  async delete(settingID: string): Promise<string> {
+    let returnId = '';
+    const result = await this.settingModel.findByIdAndDelete(settingID);
+    if (result instanceof Object) {
+      const { _id } = result;
+      if (_id) {
+        returnId = _id;
+      }
+    }
+    return returnId;
+  }
   // Edit Setting details
   async updateSetting(
     settingID,

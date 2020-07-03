@@ -15,10 +15,14 @@ import { SettingService } from './setting.service';
 import { CreateSettingDTO } from './dto/create-setting.dto';
 import { notEmptyString } from 'src/lib/validators';
 import { extractDocId } from 'src/lib/entities';
+import { UserService } from 'src/user/user.service';
 
 @Controller('setting')
 export class SettingController {
-  constructor(private settingService: SettingService) {}
+  constructor(
+    private settingService: SettingService,
+    private userService: UserService,
+  ) {}
 
   // add a setting
   @Post('create')
@@ -115,4 +119,16 @@ export class SettingController {
     }
     return res.status(HttpStatus.OK).json(setting);
   }
+
+  // Fetch a particular setting using ID
+  @Delete('delete/:settingID/:userID')
+  async delete(@Res() res,@Param('settingID') settingID, @Param('userID') userID) {
+    const data = {valid:false, setting: ''};
+    if (this.userService.isAdminUser(userID)) {
+      data.setting = await this.settingService.delete(settingID);
+      data.valid = data.setting.toString().length > 6;
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
 }
