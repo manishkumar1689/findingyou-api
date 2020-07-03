@@ -7,10 +7,10 @@ import { PreferenceDTO } from './preference.dto';
 
 export class CreateUserDTO {
   @ApiProperty()
-  readonly firstName: string;
+  readonly fullName: string;
 
   @ApiProperty()
-  readonly lastName: string;
+  readonly nickName: string;
 
   @ApiProperty()
   readonly identifier: string;
