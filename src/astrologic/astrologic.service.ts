@@ -181,12 +181,17 @@ export class AstrologicService {
     return pairedID;
   }
 
-  async getChartsByUser(userID: string, start = 0, limit = 20) {
+  async getChartsByUser(userID: string, start = 0, limit = 20, defaultOnly = false) {
     const first = await this.chartModel
       .findOne({ user: userID, isDefaultBirthChart: true })
       .exec();
+    const condMap = new Map<string, any>();
+    condMap.set('user', userID);
+    if (defaultOnly) {
+      condMap.set('isDefaultBirthChart', true);
+    }
     const others = await this.chartModel
-      .find({ user: userID })
+      .find(Object.fromEntries(condMap))
       .sort({ modifiedAt: -1 })
       .skip(start)
       .limit(limit)

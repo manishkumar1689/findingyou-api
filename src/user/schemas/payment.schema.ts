@@ -3,11 +3,15 @@ import * as mongoose from 'mongoose';
 export const PaymentSchema = new mongoose.Schema({
   service: {
     type: String,
-    default: true,
+    required: true,
+  },
+  plan: {
+    type: String,
+    required: true,
   },
   ref: {
     type: String,
-    default: false,
+    required: false,
   },
   amount: {
     type: Number,
@@ -16,7 +20,8 @@ export const PaymentSchema = new mongoose.Schema({
   },
   curr: {
     type: String,
-    default: false,
+    required: true,
+    default: "BTC",
   },
   createdAt: { type: Date, default: Date.now },
 });

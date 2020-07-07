@@ -5,6 +5,9 @@ export class PaymentDTO {
   readonly service: string;
 
   @ApiProperty()
+  readonly plan: string;
+
+  @ApiProperty()
   readonly ref: string;
 
   @ApiProperty()

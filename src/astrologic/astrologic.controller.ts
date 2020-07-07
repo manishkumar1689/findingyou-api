@@ -633,15 +633,17 @@ export class AstrologicController {
     return data;
   }
 
-  @Get('charts-by-user/:userID/:start?/:limit?')
+  @Get('charts-by-user/:userID/:start?/:limit?/:defaultOnly?')
   async fetchChartsByUser(
     @Res() res,
     @Param('userID') userID: string,
     @Param('start') start = '0',
     @Param('limit') limit = '100',
+    @Param('defaultOnly') defaultOnly = '0'
   ) {
     const data: any = { valid: false, items: [], message: 'invalid user ID' };
     const user = await this.userService.getUser(userID);
+    const isDefaultBirthChart = smartCastInt(defaultOnly) > 0;
     if (user instanceof Object) {
       if (user.active) {
         const startVal = smartCastInt(start, 0);
@@ -650,6 +652,7 @@ export class AstrologicController {
           userID,
           startVal,
           limitVal,
+          isDefaultBirthChart,
         );
         if (charts instanceof Array) {
           data.items = charts;
