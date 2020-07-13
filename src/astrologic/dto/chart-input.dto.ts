@@ -11,7 +11,7 @@ export class ChartInputDTO {
   readonly user: string;
 
   @ApiProperty()
-  readonly parent: string;
+  readonly parent?: string;
 
   @ApiProperty()
   readonly datetime: string;
