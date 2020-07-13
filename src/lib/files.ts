@@ -2,15 +2,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
   validMediaFileExtensions,
-  imageSizes,
-  pdfDirectory,
   exportDirectory,
   filesDirectory,
 } from '../.config';
-import { resizeImage, buildThumbPath, rotateImage } from './resize';
 import { hashMapToObject } from './entities';
 import { imageSize } from 'image-size';
-import { notEmptyString } from './utils';
+import { notEmptyString } from './validators';
 
 export const mimeFileFilter = (req, file, callback) => {
   const ext = path.extname(file.originalname);
@@ -60,28 +57,6 @@ export const uploadMediaFile = (
         }
       } else {
         attrsMap.set('exists', 0);
-      }
-      break;
-  }
-  switch (extension) {
-    case 'jpg':
-    case 'png':
-      resizeImage(fullPath, imageSizes.thumb);
-      switch (imageType) {
-        case 'statement':
-          setTimeout(() => {
-            resizeImage(fullPath, imageSizes.half);
-          }, 500);
-          break;
-          case 'featured':
-            setTimeout(() => {
-              resizeImage(fullPath, imageSizes.featured);
-            }, 500);
-            break;
-        default:
-          setTimeout(() => {
-            resizeImage(fullPath, imageSizes.large);
-          }, 750);
       }
       break;
   }
@@ -197,51 +172,13 @@ export const deleteFile = (
   if (fs.existsSync(fp)) {
     fs.unlinkSync(fp);
     deleted = true;
-    switch (mime) {
-      case 'image/jpeg':
-      case 'image/png':
-        const thumbPath = buildThumbPath(fp, imageSizes.thumb);
-        if (fs.existsSync(thumbPath)) {
-          fs.unlinkSync(thumbPath);
-        }
-        const largePath = buildThumbPath(fp, imageSizes.large);
-        if (fs.existsSync(largePath)) {
-          fs.unlinkSync(largePath);
-        }
-        break;
-    }
   }
   return deleted;
-};
-
-export const rotateImageFile = (filename: string, degrees: number) => {
-  const fp = buildFullPath(filename);
-
-  if (fs.existsSync(fp)) {
-    const thumbPath = buildThumbPath(fp, imageSizes.thumb);
-    if (fs.existsSync(thumbPath)) {
-      rotateImage(thumbPath, degrees);
-    }
-    setTimeout(() => {
-      const largePath = buildThumbPath(fp, imageSizes.large);
-      if (fs.existsSync(largePath)) {
-        rotateImage(largePath, degrees);
-      }
-    }, 750);
-
-    setTimeout(() => {
-      rotateImage(fp, degrees);
-    }, 1500);
-  }
 };
 
 export const mediaPath = (type: string = 'media') => {
   let relPath = 'media';
   switch (type) {
-    case 'pdf':
-    case 'pdfs':
-      relPath = pdfDirectory;
-      break;
     case 'export':
     case 'exports':
       relPath = exportDirectory;
@@ -255,12 +192,6 @@ export const mediaPath = (type: string = 'media') => {
 
 export const buildFullPath = (filename: string, type: string = 'media') => {
   return mediaPath(type) + filename;
-};
-
-export const matchGeneratedPdfPath = (seq: number): FileData => {
-  const dirPath = mediaPath('pdf');
-  const fn = dirPath + 'application-' + seq + '.pdf';
-  return getFileData(fn);
 };
 
 export const exportFileData = (filename: string): FileData => {
@@ -287,24 +218,4 @@ export const getFileData = (fn): FileData => {
     modified,
     size: iSize,
   };
-};
-
-export const checkNumFiles = (submission, maxFiles: number): boolean => {
-  let num = 0;
-  if (submission instanceof Object) {
-    if (submission.works instanceof Array) {
-      num = submission.works
-        .map(w => {
-          let n = 0;
-          if (w instanceof Object) {
-            if (w.mediaItems instanceof Array) {
-              n = w.mediaItems.length;
-            }
-          }
-          return n;
-        })
-        .reduce((a, b) => a + b, 0);
-    }
-  }
-  return num < maxFiles;
 };
