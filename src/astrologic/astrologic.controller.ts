@@ -294,6 +294,34 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  @Get('save-user-birth-chart/:userID/:loc/:dt/:f')
+  async saveUserBirthChart(
+    @Res() res,
+    @Param('userID') userID: string,
+    @Param('loc') loc: string,
+    @Param('dt') dt: string,
+    @Param('g') g: string,
+  ) {
+    let data:any = { valid: false };
+    const user = await this.userService.getUser(userID);
+    const geo = locStringToGeo(loc);
+    const gender = notEmptyString(g) && g.length === 1? g : "n";
+    if (user instanceof Object) {
+      const inData = {
+        user: user._id,
+        name: user.nickName,
+        notes: "",
+        type: "person",
+        isDefaultBirthChart: true,
+        gender,
+        eventType: "birth",
+        roddenScale: "AAX",
+      } as ChartInputDTO;
+      const data = await this.saveChartData(inData);
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
   async saveChartData(inData: ChartInputDTO, save = true) {
     let data: any = { valid: false, message: '', chart: null };
     const {

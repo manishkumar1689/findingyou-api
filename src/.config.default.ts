@@ -52,3 +52,9 @@ export const mailService = {
 };
 
 export const webBaseUrl = 'https://www.findingyou.co';
+
+export const backupPath =
+  '/var/www/findingyou.co/backups';
+
+export const mediaPath =
+'/var/www/findingyou.co/media';
