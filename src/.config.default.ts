@@ -34,6 +34,10 @@ export const timezonedb = {
   apiKey: '0NXJ03JE76B4',
 };
 
+export const googleGeo = {
+  apiKey: 'AIzaSyAOeXTgZTB_cJUyV9B2DOiZI_6LoVU2vs8',
+};
+
 export const hashSalt = '4jyddhd-90';
 
 export const maxResetMinutes = 180;
