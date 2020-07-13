@@ -16,8 +16,8 @@ import { CreateSettingDTO } from './dto/create-setting.dto';
 import { notEmptyString } from '../lib/validators';
 import { extractDocId } from '../lib/entities';
 import { UserService } from '../user/user.service';
-import { mongo, backupPath } from '../.config';
-import { exportCollection } from 'src/lib/operations';
+import { exportCollection, listFiles } from 'src/lib/operations';
+import { checkFileExists, buildFullPath } from 'src/lib/files';
 
 @Controller('setting')
 export class SettingController {
@@ -122,7 +122,8 @@ export class SettingController {
     return res.status(HttpStatus.OK).json(setting);
   }
 
-  // Fetch a particular setting using ID
+  // Return the data from a particular setting identified by key
+  // as downloadable JSON file
   @Get('json-file/:key')
   async jsonByKey(@Res() res, @Param('key') key) {
     const setting = await this.settingService.getByKey(key);
@@ -132,15 +133,36 @@ export class SettingController {
         data = setting.value;
       }
     }
-    res.attachment([key,'.json'].join(''));
+    res.attachment([key, '.json'].join(''));
     res.header('type', 'application/json');
     return res.send(JSON.stringify(data));
   }
 
+  // Return the data from a particular setting identified by key
+  // as downloadable JSON file
+  @Get('get-file/:directory/:name')
+  async fileByName(
+    @Res() res,
+    @Param('directory') directory,
+    @Param('name') name,
+  ) {
+    let fullPath = '';
+    if (checkFileExists(name, directory)) {
+      fullPath = buildFullPath(name, directory);
+      return res.sendFile(fullPath);
+    } else {
+      return res.status(HttpStatus.NOT_FOUND).send({ valid: false });
+    }
+  }
+
   // Fetch a particular setting using ID
   @Delete('delete/:settingID/:userID')
-  async delete(@Res() res,@Param('settingID') settingID, @Param('userID') userID) {
-    const data = {valid:false, setting: ''};
+  async delete(
+    @Res() res,
+    @Param('settingID') settingID,
+    @Param('userID') userID,
+  ) {
+    const data = { valid: false, setting: '' };
     if (this.userService.isAdminUser(userID)) {
       data.setting = await this.settingService.delete(settingID);
       data.valid = data.setting.toString().length > 6;
@@ -148,10 +170,16 @@ export class SettingController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('backup/:usedID/:key')
+  @Get('list-dir/:directory')
+  async listDirectory(@Res() res, @Param('directory') directory) {
+    const data = await listFiles(directory);
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('backup/:userID/:key')
   async backup(@Res() res, @Param('userID') userID, @Param('key') key) {
-    const data = {valid: false, outfile: ''};
-    const filePath = [backupPath, '/', key, '.json'].join('');
+    const data = { valid: false, outfile: '' };
+    //const filePath = [backupPath, '/', key, '.json'].join('');
     const isAdmin = await this.userService.isAdminUser(userID);
     if (isAdmin) {
       data.outfile = exportCollection(key);
@@ -159,5 +187,4 @@ export class SettingController {
     }
     return res.status(HttpStatus.OK).json(data);
   }
-
 }

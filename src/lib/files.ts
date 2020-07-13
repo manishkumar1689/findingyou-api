@@ -4,6 +4,7 @@ import {
   validMediaFileExtensions,
   exportDirectory,
   filesDirectory,
+  backupPath,
 } from '../.config';
 import { hashMapToObject } from './entities';
 import { imageSize } from 'image-size';
@@ -183,10 +184,15 @@ export const mediaPath = (type: string = 'media') => {
     case 'exports':
       relPath = exportDirectory;
       break;
+    case 'backup':
+    case 'backups':
+      relPath = backupPath;
+      break;
     case 'files':
       relPath = filesDirectory;
       break;
   }
+  console.log(relPath);
   return path.resolve(__dirname + '/../../' + relPath) + '/';
 };
 

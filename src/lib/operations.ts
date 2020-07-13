@@ -1,6 +1,12 @@
 import { spawn } from 'child_process';
 import * as fs from 'fs';
-import { mongo, backupPath, mediaPath } from '../.config';
+import {
+  mongo,
+  backupPath,
+  exportDirectory,
+  mediaPath,
+  filesDirectory,
+} from '../.config';
 
 interface FileDetails {
   name: string;
@@ -53,10 +59,14 @@ export const matchPath = (type: string) => {
   switch (type) {
     case 'media':
       return mediaPath;
-   default:
+    case 'files':
+      return filesDirectory;
+    case 'exports':
+      return exportDirectory;
+    default:
       return backupPath;
   }
-}
+};
 
 export const listFiles = async (
   directory: string,
@@ -81,7 +91,7 @@ export const listFiles = async (
       }
     }
     data.valid = data.numRefs > 0;
-    data.size = data.files.map(f => f.size).reduce((a, b) => a + b);
+    data.size = data.files.map(f => f.size).reduce((a, b) => a + b, 0);
   }
   return data;
 };
