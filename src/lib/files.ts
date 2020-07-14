@@ -192,8 +192,7 @@ export const mediaPath = (type: string = 'media') => {
       relPath = filesDirectory;
       break;
   }
-  console.log(relPath);
-  return path.resolve(__dirname + '/../../' + relPath) + '/';
+  return path.resolve(relPath) + '/';
 };
 
 export const buildFullPath = (filename: string, type: string = 'media') => {
