@@ -7,6 +7,7 @@ import {
   mediaPath,
   filesDirectory,
 } from '../.config';
+import { buildFullPath } from './files';
 
 interface FileDetails {
   name: string;
@@ -38,7 +39,7 @@ export const exportCollection = (
   collection: string = '',
   format: string = 'json',
 ) => {
-  const outFile = backupPath + '/' + collection + '.' + format;
+  const outFile = buildFullPath(collection + '.' + format, 'backups');
 
   const baseCmd = 'mongoexport';
   const args = buildOptionParams([
@@ -52,6 +53,7 @@ export const exportCollection = (
   args.push(optionParam('out', outFile));
 
   spawn(baseCmd, args);
+  console.log(baseCmd, args);
   return outFile;
 };
 

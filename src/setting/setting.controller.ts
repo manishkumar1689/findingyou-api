@@ -18,6 +18,7 @@ import { extractDocId } from '../lib/entities';
 import { UserService } from '../user/user.service';
 import { exportCollection, listFiles } from 'src/lib/operations';
 import { checkFileExists, buildFullPath } from 'src/lib/files';
+import { join } from 'path';
 
 @Controller('setting')
 export class SettingController {
@@ -147,12 +148,12 @@ export class SettingController {
     @Param('name') name,
   ) {
     let fullPath = '';
+    res.attachment([directory, name].join('-'));
+    res.header('type', 'application/json');
     if (checkFileExists(name, directory)) {
       fullPath = buildFullPath(name, directory);
-      return res.sendFile(fullPath);
-    } else {
-      return res.status(HttpStatus.NOT_FOUND).send({ valid: false });
     }
+    return res.sendFile(fullPath);
   }
 
   // Fetch a particular setting using ID
