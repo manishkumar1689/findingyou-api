@@ -10,15 +10,25 @@ import {
   NotFoundException,
   Delete,
   Param,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { SettingService } from './setting.service';
 import { CreateSettingDTO } from './dto/create-setting.dto';
 import { notEmptyString } from '../lib/validators';
 import { extractDocId } from '../lib/entities';
 import { UserService } from '../user/user.service';
-import { exportCollection, listFiles } from 'src/lib/operations';
-import { checkFileExists, buildFullPath } from 'src/lib/files';
-import { join } from 'path';
+import { exportCollection, listFiles } from '../lib/operations';
+import {
+  checkFileExists,
+  buildFullPath,
+  smartParseJsonFromBuffer,
+  extractJsonData,
+  mediaPath,
+  writeSettingFile,
+} from '../lib/files';
+import moment = require('moment');
 
 @Controller('setting')
 export class SettingController {
@@ -187,5 +197,77 @@ export class SettingController {
       data.valid = notEmptyString(data.outfile);
     }
     return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Post('import-custom/:key')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadCustom(@Res() res, @Param('key') key, @UploadedFile() file) {
+    const jsonData = extractJsonData(file, key, 'replace');
+    if (jsonData.get('valid')) {
+      const setting = await this.settingService.getByKey(key);
+      if (setting) {
+        if (setting.value instanceof Object) {
+          const customValue = setting.value;
+          const dateSuffix = moment().format('YYYY-MM-DD-HH-mm-ss');
+          const fileName = [
+            'custom-setting-',
+            key,
+            '-',
+            dateSuffix,
+            '.json',
+          ].join('');
+          writeSettingFile(fileName, customValue);
+          jsonData.set('restore', fileName);
+        }
+      }
+    }
+    return res.status(HttpStatus.OK).json(Object.fromEntries(jsonData));
+  }
+
+  @Post('import/:mode/:key')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadCollection(
+    @Res() res,
+    @Param('mode') mode,
+    @Param('key') key,
+    @UploadedFile() file,
+  ) {
+    const jsonData = extractJsonData(file, key, mode);
+    if (jsonData.get('isArrayOfObjects')) {
+      let module = '';
+      let schemaName = '';
+      switch (key) {
+        case 'users':
+        case 'user':
+          module = 'user';
+          schemaName = 'user';
+          break;
+      }
+      const schemas = require('../' +
+        module +
+        '/schemas/' +
+        schemaName +
+        '.schema');
+
+      if (schemas.constructor instanceof Function) {
+        //const sch = schemas.constructor();
+        Object.entries(schemas).forEach(entry => {
+          const name = entry[0];
+          const item: any = entry[1];
+          if (name.endsWith('Schema')) {
+            if (item instanceof Object) {
+              const objKeys = Object.keys(item);
+              if (objKeys.includes('obj')) {
+                if (item.obj instanceof Object) {
+                  const validKeys = Object.keys(item.obj);
+                  jsonData.set('validKeys', validKeys);
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+    return res.status(HttpStatus.OK).json(Object.fromEntries(jsonData));
   }
 }
