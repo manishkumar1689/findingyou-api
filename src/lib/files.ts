@@ -9,6 +9,7 @@ import {
 import { hashMapToObject } from './entities';
 import { imageSize } from 'image-size';
 import { notEmptyString } from './validators';
+import { isObject } from 'util';
 
 export const mimeFileFilter = (req, file, callback) => {
   const ext = path.extname(file.originalname);
@@ -113,8 +114,8 @@ export const writeMediaFile = (
   return fs.writeFileSync(fp, data);
 };
 
-export const writeExportFile = (filename: string, data) => {
-  const fp = buildFullPath(filename, 'exports');
+export const writeExportFile = (filename: string, data, folder = 'exports') => {
+  const fp = buildFullPath(filename, folder);
   return fs.writeFileSync(fp, data);
 };
 
@@ -193,6 +194,89 @@ export const mediaPath = (type: string = 'media') => {
       break;
   }
   return path.resolve(relPath) + '/';
+};
+
+export const smartParseJsonFromBuffer = buffer => {
+  let value = buffer.toString();
+  if (value.indexOf('/*') >= 0 && value.indexOf('*/') >= 3) {
+    const parts = value.split('/*');
+    const validParts = [];
+    for (let i = 0; i < parts.length; i++) {
+      if (i % 2 === 1) {
+        const endStr = parts[i].split('*/').pop();
+        validParts.push(endStr);
+      } else if (parts[i].length > 0) {
+        validParts.push(parts[0]);
+      }
+    }
+    value = validParts.join('');
+  }
+  let obj: any = {};
+  let error = null;
+  try {
+    obj = JSON.parse(value);
+  } catch (e) {
+    error = e;
+  }
+  const valid = obj instanceof Object && Object.keys(obj).length > 0;
+  const isArray = valid ? obj instanceof Array : false;
+  const outerArrayLength = isArray ? obj.length : -1;
+  let isArrayOfObjects =
+    outerArrayLength > 0 ? obj[0] instanceof Object : false;
+  const isArrayOfArrays = isArrayOfObjects ? obj[0] instanceof Array : false;
+  if (isArrayOfArrays) {
+    isArrayOfObjects = false;
+  }
+  let keys = [];
+  if (isArrayOfObjects && outerArrayLength > 0) {
+    keys = Object.keys(obj[0]);
+  } else if (valid && !isArray) {
+    keys = Object.keys(obj);
+  }
+  return {
+    valid,
+    error,
+    isArray,
+    isArrayOfObjects,
+    isArrayOfArrays,
+    obj,
+  };
+};
+
+export const extractJsonData = (
+  file,
+  key: string,
+  mode: string,
+): Map<string, any> => {
+  const mp = new Map<string, any>();
+  mp.set('valid', false);
+  if (file instanceof Object) {
+    const { originalname, mimetype, size, buffer } = file;
+    mp.set('mode', mode);
+    mp.set('key', key);
+    mp.set('mimetype', mimetype);
+    mp.set('size', size);
+    mp.set('originalname', originalname);
+    const jsonData = smartParseJsonFromBuffer(buffer);
+    const specialKeys = ['value', 'error', 'obj'];
+    Object.entries(jsonData).forEach(entry => {
+      const [k, v] = entry;
+      if (specialKeys.includes(k) === false) {
+        mp.set(k, v);
+      }
+    });
+    if (jsonData.valid) {
+      mp.set('value', jsonData.obj);
+      mp.set('valid', jsonData.valid);
+    } else {
+      mp.set('error', jsonData.error);
+    }
+  }
+  return mp;
+};
+
+export const writeSettingFile = (fileName: string, value = null) => {
+  writeExportFile(fileName, value);
 };
 
 export const buildFullPath = (filename: string, type: string = 'media') => {

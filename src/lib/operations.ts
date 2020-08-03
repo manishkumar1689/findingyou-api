@@ -49,11 +49,12 @@ export const exportCollection = (
     ['collection', collection],
     ['type', format],
   ]);
-
+  if (format === 'json') {
+    args.push('--jsonArray');
+  }
   args.push(optionParam('out', outFile));
 
   spawn(baseCmd, args);
-  console.log(baseCmd, args);
   return outFile;
 };
 
