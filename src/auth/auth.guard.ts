@@ -21,7 +21,10 @@ export class AuthGuard implements CanActivate {
   validateRequest(request: Request) {
     let valid = false;
     const { headers } = request;
-    console.log(request.headers);
+    const ip = Object.keys(headers).includes('x-real-ip')
+      ? headers['x-real-ip']
+      : '0.0.0.0';
+    console.log(ip);
     switch (authMode.toString()) {
       case 'skip':
         valid = true;
