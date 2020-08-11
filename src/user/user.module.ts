@@ -1,4 +1,4 @@
-import { Module, HttpModule } from '@nestjs/common';
+import { Module, HttpModule, Global } from '@nestjs/common';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { MessageService } from '../message/message.service';
@@ -9,6 +9,7 @@ import { GeoService } from './../geo/geo.service';
 import { SettingService } from './../setting/setting.service';
 import { SettingSchema } from '../setting/schemas/setting.schema';
 
+@Global()
 @Module({
   imports: [
     HttpModule,

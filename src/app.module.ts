@@ -12,7 +12,8 @@ import { DictionaryModule } from './dictionary/dictionary.module';
 import { SettingModule } from './setting/setting.module';
 import { MessageModule } from './message/message.module';
 import { mailDetails } from './.config';
-
+import { UserService } from './user/user.service';
+import { UserSchema } from './user/schemas/user.schema';
 @Module({
   imports: [
     MongooseModule.forRoot(
@@ -21,6 +22,7 @@ import { mailDetails } from './.config';
         useNewUrlParser: true,
       },
     ),
+    MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),
     RedisModule.register(redisOptions),
     MailerModule.forRoot({
       transport: mailDetails.transport,
@@ -43,6 +45,6 @@ import { mailDetails } from './.config';
     MessageModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, UserService],
 })
 export class AppModule {}
