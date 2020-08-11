@@ -8,6 +8,7 @@ export const port = 3043;
 export const globalApikey = 'eKabd7G;bd';
 export const suffixSplitChars = ['%', '.', ','];
 export const authMode = 'dynamic';
+export const ipWhiteList = ['84.93.111.229'];
 
 export const mongo = {
   name: 'findingyou',
