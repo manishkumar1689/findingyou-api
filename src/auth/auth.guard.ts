@@ -31,6 +31,7 @@ export class AuthGuard implements CanActivate {
         if (result.valid) {
           valid = true;
         }
+        console.log(valid, headers.token);
         break;
       default:
         valid = this.matchApiKey(headers);

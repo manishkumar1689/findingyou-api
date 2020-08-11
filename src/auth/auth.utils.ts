@@ -34,7 +34,9 @@ export const fromDynamicKey = (
   let valid = false;
   if (/^[0-9a-z]$/i.test(firstChar)) {
     const offset = (parseInt(firstChar, 36) % 6) + 2;
+
     const apiKeyIndex = decrypted.indexOf(globalApikey);
+
     if (apiKeyIndex === offset) {
       const parts = decrypted.split('__');
       // check userId if required
@@ -49,6 +51,8 @@ export const fromDynamicKey = (
           uid = base36PartsToHexDec(uid36);
           valid = !isNaN(randInt);
         }
+      } else {
+        valid = true;
       }
       const baseStr = parts.join('__');
       const tsParts = baseStr.split(globalApikey);
