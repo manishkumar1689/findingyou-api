@@ -22,7 +22,7 @@ export class AuthGuard implements CanActivate {
     let valid = false;
     const { headers } = request;
     const ip = Object.keys(headers).includes('x-real-ip')
-      ? headers['x-real-ip']
+      ? headers['x-real-ip'].toString()
       : '0.0.0.0';
     const mode = ipWhitelist.includes(ip) ? 'skip' : authMode.toString();
     switch (mode) {
