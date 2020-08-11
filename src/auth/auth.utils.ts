@@ -26,9 +26,7 @@ export const fromDynamicKey = (
   checkUid = false,
   minutes = 1440,
 ): ValidAuthToken => {
-  let matches = false;
   const decrypted = fromBase64(str);
-
   const firstChar = decrypted.substring(0, 1);
   let uid = '';
   let valid = false;
@@ -36,7 +34,6 @@ export const fromDynamicKey = (
     const offset = (parseInt(firstChar, 36) % 6) + 2;
 
     const apiKeyIndex = decrypted.indexOf(globalApikey);
-
     if (apiKeyIndex === offset) {
       const parts = decrypted.split('__');
       // check userId if required
@@ -61,7 +58,7 @@ export const fromDynamicKey = (
         suffixSplitChars,
       );
       if (valid && /^[0-9a-z]+$/i.test(tsStr)) {
-        const suffixInt = parseInt(tsStr, 36);
+        const suffixInt = parseInt(baseSuffix, 36);
         if (!isNaN(suffixInt)) {
           const ts = parseInt(
             tsStr
@@ -73,8 +70,8 @@ export const fromDynamicKey = (
           const currTs = new Date().getTime();
           const msTolerance = minutes * 60 * 1000;
           const [min, max] = [currTs - msTolerance, currTs + msTolerance];
-          matches = ts >= min && ts <= max;
-          if (matches && checkUid) {
+          valid = ts >= min && ts <= max;
+          if (valid && checkUid) {
             valid = uid.length > 20;
           }
         }
