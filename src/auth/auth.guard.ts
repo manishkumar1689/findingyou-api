@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { fromDynamicKey } from './auth.utils';
-import { globalApikey, authMode } from '../.config';
+import { globalApikey, authMode, ipWhitelist } from '../.config';
 import { Request } from 'express';
 
 @Injectable()
@@ -24,8 +24,8 @@ export class AuthGuard implements CanActivate {
     const ip = Object.keys(headers).includes('x-real-ip')
       ? headers['x-real-ip']
       : '0.0.0.0';
-    console.log(ip);
-    switch (authMode.toString()) {
+    const mode = ipWhitelist.includes(ip) ? 'skip' : authMode.toString();
+    switch (mode) {
       case 'skip':
         valid = true;
         break;
