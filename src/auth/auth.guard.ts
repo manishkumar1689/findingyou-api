@@ -21,7 +21,7 @@ export class AuthGuard implements CanActivate {
   validateRequest(request: Request) {
     let valid = false;
     const { headers } = request;
-    console.log(request.socket.remoteAddress);
+    console.log(request.headers);
     switch (authMode.toString()) {
       case 'skip':
         valid = true;
