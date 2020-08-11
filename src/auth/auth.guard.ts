@@ -21,7 +21,7 @@ export class AuthGuard implements CanActivate {
   validateRequest(request: Request) {
     let valid = false;
     const { headers } = request;
-    switch (authMode) {
+    switch (authMode.toString()) {
       case 'skip':
         valid = true;
         break;
@@ -31,7 +31,6 @@ export class AuthGuard implements CanActivate {
         if (result.valid) {
           valid = true;
         }
-        console.log(valid, headers.token);
         break;
       default:
         valid = this.matchApiKey(headers);
