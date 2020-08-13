@@ -11,6 +11,7 @@ import { UserModule } from './user/user.module';
 import { DictionaryModule } from './dictionary/dictionary.module';
 import { SettingModule } from './setting/setting.module';
 import { MessageModule } from './message/message.module';
+import { SnippetModule } from './snippet/snippet.module';
 import { mailDetails } from './.config';
 import { UserService } from './user/user.service';
 import { UserSchema } from './user/schemas/user.schema';
@@ -43,6 +44,7 @@ import { UserSchema } from './user/schemas/user.schema';
     DictionaryModule,
     SettingModule,
     MessageModule,
+    SnippetModule,
   ],
   controllers: [AppController],
   providers: [AppService, UserService],

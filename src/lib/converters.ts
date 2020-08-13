@@ -52,6 +52,20 @@ export const smartCastInt = (item: string, defVal: number = 0) => {
   return out;
 };
 
+export const smartCastBool = (item: string | number, defVal = false) => {
+  let intVal = defVal ? 1 : 0;
+  if (typeof item === 'string') {
+    if (item.length > 0) {
+      if (/^\s*\d+(\.\d+)?\s*/.test(item)) {
+        intVal = parseInt(item, 10);
+      }
+    }
+  } else if (typeof item === 'number') {
+    intVal = item;
+  }
+  return intVal > 0;
+};
+
 export const dateTimeSuffix = () =>
   new Date()
     .toISOString()
