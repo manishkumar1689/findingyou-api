@@ -101,17 +101,19 @@ export class SnippetService {
       filteredValues = values.map(vl => {
         let isEdited = false;
         let isNew = true;
+        let createdAt = null;
         if (exists) {
           const versionRow = snippetObj.values.find(v2 => v2.lang === vl.lang);
           if (versionRow) {
             isNew = false;
             isEdited = versionRow.text === vl.text;
+            createdAt = versionRow.createdAt;
           }
         }
         if (isNew) {
-          return { ...vl, modifiedAt: dt, createdAt: vl };
+          return { ...vl, modifiedAt: dt, createdAt: dt };
         } else if (isEdited) {
-          return { ...vl, modifiedAt: dt };
+          return { ...vl, createdAt, modifiedAt: dt };
         } else {
           return vl;
         }
@@ -122,7 +124,7 @@ export class SnippetService {
       format,
       notes,
       published,
-      values,
+      values: filteredValues,
       modifiedAt: dt,
     };
     if (exists) {

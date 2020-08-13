@@ -10,7 +10,7 @@ export const VersionSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  appoved: {
+  approved: {
     type: Boolean,
     default: false,
   },

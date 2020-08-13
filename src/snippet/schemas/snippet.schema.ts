@@ -16,7 +16,8 @@ export const SnippetSchema = new mongoose.Schema({
   },
   notes: {
     type: String,
-    required: true,
+    required: false,
+    default: '',
   },
   format: {
     type: String,
