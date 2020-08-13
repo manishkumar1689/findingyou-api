@@ -25,16 +25,6 @@ export class SnippetController {
   constructor(private snippetService: SnippetService) {}
 
   // add a snippet
-  @Post('/create')
-  async addSnippet(@Res() res, @Body() createSnippetDTO: CreateSnippetDTO) {
-    const snippet = await this.snippetService.addSnippet(createSnippetDTO);
-    return res.status(HttpStatus.OK).json({
-      message: 'Snippet has been created successfully',
-      snippet,
-    });
-  }
-
-  // add a snippet
   @Post('/bulk-save')
   async bulkSave(@Res() res, @Body() bulkSnippetDTO: BulkSnippetDTO) {
     const result = await this.snippetService.bulkUpdate(bulkSnippetDTO);
@@ -44,18 +34,11 @@ export class SnippetController {
     });
   }
 
-  @Put('/edit/:snippetID')
-  async editSnippet(
-    @Res() res,
-    @Param('snippetID') snippetID,
-    @Body() createSnippetDTO: CreateSnippetDTO,
-  ) {
-    const snippet = await this.snippetService.updateSnippet(
-      snippetID,
-      createSnippetDTO,
-    );
+  @Post('/save')
+  async save(@Res() res, @Body() createSnippetDTO: CreateSnippetDTO) {
+    const snippet = await this.snippetService.save(createSnippetDTO);
     return res.status(HttpStatus.OK).json({
-      message: 'Snippet has been updated successfully',
+      message: 'Snippet has been edited successfully',
       snippet,
     });
   }

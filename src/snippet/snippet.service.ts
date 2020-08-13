@@ -4,7 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Snippet } from './interfaces/snippet.interface';
 import { CreateSnippetDTO } from './dto/create-snippet.dto';
 import { BulkSnippetDTO } from './dto/bulk-snippet.dto';
-import { extractDocId, hashMapToObject } from '../lib/entities';
+import { extractDocId, hashMapToObject, extractObject } from '../lib/entities';
 
 @Injectable()
 export class SnippetService {
@@ -90,21 +90,54 @@ export class SnippetService {
   }
 
   // post a single Snippet
-  async addSnippet(createSnippetDTO: CreateSnippetDTO): Promise<Snippet> {
-    const newSnippet = await new this.snippetModel(createSnippetDTO);
-    return newSnippet.save();
-  }
-  // Edit Snippet details
-  async updateSnippet(
-    snippetID,
-    createSnippetDTO: CreateSnippetDTO,
-  ): Promise<Snippet> {
-    const updatedSnippet = await this.snippetModel.findByIdAndUpdate(
-      snippetID,
-      createSnippetDTO,
-      { new: true },
-    );
-    return updatedSnippet;
+  async save(createSnippetDTO: CreateSnippetDTO): Promise<Snippet> {
+    const { key, published, notes, format, values } = createSnippetDTO;
+    const snippet = await this.snippetModel.findOne({ key });
+    const exists = snippet instanceof Object;
+    const dt = new Date();
+    let filteredValues = [];
+    const snippetObj = extractObject(snippet);
+    if (values instanceof Array) {
+      filteredValues = values.map(vl => {
+        let isEdited = false;
+        let isNew = true;
+        if (exists) {
+          const versionRow = snippetObj.values.find(v2 => v2.lang === vl.lang);
+          if (versionRow) {
+            isNew = false;
+            isEdited = versionRow.text === vl.text;
+          }
+        }
+        if (isNew) {
+          return { ...vl, modifiedAt: dt, createdAt: vl };
+        } else if (isEdited) {
+          return { ...vl, modifiedAt: dt };
+        } else {
+          return vl;
+        }
+      });
+    }
+    const payload = {
+      key,
+      format,
+      notes,
+      published,
+      values,
+      modifiedAt: dt,
+    };
+    if (exists) {
+      return await this.snippetModel.findByIdAndUpdate(
+        extractDocId(snippet),
+        payload,
+        { new: true },
+      );
+    } else {
+      const newSnippet = await new this.snippetModel({
+        ...payload,
+        createdAt: dt,
+      });
+      return newSnippet.save();
+    }
   }
 
   async deleteByKey(key: string) {
