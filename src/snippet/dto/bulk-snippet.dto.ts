@@ -1,9 +1,7 @@
-import { ApiModelProperty } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { CreateSnippetDTO } from './create-snippet.dto';
 
 export class BulkSnippetDTO {
-
-  @ApiModelProperty()
+  @ApiProperty()
   readonly items: CreateSnippetDTO[];
-
 }

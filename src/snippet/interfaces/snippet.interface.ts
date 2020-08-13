@@ -1,8 +1,10 @@
 import { Document } from 'mongoose';
+import { Version } from './version.interface';
 
 export interface Snippet extends Document {
   readonly key: string;
-  value: string;
+  readonly published: boolean;
+  values: Version[];
   readonly format: string;
   readonly createdAt: Date;
   readonly modifiedAt: Date;

@@ -1,18 +1,25 @@
-import { ApiModelProperty } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
+import { VersionDTO } from './version.dto';
 
 export class CreateSnippetDTO {
-  @ApiModelProperty()
+  @ApiProperty()
   readonly key: string;
 
-  @ApiModelProperty()
-  readonly value: string;
+  @ApiProperty()
+  readonly published: boolean;
 
-  @ApiModelProperty()
+  @ApiProperty()
+  readonly values: VersionDTO[];
+
+  @ApiProperty()
+  readonly notes: string;
+
+  @ApiProperty()
   readonly format: string;
 
-  @ApiModelProperty()
+  @ApiProperty()
   readonly createdAt: Date;
 
-  @ApiModelProperty()
+  @ApiProperty()
   readonly modifiedAt: Date;
 }
