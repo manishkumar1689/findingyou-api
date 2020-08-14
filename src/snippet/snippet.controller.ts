@@ -14,11 +14,24 @@ import {
 import { SnippetService } from './snippet.service';
 import { CreateSnippetDTO } from './dto/create-snippet.dto';
 import { BulkSnippetDTO } from './dto/bulk-snippet.dto';
-import {
-  smartCastInt,
-  smartCastBool,
-  smartCastString,
-} from 'src/lib/converters';
+import { smartCastBool, smartCastString } from 'src/lib/converters';
+
+/*
+Provide alternative versions of snippets if not available
+The English version will always be available but for some languages
+an alternative closer match may be provided, e.g. Ukrainians may understand Russian
+This is separate from the preferred locale variants. These alternative then become available 
+without having to re-download a new set of snippets or provide all users with all languages (which would be manageable for small number)
+*/
+const defaultLangCodes = (baseLang = '') => {
+  const codes = ['en'];
+  switch (baseLang) {
+    case 'uk':
+      codes.push('ru');
+      break;
+  }
+  return codes;
+};
 
 @Controller('snippet')
 export class SnippetController {
@@ -64,7 +77,10 @@ export class SnippetController {
         let valid = true;
         if (langCode !== 'all') {
           const baseLang = val.lang.split('-').shift();
-          valid = val.lang === langCode || baseLang === baseLangCode;
+          valid =
+            val.lang === langCode ||
+            baseLang === baseLangCode ||
+            defaultLangCodes(baseLang).includes(baseLang);
         }
         if (activeMode && valid) {
           valid = val.active;
