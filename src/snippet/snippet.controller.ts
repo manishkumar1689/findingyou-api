@@ -73,23 +73,35 @@ export class SnippetController {
     const snippets = await this.snippetService.list(publishedMode);
     const filtered = snippets.map(record => {
       const snippet = record.toObject();
-      const values = snippet.values.filter(val => {
-        let valid = true;
-        if (langCode !== 'all') {
-          const baseLang = val.lang.split('-').shift();
-          valid =
-            val.lang === langCode ||
-            baseLang === baseLangCode ||
-            defaultLangCodes(baseLang).includes(baseLang);
-        }
-        if (activeMode && valid) {
-          valid = val.active;
-        }
-        if (approvedMode && valid) {
-          valid = val.approved;
-        }
-        return valid;
-      });
+      const values = snippet.values
+        .filter(val => {
+          let valid = true;
+          if (langCode !== 'all') {
+            const baseLang = val.lang.split('-').shift();
+            valid =
+              val.lang === langCode ||
+              baseLang === baseLangCode ||
+              defaultLangCodes(baseLang).includes(baseLang);
+          }
+          if (activeMode && valid) {
+            valid = val.active;
+          }
+          if (approvedMode && valid) {
+            valid = val.approved;
+          }
+          return valid;
+        })
+        .map(val => {
+          if (publishedMode) {
+            const { lang, text } = val;
+            return {
+              lang,
+              text,
+            };
+          } else {
+            return val;
+          }
+        });
       return { ...snippet, values };
     });
     return res.status(HttpStatus.OK).json({

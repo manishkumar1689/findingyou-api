@@ -16,7 +16,18 @@ export class SnippetService {
     const filter = publishedOnly
       ? { values: { $exists: true, $ne: [] }, published: true }
       : {};
-    const Snippets = await this.snippetModel.find(filter).exec();
+    const fields = publishedOnly
+      ? {
+          _id: 0,
+          key: 1,
+          format: 1,
+          values: 1,
+        }
+      : {};
+    const Snippets = await this.snippetModel
+      .find(filter)
+      .select(fields)
+      .exec();
     return Snippets;
   }
 
