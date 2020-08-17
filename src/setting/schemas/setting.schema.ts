@@ -27,6 +27,7 @@ export const SettingSchema = new mongoose.Schema({
       'preferences',
       'roles',
       'lookup_set',
+      'languages',
       'custom',
     ],
   },
