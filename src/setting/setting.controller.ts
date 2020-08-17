@@ -133,7 +133,6 @@ export class SettingController {
     if (!setting) {
       throw new NotFoundException('Setting does not exist!');
     }
-    console.log(key);
     return res.status(HttpStatus.OK).json(setting);
   }
 
