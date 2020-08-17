@@ -29,6 +29,9 @@ import {
   writeSettingFile,
 } from '../lib/files';
 import moment = require('moment');
+import availableLanguages from './sources/languages';
+import defaultLanguageOptions from './sources/lang-options';
+import { settings } from 'cluster';
 
 @Controller('setting')
 export class SettingController {
@@ -130,6 +133,7 @@ export class SettingController {
     if (!setting) {
       throw new NotFoundException('Setting does not exist!');
     }
+    console.log(key);
     return res.status(HttpStatus.OK).json(setting);
   }
 
@@ -147,6 +151,40 @@ export class SettingController {
     res.attachment([key, '.json'].join(''));
     res.header('type', 'application/json');
     return res.send(JSON.stringify(data));
+  }
+
+  @Get('languages/:mode?')
+  async languages(@Res() res, @Param('mode') mode) {
+    const setting = await this.settingService.getByKey('languages');
+    const showAll = mode === 'all';
+    const hasSetting =
+      setting instanceof Object && setting.value instanceof Array;
+    const enabledLangs = hasSetting
+      ? setting.value
+      : defaultLanguageOptions.map(row => {
+          return { ...row, enabled: true, native: '' };
+        });
+    const values = showAll
+      ? availableLanguages.map(lang => {
+          const { name, code2l } = lang;
+          const saved = enabledLangs.find(lang => lang.key === code2l);
+          const enabled = saved instanceof Object;
+          const native = enabled ? saved.native : lang.native;
+          return {
+            key: code2l,
+            name,
+            native,
+            enabled,
+          };
+        })
+      : enabledLangs;
+
+    const data = {
+      valid: values.length > 0,
+      languages: values,
+    };
+
+    return res.status(HttpStatus.OK).json(data);
   }
 
   // Return the data from a particular setting identified by key
