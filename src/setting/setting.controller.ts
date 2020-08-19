@@ -32,6 +32,7 @@ import moment = require('moment');
 import availableLanguages from './sources/languages';
 import defaultLanguageOptions from './sources/lang-options';
 import { settings } from 'cluster';
+import { DictionaryController } from 'src/dictionary/dictionary.controller';
 
 @Controller('setting')
 export class SettingController {
@@ -154,29 +155,58 @@ export class SettingController {
 
   @Get('languages/:mode?')
   async languages(@Res() res, @Param('mode') mode) {
+    const mapLangOpts = row => {
+      return { ...row, enabled: true, enabledInDict: true, native: '' };
+    };
     const setting = await this.settingService.getByKey('languages');
     const showAll = mode === 'all';
+    const dictMode = mode === 'dict';
+    const getDictOpts = mode !== 'app';
+    const getAppOpts = mode !== 'dict';
     const hasSetting =
       setting instanceof Object && setting.value instanceof Array;
-    const enabledLangs = hasSetting
-      ? setting.value
-      : defaultLanguageOptions.map(row => {
-          return { ...row, enabled: true, native: '' };
-        });
+    const appLangs = getAppOpts
+      ? hasSetting
+        ? setting.value
+        : defaultLanguageOptions.map(row => {
+            return { ...row, enabled: true, native: '' };
+          })
+      : [];
+    const dictSetting = await this.settingService.getByKey('dictlangs');
+    const hasDictSetting =
+      dictSetting instanceof Object && dictSetting.value instanceof Array;
+
+    const dictLangs = getDictOpts
+      ? hasDictSetting
+        ? dictSetting.value
+        : defaultLanguageOptions.map(mapLangOpts)
+      : [];
     const values = showAll
       ? availableLanguages.map(lang => {
           const { name, code2l } = lang;
-          const saved = enabledLangs.find(lang => lang.key === code2l);
-          const enabled = saved instanceof Object;
-          const native = enabled ? saved.native : lang.native;
+          const saved = appLangs.find(lang => lang.key === code2l);
+          const dictOpt = dictLangs.find(lang => lang.key === code2l);
+          const inApp = saved instanceof Object;
+          const inDict = dictOpt instanceof Object;
+          const native =
+            inApp && notEmptyString(saved.native, 2)
+              ? saved.native
+              : inDict && notEmptyString(dictOpt.native, 2)
+              ? dictOpt.native
+              : lang.native;
           return {
             key: code2l,
             name,
             native,
-            enabled,
+            appWeight: inApp ? saved.weight : 9999,
+            dictWeight: inDict ? dictOpt.weight : 9999,
+            inApp,
+            inDict,
           };
         })
-      : enabledLangs;
+      : dictMode
+      ? dictLangs
+      : appLangs;
 
     const data = {
       valid: values.length > 0,
