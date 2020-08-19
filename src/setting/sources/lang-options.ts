@@ -1,55 +1,55 @@
 const langOptions = [
   {
     key: 'en',
-    label: 'English',
+    name: 'English',
   },
   {
     key: 'sa',
-    label: 'Sanskrit',
+    name: 'Sanskrit',
   },
   {
     key: 'la',
-    label: 'Latin',
+    name: 'Latin',
   },
   {
     key: 'ar',
-    label: 'Arabic',
+    name: 'Arabic',
   },
   {
     key: 'fa',
-    label: 'Farsi / Persian',
+    name: 'Farsi / Persian',
   },
   {
     key: 'zh',
-    label: 'Chinese',
+    name: 'Chinese',
   },
   {
     key: 'fr',
-    label: 'French',
+    name: 'French',
   },
   {
     key: 'el',
-    label: 'Greek',
+    name: 'Greek',
   },
   {
     key: 'es',
-    label: 'Spanish',
+    name: 'Spanish',
   },
   {
     key: 'pt',
-    label: 'Portuguese',
+    name: 'Portuguese',
   },
   {
     key: 'it',
-    label: 'Italian',
+    name: 'Italian',
   },
   {
     key: 'de',
-    label: 'German',
+    name: 'German',
   },
   {
     key: 'ru',
-    label: 'Russian',
+    name: 'Russian',
   },
 ];
 
