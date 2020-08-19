@@ -156,7 +156,7 @@ export class SettingController {
   @Get('languages/:mode?')
   async languages(@Res() res, @Param('mode') mode) {
     const mapLangOpts = row => {
-      return { ...row, enabled: true, enabledInDict: true, native: '' };
+      return { ...row, enabled: true, native: '' };
     };
     const setting = await this.settingService.getByKey('languages');
     const showAll = mode === 'all';
