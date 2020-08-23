@@ -478,6 +478,11 @@ export class UserService {
     return adminRoles.some(role => this.hasRole(user, role));
   }
 
+  async isActive(userID: string): Promise<boolean> {
+    const user = await this.getUser(userID);
+    return user instanceof Object ? user.active : false;
+  }
+
   async isAdminUser(userID: string): Promise<boolean> {
     const user = await this.getUser(userID);
     return user instanceof Object ? this.hasAdminRole(user) : false;

@@ -1,44 +1,21 @@
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  Inject,
-} from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { fromDynamicKey } from './auth.utils';
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { extractFromHeaderToken, maySkipValidation } from './auth.utils';
 import { globalApikey, authMode, ipWhitelist } from '../.config';
 import { Request } from 'express';
+import { IncomingHttpHeaders } from 'http';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  canActivate(
-    context: ExecutionContext,
-  ): boolean | Promise<boolean> | Observable<boolean> {
+  canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
     return this.validateRequest(request);
   }
 
   validateRequest(request: Request) {
-    let valid = false;
-    const { headers } = request;
-    const ip = Object.keys(headers).includes('x-real-ip')
-      ? headers['x-real-ip'].toString()
-      : '0.0.0.0';
-    const mode = ipWhitelist.includes(ip) ? 'skip' : authMode.toString();
-    switch (mode) {
-      case 'skip':
-        valid = true;
-        break;
-      case 'dynamic':
-      case 'strict':
-        const result = this.matchDynamic(headers);
-        if (result.valid) {
-          valid = true;
-        }
-        break;
-      default:
-        valid = this.matchApiKey(headers);
-        break;
+    let valid = maySkipValidation(request);
+    if (!valid) {
+      const { headers } = request;
+      valid = this.matchDynamic(headers);
     }
     return valid;
   }
@@ -52,20 +29,8 @@ export class AuthGuard implements CanActivate {
     return valid;
   }
 
-  matchDynamic(headers) {
-    const out = { valid: false, uid: '' };
-    if (headers instanceof Object) {
-      const { token } = headers;
-      if (typeof token === 'string') {
-        const { valid, uid } = fromDynamicKey(token);
-        if (valid) {
-          out.valid = valid;
-        }
-        if (uid) {
-          out.uid = uid;
-        }
-      }
-    }
-    return out;
+  matchDynamic(headers: IncomingHttpHeaders): boolean {
+    const out = extractFromHeaderToken(headers, false);
+    return out.valid;
   }
 }
