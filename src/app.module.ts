@@ -15,6 +15,7 @@ import { SnippetModule } from './snippet/snippet.module';
 import { mailDetails } from './.config';
 import { UserService } from './user/user.service';
 import { UserSchema } from './user/schemas/user.schema';
+import { AppGateway } from './app.gateway';
 @Module({
   imports: [
     MongooseModule.forRoot(
@@ -47,6 +48,6 @@ import { UserSchema } from './user/schemas/user.schema';
     SnippetModule,
   ],
   controllers: [AppController],
-  providers: [AppService, UserService],
+  providers: [AppService, UserService, AppGateway],
 })
 export class AppModule {}

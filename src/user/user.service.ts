@@ -465,6 +465,34 @@ export class UserService {
     return false;
   }
 
+  async members(criteria = null) {
+    return this.userModel.aggregate([
+      { $match: { active: true } },
+      {
+        $lookup: {
+          from: 'charts',
+          localField: '_id',
+          foreignField: 'user',
+          as: 'chart',
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          roles: 1,
+          preview: 1,
+          fullName: 1,
+          nickName: 1,
+          active: 1,
+          placenames: 1,
+          profiles: 1,
+          gender: 1,
+          chart: 1,
+        },
+      },
+    ]);
+  }
+
   hasRole(user: User, role: string): boolean {
     let valid = false;
     if (user.roles.includes(role)) {
