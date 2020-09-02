@@ -61,6 +61,7 @@ export class UserController {
     let valid = false;
     const existing = await this.userService.findOneByEmail(
       createUserDTO.identifier,
+      false,
     );
     if (existing) {
       msg = 'A user with this email address already exists';

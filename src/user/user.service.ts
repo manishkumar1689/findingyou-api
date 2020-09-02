@@ -227,12 +227,14 @@ export class UserService {
   ) {
     const userData = new Map<string, any>();
     const dt = new Date();
+    if (isNew) {
+      userData.set('roles', ['active']);
+    }
     Object.entries(createUserDTO).forEach(entry => {
       const [key, val] = entry;
       switch (key) {
         case 'password':
           if (createUserDTO.password) {
-            //userData.set(key, bcrypt.hashSync(val, hashSalt));
             const tsSalt = dt.getTime() % 16;
             userData.set(key, bcrypt.hashSync(val, tsSalt));
           }
@@ -267,6 +269,7 @@ export class UserService {
       userData.set('status', statusValues);
     }
     if (isNew) {
+      userData.set('active', true);
       userData.set('createdAt', dt);
     }
     userData.set('modifiedAt', dt);
@@ -473,7 +476,7 @@ export class UserService {
           from: 'charts',
           localField: '_id',
           foreignField: 'user',
-          as: 'chart',
+          as: 'charts',
         },
       },
       {
