@@ -227,12 +227,14 @@ export class UserService {
   ) {
     const userData = new Map<string, any>();
     const dt = new Date();
+    if (isNew) {
+      userData.set('roles', ['active']);
+    }
     Object.entries(createUserDTO).forEach(entry => {
       const [key, val] = entry;
       switch (key) {
         case 'password':
           if (createUserDTO.password) {
-            //userData.set(key, bcrypt.hashSync(val, hashSalt));
             const tsSalt = dt.getTime() % 16;
             userData.set(key, bcrypt.hashSync(val, tsSalt));
           }
@@ -267,6 +269,7 @@ export class UserService {
       userData.set('status', statusValues);
     }
     if (isNew) {
+      userData.set('active', true);
       userData.set('createdAt', dt);
     }
     userData.set('modifiedAt', dt);
@@ -465,6 +468,34 @@ export class UserService {
     return false;
   }
 
+  async members(criteria = null) {
+    return this.userModel.aggregate([
+      { $match: { active: true } },
+      {
+        $lookup: {
+          from: 'charts',
+          localField: '_id',
+          foreignField: 'user',
+          as: 'charts',
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          roles: 1,
+          preview: 1,
+          fullName: 1,
+          nickName: 1,
+          active: 1,
+          placenames: 1,
+          profiles: 1,
+          gender: 1,
+          chart: 1,
+        },
+      },
+    ]);
+  }
+
   hasRole(user: User, role: string): boolean {
     let valid = false;
     if (user.roles.includes(role)) {
@@ -476,6 +507,11 @@ export class UserService {
   hasAdminRole(user: User): boolean {
     const adminRoles = ['admin', 'superadmin'];
     return adminRoles.some(role => this.hasRole(user, role));
+  }
+
+  async isActive(userID: string): Promise<boolean> {
+    const user = await this.getUser(userID);
+    return user instanceof Object ? user.active : false;
   }
 
   async isAdminUser(userID: string): Promise<boolean> {

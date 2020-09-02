@@ -1,5 +1,8 @@
+import { Request } from 'express';
 import { fromBase64 } from '../lib/hash';
 import { globalApikey, suffixSplitChars } from '../.config';
+import { notEmptyString } from 'src/lib/validators';
+import { authMode, ipWhitelist } from '../.config';
 
 interface ValidAuthToken {
   valid: boolean;
@@ -79,4 +82,54 @@ export const fromDynamicKey = (
     }
   }
   return { valid, uid };
+};
+
+export const maySkipValidation = (request: Request): boolean => {
+  let valid = false;
+  const { headers } = request;
+  const ip = Object.keys(headers).includes('x-real-ip')
+    ? headers['x-real-ip'].toString()
+    : '0.0.0.0';
+  const mode = ipWhitelist.includes(ip) ? 'skip' : authMode.toString();
+  switch (mode) {
+    case 'skip':
+      valid = true;
+      break;
+  }
+  return valid;
+};
+
+export const extractFromHeaderToken = (headers, checkUid = false) => {
+  const out = { valid: false, uid: '', hasUid: false };
+  if (headers instanceof Object) {
+    const { token } = headers;
+    if (typeof token === 'string') {
+      const { valid, uid } = fromDynamicKey(token, checkUid);
+      if (!checkUid && valid) {
+        out.valid = valid;
+      }
+      if (checkUid && notEmptyString(uid, 16)) {
+        out.uid = uid;
+        out.hasUid = true;
+      }
+    }
+  }
+  return out;
+};
+
+export const extractUidFromResponse = (res = null) => {
+  let strUid = '';
+  if (res instanceof Object) {
+    const { req } = res;
+    if (req instanceof Object) {
+      const { headers } = req;
+      if (headers instanceof Object) {
+        const { uid } = headers;
+        if (notEmptyString(uid, 12)) {
+          strUid = uid;
+        }
+      }
+    }
+  }
+  return strUid;
 };

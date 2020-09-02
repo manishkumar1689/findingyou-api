@@ -41,6 +41,7 @@ import { PaymentOption } from './interfaces/payment-option.interface';
 import { RemoveStatusDTO } from './dto/remove-status.dto';
 import { CountryOption } from './interfaces/country-option.interface';
 import { PreferenceOption } from './interfaces/preference-option.interface';
+import { AstrologicService } from 'src/astrologic/astrologic.service';
 
 @Controller('user')
 export class UserController {
@@ -48,6 +49,7 @@ export class UserController {
     private userService: UserService,
     private messageService: MessageService,
     private settingService: SettingService,
+    private astrologicService: AstrologicService,
     private geoService: GeoService,
   ) {}
 
@@ -59,6 +61,7 @@ export class UserController {
     let valid = false;
     const existing = await this.userService.findOneByEmail(
       createUserDTO.identifier,
+      false,
     );
     if (existing) {
       msg = 'A user with this email address already exists';
@@ -126,6 +129,12 @@ export class UserController {
       num: users.length,
       items: users,
     });
+  }
+
+  @Get('members')
+  async listMembers(@Res() res) {
+    const data = await this.userService.members();
+    return res.json(data);
   }
 
   // Fetch a particular user using ID
@@ -222,6 +231,16 @@ export class UserController {
         const userID = extractDocId(user);
         const loginDt = await this.userService.registerLogin(userID);
         userData.set('login', loginDt);
+
+        const charts = await this.astrologicService.getChartsByUser(
+          userID,
+          0,
+          100,
+          true,
+        );
+        if (charts.length > 0) {
+          userData.set('chart', charts[0]);
+        }
       }
     }
     userData.set('valid', valid);

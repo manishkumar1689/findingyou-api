@@ -12,6 +12,7 @@ import {
   Param,
   UseInterceptors,
   UploadedFile,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SettingService } from './setting.service';
@@ -31,8 +32,9 @@ import {
 import moment = require('moment');
 import availableLanguages from './sources/languages';
 import defaultLanguageOptions from './sources/lang-options';
-import { settings } from 'cluster';
-import { DictionaryController } from 'src/dictionary/dictionary.controller';
+import { AdminGuard } from '../auth/admin.guard';
+import { ServerResponse } from 'http';
+import { extractUidFromResponse } from 'src/auth/auth.utils';
 
 @Controller('setting')
 export class SettingController {
@@ -248,6 +250,7 @@ export class SettingController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  @UseGuards(AdminGuard)
   @Get('list-dir/:directory')
   async listDirectory(@Res() res, @Param('directory') directory) {
     const data = await listFiles(directory);
