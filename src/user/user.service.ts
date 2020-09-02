@@ -244,6 +244,10 @@ export class UserService {
             userData.set('roles', val);
           }
           break;
+        case 'nickName':
+        case 'mode':
+          userData.set(key, val);
+          break;
         default:
           userData.set(key, val);
           break;
