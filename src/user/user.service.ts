@@ -237,6 +237,7 @@ export class UserService {
           if (createUserDTO.password) {
             const tsSalt = dt.getTime() % 16;
             userData.set(key, bcrypt.hashSync(val, tsSalt));
+            userData.set('mode', 'local');
           }
           break;
         case 'roles':
