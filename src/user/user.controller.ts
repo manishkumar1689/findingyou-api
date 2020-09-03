@@ -87,6 +87,56 @@ export class UserController {
     });
   }
 
+  // add a user
+  @Post('auth-user')
+  async authUser(@Res() res, @Body() createUserDTO: CreateUserDTO) {
+    let msg = 'N/A';
+    let userData: any = {};
+    let valid = false;
+    const existing = await this.userService.findOneByEmail(
+      createUserDTO.identifier,
+      false,
+    );
+    if (existing) {
+      const userID = extractDocId(existing);
+      const loginDt = await this.userService.registerLogin(userID);
+      valid = existing.active;
+      const user = extractSimplified(existing, ['password']);
+      const ud: Map<string, any> = new Map(Object.entries(user));
+      ud.set('login', loginDt);
+      const charts = await this.astrologicService.getChartsByUser(
+        userID,
+        0,
+        10,
+        true,
+      );
+      if (charts.length > 0) {
+        ud.set('chart', charts[0]);
+      }
+      userData = hashMapToObject(ud);
+    }
+    if (valid) {
+      if (validEmail(createUserDTO.identifier)) {
+        const roles = await this.getRoles();
+        const user = await this.userService.addUser(createUserDTO, roles);
+        if (user) {
+          msg = 'User has been created successfully';
+          userData = extractSimplified(user, ['password']);
+          valid = true;
+        } else {
+          msg = 'Could not create a new user';
+        }
+      } else {
+        msg = 'Please enter a valid email address';
+      }
+    }
+    return res.status(HttpStatus.OK).json({
+      message: msg,
+      user: userData,
+      valid,
+    });
+  }
+
   @Put('edit/:userID')
   async editUser(
     @Res() res,

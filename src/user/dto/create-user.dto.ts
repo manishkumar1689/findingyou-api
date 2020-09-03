@@ -48,6 +48,9 @@ export class CreateUserDTO {
   readonly preview: string;
 
   @ApiProperty()
+  readonly dob?: Date;
+
+  @ApiProperty()
   readonly token: string;
 
   @ApiProperty()

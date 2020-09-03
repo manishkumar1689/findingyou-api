@@ -57,6 +57,7 @@ export const UserSchema = new mongoose.Schema({
     required: false,
     default: '',
   },
+  dob: { type: Date, default: null, required: false },
   active: Boolean,
   test: Boolean,
   status: [StatusSchema],
