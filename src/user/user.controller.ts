@@ -115,7 +115,7 @@ export class UserController {
       }
       userData = hashMapToObject(ud);
     }
-    if (valid) {
+    if (!valid) {
       if (validEmail(createUserDTO.identifier)) {
         const roles = await this.getRoles();
         const user = await this.userService.addUser(createUserDTO, roles);
