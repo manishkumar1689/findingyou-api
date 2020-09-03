@@ -21,6 +21,7 @@ export interface User extends Document {
   readonly preferences: Preference[];
   readonly profiles: Profile[];
   readonly preview: string;
+  readonly dob?: Date;
   readonly token: string;
   readonly login: Date;
   readonly createdAt: Date;

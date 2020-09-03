@@ -246,6 +246,8 @@ export class UserService {
           }
           break;
         case 'nickName':
+        case 'fullName':
+        case 'imageUri':
         case 'mode':
           userData.set(key, val);
           break;
