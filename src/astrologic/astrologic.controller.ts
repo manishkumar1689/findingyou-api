@@ -294,7 +294,7 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('save-user-birth-chart/:userID/:loc/:dt/:f')
+  @Get('save-user-birth-chart/:userID/:loc/:dt/:g')
   async saveUserBirthChart(
     @Res() res,
     @Param('userID') userID: string,
@@ -302,20 +302,24 @@ export class AstrologicController {
     @Param('dt') dt: string,
     @Param('g') g: string,
   ) {
-    let data:any = { valid: false };
+    let data: any = { valid: false };
     const user = await this.userService.getUser(userID);
     const geo = locStringToGeo(loc);
-    const gender = notEmptyString(g) && g.length === 1? g : "n";
+    const gender = notEmptyString(g) && g.length === 1 ? g : 'n';
     if (user instanceof Object) {
       const inData = {
         user: user._id,
         name: user.nickName,
-        notes: "",
-        type: "person",
+        datetime: dt,
+        lat: geo.lat,
+        lng: geo.lng,
+        alt: geo.alt,
+        notes: '',
+        type: 'person',
         isDefaultBirthChart: true,
         gender,
-        eventType: "birth",
-        roddenScale: "AAX",
+        eventType: 'birth',
+        roddenScale: 'AAX',
       } as ChartInputDTO;
       const data = await this.saveChartData(inData);
     }
@@ -476,7 +480,7 @@ export class AstrologicController {
     }
     const validC1 = c1 instanceof Object;
     const validC2 = c2 instanceof Object;
-    let surfaceGeo = {lat:0,lng:0};
+    let surfaceGeo = { lat: 0, lng: 0 };
     let surfaceAscendant = 0;
     let surfaceTzOffset = 0;
     if (validC1 && validC2) {
@@ -485,9 +489,7 @@ export class AstrologicController {
 
       surfaceGeo = midPointSurface(c1.geo, c2.geo);
       const mid =
-        midMode === 'surface'
-          ? surfaceGeo
-          : medianLatlng(c1.geo, c2.geo);
+        midMode === 'surface' ? surfaceGeo : medianLatlng(c1.geo, c2.geo);
       const dtUtc = applyTzOffsetToDateString(datetime, 0);
       const { tz, tzOffset } = await this.geoService.fetchTzData(mid, dtUtc);
       const tsData = await calcCompactChartData(
@@ -499,16 +501,19 @@ export class AstrologicController {
       );
       let surfaceTzOffset = 0;
       if (midMode !== 'surface') {
-        const surfaceTime = await this.geoService.fetchTzData(surfaceGeo, dtUtc);
+        const surfaceTime = await this.geoService.fetchTzData(
+          surfaceGeo,
+          dtUtc,
+        );
         const surfaceData = await fetchHouseData(
           dtUtc,
-          {...surfaceGeo, alt:0 },
-          'W'
+          { ...surfaceGeo, alt: 0 },
+          'W',
         );
         if (surfaceData instanceof Object) {
           surfaceAscendant = surfaceData.ascendant;
           surfaceTzOffset = surfaceTime.tzOffset;
-          console.log(surfaceAscendant,surfaceTime)
+          console.log(surfaceAscendant, surfaceTime);
         }
       }
       const { user } = inData;
@@ -564,8 +569,8 @@ export class AstrologicController {
     @Res() res,
     @Param('pairedID') pairedID: string,
     @Param('userID') userID: string,
-    ) {
-    const data = {valid: false, pairedID: ''};
+  ) {
+    const data = { valid: false, pairedID: '' };
     if (this.userService.isAdminUser(userID)) {
       const deleted = await this.astrologicService.deletePaired(pairedID);
       if (deleted) {
@@ -667,7 +672,7 @@ export class AstrologicController {
     @Param('userID') userID: string,
     @Param('start') start = '0',
     @Param('limit') limit = '100',
-    @Param('defaultOnly') defaultOnly = '0'
+    @Param('defaultOnly') defaultOnly = '0',
   ) {
     const data: any = { valid: false, items: [], message: 'invalid user ID' };
     const user = await this.userService.getUser(userID);

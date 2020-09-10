@@ -24,9 +24,15 @@ export const PreferenceSchema = new mongoose.Schema({
       'array_string', // any number of string options
       'array_integer', // any number of integer options
       'range_number', // numeric range e.g 18-40 stored as [18,40]
-      'array_float', // any number of double-precision options
+      'array_float',
+      'multiple_key_scales', // multiple scales defined by rules
     ],
     default: 'string',
     required: true,
+  },
+  rules: {
+    type: [Mixed],
+    default: [],
+    required: false,
   },
 });
