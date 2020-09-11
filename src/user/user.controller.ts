@@ -18,7 +18,7 @@ import { SettingService } from '../setting/setting.service';
 import { GeoService } from '../geo/geo.service';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { LoginDTO } from './dto/login.dto';
-import { validEmail } from '../lib/validators';
+import { validEmail, notEmptyString } from '../lib/validators';
 import { smartCastInt } from '../lib/converters';
 import { Request } from 'express';
 import { fromBase64, toBase64 } from '../lib/hash';
@@ -33,7 +33,7 @@ import {
 import roleValues from './settings/roles';
 import paymentValues from './settings/payments-options';
 import countryValues from './settings/countries';
-import preferenceOptions from './settings/preference-options';
+import getDefaultPreferences from './settings/preference-options';
 import permissionValues from './settings/permissions';
 import { Role } from './interfaces/role.interface';
 import { EditStatusDTO } from './dto/edit-status.dto';
@@ -237,9 +237,10 @@ export class UserController {
   }
 
   // Fetch preference options
-  @Get('preference-options')
-  async listPreferenceOptions(@Res() res) {
-    const prefOpts = await this.getPreferenceOptions();
+  @Get('preferences/:key?')
+  async listPreferenceOptions(@Res() res, @Param('key') key) {
+    const surveyKey = notEmptyString(key, 4) ? key : 'preference_options';
+    const prefOpts = await this.getPreferenceOptions(surveyKey);
     const data = { valid: false, num: 0, items: [] };
     if (prefOpts instanceof Array) {
       data.num = prefOpts.length;
@@ -549,11 +550,13 @@ export class UserController {
     return data;
   }
 
-  async getPreferenceOptions(): Promise<Array<PreferenceOption>> {
-    const setting = await this.settingService.getByKey('preference_options');
+  async getPreferenceOptions(
+    surveyKey = 'preference_options',
+  ): Promise<Array<PreferenceOption>> {
+    const setting = await this.settingService.getByKey(surveyKey);
     let data: Array<PreferenceOption> = [];
     if (!setting) {
-      data = preferenceOptions;
+      data = getDefaultPreferences(surveyKey);
     } else {
       if (setting.value instanceof Array) {
         data = setting.value;
