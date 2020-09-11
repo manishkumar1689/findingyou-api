@@ -375,7 +375,8 @@ const matchPersonalityOptions = (subkey = 'personality') => {
       .toLowerCase()
       .trim()
       .replace(/[^A-Za-z0-9]+/gi, '_')
-      .replace(/(^|_)(the|i|a|an|of|in|on)_/gi, '_');
+      .replace(/(^|_)(the|i|a|an|of|in|on)_/gi, '_')
+      .replace(/^_+|_+$/, '');
     return {
       key: key,
       prompt: prompt,
