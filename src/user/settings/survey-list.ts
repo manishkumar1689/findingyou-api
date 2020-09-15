@@ -1,0 +1,88 @@
+const surveyList = [
+  {
+    key: 'preference',
+    name: 'Core Preferences',
+    multiscales: '',
+    type: 'preferences',
+    enabled: true,
+  },
+  {
+    key: 'smoking',
+    name: 'Smoking',
+    multiscales: '',
+    type: 'preferences',
+    enabled: true,
+  },
+  {
+    key: 'diet',
+    name: 'Diet',
+    multiscales: '',
+    type: 'preferences',
+    enabled: true,
+  },
+  {
+    key: 'politics',
+    name: 'Politics',
+    multiscales: '',
+    type: 'preferences',
+    enabled: true,
+  },
+  {
+    key: 'topics',
+    name: 'Topics',
+    multiscales: '',
+    type: 'preferences',
+    enabled: true,
+  },
+  {
+    key: 'hobbies',
+    name: 'Hobbies',
+    multiscales: '',
+    type: 'preferences',
+    enabled: true,
+  },
+  {
+    key: 'personality',
+    name: 'Big Five',
+    multiscales: 'big5',
+    type: 'psychometric',
+    enabled: true,
+  },
+  {
+    key: 'jungian',
+    name: 'Jungian',
+    multiscales: 'jungian',
+    type: 'psychometric',
+    enabled: true,
+  },
+  {
+    key: 'ayurvedic',
+    name: 'Ayurvedic',
+    multiscales: '',
+    type: 'psychometric',
+    enabled: true,
+  },
+  {
+    key: 'quirks',
+    name: 'Personality quirks',
+    multiscales: '',
+    type: 'psychometric',
+    enabled: true,
+  },
+  {
+    key: 'spirituality',
+    name: 'Spirituality',
+    multiscales: '',
+    type: 'psychometric',
+    enabled: true,
+  },
+  {
+    key: 'feedback',
+    name: 'Feedback',
+    multiscales: '',
+    type: 'feedback',
+    enabled: true,
+  },
+];
+
+export default surveyList;
