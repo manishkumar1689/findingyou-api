@@ -1,3 +1,5 @@
+import multipleKeyScales from './multiscales';
+
 const preferenceOptions = [
   {
     key: 'age_range',
@@ -323,24 +325,47 @@ const valueOpts = [
   },
 ];
 
-const options = [
-  {
-    key: 'never',
-    valueOpts,
-  },
-  {
-    key: 'rarely',
-    valueOpts,
-  },
-  {
-    key: 'sometimes',
-    valueOpts,
-  },
-  {
-    key: 'always',
-    valueOpts,
-  },
-];
+const buildSubOpts = (range: Array<number>) => {
+  const [min, max] = range;
+  const subOpts = [];
+  for (let n = min; n <= max; n++) {
+    subOpts.push({
+      value: n,
+      name: n.toString(),
+    });
+  }
+};
+
+const matchValueOpts = (category: string) => {
+  const optSet = multipleKeyScales.find(ms => ms.key === category);
+  let vo = [];
+  if (optSet) {
+    const { items, range } = optSet;
+    if (items instanceof Array) {
+      vo = items.map(itemKey => {
+        return {
+          key: [category, itemKey].join('_'),
+          category,
+          name: itemKey,
+          value: 3,
+          options: buildSubOpts(range),
+        };
+      });
+    }
+  }
+  return vo;
+};
+
+const buildOptions = (category: string) => {
+  const keys = ['never', 'rarely', 'sometimes', 'always'];
+  return keys.map(key => {
+    const valueOpts = matchValueOpts(category);
+    return {
+      key,
+      valueOpts,
+    };
+  });
+};
 
 const matchPersonalityOptions = (subkey = 'personality') => {
   let questions = [];
@@ -377,11 +402,25 @@ const matchPersonalityOptions = (subkey = 'personality') => {
       .replace(/[^A-Za-z0-9]+/gi, '_')
       .replace(/(^|_)(the|i|a|an|of|in|on)_/gi, '_')
       .replace(/^_+|_+$/, '');
+    let multiscales = '';
+    let range = [0, 0];
+    switch (subkey) {
+      case 'personality':
+        multiscales = 'big5';
+        range = [1, 5];
+        break;
+      case 'jungian':
+        multiscales = 'jungian';
+        range = [1, 8];
+        break;
+    }
     return {
-      key: key,
+      key,
       prompt: prompt,
       type: 'multiple_key_scale',
-      options: options,
+      range,
+      multiscales,
+      options: buildOptions(multiscales),
       rules: [],
     };
   });
@@ -394,10 +433,6 @@ const getDefaultPreferences = (key = 'preference_options') => {
     case 'jungian':
     case 'ayurvedic':
     case 'quirks':
-    case 'spirituality':
-    case 'politics':
-    case 'topics':
-    case 'hobbies':
       return matchPersonalityOptions(subkey);
     case 'preference':
       return preferenceOptions;

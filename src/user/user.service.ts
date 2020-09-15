@@ -495,9 +495,16 @@ export class UserService {
           nickName: 1,
           active: 1,
           placenames: 1,
+          geo: 1,
           profiles: 1,
           gender: 1,
-          chart: 1,
+          charts: {
+            $filter: {
+              input: '$charts',
+              as: 'charts',
+              cond: { isDefaultBirthChart: true },
+            },
+          },
         },
       },
     ]);

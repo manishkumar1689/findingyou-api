@@ -34,6 +34,8 @@ import roleValues from './settings/roles';
 import paymentValues from './settings/payments-options';
 import countryValues from './settings/countries';
 import getDefaultPreferences from './settings/preference-options';
+import surveyList from './settings/survey-list';
+import multipleKeyScales from './settings/multiscales';
 import permissionValues from './settings/permissions';
 import { Role } from './interfaces/role.interface';
 import { EditStatusDTO } from './dto/edit-status.dto';
@@ -42,6 +44,7 @@ import { RemoveStatusDTO } from './dto/remove-status.dto';
 import { CountryOption } from './interfaces/country-option.interface';
 import { PreferenceOption } from './interfaces/preference-option.interface';
 import { AstrologicService } from 'src/astrologic/astrologic.service';
+import { SurveyItem } from './interfaces/survey-item';
 
 @Controller('user')
 export class UserController {
@@ -234,6 +237,36 @@ export class UserController {
       throw new NotFoundException('User does not exist!');
     }
     return res.status(HttpStatus.OK).json(user);
+  }
+
+  // Fetch preference options
+  @Get('survey-list')
+  async listSurveys(@Res() res) {
+    const setting = await this.settingService.getByKey('survey_list');
+    let data: Array<SurveyItem> = [];
+    if (!setting) {
+      data = surveyList;
+    } else {
+      if (setting.value instanceof Array) {
+        data = setting.value;
+      }
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('survey-multiscales')
+  async getSurveryMultiscales(@Res() res) {
+    const key = 'survey_multiscales';
+    const setting = await this.settingService.getByKey(key);
+    let data: Array<any> = [];
+    if (!setting) {
+      data = multipleKeyScales;
+    } else {
+      if (setting.value instanceof Array) {
+        data = setting.value;
+      }
+    }
+    return res.status(HttpStatus.OK).json(data);
   }
 
   // Fetch preference options
