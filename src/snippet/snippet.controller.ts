@@ -148,7 +148,7 @@ export class SnippetController {
       const { snippet } = data;
       valid = snippet instanceof Object;
     }
-    return res.status(HttpStatus.OK).json({ data, valid });
+    return res.status(HttpStatus.OK).json({ ...data, valid });
   }
 
   @Delete('delete/:key/:user')
