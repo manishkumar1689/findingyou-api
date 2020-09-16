@@ -4,4 +4,5 @@ export interface SurveyItem {
   readonly multiscales?: string;
   readonly type: string;
   readonly enabled: boolean;
+  readonly range?: number[];
 }

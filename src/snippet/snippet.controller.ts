@@ -121,13 +121,34 @@ export class SnippetController {
   }
 
   // Fetch a particular snippet using ID
-  @Get('snippet/:snippetID')
+  @Get('item/:snippetID')
   async getSnippet(@Res() res, @Param('snippetID') snippetID) {
     const snippet = await this.snippetService.getSnippet(snippetID);
     if (!snippet) {
       throw new NotFoundException('Snippet does not exist!');
     }
     return res.status(HttpStatus.OK).json(snippet);
+  }
+
+  // Fetch a particular snippet using ID
+  @Get('by-key/:key')
+  async getSnippetByKey(@Res() res, @Param('key') key) {
+    const snippet = await this.snippetService.getSnippetByKey(key);
+    if (!snippet) {
+      throw new NotFoundException('Snippet does not exist!');
+    }
+    return res.status(HttpStatus.OK).json(snippet);
+  }
+
+  @Get('by-key-start/:key')
+  async getSnippetByKeyPattern(@Res() res, @Param('key') key) {
+    const data = await this.snippetService.getSnippetByKeyStart(key);
+    let valid = false;
+    if (data instanceof Object) {
+      const { snippet } = data;
+      valid = snippet instanceof Object;
+    }
+    return res.status(HttpStatus.OK).json({ data, valid });
   }
 
   @Delete('delete/:key/:user')

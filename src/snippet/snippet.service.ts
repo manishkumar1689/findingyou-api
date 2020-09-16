@@ -64,6 +64,23 @@ export class SnippetService {
     return snippet;
   }
 
+  // Get a single Snippet
+  async getSnippetByKey(key: string): Promise<Snippet> {
+    const snippet = await this.snippetModel.findOne({ key }).exec();
+    return snippet;
+  }
+
+  async getSnippetByKeyStart(key: string): Promise<any> {
+    const snippet = await this.snippetModel.findOne({ key }).exec();
+    const data = { snippet, options: [] };
+    const rgx = new RegExp('^' + key + '_option_');
+    const related = await this.snippetModel.find({ key: rgx }).exec();
+    if (related.length > 0) {
+      data.options = related;
+    }
+    return data;
+  }
+
   // Bulk-edit submission status fields
   async bulkUpdate(bulkSnippetDTO: BulkSnippetDTO): Promise<BulkSnippetDTO> {
     const { items } = bulkSnippetDTO;
