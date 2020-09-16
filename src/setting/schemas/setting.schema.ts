@@ -25,6 +25,7 @@ export const SettingSchema = new mongoose.Schema({
       'array_float',
       'payments',
       'preferences',
+      'survey_list',
       'roles',
       'lookup_set',
       'languages',

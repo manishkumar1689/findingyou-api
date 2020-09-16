@@ -185,22 +185,6 @@ const qs3 = [
   'I become overwhelmed by events',
   'I have a lot of fun',
   'I believe that there is no absolute right or wrong',
-  'I feel sympathy for those who are worse off than myself',
-  'I make rash decisions',
-  'I am afraid of many things',
-  'I avoid coming into contact with people if I can help it',
-  'I love to daydream',
-  'I trust what people say',
-  'I handle tasks methodically',
-  'I frequently lose my temper',
-  'I prefer to be alone',
-  'I do not like poetry',
-  'I take advantage of others',
-  'I always leave the place in a mess',
-  'I am often down in the dumps',
-  'I take control of situations',
-  'I rarely notice my emotional reactions and feelings',
-  'I am indifferent to the feelings of others',
 ];
 
 const qs4 = [
@@ -211,12 +195,6 @@ const qs4 = [
   'I insult people',
   'I do just enough work to get by',
   'I easily resist temptations',
-  'I enjoy being reckless',
-  'I have difficulty understanding abstract ideas',
-  'I have a high opinion of myself',
-  'I waste my time',
-  "I feel that I'm unable to deal with things",
-  'I love life',
 ];
 
 const qs5 = [
@@ -262,6 +240,37 @@ const qs8 = [
   'I believe that we should be very tough on crime',
   'I try not to think about the needy',
   'I act without thinking',
+];
+
+const qs9 = [
+  'I feel sympathy for those who are worse off than myself',
+  'I make rash decisions',
+  'I am afraid of many things',
+  'I avoid coming into contact with people if I can help it',
+  'I love to daydream',
+  'I trust what people say',
+  'I handle tasks methodically',
+  'I frequently lose my temper',
+];
+
+const qs10 = [
+  'I prefer to be alone',
+  'I do not like poetry',
+  'I take advantage of others',
+  'I always leave the place in a mess',
+  'I am often down in the dumps',
+  'I take control of situations',
+  'I rarely notice my emotional reactions and feelings',
+  'I am indifferent to the feelings of others',
+];
+
+const qs11 = [
+  'I enjoy being reckless',
+  'I have difficulty understanding abstract ideas',
+  'I have a high opinion of myself',
+  'I waste my time',
+  "I feel that I'm unable to deal with things",
+  'I love life',
 ];
 
 const subOpts = [
@@ -394,6 +403,15 @@ const matchPersonalityOptions = (subkey = 'personality') => {
     case 'hobbies':
       questions = qs8;
       break;
+    case 'diet':
+      questions = qs9;
+      break;
+    case 'smoking':
+      questions = qs10;
+      break;
+    case 'feedback':
+      questions = qs11;
+      break;
   }
   return questions.map(prompt => {
     const key = prompt
@@ -429,15 +447,10 @@ const matchPersonalityOptions = (subkey = 'personality') => {
 const getDefaultPreferences = (key = 'preference_options') => {
   const subkey = key.split('_option').shift();
   switch (subkey) {
-    case 'personality':
-    case 'jungian':
-    case 'ayurvedic':
-    case 'quirks':
-      return matchPersonalityOptions(subkey);
     case 'preference':
       return preferenceOptions;
     default:
-      return [];
+      return matchPersonalityOptions(subkey);
   }
 };
 
