@@ -8,8 +8,8 @@ import { UserSchema } from '../user/schemas/user.schema';
 @Module({
   imports: [
     MongooseModule.forFeature([
-      { name: 'Setting', schema: SettingSchema }, 
-      {name: 'User', schema: UserSchema },
+      { name: 'Setting', schema: SettingSchema },
+      { name: 'User', schema: UserSchema },
     ]),
   ],
   providers: [SettingService, UserService],

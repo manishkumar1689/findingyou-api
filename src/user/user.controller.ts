@@ -45,6 +45,7 @@ import { CountryOption } from './interfaces/country-option.interface';
 import { PreferenceOption } from './interfaces/preference-option.interface';
 import { AstrologicService } from 'src/astrologic/astrologic.service';
 import { SurveyItem } from './interfaces/survey-item';
+import { SnippetService } from 'src/snippet/snippet.service';
 
 @Controller('user')
 export class UserController {
@@ -52,6 +53,7 @@ export class UserController {
     private userService: UserService,
     private messageService: MessageService,
     private settingService: SettingService,
+    private snippetService: SnippetService,
     private astrologicService: AstrologicService,
     private geoService: GeoService,
   ) {}
@@ -278,7 +280,18 @@ export class UserController {
     if (prefOpts instanceof Array) {
       data.num = prefOpts.length;
       data.valid = data.num > 0;
-      data.items = prefOpts;
+      data.items = [];
+      for (const po of prefOpts) {
+        const comboKey = [key, po.key].join('__');
+        const versions = await this.snippetService.getSnippetByKeyStart(
+          comboKey,
+        );
+        data.items.push({
+          ...po,
+          hasVersions: versions.snippet instanceof Object,
+          versions,
+        });
+      }
     }
     return res.status(HttpStatus.OK).json(data);
   }
