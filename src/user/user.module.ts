@@ -12,6 +12,8 @@ import { ChartSchema } from 'src/astrologic/schemas/chart.schema';
 import { AstrologicService } from 'src/astrologic/astrologic.service';
 import { BodySpeedSchema } from 'src/astrologic/schemas/body-speed.schema';
 import { PairedChartSchema } from 'src/astrologic/schemas/paired-chart.schema';
+import { SnippetSchema } from 'src/snippet/schemas/snippet.schema';
+import { SnippetService } from 'src/snippet/snippet.service';
 
 @Global()
 @Module({
@@ -21,6 +23,7 @@ import { PairedChartSchema } from 'src/astrologic/schemas/paired-chart.schema';
       { name: 'User', schema: UserSchema },
       { name: 'Message', schema: MessageSchema },
       { name: 'Setting', schema: SettingSchema },
+      { name: 'Snippet', schema: SnippetSchema },
       { name: 'Chart', schema: ChartSchema },
       { name: 'BodySpeed', schema: BodySpeedSchema },
       { name: 'PairedChart', schema: PairedChartSchema },
@@ -30,6 +33,7 @@ import { PairedChartSchema } from 'src/astrologic/schemas/paired-chart.schema';
     UserService,
     MessageService,
     SettingService,
+    SnippetService,
     AstrologicService,
     GeoService,
   ],

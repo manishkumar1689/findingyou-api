@@ -52,10 +52,7 @@ export class SnippetService {
 
   // fetch all snippets with core fields only
   async getAll(): Promise<Snippet[]> {
-    const Snippets = await this.snippetModel
-      .find()
-      .select({ key: 1, values: 1, format: 1, _id: 0 })
-      .exec();
+    const Snippets = await this.snippetModel.find().exec();
     return Snippets;
   }
   // Get a single Snippet
@@ -71,10 +68,23 @@ export class SnippetService {
   }
 
   async getSnippetByKeyStart(key: string): Promise<any> {
-    const snippet = await this.snippetModel.findOne({ key }).exec();
+    const fields = {
+      key: 1,
+      format: 1,
+      values: 1,
+      _id: 0,
+      modifiedAt: 1,
+    };
+    const snippet = await this.snippetModel
+      .findOne({ key })
+      .select(fields)
+      .exec();
     const data = { snippet, options: [] };
     const rgx = new RegExp('^' + key + '_option_');
-    const related = await this.snippetModel.find({ key: rgx }).exec();
+    const related = await this.snippetModel
+      .find({ key: rgx })
+      .select(fields)
+      .exec();
     if (related.length > 0) {
       data.options = related;
     }
