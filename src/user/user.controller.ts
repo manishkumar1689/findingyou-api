@@ -277,18 +277,38 @@ export class UserController {
     const surveyKey = notEmptyString(key, 4) ? key : 'preference_options';
     const prefOpts = await this.getPreferenceOptions(surveyKey);
     const data = { valid: false, num: 0, items: [] };
+    const mapLocalised = v => {
+      return {
+        lang: v.lang,
+        text: v.text,
+      };
+    };
     if (prefOpts instanceof Array) {
       data.num = prefOpts.length;
       data.valid = data.num > 0;
       data.items = [];
       for (const po of prefOpts) {
         const comboKey = [key, po.key].join('__');
-        const versions = await this.snippetService.getSnippetByKeyStart(
-          comboKey,
-        );
+        const vData = await this.snippetService.getSnippetByKeyStart(comboKey);
+        const hasVersions = vData.snippet instanceof Object;
+        const hasOptionVersions = vData.options.length > 0;
+        const versions = {
+          prompt: hasVersions ? vData.snippet.values.map(mapLocalised) : [],
+          options: {},
+        };
+        const optMap = new Map<string, Array<any>>();
+        if (hasOptionVersions) {
+          vData.options.forEach(optSet => {
+            const vals = optSet.values
+              .filter(v => v instanceof Object)
+              .map(mapLocalised);
+            optMap.set(optSet.key.split('_option_').pop(), vals);
+          });
+          versions.options = Object.fromEntries(optMap.entries());
+        }
         data.items.push({
           ...po,
-          hasVersions: versions.snippet instanceof Object,
+          hasVersions,
           versions,
         });
       }
