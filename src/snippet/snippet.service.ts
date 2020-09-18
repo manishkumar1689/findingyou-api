@@ -70,10 +70,8 @@ export class SnippetService {
   async getSnippetByKeyStart(key: string): Promise<any> {
     const fields = {
       key: 1,
-      format: 1,
       values: 1,
       _id: 0,
-      modifiedAt: 1,
     };
     const snippet = await this.snippetModel
       .findOne({ key })

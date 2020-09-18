@@ -513,7 +513,6 @@ export class AstrologicController {
         if (surfaceData instanceof Object) {
           surfaceAscendant = surfaceData.ascendant;
           surfaceTzOffset = surfaceTime.tzOffset;
-          console.log(surfaceAscendant, surfaceTime);
         }
       }
       const { user } = inData;
