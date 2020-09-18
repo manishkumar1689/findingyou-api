@@ -16,6 +16,7 @@ import { mailDetails } from './.config';
 import { UserService } from './user/user.service';
 import { UserSchema } from './user/schemas/user.schema';
 import { AppGateway } from './app.gateway';
+import { FeedbackModule } from './feedback/feedback.module';
 @Module({
   imports: [
     MongooseModule.forRoot(
@@ -46,6 +47,7 @@ import { AppGateway } from './app.gateway';
     SettingModule,
     MessageModule,
     SnippetModule,
+    FeedbackModule,
   ],
   controllers: [AppController],
   providers: [AppService, UserService, AppGateway],
