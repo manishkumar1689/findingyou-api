@@ -24,4 +24,9 @@ export const MediaItemSchema = new mongoose.Schema({
     enum: ['image', 'video', 'audio'],
   },
   title: String,
+  variants: {
+    type: [String],
+    default: [],
+    required: false,
+  },
 });

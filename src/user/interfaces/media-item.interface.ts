@@ -9,4 +9,5 @@ export interface MediaItem extends Document {
   readonly attributes: Attributes;
   readonly type: string;
   readonly title: string;
+  readonly variants?: string[];
 }
