@@ -16,6 +16,7 @@ import { Status } from './interfaces/status.interface';
 import { Payment } from './interfaces/payment.interface';
 import { PaymentOption } from './interfaces/payment-option.interface';
 import { PaymentDTO } from './dto/payment.dto';
+import { ProfileDTO } from './dto/profile.dto';
 
 const userSelectPaths = [
   '_id',
@@ -516,6 +517,179 @@ export class UserService {
       return user.active;
     }
     return valid;
+  }
+
+  async savePreference(userID: string, preference = null) {
+    const user = await this.userModel.findById(userID);
+    const data = {
+      user: null,
+      valid: false,
+    };
+    if (user instanceof Object && preference instanceof Object) {
+      const pKeys = Object.keys(preference);
+      if (
+        pKeys.includes('key') &&
+        pKeys.includes('value') &&
+        pKeys.includes('type')
+      ) {
+        const userData = user.toObject();
+        const { preferences } = userData;
+        const prefs = preferences instanceof Array ? preferences : [];
+        const currPreferenceIndex = preferences.findIndex(
+          pr => pr.key === preference.key,
+        );
+        if (currPreferenceIndex >= 0) {
+          prefs[currPreferenceIndex].value = preference.value;
+        } else {
+          prefs.push(preference);
+        }
+        const dt = new Date();
+        data.user = await this.userModel.findByIdAndUpdate(
+          userID,
+          { preferences: prefs, modifiedAt: dt },
+          {
+            new: true,
+          },
+        );
+        data.valid = true;
+      }
+    }
+  }
+
+  async saveProfile(userID: string, profile: ProfileDTO) {
+    const user = await this.userModel.findById(userID);
+    const data = {
+      user: null,
+      valid: false,
+    };
+    if (user instanceof Object) {
+      const userData = user.toObject();
+      if (user.profiles instanceof Array) {
+        const profileIndex = await user.profiles.findIndex(
+          up => up.type === profile.type,
+        );
+        if (profileIndex >= 0) {
+          const { createdAt } = userData.profiles[profileIndex];
+          userData.profiles[profileIndex] = { ...profile, createdAt };
+        } else {
+          userData.profiles.push(profile);
+        }
+      } else {
+        userData.profiles = [profile];
+      }
+      const dt = new Date();
+      data.user = await this.userModel.findByIdAndUpdate(
+        userID,
+        { profiles: userData.profiles, modifiedAt: dt },
+        {
+          new: true,
+        },
+      );
+      data.valid = true;
+    }
+    return data;
+  }
+
+  async saveProfileImage(userID: string, type: string, fileRef = null) {
+    const user = await this.userModel.findById(userID);
+    const data = {
+      user: null,
+      valid: false,
+    };
+    if (user instanceof Object) {
+      const userData = this.assignProfile(user, type, fileRef);
+      const dt = new Date();
+      data.user = await this.userModel.findByIdAndUpdate(
+        userID,
+        { profiles: userData.profiles, modifiedAt: dt },
+        {
+          new: true,
+        },
+      );
+      data.valid = userData instanceof Object;
+      data.user = userData;
+    }
+    return data;
+  }
+
+  assignProfile(user: User, profileRef = null, mediaItemRef = null) {
+    const userData = user.toObject();
+    let profile: any = {};
+    let hasProfileData = false;
+    if (profileRef instanceof Object) {
+      profile = profileRef;
+      hasProfileData = true;
+    } else if (notEmptyString(profileRef)) {
+      profile = {
+        type: profileRef,
+        text: '',
+      };
+    }
+    let mediaItem: any = null;
+    let hasMediaItem = false;
+    if (mediaItemRef instanceof Object) {
+      const mediaKeys = Object.keys(mediaItemRef);
+      if (mediaKeys.includes('filename')) {
+        mediaItem = mediaItemRef;
+        hasMediaItem = true;
+      }
+    }
+    if (user.profiles instanceof Array) {
+      const profileIndex = user.profiles.findIndex(
+        up => up.type === profile.type,
+      );
+      if (profileIndex >= 0) {
+        const currProfile = userData.profiles[profileIndex];
+        const editedProfile: Map<string, any> = new Map(
+          Object.entries(currProfile),
+        );
+        Object.entries(currProfile).forEach(entry => {
+          const [k, v] = entry;
+          switch (k) {
+            case 'createdAt':
+              break;
+            case 'text':
+              if (typeof v === 'string') {
+                editedProfile.set(k, v);
+              }
+              break;
+          }
+        });
+        if (hasMediaItem) {
+          if (editedProfile.has('mediaItems')) {
+            let items = editedProfile.get('mediaItems');
+            let itemIndex = -1;
+            if (items instanceof Array) {
+              itemIndex = items.findIndex(
+                mi => mi.filename === mediaItem.filename,
+              );
+            } else {
+              items = [];
+            }
+            if (itemIndex >= 0) {
+              items[itemIndex] = mediaItem;
+            } else {
+              items.push(mediaItem);
+            }
+          }
+        }
+        editedProfile.set('createdAt', currProfile.createdAt);
+        userData.profiles[profileIndex] = Object.fromEntries(
+          editedProfile.entries(),
+        );
+      } else {
+        if (hasMediaItem) {
+          profile.mediaItems = [mediaItem];
+        }
+        userData.profiles.push(profile);
+      }
+    } else {
+      if (hasMediaItem) {
+        profile.mediaItems = [mediaItem];
+      }
+      userData.profiles = [profile];
+    }
+    return userData;
   }
 
   hasAdminRole(user: User): boolean {

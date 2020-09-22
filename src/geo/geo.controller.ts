@@ -91,7 +91,6 @@ export class GeoController {
   @Get('timezonedb/:loc/:dt')
   async timezoneDb(@Res() res, @Param('loc') loc, @Param('dt') dt) {
     const data = { valid: false, result: {} };
-    console.log(dt);
     if (validISODateString(dt)) {
       const geo = locStringToGeo(loc);
       const result = await this.geoService.fetchTimezoneOffset(geo, dt);

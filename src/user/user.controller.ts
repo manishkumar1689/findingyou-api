@@ -11,6 +11,8 @@ import {
   NotFoundException,
   Delete,
   Param,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { MessageService } from '../message/message.service';
@@ -22,7 +24,7 @@ import { validEmail, notEmptyString } from '../lib/validators';
 import { smartCastInt } from '../lib/converters';
 import { Request } from 'express';
 import { fromBase64, toBase64 } from '../lib/hash';
-import { maxResetMinutes } from '../.config';
+import { maxResetMinutes, imageSizes } from '../.config';
 import * as bcrypt from 'bcrypt';
 import {
   extractDocId,
@@ -46,6 +48,14 @@ import { PreferenceOption } from './interfaces/preference-option.interface';
 import { AstrologicService } from 'src/astrologic/astrologic.service';
 import { SurveyItem } from './interfaces/survey-item';
 import { SnippetService } from 'src/snippet/snippet.service';
+import { ProfileDTO } from './dto/profile.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  generateFileName,
+  generateImageStyle,
+  uploadMediaFile,
+} from 'src/lib/files';
+import { PreferenceDTO } from './dto/preference.dto';
 
 @Controller('user')
 export class UserController {
@@ -629,5 +639,76 @@ export class UserController {
       }
     }
     return data;
+  }
+
+  @Put('profile/save/:userID')
+  async saveProfile(
+    @Res() res,
+    @Param('userID') userID,
+    @Body() profileDTO: ProfileDTO,
+  ) {
+    const data = await this.userService.saveProfile(userID, profileDTO);
+    return res.json(data);
+  }
+
+  @Put('preference/save/:userID')
+  async savePreference(
+    @Res() res,
+    @Param('userID') userID,
+    @Body() preferenceDTO: PreferenceDTO,
+  ) {
+    const data = await this.userService.savePreference(userID, preferenceDTO);
+    return res.json(data);
+  }
+
+  @Post('profile-upload/:userID/:type/:name?/:title?')
+  @UseInterceptors(FileInterceptor('file'))
+  async upload(
+    @Res() res,
+    @Param('userID') userID,
+    @Param('type') type,
+    @Param('name') name = '',
+    @Param('title') title = '',
+    @UploadedFile() file,
+  ) {
+    let data: any = { valid: false, fileData: null };
+    if (file instanceof Object) {
+      const { originalname, mimetype, size, buffer } = file;
+      const fn = notEmptyString(name, 5)
+        ? name
+        : generateFileName(userID, originalname);
+
+      const fileData = {
+        filename: fn,
+        mime: mimetype,
+        size,
+        title,
+      };
+      data = { valid: false, fileData };
+      const intSize = parseInt(size, 10);
+      const params = imageSizes.thumb;
+      const { filename, attributes } = uploadMediaFile(
+        userID,
+        originalname,
+        buffer,
+        'image',
+      );
+      if (filename.length > 5) {
+        const fileData = {
+          filename,
+          mime: mimetype,
+          size: intSize,
+          source: 'local',
+          attributes,
+        };
+        const savedSub = await this.userService.saveProfileImage(
+          userID,
+          type,
+          fileData,
+        );
+        data.user = savedSub;
+      }
+    }
+    return res.json(data);
   }
 }

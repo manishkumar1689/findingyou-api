@@ -60,6 +60,27 @@ export const mailService = {
   secret: '',
 };
 
+export const imageSizes = {
+  thumb: {
+    mode: 'resize',
+    width: 640,
+    height: 640,
+    quality: 92,
+  },
+  half: {
+    mode: 'resize',
+    width: 1280,
+    height: 1280,
+    quality: 92,
+  },
+  large: {
+    mode: 'resize',
+    width: 2560,
+    height: 2560,
+    quality: 88,
+  },
+};
+
 export const webBaseUrl = 'https://www.findingyou.co';
 
 export const backupPath = '/var/www/findingyou.co/backups';
@@ -73,3 +94,5 @@ export const exportDirectory = '../exports';
 export const logsDirectory = '../logs';
 
 export const validMediaFileExtensions = ['jpg', 'jpeg', 'png', 'svg', 'mp3'];
+
+export const validImageExtensions = ['jpg', 'jpeg', 'png'];

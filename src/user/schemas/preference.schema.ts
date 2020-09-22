@@ -30,9 +30,4 @@ export const PreferenceSchema = new mongoose.Schema({
     default: 'string',
     required: true,
   },
-  rules: {
-    type: [Mixed],
-    default: [],
-    required: false,
-  },
 });
