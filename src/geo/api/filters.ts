@@ -38,9 +38,6 @@ export const filterDefaultName = (
 
 export const filterToponyms = (toponyms: Array<Toponym>, locality = '') => {
   const items = toponyms.filter(row => notEmptyString(row.name));
-  if (items.length > 0 && notEmptyString(locality)) {
-    console.log(items, locality);
-  }
   const adm1Index = toponyms.findIndex(
     tp => tp.name.toLowerCase() === 'scotland',
   );
