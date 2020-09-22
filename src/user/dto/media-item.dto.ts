@@ -22,4 +22,7 @@ export class MediaItemDTO {
 
   @ApiProperty()
   readonly title: string;
+
+  @ApiProperty()
+  readonly variants?: string[];
 }
