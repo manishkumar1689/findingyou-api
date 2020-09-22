@@ -25,7 +25,11 @@ const permissionValues = [
   },
   {
     key: 'image_upload',
-    name: 'May upload extra images',
+    name: 'May upload up to 3 images per profile type',
+  },
+  {
+    key: 'image_upload_extra',
+    name: 'May upload up to 15 images per profile type',
   },
   {
     key: 'contact_other_members',

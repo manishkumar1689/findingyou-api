@@ -5,11 +5,12 @@ import {
   exportDirectory,
   filesDirectory,
   backupPath,
+  imageSizes,
 } from '../.config';
 import { hashMapToObject } from './entities';
 import { imageSize } from 'image-size';
 import { notEmptyString } from './validators';
-import { isObject } from 'util';
+import { resizeImage } from './resize';
 
 export const mimeFileFilter = (req, file, callback) => {
   const ext = path.extname(file.originalname);
@@ -29,12 +30,12 @@ export interface FileData {
 }
 
 export const uploadMediaFile = (
-  workID: string,
+  userID: string,
   originalname: string,
   data: any,
   imageType = 'media',
 ) => {
-  const filename = generateFileName(workID, originalname);
+  const filename = generateFileName(userID, originalname);
   const extension = filename
     .split('.')
     .pop()
@@ -43,12 +44,11 @@ export const uploadMediaFile = (
   const fullPath = buildFullPath(filename);
   writeMediaFile(filename, data);
   let exists = false;
+  let isBitmap = false;
   switch (extension) {
     case 'jpg':
     case 'jpeg':
     case 'png':
-    case 'gif':
-    case 'svg':
       exists = fs.existsSync(fullPath);
       if (exists) {
         const dims = imageSize(fs.readFileSync(fullPath));
@@ -60,16 +60,26 @@ export const uploadMediaFile = (
       } else {
         attrsMap.set('exists', 0);
       }
+      isBitmap = true;
       break;
+  }
+  if (isBitmap) {
+    resizeImage(fullPath, imageSizes.thumb);
+    setTimeout(() => {
+      resizeImage(fullPath, imageSizes.half);
+    }, 1000);
+    setTimeout(() => {
+      resizeImage(fullPath, imageSizes.large);
+    }, 2000);
   }
   return {
     filename,
-    attributes: hashMapToObject(attrsMap),
+    attributes: Object.fromEntries(attrsMap.entries()),
     exists,
   };
 };
 
-export const generateFileName = (workID: string, originalname: string) => {
+export const generateFileName = (userID: string, originalname: string) => {
   let extension = originalname
     .split('.')
     .pop()
@@ -80,14 +90,14 @@ export const generateFileName = (workID: string, originalname: string) => {
       break;
   }
   let filename = '';
-  if (workID.indexOf('-') > 6) {
-    filename = workID + '.' + extension;
+  if (userID.indexOf('-') > 6) {
+    filename = userID + '.' + extension;
   } else {
     let ts = new Date().getTime() % 1000000;
-    filename = buildFileName(workID, ts, extension);
+    filename = buildFileName(userID, ts, extension);
     if (mediaFileExists(filename)) {
       ts = new Date().getTime() % 999888;
-      filename = filename = buildFileName(workID, ts, extension);
+      filename = filename = buildFileName(userID, ts, extension);
     }
   }
   return filename;

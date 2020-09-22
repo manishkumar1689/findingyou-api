@@ -162,8 +162,9 @@ export class SettingController {
     };
     const setting = await this.settingService.getByKey('languages');
     const showAll = mode === 'all';
-    const dictMode = mode === 'dict';
-    const getDictOpts = mode !== 'app';
+    const bothMode = mode === 'both';
+    const appMode = mode === 'app' || bothMode;
+    const getDictOpts = mode !== 'app' || bothMode;
     const getAppOpts = mode !== 'dict';
     const hasSetting =
       setting instanceof Object && setting.value instanceof Array;
@@ -206,10 +207,16 @@ export class SettingController {
             inDict,
           };
         })
-      : dictMode
-      ? dictLangs
-      : appLangs;
-
+      : appMode
+      ? appLangs
+      : dictLangs;
+    if (bothMode) {
+      dictLangs.forEach(row => {
+        if (values.some(lang => lang.key === row.key) === false) {
+          values.push(row);
+        }
+      });
+    }
     const data = {
       valid: values.length > 0,
       languages: values,
