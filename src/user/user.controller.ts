@@ -687,7 +687,7 @@ export class UserController {
       data = { valid: false, fileData };
       const intSize = parseInt(size, 10);
       const params = imageSizes.thumb;
-      const { filename, attributes } = uploadMediaFile(
+      const { filename, attributes, variants } = uploadMediaFile(
         userID,
         originalname,
         buffer,
@@ -700,6 +700,7 @@ export class UserController {
           size: intSize,
           source: 'local',
           attributes,
+          variants,
         };
         const savedSub = await this.userService.saveProfileImage(
           userID,

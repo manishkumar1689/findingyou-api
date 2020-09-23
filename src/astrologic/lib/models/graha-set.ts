@@ -19,6 +19,7 @@ import maitriData from '../settings/maitri-data';
 import { GeoPos } from '../../interfaces/geo-pos';
 import { BodyTransition } from 'src/astrologic/interfaces/body-transition';
 import { HouseSet } from './house-set';
+import { nakshatra27, nakshatra28 } from '../helpers';
 
 interface VariantGroup {
   num: number;
@@ -153,6 +154,14 @@ export class Graha extends BaseObject {
 
   get nakshatraDegrees() {
     return 360 / nakshatraValues.length;
+  }
+
+  get nakshatra27() {
+    return nakshatra27(this.lng);
+  }
+
+  get nakshatra28() {
+    return nakshatra28(this.lng);
   }
 
   get padaDegrees() {

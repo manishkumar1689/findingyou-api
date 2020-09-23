@@ -9,7 +9,7 @@ import {
 } from '../.config';
 import { hashMapToObject } from './entities';
 import { imageSize } from 'image-size';
-import { notEmptyString } from './validators';
+import { isNumber, isNumeric, notEmptyString } from './validators';
 import { resizeImage } from './resize';
 
 export const mimeFileFilter = (req, file, callback) => {
@@ -42,7 +42,7 @@ export const uploadMediaFile = (
     .toLowerCase();
   const attrsMap = new Map<string, any>();
   const fullPath = buildFullPath(filename);
-  writeMediaFile(filename, data);
+  writeMediaFile(filename, data, imageType);
   let exists = false;
   let isBitmap = false;
   switch (extension) {
@@ -63,20 +63,41 @@ export const uploadMediaFile = (
       isBitmap = true;
       break;
   }
+  const variants = [];
   if (isBitmap) {
-    resizeImage(fullPath, imageSizes.thumb);
-    setTimeout(() => {
-      resizeImage(fullPath, imageSizes.half);
-    }, 1000);
-    setTimeout(() => {
-      resizeImage(fullPath, imageSizes.large);
-    }, 2000);
+    let ms = 0;
+    Object.entries(imageSizes).forEach(entry => {
+      const [key, imgSize] = entry;
+      if (imageAttrsLargerThan(attrsMap, imgSize)) {
+        setTimeout(() => {
+          resizeImage(fullPath, imgSize);
+        }, ms);
+        ms += 1000;
+        variants.push(['resize', imgSize.width, imgSize.height].join('-'));
+      }
+    });
   }
   return {
     filename,
     attributes: Object.fromEntries(attrsMap.entries()),
+    variants,
     exists,
   };
+};
+
+const imageAttrsLargerThan = (attrs: Map<string, any>, imgSize = null) => {
+  if (imgSize instanceof Object) {
+    const { width, height } = imgSize;
+    if (
+      attrs.has('width') &&
+      isNumber(width) &&
+      attrs.has('height') &&
+      isNumber(height)
+    ) {
+      return attrs.get('width') > width || attrs.get('height') > height;
+    }
+  }
+  return false;
 };
 
 export const generateFileName = (userID: string, originalname: string) => {
