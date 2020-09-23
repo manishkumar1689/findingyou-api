@@ -307,3 +307,79 @@ const grahaValues = [
 ];
 
 export default grahaValues;
+
+export const naturalBenefics = ['mo', 've', 'ju'];
+export const naturalMalefics = ['su', 'ma', 'sa'];
+export const naturalNeutral = ['me'];
+
+export const functionalHouseNatures = [
+  { house: 1, nature: 'b', index: 0 },
+  { house: 2, nature: 'n', set: 2, index: 0 },
+  { house: 3, nature: 'm', index: 0 },
+  { house: 4, nature: 'n', set: 1, index: 0 },
+  { house: 5, nature: 'b', index: 1 },
+  { house: 6, nature: 'm', index: 1 },
+  { house: 7, nature: 'n', set: 1, index: 1 },
+  { house: 8, nature: 'n', set: 2, index: 2 },
+  { house: 9, nature: 'b', index: 2 },
+  { house: 10, nature: 'n', set: 1, index: 2 },
+  { house: 11, nature: 'm', index: 2 },
+  { house: 12, nature: 'n', set: 2, index: 0 },
+];
+
+export const aspectGroups = [
+  [
+    { key: 'conjunction', div: 1, fac: 1, cg: 'red' },
+    { key: 'opposition', div: 2, fac: 1, cg: 'red' },
+    { key: 'trine', div: 3, fac: 1, cg: 'blue' },
+    { key: 'square', div: 4, fac: 1, cg: 'red' },
+  ],
+  [{ key: 'sextile', div: 6, fac: 1, cg: 'green' }],
+  [
+    { key: 'sesqui-square', div: 3, fac: 3, cg: 'red' },
+    { key: 'inconjunction', div: 12, fac: 5, cg: 'black' },
+    { key: 'semi-square', div: 8, fac: 1, cg: 'red' },
+  ],
+  [
+    { key: 'semi-sextile', div: 2, fac: 1, cg: 'grey' },
+    { key: 'quintile', div: 5, fac: 1, cg: 'grey' },
+    { key: 'bi-quintile', div: 5, fac: 2, cg: 'grey' },
+  ],
+  [
+    { key: 'virgintile', div: 20, fac: 1, cg: 'grey' },
+    { key: 'quindecile', div: 24, fac: 11, cg: 'grey' },
+    { key: 'undecile', div: 11, fac: 1, cg: 'grey' },
+    { key: 'dectile', div: 10, fac: 1, cg: 'grey' },
+    { key: 'novile', div: 9, fac: 1, cg: 'grey' },
+    { key: 'bi-novile', div: 9, fac: 2, cg: 'grey' },
+    { key: 'quad-novile', div: 9, fac: 4, cg: 'grey' },
+    { key: 'tri-decile', div: 10, fac: 3, cg: 'grey' },
+    { key: 'tri-septile', div: 7, fac: 3, cg: 'grey' },
+    { key: 'bi-septile', div: 7, fac: 2, cg: 'grey' },
+    { key: 'septile', div: 7, fac: 1, cg: 'grey' },
+  ],
+];
+
+export const orbGrahaMatches = [
+  { group: 1, orbs: [12, 5, 3, 1, 0.5], keys: ['su', 'mo'] },
+  { group: 2, orbs: [7, 5, 2, 1, 0.5], keys: ['me', 've', 'ma'] },
+  { group: 3, orbs: [5, 2, 1, 0.5], keys: ['ju', 'sa'] },
+  { group: 4, orbs: [3, 2, 1, 1, 0.5], keys: ['ur', 'ne', 'pl'] },
+  { group: 6, orbs: [1, 0, 0, 0, 0], keys: ['ra', 'ke'] },
+  { group: 7, orbs: [7, 5, 2, 1, 0.5], keys: ['as', 'ds', 'mc', 'ic'] },
+];
+
+export const rulerSignsMap = (): Map<string, number[]> => {
+  const mp = new Map<string, number[]>();
+  grahaValues.forEach(gr => {
+    if (gr instanceof Object) {
+      const { ownSign, jyNum } = gr;
+      if (jyNum) {
+        if (jyNum > 0 && jyNum <= 9 && ownSign instanceof Array) {
+          mp.set(gr.key, ownSign);
+        }
+      }
+    }
+  });
+  return mp;
+};

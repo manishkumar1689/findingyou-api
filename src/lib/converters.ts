@@ -79,3 +79,20 @@ export const sanitize = (str: string, separator = '-') => {
     .trim()
     .replace(/[^a-z0-9]+/g, separator);
 };
+
+export const zeroPad = (inval: number | string, places = 2) => {
+  let num = 0;
+  if (typeof inval === 'string') {
+    num = parseInt(inval);
+  } else if (typeof inval === 'number') {
+    num = inval;
+  }
+  const strs: Array<string> = [];
+  const len = num > 0 ? Math.floor(Math.log10(num)) + 1 : 1;
+  if (num < Math.pow(10, places - 1)) {
+    const ep = places - len;
+    strs.push('0'.repeat(ep));
+  }
+  strs.push(num.toString());
+  return strs.join('');
+};

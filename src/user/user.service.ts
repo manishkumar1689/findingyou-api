@@ -17,7 +17,7 @@ import { Payment } from './interfaces/payment.interface';
 import { PaymentOption } from './interfaces/payment-option.interface';
 import { PaymentDTO } from './dto/payment.dto';
 import { ProfileDTO } from './dto/profile.dto';
-
+import { simplifyChart } from '../astrologic/lib/member-charts';
 const userSelectPaths = [
   '_id',
   'fullName',
@@ -477,14 +477,14 @@ export class UserService {
   }
 
   async members(criteria = null) {
-    return this.userModel.aggregate([
+    const userCharts = await this.userModel.aggregate([
       { $match: { active: true } },
       {
         $lookup: {
           from: 'charts',
           localField: '_id',
           foreignField: 'user',
-          as: 'charts',
+          as: 'chart',
         },
       },
       {
@@ -499,16 +499,33 @@ export class UserService {
           geo: 1,
           profiles: 1,
           gender: 1,
-          charts: {
+          chart: {
             $filter: {
-              input: '$charts',
-              as: 'charts',
+              input: '$chart',
+              as: 'chart',
               cond: { isDefaultBirthChart: true },
             },
           },
         },
       },
     ]);
+    return userCharts.map(item => {
+      let chart: any = {};
+      let hasChart = false;
+      if (item.chart instanceof Array) {
+        if (item.chart.length > 0) {
+          const index = item.chart.findIndex(c => c.isDefaultBirthChart);
+          if (index >= 0) {
+            chart = simplifyChart(item.chart[index]);
+            hasChart = chart instanceof Object;
+          }
+        }
+      }
+      if (item.geo) {
+        delete item.geo._id;
+      }
+      return { ...item, chart, hasChart };
+    });
   }
 
   hasRole(user: User, role: string): boolean {
@@ -554,6 +571,7 @@ export class UserService {
         data.valid = true;
       }
     }
+    return data;
   }
 
   async saveProfile(userID: string, profile: ProfileDTO) {
