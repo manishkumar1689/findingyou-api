@@ -9,7 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { hashSalt } from '../.config';
 import { generateHash } from '../lib/hash';
 import * as moment from 'moment-timezone';
-import { notEmptyString } from 'src/lib/validators';
+import { isNumber, isNumeric, notEmptyString } from 'src/lib/validators';
 import roleValues from './settings/roles';
 import { Role } from './interfaces/role.interface';
 import { Status } from './interfaces/status.interface';
@@ -252,6 +252,15 @@ export class UserService {
         case 'mode':
           userData.set(key, val);
           break;
+        case 'geo':
+          if (val instanceof Object) {
+            const { lat, lng } = val;
+            if (isNumeric(lat) && isNumeric(lng)) {
+              userData.set(key, val);
+              userData.set('coords', [lng, lat]);
+            }
+          }
+          break;
         default:
           userData.set(key, val);
           break;
@@ -477,11 +486,16 @@ export class UserService {
   }
 
   async members(criteria = null) {
-    const filter =
-      criteria instanceof Object
-        ? new Map(Object.entries(criteria))
-        : new Map<string, any>();
+    const filter = new Map<string, any>();
     filter.set('active', true);
+    const latLngDist = { lat: 0, lng: 0 };
+    if (criteria instanceof Object) {
+      Object.entries(criteria).forEach(entry => {
+        const [key, value] = entry;
+        switch (key) {
+        }
+      });
+    }
     const matchCriteria = Object.fromEntries(filter.entries());
     const userCharts = await this.userModel.aggregate([
       { $match: matchCriteria },
