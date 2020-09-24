@@ -19,8 +19,10 @@ export const simplifyChart = (chart = null, ayanamshaKey = 'true_citra') => {
   }
 
   chart.grahas = grahas.map(gr => {
-    gr.lng = gr.lng - ayanamshaVal;
-    gr.topo = {
+    // apply ayanamsha
+
+    const lng = gr.lng - ayanamshaVal;
+    const topo = {
       lng: gr.topo.lng - ayanamshaVal,
       lat: gr.topo.lat,
     };
@@ -34,9 +36,10 @@ export const simplifyChart = (chart = null, ayanamshaKey = 'true_citra') => {
     let extra: any = {};
     if (gr.variants instanceof Array) {
       extra = Object.assign({}, removeIds(gr.variants[ayanamshaIndex]));
+      delete extra.num;
     }
     delete gr.variants;
-    return { ...gr, ...extra };
+    return { ...gr, lng, topo, ...extra };
   });
   chart.placenames = chart.placenames.map(pl => {
     delete pl._id;
