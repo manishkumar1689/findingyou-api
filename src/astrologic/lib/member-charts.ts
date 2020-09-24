@@ -25,13 +25,18 @@ export const simplifyChart = (chart = null, ayanamshaKey = 'true_citra') => {
       lat: gr.topo.lat,
     };
     delete gr._id;
-    gr.transitions = gr.transitions.map(removeIds);
+    gr.transitions = gr.transitions.map(tr => {
+      return {
+        type: tr.type,
+        jd: tr.jd,
+      };
+    });
     let extra: any = {};
     if (gr.variants instanceof Array) {
       extra = Object.assign({}, removeIds(gr.variants[ayanamshaIndex]));
     }
     delete gr.variants;
-    return { gr, ...extra };
+    return { ...gr, ...extra };
   });
   chart.placenames = chart.placenames.map(pl => {
     delete pl._id;

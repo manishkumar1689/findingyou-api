@@ -5,6 +5,7 @@ import { ProfileSchema } from './profile.schema';
 import { GeoSchema } from './geo.schema';
 import { PlacenameSchema } from './placename.schema';
 import { PreferenceSchema } from './preference.schema';
+import { ContactSchema } from './contact.schema';
 
 export const UserSchema = new mongoose.Schema({
   fullName: String,
@@ -29,6 +30,15 @@ export const UserSchema = new mongoose.Schema({
   roles: [String],
   geo: {
     type: GeoSchema,
+    required: false,
+  },
+  coords: {
+    type: [Number],
+    required: false,
+    default: [0, 0],
+  },
+  contacts: {
+    type: [ContactSchema],
     required: false,
   },
   placenames: {

@@ -4,6 +4,7 @@ import { GeoDTO } from './geo.dto';
 import { PlacenameDTO } from './placename.dto';
 import { ProfileDTO } from './profile.dto';
 import { PreferenceDTO } from './preference.dto';
+import { ContactDTO } from './contact.dto';
 
 export class CreateUserDTO {
   @ApiProperty()
@@ -33,7 +34,14 @@ export class CreateUserDTO {
   @ApiProperty()
   readonly status: StatusDTO[];
 
+  @ApiProperty()
   readonly geo?: GeoDTO;
+
+  @ApiProperty()
+  readonly coords?: number[];
+
+  @ApiProperty()
+  readonly contacts?: ContactDTO[];
 
   @ApiProperty()
   readonly placenames?: PlacenameDTO[];
