@@ -4,6 +4,7 @@ import { Profile } from './profile.interface';
 import { Placename } from './placename.interface';
 import { Geo } from './geo.interface';
 import { Preference } from './preference.interface';
+import { Contact } from './contact.interface';
 
 export interface User extends Document {
   readonly fullName: string;
@@ -16,6 +17,8 @@ export interface User extends Document {
   readonly test: boolean;
   readonly status: Status[];
   readonly geo?: Geo;
+  readonly coords?: number[];
+  readonly contacts?: Contact[];
   readonly placenames?: Placename[];
   readonly gender: string;
   readonly preferences: Preference[];

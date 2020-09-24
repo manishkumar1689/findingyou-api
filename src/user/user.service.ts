@@ -477,8 +477,14 @@ export class UserService {
   }
 
   async members(criteria = null) {
+    const filter =
+      criteria instanceof Object
+        ? new Map(Object.entries(criteria))
+        : new Map<string, any>();
+    filter.set('active', true);
+    const matchCriteria = Object.fromEntries(filter.entries());
     const userCharts = await this.userModel.aggregate([
-      { $match: { active: true } },
+      { $match: matchCriteria },
       {
         $lookup: {
           from: 'charts',
