@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { BodySpeed } from './interfaces/body-speed.interface';
@@ -13,6 +13,8 @@ import moment = require('moment');
 import { PairedChartDTO } from './dto/paired-chart.dto';
 import { PairedChart } from './interfaces/paired-chart.interface';
 import { mapPairedCharts } from './lib/mappers';
+import { RedisService } from 'nestjs-redis';
+import * as Redis from 'ioredis';
 
 @Injectable()
 export class AstrologicService {
@@ -20,7 +22,40 @@ export class AstrologicService {
     @InjectModel('BodySpeed') private bodySpeedModel: Model<BodySpeed>,
     @InjectModel('Chart') private chartModel: Model<Chart>,
     @InjectModel('PairedChart') private pairedChartModel: Model<PairedChart>,
+    private readonly redisService: RedisService,
   ) {}
+
+  async redisClient(): Promise<Redis.Redis> {
+    const redisMap = this.redisService.getClients();
+    let redis = null;
+    for (const item of redisMap) {
+      redis = item[1];
+      break;
+    }
+    return redis;
+  }
+
+  async redisGet(key: string): Promise<any> {
+    const client = await this.redisClient();
+    let result = null;
+    if (client instanceof Object) {
+      const strVal = await client.get(key);
+      if (strVal) {
+        result = JSON.parse(strVal);
+      }
+    }
+    return result;
+  }
+
+  async redisSet(key: string, value): Promise<boolean> {
+    const client = await this.redisClient();
+    let result = false;
+    if (client instanceof Object) {
+      client.set(key, JSON.stringify(value));
+      result = true;
+    }
+    return result;
+  }
 
   async createChart(data: CreateChartDTO) {
     let isNew = true;
@@ -181,7 +216,12 @@ export class AstrologicService {
     return pairedID;
   }
 
-  async getChartsByUser(userID: string, start = 0, limit = 20, defaultOnly = false) {
+  async getChartsByUser(
+    userID: string,
+    start = 0,
+    limit = 20,
+    defaultOnly = false,
+  ) {
     const first = await this.chartModel
       .findOne({ user: userID, isDefaultBirthChart: true })
       .exec();
@@ -386,6 +426,26 @@ export class AstrologicService {
   }
 
   async planetStations(
+    num: number,
+    datetime: string,
+    fetchCurrent = false,
+  ): Promise<Array<any>> {
+    const fetchCurrentStr = fetchCurrent ? 'curr' : 'not';
+    const key = ['planet-stations', num, datetime, fetchCurrentStr].join('_');
+    let results = await this.redisGet(key);
+    const valid = results instanceof Array && results.length > 0;
+    if (valid) {
+      return results;
+    } else {
+      results = await this._planetStations(num, datetime, fetchCurrent);
+      if (results instanceof Array) {
+        this.redisSet(key, results);
+      }
+    }
+    return results;
+  }
+
+  async _planetStations(
     num: number,
     datetime: string,
     fetchCurrent = false,
