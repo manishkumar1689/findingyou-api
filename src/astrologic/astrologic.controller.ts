@@ -924,7 +924,7 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('planet-stations/:planet/:dt:/current?')
+  @Get('planet-stations/:planet/:dt/:current?')
   async planetStationSet(
     @Res() res,
     @Param('planet') planet,

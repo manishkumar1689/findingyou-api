@@ -30,6 +30,7 @@
     "@nestjs/platform-socket.io": "^7.4.2",
     "@nestjs/swagger": "^4.4.0",
     "@nestjs/websockets": "^7.4.2",
+    "@types/cache-manager": "^2.10.3",
     "@types/mongoose": "^5.7.6",
     "bcrypt": "^4.0.1",
     "cache-manager-redis-store": "^2.0.0",
