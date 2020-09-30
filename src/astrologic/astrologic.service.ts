@@ -6,7 +6,7 @@ import { Chart } from './interfaces/chart.interface';
 import { BodySpeedDTO } from './dto/body-speed.dto';
 import { calcAcceleration, calcStation } from './lib/astro-motion';
 import grahaValues from './lib/settings/graha-values';
-import { calcJulDate } from './lib/date-funcs';
+import { calcJulDate, calcJulDateFromParts } from './lib/date-funcs';
 import { isNumeric, validISODateString } from 'src/lib/validators';
 import { CreateChartDTO } from './dto/create-chart.dto';
 import moment = require('moment');
@@ -340,14 +340,24 @@ export class AstrologicService {
       .exec();
   }
 
-  async transitionsByPlanet(num: number): Promise<Array<SimpleTransition>> {
-    const key = ['all-transitions-by-planet', num].join('_');
+  async transitionsByPlanet(
+    num: number,
+    startYear = 2000,
+    endYear = 2100,
+  ): Promise<Array<SimpleTransition>> {
+    const key = ['all-transitions-by-planet', num, startYear, endYear].join(
+      '_',
+    );
     const storedResults = await this.redisGet(key);
     let results = [];
     if (storedResults instanceof Array && storedResults.length > 0) {
       results = storedResults;
     } else {
-      const dbResults = await this._transitionsByPlanet(num);
+      const dbResults = await this._transitionsByPlanet(
+        num,
+        startYear,
+        endYear,
+      );
       if (dbResults instanceof Array && dbResults.length > 0) {
         results = dbResults.map(item => {
           const { jd, datetime, num, speed, lng, acceleration, station } = item;
@@ -359,13 +369,21 @@ export class AstrologicService {
     return results;
   }
 
-  async _transitionsByPlanet(num: number): Promise<Array<BodySpeed>> {
+  async _transitionsByPlanet(
+    num: number,
+    startYear = 2000,
+    endYear = 2100,
+  ): Promise<Array<BodySpeed>> {
     const station = { $ne: 'sample' };
-    const criteria = num > 0 ? { num, station } : { station };
+    const otherParams = { month: 1, day: 1, hour: 0 };
+    const startJd = calcJulDateFromParts({ year: startYear, ...otherParams });
+    const endJd = calcJulDateFromParts({ year: endYear, ...otherParams });
+    const jd = { $gte: startJd, $lte: endJd };
+    const criteria = num > 0 ? { num, station, jd } : { station, jd };
     const data = await this.bodySpeedModel
       .find(criteria)
       .sort({ jd: 1 })
-      .limit(5000)
+      .limit(25000)
       .exec();
     return data;
   }
