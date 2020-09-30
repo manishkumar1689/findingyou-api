@@ -14,7 +14,13 @@ import { PairedChartDTO } from './dto/paired-chart.dto';
 import { PairedChart } from './interfaces/paired-chart.interface';
 import { mapPairedCharts } from './lib/mappers';
 import { RedisService } from 'nestjs-redis';
+import {
+  extractFromRedisClient,
+  extractFromRedisMap,
+  storeInRedis,
+} from 'src/lib/entities';
 import * as Redis from 'ioredis';
+import { SimpleTransition } from './interfaces/simple-transition.interface';
 
 @Injectable()
 export class AstrologicService {
@@ -27,34 +33,17 @@ export class AstrologicService {
 
   async redisClient(): Promise<Redis.Redis> {
     const redisMap = this.redisService.getClients();
-    let redis = null;
-    for (const item of redisMap) {
-      redis = item[1];
-      break;
-    }
-    return redis;
+    return extractFromRedisMap(redisMap);
   }
 
   async redisGet(key: string): Promise<any> {
     const client = await this.redisClient();
-    let result = null;
-    if (client instanceof Object) {
-      const strVal = await client.get(key);
-      if (strVal) {
-        result = JSON.parse(strVal);
-      }
-    }
-    return result;
+    return await extractFromRedisClient(client, key);
   }
 
   async redisSet(key: string, value): Promise<boolean> {
     const client = await this.redisClient();
-    let result = false;
-    if (client instanceof Object) {
-      client.set(key, JSON.stringify(value));
-      result = true;
-    }
-    return result;
+    return await storeInRedis(client, key, value);
   }
 
   async createChart(data: CreateChartDTO) {
@@ -349,6 +338,36 @@ export class AstrologicService {
       .sort({ jd: sortDir })
       .limit(1)
       .exec();
+  }
+
+  async transitionsByPlanet(num: number): Promise<Array<SimpleTransition>> {
+    const key = ['all-transitions-by-planet', num].join('_');
+    const storedResults = await this.redisGet(key);
+    let results = [];
+    if (storedResults instanceof Array && storedResults.length > 0) {
+      results = storedResults;
+    } else {
+      const dbResults = await this._transitionsByPlanet(num);
+      if (dbResults instanceof Array && dbResults.length > 0) {
+        results = dbResults.map(item => {
+          const { jd, datetime, num, speed, lng, acceleration, station } = item;
+          return { jd, datetime, num, speed, lng, acceleration, station };
+        });
+        this.redisSet(key, results);
+      }
+    }
+    return results;
+  }
+
+  async _transitionsByPlanet(num: number): Promise<Array<BodySpeed>> {
+    const station = { $ne: 'sample' };
+    const criteria = num > 0 ? { num, station } : { station };
+    const data = await this.bodySpeedModel
+      .find(criteria)
+      .sort({ jd: 1 })
+      .limit(5000)
+      .exec();
+    return data;
   }
 
   async speedPatternsByPlanet(num: number): Promise<Array<BodySpeed>> {
