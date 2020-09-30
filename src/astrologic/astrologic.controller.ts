@@ -881,7 +881,7 @@ export class AstrologicController {
       const startYearInt = isNumeric(startYear)
         ? parseInt(startYear, 10)
         : 2000;
-      const endYearInt = isNumeric(endYear) ? parseInt(startYear, 10) : 2100;
+      const endYearInt = isNumeric(endYear) ? parseInt(endYear, 10) : 2100;
       data.values = await this.astrologicService.transitionsByPlanet(
         num,
         startYearInt,
