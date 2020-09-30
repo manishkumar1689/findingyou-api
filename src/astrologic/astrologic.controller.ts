@@ -868,12 +868,25 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('transitions-by-planet/:planet')
-  async transitionsByPlanet(@Res() res, @Param('planet') planet) {
+  @Get('transitions-by-planet/:planet/:startYear?/:endYear?')
+  async transitionsByPlanet(
+    @Res() res,
+    @Param('planet') planet,
+    @Param('startYear') startYear,
+    @Param('endYear') endYear,
+  ) {
     let data: any = { valid: false, values: [] };
     if (isNumeric(planet)) {
       const num = parseInt(planet);
-      data.values = await this.astrologicService.transitionsByPlanet(num);
+      const startYearInt = isNumeric(startYear)
+        ? parseInt(startYear, 10)
+        : 2000;
+      const endYearInt = isNumeric(endYear) ? parseInt(startYear, 10) : 2100;
+      data.values = await this.astrologicService.transitionsByPlanet(
+        num,
+        startYearInt,
+        endYearInt,
+      );
     }
     return res.status(HttpStatus.OK).json(data);
   }

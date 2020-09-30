@@ -2,11 +2,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as lineByLine from 'n-readlines';
 import { ephemerisPath } from '../../.config';
+import fileValues from './settings/file-values';
 /*
 @param fn:string
 @return Object
 */
-export const getFileData = (fn) => {
+export const getFileData = fn => {
   const path = fs.existsSync(fn) ? fn : '';
   let iSize = 0;
   let modified = '';
@@ -34,24 +35,24 @@ export const getFileData = (fn) => {
       modified,
       size: iSize,
       isDir,
-      copyLine
+      copyLine,
     };
   }
-}
+};
 
 /*
 @param path:string
 @return string
 */
-const fetchFirstLines = (path) => {
+const fetchFirstLines = path => {
   let lines = [];
   const liner = new lineByLine(path);
   const yearRgx = /\b(19|20)\d\d\b/;
   let line;
   let lineNumber = 0;
-  let strLine = "";
+  let strLine = '';
   let yearMatched = false;
-  while (line = liner.next()) {
+  while ((line = liner.next())) {
     strLine = line.toString('ascii');
     if (strLine.length > 7) {
       lines.push(strLine);
@@ -68,14 +69,14 @@ const fetchFirstLines = (path) => {
   if (!yearMatched) {
     lines = lines.length > 0 ? lines.splice(0, 1) : [];
   }
-  return lines.length > 0 ? lines.join("\n") : null;
-}
+  return lines.length > 0 ? lines.join('\n') : null;
+};
 
 /*
 @param directoryPath:string
 @return Array<Object>
 */
-const readDataFilesSync = (directoryPath) => {
+const readDataFilesSync = directoryPath => {
   let files = [];
   if (fs.existsSync(directoryPath)) {
     files = fs.readdirSync(directoryPath);
@@ -87,22 +88,31 @@ const readDataFilesSync = (directoryPath) => {
       const children = readDataFilesSync(fp);
       return { ...fd, children };
     } else {
-      return fd;
+      const file = fd.path.split('/').pop();
+      let infoItem = fileValues.find(fi => fi.file === file);
+      if (!infoItem) {
+        infoItem = {
+          file,
+          info: '',
+          yearRange: [0, 0],
+        };
+      }
+      return { ...fd, ...infoItem };
     }
   });
-}
+};
 
 /*
 @param directoryPath:string
 @return Promise<Array<Object>>
 */
-export const readDataFiles = async (directoryPath) => {
+export const readDataFiles = async directoryPath => {
   return readDataFilesSync(directoryPath);
-}
+};
 
 /*
-* return Promise<Array<Object>>
-*/
+ * return Promise<Array<Object>>
+ */
 export const readEpheFiles = async () => {
   return await readDataFiles(ephemerisPath);
-}
+};
