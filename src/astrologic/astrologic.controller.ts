@@ -868,6 +868,16 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  @Get('transitions-by-planet/:planet')
+  async transitionsByPlanet(@Res() res, @Param('planet') planet) {
+    let data: any = { valid: false, values: [] };
+    if (isNumeric(planet)) {
+      const num = parseInt(planet);
+      data.values = await this.astrologicService.transitionsByPlanet(num);
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
   @Get('planet-station-test/:planet/:startDt/:station')
   async planetStationTest(
     @Res() res,
@@ -924,7 +934,7 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('planet-stations/:planet/:dt:/current?')
+  @Get('planet-stations/:planet/:dt/:current?')
   async planetStationSet(
     @Res() res,
     @Param('planet') planet,

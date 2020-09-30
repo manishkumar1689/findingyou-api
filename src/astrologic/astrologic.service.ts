@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { BodySpeed } from './interfaces/body-speed.interface';
@@ -13,6 +13,14 @@ import moment = require('moment');
 import { PairedChartDTO } from './dto/paired-chart.dto';
 import { PairedChart } from './interfaces/paired-chart.interface';
 import { mapPairedCharts } from './lib/mappers';
+import { RedisService } from 'nestjs-redis';
+import {
+  extractFromRedisClient,
+  extractFromRedisMap,
+  storeInRedis,
+} from 'src/lib/entities';
+import * as Redis from 'ioredis';
+import { SimpleTransition } from './interfaces/simple-transition.interface';
 
 @Injectable()
 export class AstrologicService {
@@ -20,7 +28,23 @@ export class AstrologicService {
     @InjectModel('BodySpeed') private bodySpeedModel: Model<BodySpeed>,
     @InjectModel('Chart') private chartModel: Model<Chart>,
     @InjectModel('PairedChart') private pairedChartModel: Model<PairedChart>,
+    private readonly redisService: RedisService,
   ) {}
+
+  async redisClient(): Promise<Redis.Redis> {
+    const redisMap = this.redisService.getClients();
+    return extractFromRedisMap(redisMap);
+  }
+
+  async redisGet(key: string): Promise<any> {
+    const client = await this.redisClient();
+    return await extractFromRedisClient(client, key);
+  }
+
+  async redisSet(key: string, value): Promise<boolean> {
+    const client = await this.redisClient();
+    return await storeInRedis(client, key, value);
+  }
 
   async createChart(data: CreateChartDTO) {
     let isNew = true;
@@ -181,7 +205,12 @@ export class AstrologicService {
     return pairedID;
   }
 
-  async getChartsByUser(userID: string, start = 0, limit = 20, defaultOnly = false) {
+  async getChartsByUser(
+    userID: string,
+    start = 0,
+    limit = 20,
+    defaultOnly = false,
+  ) {
     const first = await this.chartModel
       .findOne({ user: userID, isDefaultBirthChart: true })
       .exec();
@@ -311,6 +340,36 @@ export class AstrologicService {
       .exec();
   }
 
+  async transitionsByPlanet(num: number): Promise<Array<SimpleTransition>> {
+    const key = ['all-transitions-by-planet', num].join('_');
+    const storedResults = await this.redisGet(key);
+    let results = [];
+    if (storedResults instanceof Array && storedResults.length > 0) {
+      results = storedResults;
+    } else {
+      const dbResults = await this._transitionsByPlanet(num);
+      if (dbResults instanceof Array && dbResults.length > 0) {
+        results = dbResults.map(item => {
+          const { jd, datetime, num, speed, lng, acceleration, station } = item;
+          return { jd, datetime, num, speed, lng, acceleration, station };
+        });
+        this.redisSet(key, results);
+      }
+    }
+    return results;
+  }
+
+  async _transitionsByPlanet(num: number): Promise<Array<BodySpeed>> {
+    const station = { $ne: 'sample' };
+    const criteria = num > 0 ? { num, station } : { station };
+    const data = await this.bodySpeedModel
+      .find(criteria)
+      .sort({ jd: 1 })
+      .limit(5000)
+      .exec();
+    return data;
+  }
+
   async speedPatternsByPlanet(num: number): Promise<Array<BodySpeed>> {
     let minJd = 0;
     const last2 = await this.bodySpeedModel
@@ -386,6 +445,26 @@ export class AstrologicService {
   }
 
   async planetStations(
+    num: number,
+    datetime: string,
+    fetchCurrent = false,
+  ): Promise<Array<any>> {
+    const fetchCurrentStr = fetchCurrent ? 'curr' : 'not';
+    const key = ['planet-stations', num, datetime, fetchCurrentStr].join('_');
+    let results = await this.redisGet(key);
+    const valid = results instanceof Array && results.length > 0;
+    if (valid) {
+      return results;
+    } else {
+      results = await this._planetStations(num, datetime, fetchCurrent);
+      if (results instanceof Array) {
+        this.redisSet(key, results);
+      }
+    }
+    return results;
+  }
+
+  async _planetStations(
     num: number,
     datetime: string,
     fetchCurrent = false,
