@@ -4,6 +4,7 @@ import { FeedbackController } from './feedback.controller';
 import { UserService } from 'src/user/user.service';
 import { UserSchema } from 'src/user/schemas/user.schema';
 import { FeedbackSchema } from './schemas/feedback.schema';
+import { FlagSchema } from './schemas/flag.schema';
 import { MongooseModule } from '@nestjs/mongoose';
 import { SettingSchema } from 'src/setting/schemas/setting.schema';
 import { SettingService } from 'src/setting/setting.service';
@@ -13,6 +14,7 @@ import { SettingService } from 'src/setting/setting.service';
     HttpModule,
     MongooseModule.forFeature([
       { name: 'Feedback', schema: FeedbackSchema },
+      { name: 'Flag', schema: FlagSchema },
       { name: 'User', schema: UserSchema },
       { name: 'Setting', schema: SettingSchema },
     ]),
