@@ -14,10 +14,7 @@ export class CreateFeedbackDTO {
   readonly active: boolean;
 
   @ApiProperty()
-  readonly type: string;
-
-  @ApiProperty()
-  readonly value: any;
+  readonly text: String;
 
   @ApiProperty()
   readonly createdAt: Date;

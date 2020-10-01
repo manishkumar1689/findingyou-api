@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { notEmptyString } from 'src/lib/validators';
+import { CreateFlagDTO } from './dto/create-flag.dto';
 import { Feedback } from './interfaces/feedback.interface';
 import { Flag } from './interfaces/flag.interface';
 
@@ -73,7 +74,9 @@ export class FeedbackService {
     return Object.fromEntries(filter.entries());
   }
 
-  async saveItem(uid: string, targetUser: string, key: string, value = null) {
+  async saveFlag(flagDto: CreateFlagDTO) {
+    const { user, targetUser, key, type, value } = flagDto;
+    const uid = user;
     const criteria = this.buildFilterCriteria(targetUser, key, { uid });
     const fbItem = await this.flagModel.findOne(criteria);
     const dt = new Date();
@@ -89,6 +92,7 @@ export class FeedbackService {
         user: uid,
         targetUser,
         key,
+        type,
         value,
         createdAt: dt,
         modifiedAt: dt,
