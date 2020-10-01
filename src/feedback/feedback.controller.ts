@@ -14,6 +14,7 @@ import { Request } from 'express';
 import { FeedbackService } from './feedback.service';
 import { UserService } from 'src/user/user.service';
 import { SettingService } from 'src/setting/setting.service';
+import { CreateFlagDTO } from './dto/create-flag.dto';
 
 @Controller('feedback')
 export class FeedbackController {
@@ -36,6 +37,12 @@ export class FeedbackController {
       key,
       query,
     );
+    return res.json(data);
+  }
+
+  @Post('save-flag')
+  async saveFlag(@Res() res, @Body() createFlagDTO: CreateFlagDTO) {
+    const data = await this.feedbackService.saveFlag(createFlagDTO);
     return res.json(data);
   }
 
