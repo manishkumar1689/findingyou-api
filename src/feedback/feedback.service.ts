@@ -3,11 +3,13 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { notEmptyString } from 'src/lib/validators';
 import { Feedback } from './interfaces/feedback.interface';
+import { Flag } from './interfaces/flag.interface';
 
 @Injectable()
 export class FeedbackService {
   constructor(
     @InjectModel('Feedback') private readonly feedbackModel: Model<Feedback>,
+    @InjectModel('Flag') private flagModel: Model<Flag>,
   ) {}
 
   async getByTargetUserOrKey(
@@ -16,7 +18,7 @@ export class FeedbackService {
     otherCriteria = null,
   ) {
     const criteria = this.buildFilterCriteria(userRef, keyRef, otherCriteria);
-    return await this.feedbackModel.find(criteria);
+    return await this.flagModel.find(criteria);
   }
 
   async countByTargetUserOrKey(
@@ -25,17 +27,17 @@ export class FeedbackService {
     otherCriteria = null,
   ) {
     const criteria = this.buildFilterCriteria(userRef, keyRef, otherCriteria);
-    return await this.feedbackModel.count(criteria);
+    return await this.flagModel.count(criteria);
   }
 
   async getAllbySourceUser(uid: string) {
     const criteria = this.buildFilterCriteria('', '', { uid });
-    return await this.feedbackModel.find(criteria);
+    return await this.flagModel.find(criteria);
   }
 
   async getAllbyTargetUser(user: string) {
     const criteria = this.buildFilterCriteria(user, '');
-    return await this.feedbackModel.find(criteria);
+    return await this.flagModel.find(criteria);
   }
 
   buildFilterCriteria(
@@ -73,7 +75,7 @@ export class FeedbackService {
 
   async saveItem(uid: string, targetUser: string, key: string, value = null) {
     const criteria = this.buildFilterCriteria(targetUser, key, { uid });
-    const fbItem = await this.feedbackModel.findOne(criteria);
+    const fbItem = await this.flagModel.findOne(criteria);
     const dt = new Date();
     let data: any = null;
     if (fbItem instanceof Object) {
@@ -91,7 +93,7 @@ export class FeedbackService {
         createdAt: dt,
         modifiedAt: dt,
       };
-      const newFB = new this.feedbackModel(fields);
+      const newFB = new this.flagModel(fields);
       data = await newFB.save();
     }
     return data;
@@ -99,7 +101,7 @@ export class FeedbackService {
 
   async activateUser(user: string, active = true) {
     const criteria = this.buildFilterCriteria(user, '');
-    return await this.feedbackModel.updateMany(criteria, {
+    return await this.flagModel.updateMany(criteria, {
       active,
     });
   }

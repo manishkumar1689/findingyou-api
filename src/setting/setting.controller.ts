@@ -32,6 +32,7 @@ import {
 import moment = require('moment');
 import availableLanguages from './sources/languages';
 import defaultLanguageOptions from './sources/lang-options';
+import defaultFlags from './sources/flags';
 import { AdminGuard } from '../auth/admin.guard';
 import { ServerResponse } from 'http';
 import { extractUidFromResponse } from 'src/auth/auth.utils';
@@ -223,6 +224,18 @@ export class SettingController {
     };
 
     return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('flags')
+  async getAllFlags(@Res() res) {
+    let flags = defaultFlags;
+    const setting = await this.settingService.getByKey('flags');
+    if (setting) {
+      if (setting.value instanceof Array && setting.value.length > 0) {
+        flags = setting.value;
+      }
+    }
+    return res.json(flags);
   }
 
   // Return the data from a particular setting identified by key
