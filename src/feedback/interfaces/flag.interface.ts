@@ -7,6 +7,7 @@ export interface Flag extends Document {
   readonly active: boolean;
   readonly type: string;
   readonly value: any;
+  readonly isRating: boolean;
   readonly createdAt: Date;
   readonly modifiedAt: Date;
 }

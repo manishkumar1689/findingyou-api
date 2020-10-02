@@ -1,12 +1,12 @@
 const flags = [
-  { key: 'like', type: 'boolean', defaultValue: false },
-  { key: 'wink', type: 'boolean', defaultValue: false },
-  { key: 'no_winking', type: 'boolean', defaultValue: false },
-  { key: 'view_protected', type: 'boolean', defaultValue: false },
-  { key: 'view_private', type: 'boolean', defaultValue: false },
-  { key: 'may_chat', type: 'boolean', defaultValue: false },
-  { key: 'is_abusive', type: 'boolean', defaultValue: false },
-  { key: 'reported', type: 'boolean', defaultValue: false },
+  { key: 'like', type: 'boolean' },
+  { key: 'wink', type: 'boolean' },
+  { key: 'no_winking', type: 'boolean' },
+  { key: 'view_protected', type: 'boolean' },
+  { key: 'view_private', type: 'boolean' },
+  { key: 'may_chat', type: 'boolean' },
+  { key: 'is_abusive', type: 'boolean' },
+  { key: 'reported', type: 'boolean' },
 ];
 
 const ratings = [
@@ -14,4 +14,12 @@ const ratings = [
   { key: 'character', type: 'double', defaultValue: 3, range: [0, 5] },
 ];
 
-export default [...flags, ...ratings];
+const expandFlag = flag => {
+  return { ...flag, defaultValue: false, isRating: false };
+};
+
+const expandRating = flag => {
+  return { ...flag, isRating: true };
+};
+
+export default [...flags.map(expandFlag), ...ratings.map(expandRating)];
