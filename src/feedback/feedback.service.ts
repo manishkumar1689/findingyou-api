@@ -5,7 +5,7 @@ import { extractDocId } from 'src/lib/entities';
 import { notEmptyString } from 'src/lib/validators';
 import { CreateFlagDTO } from './dto/create-flag.dto';
 import { Feedback } from './interfaces/feedback.interface';
-import { Flag } from './interfaces/flag.interface';
+import { Flag, SimpleFlag } from './interfaces/flag.interface';
 
 @Injectable()
 export class FeedbackService {
@@ -20,7 +20,7 @@ export class FeedbackService {
     otherCriteria = null,
   ) {
     const criteria = this.buildFilterCriteria(userRef, keyRef, otherCriteria);
-    return await this.flagModel.find(criteria);
+    return await this.flagModel.find(criteria).select({ _id: 0, __v: 0 });
   }
 
   async countByTargetUserOrKey(
@@ -112,7 +112,7 @@ export class FeedbackService {
     return Object.fromEntries(filter.entries());
   }
 
-  async saveFlag(flagDto: CreateFlagDTO) {
+  async saveFlag(flagDto: CreateFlagDTO | SimpleFlag) {
     const { user, targetUser, key, type, value, isRating } = flagDto;
     const uid = user;
     const criteria = this.buildFilterCriteria(targetUser, key, { uid });
