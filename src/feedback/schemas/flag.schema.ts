@@ -45,6 +45,11 @@ export const FlagSchema = new mongoose.Schema({
     required: true,
     default: null,
   },
+  isRating: {
+    type: Boolean,
+    default: false,
+    // may be used for stats
+  },
   createdAt: { type: Date, default: Date.now },
   modifiedAt: { type: Date, default: Date.now },
 });

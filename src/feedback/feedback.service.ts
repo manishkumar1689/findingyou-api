@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { extractDocId } from 'src/lib/entities';
 import { notEmptyString } from 'src/lib/validators';
 import { CreateFlagDTO } from './dto/create-flag.dto';
 import { Feedback } from './interfaces/feedback.interface';
@@ -41,6 +42,43 @@ export class FeedbackService {
     return await this.flagModel.find(criteria);
   }
 
+  async getMemberSet(user: string, uid: string) {
+    const ratingCriteria = { targetUser: user, isRating: true, active: true };
+    const ratingRows = await this.flagModel.find(ratingCriteria).select({
+      _id: 0,
+      __v: 0,
+      createdAt: 0,
+      modifiedAt: 0,
+      user: 0,
+      targetUser: 0,
+    });
+    const flagCriteria = { targetUser: user, user: uid, active: true };
+    const flags = await this.flagModel
+      .find(flagCriteria)
+      .select({ _id: 0, __v: 0, user: 0, targetUser: 0 });
+    const otherFlagCriteria = { targetUser: uid, user, active: true };
+    const otherFlags = await this.flagModel
+      .find(otherFlagCriteria)
+      .select({ _id: 0, __v: 0, user: 0, targetUser: 0 });
+    const ratingsMap: Map<string, { total: number; count: number }> = new Map();
+    for (const row of ratingRows) {
+      const currRow = ratingsMap.get(row.key);
+      const hasRow = currRow instanceof Object;
+      const dblVal = hasRow ? currRow.total : 0;
+      const count = hasRow ? currRow.count + 1 : 1;
+      ratingsMap.set(row.key, {
+        total: row.value + dblVal,
+        count,
+      });
+    }
+
+    return {
+      ratings: Object.fromEntries(ratingsMap.entries()),
+      flags,
+      otherFlags,
+    };
+  }
+
   buildFilterCriteria(
     userRef: string = '',
     keyRef: string = '',
@@ -75,7 +113,7 @@ export class FeedbackService {
   }
 
   async saveFlag(flagDto: CreateFlagDTO) {
-    const { user, targetUser, key, type, value } = flagDto;
+    const { user, targetUser, key, type, value, isRating } = flagDto;
     const uid = user;
     const criteria = this.buildFilterCriteria(targetUser, key, { uid });
     const fbItem = await this.flagModel.findOne(criteria);
@@ -84,9 +122,11 @@ export class FeedbackService {
     if (fbItem instanceof Object) {
       const newFields = {
         value,
+        isRating: isRating === true,
         modifiedAt: dt,
       };
-      data = await fbItem.save();
+      const fbId = extractDocId(fbItem);
+      data = await this.flagModel.findByIdAndUpdate(fbId, newFields);
     } else {
       const fields = {
         user: uid,
@@ -94,6 +134,7 @@ export class FeedbackService {
         key,
         type,
         value,
+        isRating: isRating === true,
         createdAt: dt,
         modifiedAt: dt,
       };

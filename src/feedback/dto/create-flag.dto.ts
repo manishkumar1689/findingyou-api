@@ -20,6 +20,9 @@ export class CreateFlagDTO {
   readonly value: any;
 
   @ApiProperty()
+  readonly isRating: boolean;
+
+  @ApiProperty()
   readonly createdAt: Date;
 
   @ApiProperty()

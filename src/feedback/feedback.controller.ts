@@ -40,6 +40,16 @@ export class FeedbackController {
     return res.json(data);
   }
 
+  @Get('member-set/:user/:uid')
+  async getMemberRatingsAndFlags(
+    @Res() res,
+    @Param('user') user,
+    @Param('uid') uid,
+  ) {
+    const data = await this.feedbackService.getMemberSet(user, uid);
+    return res.json(data);
+  }
+
   @Post('save-flag')
   async saveFlag(@Res() res, @Body() createFlagDTO: CreateFlagDTO) {
     const data = await this.feedbackService.saveFlag(createFlagDTO);
