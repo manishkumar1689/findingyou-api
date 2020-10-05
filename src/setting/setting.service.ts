@@ -3,7 +3,7 @@ import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Setting } from './interfaces/setting.interface';
 import { CreateSettingDTO } from './dto/create-setting.dto';
-import { extractObject } from 'src/lib/entities';
+import defaultFlags from './sources/flags';
 
 @Injectable()
 export class SettingService {
@@ -94,5 +94,16 @@ export class SettingService {
       { new: true },
     );
     return updatedSetting;
+  }
+
+  async getFlags() {
+    let flags = defaultFlags;
+    const setting = await this.getByKey('flags');
+    if (setting) {
+      if (setting.value instanceof Array && setting.value.length > 0) {
+        flags = setting.value;
+      }
+    }
+    return flags;
   }
 }

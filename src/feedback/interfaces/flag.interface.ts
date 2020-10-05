@@ -11,3 +11,12 @@ export interface Flag extends Document {
   readonly createdAt: Date;
   readonly modifiedAt: Date;
 }
+
+export interface SimpleFlag {
+  user: string;
+  targetUser: any;
+  key: string;
+  value: any;
+  type?: string;
+  isRating?: boolean;
+}

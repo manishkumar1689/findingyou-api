@@ -56,6 +56,32 @@ export class FeedbackController {
     return res.json(data);
   }
 
+  @Post('save-member-flag')
+  async saveMemberFlag(@Res() res, @Body() createFlagDTO: CreateFlagDTO) {
+    const flags = await this.settingService.getFlags();
+    const flag = flags.find(fl => fl.key === createFlagDTO.key);
+    const { user, targetUser, key, value } = createFlagDTO;
+    let type = 'boolean';
+    let isRating = false;
+    let data: any = { valid: false };
+    if (flag) {
+      type = flag.type;
+      isRating = flag.isRating === true;
+      await this.feedbackService.saveFlag({
+        user,
+        targetUser,
+        key,
+        value,
+        type,
+        isRating,
+      });
+      data = await this.feedbackService.getByTargetUserOrKey(targetUser, key, {
+        uid: user,
+      });
+    }
+    return res.json(data);
+  }
+
   @Get('deactivate/:user?/?')
   async getUsersByCriteria(
     @Res() res,

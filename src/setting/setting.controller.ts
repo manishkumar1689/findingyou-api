@@ -32,10 +32,7 @@ import {
 import moment = require('moment');
 import availableLanguages from './sources/languages';
 import defaultLanguageOptions from './sources/lang-options';
-import defaultFlags from './sources/flags';
 import { AdminGuard } from '../auth/admin.guard';
-import { ServerResponse } from 'http';
-import { extractUidFromResponse } from 'src/auth/auth.utils';
 
 @Controller('setting')
 export class SettingController {
@@ -228,13 +225,7 @@ export class SettingController {
 
   @Get('flags')
   async getAllFlags(@Res() res) {
-    let flags = defaultFlags;
-    const setting = await this.settingService.getByKey('flags');
-    if (setting) {
-      if (setting.value instanceof Array && setting.value.length > 0) {
-        flags = setting.value;
-      }
-    }
+    const flags = await this.settingService.getFlags();
     return res.json(flags);
   }
 

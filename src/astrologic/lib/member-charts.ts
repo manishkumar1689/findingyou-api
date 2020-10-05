@@ -1,3 +1,4 @@
+import { smartCastFloat, smartCastInt } from 'src/lib/converters';
 import { subtractLng360 } from './helpers';
 
 const removeIds = item => {
@@ -52,6 +53,13 @@ export const simplifyChart = (chart = null, ayanamshaKey = 'true_citra') => {
   });
   chart.subject = removeIds(chart.subject);
   chart.geo = removeIds(chart.geo);
+
+  chart.ascendant = subtractLng360(
+    smartCastFloat(chart.ascendant),
+    ayanamshaVal,
+  );
+  chart.mc = subtractLng360(smartCastFloat(chart.mc), ayanamshaVal);
+  chart.vertex = subtractLng360(smartCastFloat(chart.vertex), ayanamshaVal);
   delete chart._id;
   chart.ayanamshas = chart.ayanamshas.map(removeIds);
   chart.upagrahas = chart.upagrahas.map(removeIds);

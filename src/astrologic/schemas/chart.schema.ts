@@ -56,15 +56,15 @@ export const ChartSchema = new mongoose.Schema({
     required: true,
   },
   ascendant: {
-    type: String,
+    type: Number,
     required: false,
   },
   mc: {
-    type: String,
+    type: Number,
     required: false,
   },
   vertex: {
-    type: String,
+    type: Number,
     required: false,
   },
   grahas: {
