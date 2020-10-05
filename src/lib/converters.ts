@@ -40,16 +40,24 @@ export const smartCastString = (item: any, defVal: string = '') => {
   return out;
 };
 
-export const smartCastInt = (item: string, defVal: number = 0) => {
+export const smartCastNumber = (item: string, defVal = 0, isInt = false) => {
   let out = defVal;
   if (typeof item === 'string') {
     if (item.length > 0) {
       if (/^\s*\d+(\.\d+)?\s*/.test(item)) {
-        out = parseInt(item, 10);
+        out = isInt ? parseInt(item, 10) : parseFloat(item);
       }
     }
   }
   return out;
+};
+
+export const smartCastInt = (item: string, defVal = 0) => {
+  return smartCastNumber(item, defVal, true);
+};
+
+export const smartCastFloat = (item: string, defVal = 0) => {
+  return smartCastNumber(item, defVal, false);
 };
 
 export const smartCastBool = (item: string | number, defVal = false) => {
