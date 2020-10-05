@@ -58,7 +58,7 @@ export const simplifyChart = (chart = null, ayanamshaKey = 'true_citra') => {
     smartCastFloat(chart.ascendant),
     ayanamshaVal,
   );
-  chart.mc = subtractLng360(chart.mc, ayanamshaVal);
+  chart.mc = subtractLng360(smartCastFloat(chart.mc), ayanamshaVal);
   chart.vertex = subtractLng360(smartCastFloat(chart.vertex), ayanamshaVal);
   delete chart._id;
   chart.ayanamshas = chart.ayanamshas.map(removeIds);
