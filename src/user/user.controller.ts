@@ -56,6 +56,8 @@ import {
   uploadMediaFile,
 } from 'src/lib/files';
 import { PreferenceDTO } from './dto/preference.dto';
+import { SampleDataDTO } from './dto/sample-data.dto';
+import { SampleRecordDTO } from './dto/sample-record.dto';
 
 @Controller('user')
 export class UserController {
@@ -711,5 +713,27 @@ export class UserController {
       }
     }
     return res.json(data);
+  }
+
+  @Post('bulk/sample-import')
+  async bulkSampleImprt(@Res() res, @Body() sampleDataDTO: SampleDataDTO) {
+    const data: Map<string, any> = new Map();
+    if (sampleDataDTO.items.length > 0) {
+      for (const item of sampleDataDTO.items) {
+        await this.saveImportedUser(item);
+      }
+    }
+    return res.status(HttpStatus.OK).json(hashMapToObject(data));
+  }
+
+  async saveImportedUser(item: SampleRecordDTO) {
+    const astrobankPart = 'astro-databank/';
+    const identifier = item.url.includes(astrobankPart)
+      ? '/' + astrobankPart + item.url.split(astrobankPart).pop()
+      : item.url;
+    const user = {
+      identifier,
+    };
+    this.userService.addUser(user);
   }
 }
