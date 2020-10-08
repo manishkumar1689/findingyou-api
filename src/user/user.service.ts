@@ -221,8 +221,16 @@ export class UserService {
     return newUser.save();
   }
 
+  // create a single user with basic data
+  async create(inData = null): Promise<User> {
+    const userObj = this.transformUserDTO(inData, true);
+
+    const newUser = new this.userModel(userObj);
+    return newUser.save();
+  }
+
   transformUserDTO(
-    createUserDTO: CreateUserDTO,
+    inData = null,
     isNew: boolean = false,
     roles: Array<Role> = [],
   ) {
@@ -231,11 +239,11 @@ export class UserService {
     if (isNew) {
       userData.set('roles', ['active']);
     }
-    Object.entries(createUserDTO).forEach(entry => {
+    Object.entries(inData).forEach(entry => {
       const [key, val] = entry;
       switch (key) {
         case 'password':
-          if (createUserDTO.password) {
+          if (inData.password) {
             const tsSalt = dt.getTime() % 16;
             userData.set(key, bcrypt.hashSync(val, tsSalt));
             userData.set('mode', 'local');
@@ -254,7 +262,9 @@ export class UserService {
           break;
         case 'geo':
           if (val instanceof Object) {
-            const { lat, lng } = val;
+            const map = new Map(Object.entries(val));
+            const lng = map.get('lng');
+            const lat = map.get('lat');
             if (isNumeric(lat) && isNumeric(lng)) {
               userData.set(key, val);
               userData.set('coords', [lng, lat]);
