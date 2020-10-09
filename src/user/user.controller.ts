@@ -733,7 +733,11 @@ export class UserController {
       : item.url;
     const user = {
       identifier,
+      nickName: item.name,
+      fullName: item.name,
+      testMode: true,
+      mode: 'local',
     };
-    this.userService.addUser(user);
+    this.userService.create(user);
   }
 }

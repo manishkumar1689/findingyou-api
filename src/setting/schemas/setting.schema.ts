@@ -30,6 +30,7 @@ export const SettingSchema = new mongoose.Schema({
       'lookup_set',
       'languages',
       'flags',
+      'rules',
       'custom',
     ],
   },
