@@ -4,11 +4,16 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Setting } from './interfaces/setting.interface';
 import { CreateSettingDTO } from './dto/create-setting.dto';
 import defaultFlags from './sources/flags';
+import { notEmptyString } from 'src/lib/validators';
+import { RulesCollection } from './interfaces/rules-collection.interface';
+import { RulesCollectionDTO } from './dto/rules-collection.dto';
 
 @Injectable()
 export class SettingService {
   constructor(
     @InjectModel('Setting') private readonly settingModel: Model<Setting>,
+    @InjectModel('RulesCollection')
+    private readonly rulesCollectionModel: Model<RulesCollection>,
   ) {}
   // fetch all Settings
   async getAllSetting(): Promise<Setting[]> {
@@ -105,5 +110,43 @@ export class SettingService {
       }
     }
     return flags;
+  }
+
+  async getRuleCollection(itemID: string) {
+    return await this.rulesCollectionModel.findById(itemID);
+  }
+
+  async getRuleCollections(userID = null) {
+    const mp: Map<string, any> = new Map();
+    const userNotMatched = userID === '-';
+    if (!userNotMatched && notEmptyString(userID, 8)) {
+      mp.set('user', userID);
+    }
+    if (userNotMatched) {
+      return [];
+    } else {
+      const criteria = Object.fromEntries(mp.entries());
+      return await this.rulesCollectionModel.find(criteria);
+    }
+  }
+
+  async saveRuleCollection(rulesCollectionDTO: RulesCollectionDTO, id = '') {
+    let result: any = null;
+    if (notEmptyString(id, 8)) {
+      await this.rulesCollectionModel.findByIdAndUpdate(id, rulesCollectionDTO);
+      result = await this.rulesCollectionModel.findById(id);
+    } else {
+      const rulesCollection = new this.rulesCollectionModel(rulesCollectionDTO);
+      result = await rulesCollection.save();
+    }
+    return result;
+  }
+
+  async deleteRuleCollection(id = '') {
+    const item = await this.rulesCollectionModel.findById(id);
+    if (!notEmptyString(id, 8)) {
+      await this.rulesCollectionModel.findByIdAndDelete(id);
+    }
+    return item;
   }
 }

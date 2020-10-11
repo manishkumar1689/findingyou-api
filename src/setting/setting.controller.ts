@@ -33,6 +33,7 @@ import moment = require('moment');
 import availableLanguages from './sources/languages';
 import defaultLanguageOptions from './sources/lang-options';
 import { AdminGuard } from '../auth/admin.guard';
+import { RulesCollectionDTO } from './dto/rules-collection.dto';
 
 @Controller('setting')
 export class SettingController {
@@ -246,6 +247,48 @@ export class SettingController {
     return res.sendFile(fullPath);
   }
 
+  @Get('rules-collections/list/:userID')
+  async getRulesCollections(@Res() res, @Param('userID') userID) {
+    const isAdmin = await this.userService.isAdminUser(userID);
+    const hasUserID = notEmptyString(userID, 16) && /^[0-9a-f]+$/i.test(userID);
+    const userRef = isAdmin ? '' : hasUserID ? userID : '-';
+    const rules = await this.settingService.getRuleCollections(userRef);
+    return res.send(rules);
+  }
+
+  @Post('rules-collections/save')
+  async saveRulesCollections(
+    @Res() res,
+    @Body() rulesCollectionDTO: RulesCollectionDTO,
+  ) {
+    const data = await this.settingService.saveRuleCollection(
+      rulesCollectionDTO,
+    );
+    return res.send(data);
+  }
+
+  @Put('rules-collections/edit/:itemID')
+  async updateRulesCollections(
+    @Res() res,
+    @Param('itemID') itemID,
+    @Body() rulesCollectionDTO: RulesCollectionDTO,
+  ) {
+    const { user } = rulesCollectionDTO;
+    const item = await this.settingService.getRuleCollection(itemID);
+    let result: any = { valid: false };
+    if (item instanceof Object) {
+      const isAdmin = await this.userService.isAdminUser(user);
+      if (isAdmin || item.user.toString() === user.toString()) {
+        const data = await this.settingService.saveRuleCollection(
+          rulesCollectionDTO,
+          itemID,
+        );
+        result = { valid: true, item };
+      }
+    }
+    return res.send(result);
+  }
+
   // Fetch a particular setting using ID
   @Delete('delete/:settingID/:userID')
   async delete(
@@ -257,6 +300,25 @@ export class SettingController {
     if (this.userService.isAdminUser(userID)) {
       data.setting = await this.settingService.delete(settingID);
       data.valid = data.setting.toString().length > 6;
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  // Fetch a particular setting using ID
+  @Delete('rules-collection/delete/:itemID/:userID')
+  async deleteRulesCollection(
+    @Res() res,
+    @Param('itemID') itemID,
+    @Param('userID') userID,
+  ) {
+    const data = { valid: false, item: null };
+    const item = await this.settingService.getRuleCollection(itemID);
+    if (
+      this.userService.isAdminUser(userID) ||
+      item.user.toString() === userID
+    ) {
+      data.item = await this.settingService.deleteRuleCollection(itemID);
+      data.valid = true;
     }
     return res.status(HttpStatus.OK).json(data);
   }
@@ -331,7 +393,6 @@ export class SettingController {
         '.schema');
 
       if (schemas.constructor instanceof Function) {
-        //const sch = schemas.constructor();
         Object.entries(schemas).forEach(entry => {
           const name = entry[0];
           const item: any = entry[1];

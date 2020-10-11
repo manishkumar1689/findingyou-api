@@ -1,13 +1,14 @@
 import { Module, HttpModule } from '@nestjs/common';
 import { FeedbackService } from './feedback.service';
 import { FeedbackController } from './feedback.controller';
-import { UserService } from 'src/user/user.service';
-import { UserSchema } from 'src/user/schemas/user.schema';
+import { UserService } from '../user/user.service';
+import { UserSchema } from '../user/schemas/user.schema';
 import { FeedbackSchema } from './schemas/feedback.schema';
 import { FlagSchema } from './schemas/flag.schema';
 import { MongooseModule } from '@nestjs/mongoose';
-import { SettingSchema } from 'src/setting/schemas/setting.schema';
-import { SettingService } from 'src/setting/setting.service';
+import { SettingSchema } from '../setting/schemas/setting.schema';
+import { SettingService } from '../setting/setting.service';
+import { RulesCollectionSchema } from '../setting/schemas/rules-collection.schema';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { SettingService } from 'src/setting/setting.service';
       { name: 'Flag', schema: FlagSchema },
       { name: 'User', schema: UserSchema },
       { name: 'Setting', schema: SettingSchema },
+      { name: 'RulesCollection', schema: RulesCollectionSchema },
     ]),
   ],
   providers: [FeedbackService, UserService, SettingService],
