@@ -8,12 +8,13 @@ import { MessageSchema } from '../message/schemas/message.schema';
 import { GeoService } from './../geo/geo.service';
 import { SettingService } from './../setting/setting.service';
 import { SettingSchema } from '../setting/schemas/setting.schema';
-import { ChartSchema } from 'src/astrologic/schemas/chart.schema';
-import { AstrologicService } from 'src/astrologic/astrologic.service';
-import { BodySpeedSchema } from 'src/astrologic/schemas/body-speed.schema';
-import { PairedChartSchema } from 'src/astrologic/schemas/paired-chart.schema';
-import { SnippetSchema } from 'src/snippet/schemas/snippet.schema';
-import { SnippetService } from 'src/snippet/snippet.service';
+import { ChartSchema } from '../astrologic/schemas/chart.schema';
+import { AstrologicService } from '../astrologic/astrologic.service';
+import { BodySpeedSchema } from '../astrologic/schemas/body-speed.schema';
+import { PairedChartSchema } from '../astrologic/schemas/paired-chart.schema';
+import { SnippetSchema } from '../snippet/schemas/snippet.schema';
+import { SnippetService } from '../snippet/snippet.service';
+import { RulesCollectionSchema } from '../setting/schemas/rules-collection.schema';
 
 @Global()
 @Module({
@@ -27,6 +28,7 @@ import { SnippetService } from 'src/snippet/snippet.service';
       { name: 'Chart', schema: ChartSchema },
       { name: 'BodySpeed', schema: BodySpeedSchema },
       { name: 'PairedChart', schema: PairedChartSchema },
+      { name: 'RulesCollection', schema: RulesCollectionSchema },
     ]),
   ],
   providers: [
