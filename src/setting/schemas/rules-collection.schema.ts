@@ -1,5 +1,5 @@
 import * as mongoose from 'mongoose';
-import { CategorySchema } from './Category.schema';
+import { CategorySchema } from './category.schema';
 import { RuleSetSchema } from './rule-set.schema';
 const { Mixed, ObjectId } = mongoose.Schema.Types;
 
