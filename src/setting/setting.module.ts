@@ -6,6 +6,7 @@ import { SettingSchema } from './schemas/setting.schema';
 import { UserService } from './../user/user.service';
 import { UserSchema } from '../user/schemas/user.schema';
 import { RulesCollectionSchema } from './schemas/rules-collection.schema';
+
 @Module({
   imports: [
     MongooseModule.forFeature([
