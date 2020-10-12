@@ -5,15 +5,15 @@ import { Setting } from './interfaces/setting.interface';
 import { CreateSettingDTO } from './dto/create-setting.dto';
 import defaultFlags from './sources/flags';
 import { notEmptyString } from 'src/lib/validators';
-import { RulesCollection } from './interfaces/rules-collection.interface';
-import { RulesCollectionDTO } from './dto/rules-collection.dto';
+import { Protocol } from './interfaces/protocol.interface';
+import { ProtocolDTO } from './dto/protocol.dto';
 
 @Injectable()
 export class SettingService {
   constructor(
     @InjectModel('Setting') private readonly settingModel: Model<Setting>,
-    @InjectModel('RulesCollection')
-    private readonly rulesCollectionModel: Model<RulesCollection>,
+    @InjectModel('Protocol')
+    private readonly protocolModel: Model<Protocol>,
   ) {}
   // fetch all Settings
   async getAllSetting(): Promise<Setting[]> {
@@ -112,11 +112,11 @@ export class SettingService {
     return flags;
   }
 
-  async getRuleCollection(itemID: string) {
-    return await this.rulesCollectionModel.findById(itemID);
+  async getProtocol(itemID: string) {
+    return await this.protocolModel.findById(itemID);
   }
 
-  async getRuleCollections(userID = null) {
+  async getProtcols(userID = null) {
     const mp: Map<string, any> = new Map();
     const userNotMatched = userID === '-';
     if (!userNotMatched && notEmptyString(userID, 8)) {
@@ -126,26 +126,38 @@ export class SettingService {
       return [];
     } else {
       const criteria = Object.fromEntries(mp.entries());
-      return await this.rulesCollectionModel.find(criteria);
+      return await this.protocolModel
+        .find(criteria)
+        .select({ __v: 0 })
+        .populate({
+          path: 'user',
+          select: {
+            identifier: 1,
+            roles: 1,
+            fullName: 1,
+            nickName: 1,
+            active: 1,
+          },
+        });
     }
   }
 
-  async saveRuleCollection(rulesCollectionDTO: RulesCollectionDTO, id = '') {
+  async saveProtcol(protocolDTO: ProtocolDTO, id = '') {
     let result: any = null;
     if (notEmptyString(id, 8)) {
-      await this.rulesCollectionModel.findByIdAndUpdate(id, rulesCollectionDTO);
-      result = await this.rulesCollectionModel.findById(id);
+      await this.protocolModel.findByIdAndUpdate(id, protocolDTO);
+      result = await this.protocolModel.findById(id);
     } else {
-      const rulesCollection = new this.rulesCollectionModel(rulesCollectionDTO);
-      result = await rulesCollection.save();
+      const protocol = new this.protocolModel(protocolDTO);
+      result = await protocol.save();
     }
     return result;
   }
 
-  async deleteRuleCollection(id = '') {
-    const item = await this.rulesCollectionModel.findById(id);
+  async deleteProtocol(id = '') {
+    const item = await this.protocolModel.findById(id);
     if (!notEmptyString(id, 8)) {
-      await this.rulesCollectionModel.findByIdAndDelete(id);
+      await this.protocolModel.findByIdAndDelete(id);
     }
     return item;
   }

@@ -8,7 +8,7 @@ import { FlagSchema } from './schemas/flag.schema';
 import { MongooseModule } from '@nestjs/mongoose';
 import { SettingSchema } from '../setting/schemas/setting.schema';
 import { SettingService } from '../setting/setting.service';
-import { RulesCollectionSchema } from '../setting/schemas/rules-collection.schema';
+import { ProtocolSchema } from '../setting/schemas/protocol.schema';
 
 @Module({
   imports: [
@@ -18,7 +18,7 @@ import { RulesCollectionSchema } from '../setting/schemas/rules-collection.schem
       { name: 'Flag', schema: FlagSchema },
       { name: 'User', schema: UserSchema },
       { name: 'Setting', schema: SettingSchema },
-      { name: 'RulesCollection', schema: RulesCollectionSchema },
+      { name: 'Protocol', schema: ProtocolSchema },
     ]),
   ],
   providers: [FeedbackService, UserService, SettingService],

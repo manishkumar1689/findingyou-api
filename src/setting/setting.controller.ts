@@ -33,7 +33,7 @@ import moment = require('moment');
 import availableLanguages from './sources/languages';
 import defaultLanguageOptions from './sources/lang-options';
 import { AdminGuard } from '../auth/admin.guard';
-import { RulesCollectionDTO } from './dto/rules-collection.dto';
+import { ProtocolDTO } from './dto/protocol.dto';
 
 @Controller('setting')
 export class SettingController {
@@ -46,7 +46,7 @@ export class SettingController {
   @Post('create')
   async addSetting(@Res() res, @Body() createSettingDTO: CreateSettingDTO) {
     const setting = await this.settingService.addSetting(createSettingDTO);
-    return res.status(HttpStatus.OK).json({
+    return res.status(HttpStatus.CREATED).json({
       message: 'Setting has been created successfully',
       setting,
     });
@@ -247,42 +247,39 @@ export class SettingController {
     return res.sendFile(fullPath);
   }
 
-  @Get('rules-collections/list/:userID')
+  @Get('protocols/list/:userID')
   async getRulesCollections(@Res() res, @Param('userID') userID) {
     const isAdmin = await this.userService.isAdminUser(userID);
     const hasUserID = notEmptyString(userID, 16) && /^[0-9a-f]+$/i.test(userID);
     const userRef = isAdmin ? '' : hasUserID ? userID : '-';
-    const rules = await this.settingService.getRuleCollections(userRef);
-    return res.send(rules);
+    const rules = await this.settingService.getProtcols(userRef);
+    const statusCode = hasUserID
+      ? rules.length > 0
+        ? HttpStatus.OK
+        : HttpStatus.NO_CONTENT
+      : HttpStatus.NOT_ACCEPTABLE;
+    return res.status(statusCode).send(rules);
   }
 
-  @Post('rules-collections/save')
-  async saveRulesCollections(
-    @Res() res,
-    @Body() rulesCollectionDTO: RulesCollectionDTO,
-  ) {
-    const data = await this.settingService.saveRuleCollection(
-      rulesCollectionDTO,
-    );
-    return res.send(data);
+  @Post('protocol/save')
+  async saveRulesCollections(@Res() res, @Body() protocolDTO: ProtocolDTO) {
+    const data = await this.settingService.saveProtcol(protocolDTO);
+    return res.status(HttpStatus.CREATED).send(data);
   }
 
-  @Put('rules-collections/edit/:itemID')
+  @Put('protocol/edit/:itemID')
   async updateRulesCollections(
     @Res() res,
     @Param('itemID') itemID,
-    @Body() rulesCollectionDTO: RulesCollectionDTO,
+    @Body() protocolDTO: ProtocolDTO,
   ) {
-    const { user } = rulesCollectionDTO;
-    const item = await this.settingService.getRuleCollection(itemID);
+    const { user } = protocolDTO;
+    const item = await this.settingService.getProtocol(itemID);
     let result: any = { valid: false };
     if (item instanceof Object) {
       const isAdmin = await this.userService.isAdminUser(user);
       if (isAdmin || item.user.toString() === user.toString()) {
-        const data = await this.settingService.saveRuleCollection(
-          rulesCollectionDTO,
-          itemID,
-        );
+        const data = await this.settingService.saveProtcol(protocolDTO, itemID);
         result = { valid: true, item };
       }
     }
@@ -297,27 +294,29 @@ export class SettingController {
     @Param('userID') userID,
   ) {
     const data = { valid: false, setting: '' };
+    let statusCode = HttpStatus.OK;
     if (this.userService.isAdminUser(userID)) {
       data.setting = await this.settingService.delete(settingID);
       data.valid = data.setting.toString().length > 6;
+      HttpStatus.NOT_ACCEPTABLE;
     }
-    return res.status(HttpStatus.OK).json(data);
+    return res.status(statusCode).json(data);
   }
 
   // Fetch a particular setting using ID
-  @Delete('rules-collection/delete/:itemID/:userID')
+  @Delete('protocol/delete/:itemID/:userID')
   async deleteRulesCollection(
     @Res() res,
     @Param('itemID') itemID,
     @Param('userID') userID,
   ) {
     const data = { valid: false, item: null };
-    const item = await this.settingService.getRuleCollection(itemID);
+    const item = await this.settingService.getProtocol(itemID);
     if (
       this.userService.isAdminUser(userID) ||
       item.user.toString() === userID
     ) {
-      data.item = await this.settingService.deleteRuleCollection(itemID);
+      data.item = await this.settingService.deleteProtocol(itemID);
       data.valid = true;
     }
     return res.status(HttpStatus.OK).json(data);
@@ -346,6 +345,7 @@ export class SettingController {
   @UseInterceptors(FileInterceptor('file'))
   async uploadCustom(@Res() res, @Param('key') key, @UploadedFile() file) {
     const jsonData = extractJsonData(file, key, 'replace');
+    let statusCode = HttpStatus.NOT_ACCEPTABLE;
     if (jsonData.get('valid')) {
       const setting = await this.settingService.getByKey(key);
       if (setting) {
@@ -361,10 +361,11 @@ export class SettingController {
           ].join('');
           writeSettingFile(fileName, customValue);
           jsonData.set('restore', fileName);
+          statusCode = HttpStatus.OK;
         }
       }
     }
-    return res.status(HttpStatus.OK).json(Object.fromEntries(jsonData));
+    return res.status(statusCode).json(Object.fromEntries(jsonData));
   }
 
   @Post('import/:mode/:key')
@@ -376,6 +377,7 @@ export class SettingController {
     @UploadedFile() file,
   ) {
     const jsonData = extractJsonData(file, key, mode);
+    let statusCode = HttpStatus.NOT_ACCEPTABLE;
     if (jsonData.get('isArrayOfObjects')) {
       let module = '';
       let schemaName = '';
@@ -403,6 +405,7 @@ export class SettingController {
                 if (item.obj instanceof Object) {
                   const validKeys = Object.keys(item.obj);
                   jsonData.set('validKeys', validKeys);
+                  statusCode = HttpStatus.OK;
                 }
               }
             }
@@ -410,6 +413,6 @@ export class SettingController {
         });
       }
     }
-    return res.status(HttpStatus.OK).json(Object.fromEntries(jsonData));
+    return res.status(statusCode).json(Object.fromEntries(jsonData));
   }
 }

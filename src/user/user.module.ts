@@ -14,7 +14,7 @@ import { BodySpeedSchema } from '../astrologic/schemas/body-speed.schema';
 import { PairedChartSchema } from '../astrologic/schemas/paired-chart.schema';
 import { SnippetSchema } from '../snippet/schemas/snippet.schema';
 import { SnippetService } from '../snippet/snippet.service';
-import { RulesCollectionSchema } from '../setting/schemas/rules-collection.schema';
+import { ProtocolSchema } from '../setting/schemas/protocol.schema';
 
 @Global()
 @Module({
@@ -28,7 +28,7 @@ import { RulesCollectionSchema } from '../setting/schemas/rules-collection.schem
       { name: 'Chart', schema: ChartSchema },
       { name: 'BodySpeed', schema: BodySpeedSchema },
       { name: 'PairedChart', schema: PairedChartSchema },
-      { name: 'RulesCollection', schema: RulesCollectionSchema },
+      { name: 'Protocol', schema: ProtocolSchema },
     ]),
   ],
   providers: [
