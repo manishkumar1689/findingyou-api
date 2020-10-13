@@ -261,6 +261,9 @@ export class SettingController {
     return res.status(statusCode).send(rules);
   }
 
+  /*
+  Save new protocol with nested rules-collections
+  */
   @Post('protocol/save')
   async saveRulesCollections(@Res() res, @Body() protocolDTO: ProtocolDTO) {
     const data = await this.settingService.saveProtcol(protocolDTO);
