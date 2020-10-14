@@ -6,4 +6,7 @@ export class CategoryDTO {
 
   @ApiProperty()
   readonly name: string;
+
+  @ApiProperty()
+  readonly maxScore: number;
 }
