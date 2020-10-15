@@ -9,4 +9,9 @@ export const CategorySchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  maxScore: {
+    type: Number,
+    required: false,
+    default: 0,
+  },
 });

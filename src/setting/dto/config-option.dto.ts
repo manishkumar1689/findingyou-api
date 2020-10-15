@@ -1,12 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class CategoryDTO {
+export class ConfigOptionDTO {
   @ApiProperty()
   readonly key: string;
 
   @ApiProperty()
-  readonly name: string;
+  readonly value: any;
 
   @ApiProperty()
-  readonly maxScore: number;
+  readonly type: string;
 }
