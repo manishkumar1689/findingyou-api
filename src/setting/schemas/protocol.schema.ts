@@ -1,6 +1,7 @@
 import * as mongoose from 'mongoose';
 import { CategorySchema } from './category.schema';
 import { RulesCollectionSchema } from './rules-collection.schema';
+import { ConfigOptionSchema } from './config-option.schema';
 const { Mixed, ObjectId } = mongoose.Schema.Types;
 
 export const ProtocolSchema = new mongoose.Schema({
@@ -19,6 +20,10 @@ export const ProtocolSchema = new mongoose.Schema({
   },
   collections: {
     type: [RulesCollectionSchema],
+    default: [],
+  },
+  settings: {
+    type: [ConfigOptionSchema],
     default: [],
   },
   categories: {

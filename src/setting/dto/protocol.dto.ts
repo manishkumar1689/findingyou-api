@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { CategoryDTO } from './category.dto';
+import { ConfigOptionDTO } from './config-option.dto';
 import { RulesCollectionDTO } from './rules-collection.dto';
 
 export class ProtocolDTO {
@@ -17,6 +18,9 @@ export class ProtocolDTO {
 
   @ApiProperty()
   readonly categories: CategoryDTO[];
+
+  @ApiProperty()
+  readonly settings: ConfigOptionDTO[];
 
   @ApiProperty()
   readonly createdAt: Date;
