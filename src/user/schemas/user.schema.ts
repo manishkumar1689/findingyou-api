@@ -8,20 +8,22 @@ import { PreferenceSchema } from './preference.schema';
 import { ContactSchema } from './contact.schema';
 
 export const UserSchema = new mongoose.Schema({
-  fullName: String,
-  nickName: String,
+  fullName: String, // formal full name
+  nickName: String, // display name, alias, stage name
   identifier: {
     type: String,
     required: true,
     unique: true,
-    validate: {
+    // identifier may not always be an email, but must unique
+    // use client-side validation instead
+    /* validate: {
       validator: validator.isEmail,
       message: '{VALUE} is not a valid email',
-    },
+    }, */
   },
   mode: {
     type: String,
-    enum: ['local', 'google', 'facebook'],
+    enum: ['local', 'google', 'facebook', 'astro-databank'],
   },
   password: {
     type: String,

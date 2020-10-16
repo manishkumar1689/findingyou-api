@@ -35,6 +35,7 @@
     "bcrypt": "^4.0.1",
     "cache-manager": "^3.4.0",
     "cache-manager-redis-store": "^2.0.0",
+    "csv-parser": "^2.3.3",
     "express-list-routes": "^0.1.4",
     "image-size": "^0.8.3",
     "moment": "^2.24.0",
@@ -46,6 +47,7 @@
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",
     "rxjs": "^6.5.4",
+    "strip-bom-stream": "^4.0.0",
     "swisseph": "^0.5.13",
     "validator": "^13.0.0"
   },

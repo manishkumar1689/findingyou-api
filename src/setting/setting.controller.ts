@@ -34,6 +34,7 @@ import availableLanguages from './sources/languages';
 import defaultLanguageOptions from './sources/lang-options';
 import { AdminGuard } from '../auth/admin.guard';
 import { ProtocolDTO } from './dto/protocol.dto';
+import { parseAstroBankCSV } from '../lib/parse-astro-csv';
 
 @Controller('setting')
 export class SettingController {
@@ -417,5 +418,11 @@ export class SettingController {
       }
     }
     return res.status(statusCode).json(Object.fromEntries(jsonData));
+  }
+
+  @Get('test-records/import')
+  async importTestRecords(@Res() res) {
+    const result = await parseAstroBankCSV();
+    return res.send(result);
   }
 }

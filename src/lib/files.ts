@@ -6,6 +6,7 @@ import {
   filesDirectory,
   backupPath,
   imageSizes,
+  sourcesDirectory,
 } from '../.config';
 import { hashMapToObject } from './entities';
 import { imageSize } from 'image-size';
@@ -211,6 +212,7 @@ export const deleteFile = (
 
 export const mediaPath = (type: string = 'media') => {
   let relPath = 'media';
+
   switch (type) {
     case 'export':
     case 'exports':
@@ -222,6 +224,10 @@ export const mediaPath = (type: string = 'media') => {
       break;
     case 'files':
       relPath = filesDirectory;
+      break;
+    case 'sources':
+    case 'source':
+      relPath = sourcesDirectory;
       break;
   }
   return path.resolve(relPath) + '/';
