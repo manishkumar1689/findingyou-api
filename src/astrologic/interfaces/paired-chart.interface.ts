@@ -13,6 +13,7 @@ export interface PairedChart extends Document {
   readonly surfaceTzOffset: number;
   readonly midMode: string;
   readonly tags: Tag[];
+  readonly ageSpan: number[];
   readonly notes: string;
   readonly createdAt: Date;
   readonly modifiedAt: Date;
