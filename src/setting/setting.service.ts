@@ -145,7 +145,8 @@ export class SettingService {
   async saveProtcol(protocolDTO: ProtocolDTO, id = '') {
     let result: any = null;
     if (notEmptyString(id, 8)) {
-      await this.protocolModel.findByIdAndUpdate(id, protocolDTO);
+      const updated = { ...protocolDTO, modifiedAt: new Date() };
+      await this.protocolModel.findByIdAndUpdate(id, updated);
       result = await this.protocolModel.findById(id);
     } else {
       const protocol = new this.protocolModel(protocolDTO);

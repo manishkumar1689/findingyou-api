@@ -53,10 +53,16 @@ import { calcRetroGrade, calcStation } from './lib/astro-motion';
 import { toIndianTime, calcTransition } from './lib/transitions';
 import { readEpheFiles } from './lib/files';
 import { ChartInputDTO } from './dto/chart-input.dto';
-import { smartCastInt, sanitize } from 'src/lib/converters';
+import { smartCastInt, sanitize, smartCastFloat } from 'src/lib/converters';
 import { PairedChartInputDTO } from './dto/paired-chart-input.dto';
 import { midPointSurface, medianLatlng } from './lib/math-funcs';
 import { PairedChartDTO } from './dto/paired-chart.dto';
+import {
+  mapPairedChartInput,
+  mapToChartInput,
+  parseAstroBankJSON,
+  Record,
+} from '../lib/parse-astro-csv';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -336,6 +342,10 @@ export class AstrologicController {
       alt,
       isDefaultBirthChart,
       locality,
+      notes,
+      tz,
+      tzOffset,
+      placenames,
     } = inData;
     let { name, type, gender, eventType, roddenScale } = inData;
     const userRecord = await this.userService.getUser(user);
@@ -361,7 +371,12 @@ export class AstrologicController {
             gender,
             eventType,
             roddenScale,
+            notes,
           };
+          const hasGeoTzData =
+            notEmptyString(tz) &&
+            isNumeric(tzOffset) &&
+            placenames instanceof Array;
           const geoInfo = await this.geoService.fetchGeoAndTimezone(
             geo.lat,
             geo.lng,
@@ -471,6 +486,12 @@ export class AstrologicController {
 
   @Post('save-paired')
   async savePairedChart(@Res() res, @Body() inData: PairedChartInputDTO) {
+    const data = await this.savePairedChartData(inData);
+    const statusCode = data.valid ? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
+    return res.status(statusCode).res(data);
+  }
+
+  async savePairedChartData(inData: PairedChartInputDTO) {
     const c1 = await this.astrologicService.getChart(inData.c1);
     const c2 = await this.astrologicService.getChart(inData.c2);
     const midMode = inData.mode === 'surface' ? 'surface' : 'median';
@@ -491,7 +512,11 @@ export class AstrologicController {
       const mid =
         midMode === 'surface' ? surfaceGeo : medianLatlng(c1.geo, c2.geo);
       const dtUtc = applyTzOffsetToDateString(datetime, 0);
-      const { tz, tzOffset } = await this.geoService.fetchTzData(mid, dtUtc);
+      const { tz, tzOffset } = await this.geoService.fetchTzData(
+        mid,
+        dtUtc,
+        true,
+      );
       const tsData = await calcCompactChartData(
         dtUtc,
         { ...mid, alt: 0 },
@@ -504,6 +529,7 @@ export class AstrologicController {
         const surfaceTime = await this.geoService.fetchTzData(
           surfaceGeo,
           dtUtc,
+          true,
         );
         const surfaceData = await fetchHouseData(
           dtUtc,
@@ -542,11 +568,11 @@ export class AstrologicController {
         tags,
       } as PairedChartDTO;
       const paired = await this.astrologicService.savePaired(pairedDTO);
-      return res.json({
+      return {
         valid: true,
         paired,
         msg: `saved`,
-      });
+      };
     } else {
       const invalidKeys = [];
       if (!validC1) {
@@ -556,10 +582,10 @@ export class AstrologicController {
         invalidKeys.push(c2);
       }
       const chartIds = invalidKeys.join(', ');
-      return res.json({
+      return {
         valid: false,
         msg: `Chart IDs not matched ${chartIds}`,
-      });
+      };
     }
   }
 
@@ -828,6 +854,17 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  @Get('tzdata/:loc/:dt')
+  async timeZoneByGeo(@Res() res, @Param('loc') loc, @Param('dt') dt) {
+    if (notEmptyString(dt, 6) && notEmptyString(loc, 3)) {
+      const geo = locStringToGeo(loc);
+      const data = await this.geoService.fetchTzData(geo, dt);
+      return res.status(HttpStatus.OK).send(data);
+    } else {
+      return res.status(HttpStatus.NOT_ACCEPTABLE).send({ valid: false });
+    }
+  }
+
   @Get('retrograde/:dt/:planet')
   async retrogradeStations(
     @Res() res,
@@ -1006,5 +1043,71 @@ export class AstrologicController {
     }
     const data = fetchAllSettings(filters);
     return res.status(HttpStatus.OK).json(data);
+  }
+
+  async mapAstroDatabankRecord(
+    rec: Record,
+    rows: Array<Record>,
+    userID: string,
+    timeoutMs = 500,
+  ) {
+    const inData = mapToChartInput(rec, userID);
+
+    const d1 = await this.saveChartData(inData);
+    //console.log(inData.name, rec.dob, rec.jd, inData.datetime);
+    if (d1.valid && rec.relations.length > 0) {
+      rec.relations.forEach(async (rel, relIndex) => {
+        const relRec = rows.find(
+          r => r.identifier.trim() === rel.identifier.trim(),
+        );
+        if (relRec instanceof Object) {
+          const inData2 = mapToChartInput(relRec, userID);
+          setTimeout(async () => {
+            const d2 = await this.saveChartData(inData2);
+
+            if (d2.valid) {
+              const pd = mapPairedChartInput(
+                relRec,
+                d1.chart._id,
+                d2.chart._id,
+                rel,
+                userID,
+              );
+              const pData = await this.savePairedChartData(pd);
+              //console.log(pData);
+            }
+          }, relIndex * timeoutMs);
+        }
+      });
+    }
+  }
+
+  @Get('test-records/match/:userID')
+  async matchTestRecords(@Res() res, @Param('userID') userID) {
+    const result = await parseAstroBankJSON();
+    const start = 100;
+    const timeoutMs = 800;
+    let numRows = 0;
+    if (result.has('numRows')) {
+      numRows = result.get('numRows');
+      if (numRows > 0) {
+        const rows = result.get('rows');
+        if (rows instanceof Array) {
+          console.log(numRows, start);
+          for (let i = start; i < numRows; i++) {
+            const rec: Record = rows[i];
+            const numRels = rec.relations.length;
+            let ts = (i - start) * (1 + numRels) * timeoutMs;
+            if (ts < 0) {
+              ts = 0;
+            }
+            setTimeout(() => {
+              this.mapAstroDatabankRecord(rec, rows, userID, timeoutMs * 0.9);
+            }, ts);
+          }
+        }
+      }
+    }
+    return res.send(Object.fromEntries(result.entries()));
   }
 }

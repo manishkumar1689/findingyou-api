@@ -34,7 +34,7 @@ import availableLanguages from './sources/languages';
 import defaultLanguageOptions from './sources/lang-options';
 import { AdminGuard } from '../auth/admin.guard';
 import { ProtocolDTO } from './dto/protocol.dto';
-import { parseAstroBankCSV } from '../lib/parse-astro-csv';
+import { parseAstroBankCSV, parseAstroBankJSON } from '../lib/parse-astro-csv';
 
 @Controller('setting')
 export class SettingController {

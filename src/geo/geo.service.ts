@@ -4,20 +4,45 @@ import { geonamesApiBase, timezonedbApiBase } from './api';
 import { objectToQueryString, mapToQueryString } from '../lib/converters';
 import { AxiosResponse } from 'axios';
 import * as moment from 'moment-timezone';
-import { notEmptyString, isNumeric } from 'src/lib/validators';
+import { notEmptyString, isNumeric } from '../lib/validators';
 import {
   filterDefaultName,
   filterToponyms,
   correctOceanTz,
 } from './api/filters';
 import { GeoPos } from 'src/astrologic/interfaces/geo-pos';
+import {
+  extractFromRedisClient,
+  extractFromRedisMap,
+  storeInRedis,
+} from '../lib/entities';
+import * as Redis from 'ioredis';
+import { RedisService } from 'nestjs-redis';
 
 @Injectable()
 export class GeoService {
-  constructor(private http: HttpService) {}
+  constructor(
+    private http: HttpService,
+    private readonly redisService: RedisService,
+  ) {}
 
   getHttp(url: string): Promise<AxiosResponse> {
     return this.http.get(url).toPromise();
+  }
+
+  async redisClient(): Promise<Redis.Redis> {
+    const redisMap = this.redisService.getClients();
+    return extractFromRedisMap(redisMap);
+  }
+
+  async redisGet(key: string): Promise<any> {
+    const client = await this.redisClient();
+    return await extractFromRedisClient(client, key);
+  }
+
+  async redisSet(key: string, value): Promise<boolean> {
+    const client = await this.redisClient();
+    return await storeInRedis(client, key, value);
   }
 
   async fetchGeoNames(method: string, params: any) {
@@ -136,13 +161,42 @@ export class GeoService {
     return { ...data, offset: correctOceanTz(data.toponyms, offset) };
   }
 
-  async fetchTzData(coords: GeoPos, datetime: string) {
+  async fetchTzData(coords: GeoPos, datetime: string, skipRemote = false) {
     const tz = await this.fetchGeoNames('timezoneJSON', coords);
     const { timezoneId } = tz;
-    const tzoData = await this.fetchTimezoneOffset(timezoneId, datetime);
+    const key = ['tzdb', timezoneId, datetime.split(':').shift()].join('_');
+    const storedTzData = await this.redisGet(key);
+    let tzoData: any = {
+      tz: tz.timezoneId,
+      tzOffset: 0,
+      valid: false,
+    };
+    const isValidTimezoneDBPayload = payload =>
+      payload instanceof Object && Object.keys(payload).includes('offset');
+    let valid = isValidTimezoneDBPayload(storedTzData);
+    let tzOffset = 0;
+    if (valid) {
+      tzoData = storedTzData;
+      tzOffset = tzoData.offset;
+    } else {
+      if (skipRemote) {
+        tzOffset = this.checkGmtOffset(tz.timezoneId, datetime);
+        valid = true;
+      } else {
+        tzoData = await this.fetchTimezoneOffset(timezoneId, datetime);
+        valid = isValidTimezoneDBPayload(tzoData);
+        if (valid) {
+          this.redisSet(key, tzoData);
+          tzOffset = tzoData.offset;
+        } else {
+          tzOffset = this.checkGmtOffset(tz.timezoneId, datetime);
+        }
+      }
+    }
     return {
       tz: tz.timezoneId,
-      tzOffset: tzoData.offset,
+      tzOffset,
+      valid,
     };
   }
 

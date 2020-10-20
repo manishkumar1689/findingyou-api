@@ -1,8 +1,24 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { PlacenameDTO } from 'src/user/dto/placename.dto';
 
 /*
 Simple DTO for core input data required to construct a chart
+with many optional fields depending on context
 */
+
+export interface SimpleGeo {
+  lat: number;
+  lng: number;
+  alt?: number;
+}
+
+export interface SimplePlacename {
+  fullName?: string;
+  name?: string;
+  type?: string;
+  geo?: SimpleGeo;
+}
+
 export class ChartInputDTO {
   @ApiProperty()
   readonly _id?: string;
@@ -48,4 +64,13 @@ export class ChartInputDTO {
 
   @ApiProperty()
   readonly locality?: string;
+
+  @ApiProperty()
+  readonly tzOffset?: number;
+
+  @ApiProperty()
+  readonly tz?: string;
+
+  @ApiProperty()
+  readonly placenames?: SimplePlacename;
 }
