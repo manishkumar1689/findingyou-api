@@ -658,18 +658,32 @@ export class AstrologicController {
     }
   }
 
-  @Get('paired/:userID')
-  async getPairedByUser(@Res() res, @Param('userID') userID: string) {
-    const items = await this.astrologicService.getPairedByUser(userID);
+  @Get('paired/:userID/:max?')
+  async getPairedByUser(
+    @Res() res,
+    @Param('userID') userID: string,
+    @Param('max') max: string,
+  ) {
+    const limit = smartCastInt(max, 0);
+    const items = await this.astrologicService.getPairedByUser(userID, limit);
     return res.json({
       valid: true,
       items,
     });
   }
 
-  @Get('paired-by-chart/:chartID')
-  async getPairedByChart(@Res() res, @Param('chartID') chartID: string) {
-    const items = await this.astrologicService.getPairedByChart(chartID);
+  @Get('paired-by-chart/:chartID/:max?')
+  async getPairedByChart(
+    @Res() res,
+    @Param('chartID') chartID: string,
+    @Param('max') max: string,
+  ) {
+    const limit = smartCastInt(max, 0);
+    const items = await this.astrologicService.getPairedByChart(
+      chartID,
+      'modifiedAt',
+      limit,
+    );
     return res.json({
       valid: true,
       items,

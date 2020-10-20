@@ -173,9 +173,11 @@ export class AstrologicService {
     return result;
   }
 
-  async getPairedByUser(userID: string) {
+  async getPairedByUser(userID: string, limit = 0) {
+    const max = limit > 0 && limit < 1000 ? limit : 1000;
     const items = await this.pairedChartModel
       .find({ user: userID })
+      .limit(max)
       .populate(['c1', 'c2'])
       .sort([['modifiedAt', -1]])
       .populate(['c1', 'c2'])
@@ -183,7 +185,8 @@ export class AstrologicService {
     return items.map(mapPairedCharts);
   }
 
-  async getPairedByChart(chartID: string, sort = 'modifiedAt') {
+  async getPairedByChart(chartID: string, sort = 'modifiedAt', limit = 0) {
+    const max = limit > 0 && limit < 1000 ? limit : 1000;
     let sortDir = -1;
     switch (sort) {
       case 'subject.name':
@@ -194,6 +197,7 @@ export class AstrologicService {
       .find({
         $or: [{ c1: chartID }, { c2: chartID }],
       })
+      .limit(limit)
       .sort([[sort, sortDir]])
       .populate(['c1', 'c2'])
       .exec();
@@ -212,25 +216,34 @@ export class AstrologicService {
     defaultOnly = false,
     queryParams = null,
   ) {
-    const first = await this.chartModel
-      .findOne({ user: userID, isDefaultBirthChart: true })
-      .exec();
     const condMap = new Map<string, any>();
-    condMap.set('user', userID);
-    if (defaultOnly) {
-      condMap.set('isDefaultBirthChart', true);
-    }
+    let showUserFirst = start < 1;
     if (queryParams instanceof Object) {
       Object.entries(queryParams).map(entry => {
         const [key, val] = entry;
         if (typeof val === 'string') {
+          showUserFirst = false;
           switch (key) {
             case 'name':
               condMap.set('subject.name', RegExp(val, 'i'));
               break;
+            case 'id':
+              condMap.set('_id', val);
+              break;
           }
         }
       });
+    }
+    let first = null;
+    if (showUserFirst) {
+      first = await this.chartModel
+        .findOne({ user: userID, isDefaultBirthChart: true })
+        .exec();
+    }
+
+    condMap.set('user', userID);
+    if (defaultOnly) {
+      condMap.set('isDefaultBirthChart', true);
     }
     const others = await this.chartModel
       .find(Object.fromEntries(condMap))

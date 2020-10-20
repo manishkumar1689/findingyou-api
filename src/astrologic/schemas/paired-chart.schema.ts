@@ -45,6 +45,11 @@ export const PairedChartSchema = new mongoose.Schema({
     required: false,
     default: [],
   },
+  ageSpan: {
+    type: [Number],
+    required: false,
+    default: [0, 0],
+  },
   notes: {
     type: String,
     required: false,
