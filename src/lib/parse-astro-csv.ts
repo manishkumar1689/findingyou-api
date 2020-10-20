@@ -3,16 +3,24 @@ import * as stripBom from 'strip-bom-stream';
 import * as fs from 'fs';
 import { mediaPath, writeMediaFile } from './files';
 import * as moment from 'moment-timezone';
-import { calcJulDate } from '../astrologic/lib/date-funcs';
-import { notEmptyString, validISODateString } from './validators';
+import { calcJulDate, jdToDateTime } from '../astrologic/lib/date-funcs';
+import { emptyString, notEmptyString, validISODateString } from './validators';
+import {
+  ChartInputDTO,
+  SimplePlacename,
+  SimpleGeo,
+} from '../astrologic/dto/chart-input.dto';
+import { PairedChartInputDTO } from 'src/astrologic/dto/paired-chart-input.dto';
+import { sanitize } from './converters';
+import { GeoDTO } from '../user/dto/geo.dto';
 
-interface RecordRelation {
+export interface RecordRelation {
   tags: string[];
   identifier: string;
   notes?: string;
 }
 
-interface Record {
+export interface Record {
   identifier: string;
   source: string;
   fullName: string;
@@ -21,9 +29,11 @@ interface Record {
   geo: any;
   dob: Date;
   jd: number;
+  tz: string;
+  tzOffset: number;
   relations: RecordRelation[];
   rodden: string;
-  placenames: Array<any>;
+  placenames: Array<SimplePlacename>;
   [key: string]: any;
 }
 
@@ -36,22 +46,29 @@ const defaultRecord = {
   rodden: '',
   dob: new Date('0000-00-00T00:00:00'),
   jd: 0,
+  tz: '',
+  tzOffset: 0,
   geo: { lat: 0, lng: 0 },
   placenames: [],
   relations: [],
 };
 
 const cleanAstroBankUrl = (url: string) => {
-  return url.split('/astro-databank/').pop();
+  return url
+    .split('/astro-databank/')
+    .pop()
+    .replace(/(\w)\s+_([a-z])/i, '$1,_$2')
+    .split(/\,\s+/)
+    .shift();
 };
 
 const parseTzString = (value: string) => {
-  const match = value.match(/\bh(\d+(.\d+)?)([we])\b/);
+  const match = value.match(/\bh(\d+(\.\d+)?)([we])\b/i);
   let offset = 0;
   if (match) {
     const hours = parseFloat(match[1]);
     offset = hours * 60 * 60;
-    switch (match[2]) {
+    switch (match[3]) {
       case 'w':
         offset = 0 - offset;
         break;
@@ -128,12 +145,20 @@ const parseRecord = row => {
     const baseKey = key.replace(/_\d+$/, '');
     let placename = '';
     if (typeof value === 'string') {
-      switch (baseKey) {
+      switch (baseKey.toLowerCase()) {
         case 'birthname':
-          record.fullName = value;
+          record.fullName = value.trim();
           break;
         case 'name_rows':
-          record.nickName = value;
+          record.nickName = value.trim();
+          break;
+        case 'name':
+          record.nickName = value
+            .split(',')
+            .reverse()
+            .join(' ')
+            .trim()
+            .replace(/\s\s+/g, ' ');
           break;
         case 'category':
           categories = value.split(',').map(txt =>
@@ -182,8 +207,14 @@ const parseRecord = row => {
       }
     }
     if (placename.length > 1) {
-      record.placenames = placename.split(/,\s*/).map(word => {
-        return { name: word, fullName: word, type: 'XX', geo: record.geo };
+      record.placenames = placename.split(/,\s*/).map((word, wi) => {
+        const type = wi === 0 ? 'PPL' : 'PCLI';
+        return {
+          name: word.toString(),
+          fullName: word.toString(),
+          type,
+          geo: record.geo as GeoDTO,
+        };
       });
     }
     if (hasDob) {
@@ -224,13 +255,8 @@ export const parseAstroBankCSV = async () => {
     )
     .on('data', data => rows.push(data))
     .on('end', () => {
-      const endIndex = startIndex + numPreview;
+      //const endIndex = startIndex + numPreview;
       const records = rows.map(parseRecord);
-      /* for (let i = startIndex; i < endIndex; i++) {
-        const record = records[i];
-        console.log(JSON.stringify(record, null, 2));
-        records.push(record);
-      } */
       const identifiers = records.map(r => r.identifier);
       const unmatched = [];
       records.forEach(r => {
@@ -253,4 +279,102 @@ export const parseAstroBankCSV = async () => {
     });
 
   return Object.fromEntries(result.entries());
+};
+
+export const fetchJsonRows = (fp: string): Array<any> => {
+  if (fs.existsSync(fp)) {
+    const raw = fs.readFileSync(fp);
+    return raw instanceof Buffer ? JSON.parse(raw.toString()) : [];
+  } else {
+    return [];
+  }
+};
+
+export const mapToChartInput = (rec: Record, userID: string): ChartInputDTO => {
+  let bestName = rec.fullName;
+  if (emptyString(bestName)) {
+    bestName = rec.nickName;
+    if (emptyString(bestName)) {
+      bestName = rec.identifier;
+    }
+  }
+  const placenames = rec.placenames.filter(pl => pl instanceof Object);
+  return {
+    user: userID,
+    name: bestName,
+    datetime: jdToDateTime(rec.jd),
+    lat: rec.geo.lat,
+    lng: rec.geo.lng,
+    alt: 10,
+    notes: rec.notes,
+    type: 'person',
+    isDefaultBirthChart: false,
+    gender: rec.gender,
+    eventType: 'birth',
+    roddenScale: rec.rodden,
+    placenames,
+    tz: 'X/X',
+    tzOffset: rec.tzOffset,
+  } as ChartInputDTO;
+};
+
+export const mapPairedChartInput = (
+  rec: Record,
+  c1: string,
+  c2: string,
+  rel: any,
+  userID: string,
+) => {
+  let strNotes = '';
+  let arrTags = [];
+  if (rel instanceof Object) {
+    const { tags, notes } = rel;
+    if (tags instanceof Array) {
+      arrTags = tags.map(tg => {
+        return {
+          slug: sanitize(tg),
+          name: tg,
+        };
+      });
+    }
+    if (notEmptyString(notes)) {
+      strNotes = notes;
+    }
+  }
+  return {
+    user: userID,
+    c1,
+    c2,
+    tags: arrTags,
+    notes: strNotes,
+    mode: 'median',
+  } as PairedChartInputDTO;
+};
+
+export const parseAstroBankJSON = async () => {
+  const fpSource = mediaPath('sources') + 'test-records.json';
+  const fpRelated = mediaPath('sources') + 'related.json';
+  const mp: Map<string, any> = new Map();
+  const sourceRows = fetchJsonRows(fpSource);
+  const numSourceRows = sourceRows.length;
+  mp.set('numSourceRows', numSourceRows);
+
+  const relatedRows = fetchJsonRows(fpRelated);
+  mp.set('numRelatedRows', relatedRows.length);
+  const rows = [];
+  for (let i = 0; i < sourceRows.length; i++) {
+    const rec = sourceRows[i];
+    rows.push(rec);
+    if (rec.relations instanceof Array) {
+      rec.relations.forEach(rel => {
+        const mr = relatedRows.find(r => r.url === rel.identifier);
+        if (mr) {
+          rows.push(parseRecord(mr));
+        }
+      });
+    }
+  }
+  mp.set('rows', rows);
+  mp.set('numRows', rows.length);
+  return mp;
 };
