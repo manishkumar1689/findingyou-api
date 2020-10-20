@@ -698,19 +698,22 @@ export class AstrologicController {
     @Param('start') start = '0',
     @Param('limit') limit = '100',
     @Param('defaultOnly') defaultOnly = '0',
+    @Query() query,
   ) {
     const data: any = { valid: false, items: [], message: 'invalid user ID' };
     const user = await this.userService.getUser(userID);
     const isDefaultBirthChart = smartCastInt(defaultOnly) > 0;
+
     if (user instanceof Object) {
       if (user.active) {
         const startVal = smartCastInt(start, 0);
-        const limitVal = smartCastInt(limit, 100);
+        const limitVal = smartCastInt(limit, 10);
         const charts = await this.astrologicService.getChartsByUser(
           userID,
           startVal,
           limitVal,
           isDefaultBirthChart,
+          query,
         );
         if (charts instanceof Array) {
           data.items = charts;

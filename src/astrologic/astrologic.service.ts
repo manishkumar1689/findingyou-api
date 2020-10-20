@@ -210,6 +210,7 @@ export class AstrologicService {
     start = 0,
     limit = 20,
     defaultOnly = false,
+    queryParams = null,
   ) {
     const first = await this.chartModel
       .findOne({ user: userID, isDefaultBirthChart: true })
@@ -218,6 +219,18 @@ export class AstrologicService {
     condMap.set('user', userID);
     if (defaultOnly) {
       condMap.set('isDefaultBirthChart', true);
+    }
+    if (queryParams instanceof Object) {
+      Object.entries(queryParams).map(entry => {
+        const [key, val] = entry;
+        if (typeof val === 'string') {
+          switch (key) {
+            case 'name':
+              condMap.set('subject.name', RegExp(val, 'i'));
+              break;
+          }
+        }
+      });
     }
     const others = await this.chartModel
       .find(Object.fromEntries(condMap))
