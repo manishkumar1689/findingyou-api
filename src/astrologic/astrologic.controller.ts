@@ -690,6 +690,25 @@ export class AstrologicController {
     });
   }
 
+  @Get('paired-by-charts/:chartID1/:chartID2')
+  async getPairedByChartIDs(
+    @Res() res,
+    @Param('chartID1') chartID1: string,
+    @Param('chartID2') chartID2: string,
+  ) {
+    const items = await this.astrologicService.getPairedByChart(
+      chartID1,
+      'modifiedAt',
+      1,
+      chartID2,
+    );
+    const item = items.length > 0 ? items[0] : null;
+    return res.json({
+      valid: items.length > 0,
+      item,
+    });
+  }
+
   @Get('chart/:chartID')
   async fetchChart(@Res() res, @Param('chartID') chartID: string) {
     const data: any = { valid: false, shortTz: '', chart: null, user: null };

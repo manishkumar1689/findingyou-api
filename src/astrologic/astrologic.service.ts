@@ -7,7 +7,11 @@ import { BodySpeedDTO } from './dto/body-speed.dto';
 import { calcAcceleration, calcStation } from './lib/astro-motion';
 import grahaValues from './lib/settings/graha-values';
 import { calcJulDate, calcJulDateFromParts } from './lib/date-funcs';
-import { isNumeric, validISODateString } from 'src/lib/validators';
+import {
+  isNumeric,
+  notEmptyString,
+  validISODateString,
+} from 'src/lib/validators';
 import { CreateChartDTO } from './dto/create-chart.dto';
 import moment = require('moment');
 import { PairedChartDTO } from './dto/paired-chart.dto';
@@ -185,7 +189,12 @@ export class AstrologicService {
     return items.map(mapPairedCharts);
   }
 
-  async getPairedByChart(chartID: string, sort = 'modifiedAt', limit = 0) {
+  async getPairedByChart(
+    chartID: string,
+    sort = 'modifiedAt',
+    limit = 0,
+    chartID2 = '',
+  ) {
     const max = limit > 0 && limit < 1000 ? limit : 1000;
     let sortDir = -1;
     switch (sort) {
@@ -193,9 +202,12 @@ export class AstrologicService {
         sortDir = 1;
         break;
     }
+    const hasMatchC2 = notEmptyString(chartID2, 8);
+    const cond1 = hasMatchC2 ? { c1: chartID, c2: chartID2 } : { c1: chartID };
+    const cond2 = hasMatchC2 ? { c2: chartID, c1: chartID2 } : { c2: chartID };
     const items = await this.pairedChartModel
       .find({
-        $or: [{ c1: chartID }, { c2: chartID }],
+        $or: [cond1, cond2],
       })
       .limit(limit)
       .sort([[sort, sortDir]])
