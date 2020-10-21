@@ -23,7 +23,9 @@ export class PairedChartDTO {
   @ApiProperty()
   readonly tags: TagDTO[];
   @ApiProperty()
-  readonly ageSpan: number[];
+  readonly startYear?: number;
+  @ApiProperty()
+  readonly span?: number;
   @ApiProperty()
   readonly notes: string;
   @ApiProperty()
