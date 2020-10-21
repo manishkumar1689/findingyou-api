@@ -11,7 +11,7 @@ import {
   isNumeric,
   notEmptyString,
   validISODateString,
-} from 'src/lib/validators';
+} from '../lib/validators';
 import { CreateChartDTO } from './dto/create-chart.dto';
 import moment = require('moment');
 import { PairedChartDTO } from './dto/paired-chart.dto';
@@ -22,7 +22,7 @@ import {
   extractFromRedisClient,
   extractFromRedisMap,
   storeInRedis,
-} from 'src/lib/entities';
+} from '../lib/entities';
 import * as Redis from 'ioredis';
 import { SimpleTransition } from './interfaces/simple-transition.interface';
 
