@@ -85,7 +85,8 @@ export const mediaPath = '/var/www/findingyou.co/media';
 
 export const filesDirectory = '../files';
 
-export const sourcesDirectory = '/var/www/dev.findingyou.co/backend/sources';
+export const sourcesDirectory =
+  '/var/www/dev.findingyou.co/backend/sample-data';
 
 export const exportDirectory = '../exports';
 
