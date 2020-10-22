@@ -40,6 +40,11 @@ export const PairedChartSchema = new mongoose.Schema({
     type: String,
     default: 'median',
   },
+  relType: {
+    type: String,
+    required: false,
+    default: '',
+  },
   tags: {
     type: [TagSchema],
     required: false,
