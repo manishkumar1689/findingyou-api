@@ -1093,7 +1093,6 @@ export class AstrologicController {
     const inData = mapToChartInput(rec, userID);
 
     const d1 = await this.saveChartData(inData);
-    //console.log(inData.name, rec.dob, rec.jd, inData.datetime);
     if (d1.valid && rec.relations.length > 0) {
       rec.relations.forEach(async (rel, relIndex) => {
         const relRec = rows.find(
@@ -1113,7 +1112,6 @@ export class AstrologicController {
                 userID,
               );
               const pData = await this.savePairedChartData(pd);
-              //console.log(pData);
             }
           }, relIndex * timeoutMs);
         }
@@ -1132,7 +1130,6 @@ export class AstrologicController {
       if (numRows > 0) {
         const rows = result.get('rows');
         if (rows instanceof Array) {
-          console.log(numRows, start);
           for (let i = start; i < numRows; i++) {
             const rec: Record = rows[i];
             const numRels = rec.relations.length;

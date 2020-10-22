@@ -167,11 +167,14 @@ export class AstrologicService {
         .exec();
       if (currPairedChart) {
         const { _id } = currPairedChart;
-        result = this.pairedChartModel.findByIdAndUpdate(_id, pairedDTO);
+        result = await this.pairedChartModel.findByIdAndUpdate(_id, pairedDTO);
       } else {
         pairedDTO = { ...pairedDTO, createdAt: nowDt };
         const pairedChart = await this.pairedChartModel.create(pairedDTO);
         result = await pairedChart.save();
+      }
+      if (result) {
+        result = await this.pairedChartModel.findById(result._id);
       }
     }
     return result;
