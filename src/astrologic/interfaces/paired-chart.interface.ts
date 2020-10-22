@@ -1,7 +1,7 @@
 import { Document } from 'mongoose';
 import { BaseChart } from './base-chart.interface';
 import { Tag } from './tag.interface';
-import { Geo } from 'src/user/interfaces/geo.interface';
+import { Geo } from '../../user/interfaces/geo.interface';
 
 export interface PairedChart extends Document {
   readonly user: string;
@@ -12,6 +12,7 @@ export interface PairedChart extends Document {
   readonly surfaceAscendant: number;
   readonly surfaceTzOffset: number;
   readonly midMode: string;
+  readonly relType: string;
   readonly tags: Tag[];
   readonly startYear?: number;
   readonly span?: number;
