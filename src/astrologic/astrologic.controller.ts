@@ -488,7 +488,7 @@ export class AstrologicController {
   async savePairedChart(@Res() res, @Body() inData: PairedChartInputDTO) {
     const data = await this.savePairedChartData(inData);
     const statusCode = data.valid ? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
-    return res.status(statusCode).res(data);
+    return res.status(statusCode).send(data);
   }
 
   async savePairedChartData(inData: PairedChartInputDTO) {
@@ -565,6 +565,9 @@ export class AstrologicController {
         surfaceTzOffset,
         midMode,
         notes,
+        startYear: inData.startYear,
+        span: inData.span,
+        relType: inData.relType,
         tags,
       } as PairedChartDTO;
       const paired = await this.astrologicService.savePaired(pairedDTO);
@@ -895,9 +898,9 @@ export class AstrologicController {
     if (notEmptyString(dt, 6) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const data = await this.geoService.fetchTzData(geo, dt);
-      return res.status(HttpStatus.OK).send(data);
+      return res.status(HttpStatus.OK).json(data);
     } else {
-      return res.status(HttpStatus.NOT_ACCEPTABLE).send({ valid: false });
+      return res.status(HttpStatus.NOT_ACCEPTABLE).json({ valid: false });
     }
   }
 

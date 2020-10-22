@@ -15,6 +15,15 @@ export class PairedChartInputDTO {
   readonly c2: string;
 
   @ApiProperty()
+  readonly startYear?: number;
+
+  @ApiProperty()
+  readonly span?: number;
+
+  @ApiProperty()
+  readonly relType: string;
+
+  @ApiProperty()
   readonly tags: TagDTO[];
 
   @ApiProperty()
