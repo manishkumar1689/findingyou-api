@@ -667,9 +667,14 @@ export class AstrologicController {
     @Res() res,
     @Param('userID') userID: string,
     @Param('max') max: string,
+    @Query() query,
   ) {
     const limit = smartCastInt(max, 0);
-    const items = await this.astrologicService.getPairedByUser(userID, limit);
+    const items = await this.astrologicService.getPairedByUser(
+      userID,
+      limit,
+      query,
+    );
     return res.json({
       valid: true,
       items,

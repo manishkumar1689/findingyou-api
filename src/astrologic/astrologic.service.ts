@@ -194,7 +194,7 @@ export class AstrologicService {
             criteria.set('relType', val);
             break;
           case 'tag':
-            criteria.set('tags.key', val);
+            criteria.set('tags.slug', val);
             break;
           case 'length_gt':
             criteria.set('span', {
@@ -209,6 +209,7 @@ export class AstrologicService {
         }
       });
     }
+    console.log(params, criteria);
     const items = await this.pairedChartModel
       .find(Object.fromEntries(criteria))
       .limit(max)
