@@ -27,6 +27,8 @@ export class PairedChartDTO {
   @ApiProperty()
   readonly startYear?: number;
   @ApiProperty()
+  readonly endYear?: number;
+  @ApiProperty()
   readonly span?: number;
   @ApiProperty()
   readonly notes: string;

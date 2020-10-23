@@ -180,10 +180,37 @@ export class AstrologicService {
     return result;
   }
 
-  async getPairedByUser(userID: string, limit = 0) {
+  async getPairedByUser(userID: string, limit = 0, params = null) {
     const max = limit > 0 && limit < 1000 ? limit : 1000;
+    const criteria: Map<string, any> = new Map();
+    if (notEmptyString(userID, 16)) {
+      criteria.set('user', userID);
+    }
+    if (params instanceof Object) {
+      Object.entries(params).forEach(entry => {
+        const [key, val] = entry;
+        switch (key) {
+          case 'type':
+            criteria.set('relType', val);
+            break;
+          case 'tag':
+            criteria.set('tags.key', val);
+            break;
+          case 'length_gt':
+            criteria.set('span', {
+              $gt: val,
+            });
+            break;
+          case 'length_lt':
+            criteria.set('span', {
+              $lt: val,
+            });
+            break;
+        }
+      });
+    }
     const items = await this.pairedChartModel
-      .find({ user: userID })
+      .find(Object.fromEntries(criteria))
       .limit(max)
       .populate(['c1', 'c2'])
       .sort([['modifiedAt', -1]])

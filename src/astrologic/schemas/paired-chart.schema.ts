@@ -56,6 +56,12 @@ export const PairedChartSchema = new mongoose.Schema({
     required: false,
     default: 0,
   },
+  endYear: {
+    // approx
+    type: Number,
+    required: false,
+    default: -1,
+  },
   span: {
     // Length of relation in years, fractions for approx months, weeks etc.
     type: Number,
