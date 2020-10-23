@@ -566,6 +566,7 @@ export class AstrologicController {
         midMode,
         notes,
         startYear: inData.startYear,
+        endYear: inData.endYear,
         span: inData.span,
         relType: inData.relType,
         tags,

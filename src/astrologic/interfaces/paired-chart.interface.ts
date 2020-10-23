@@ -15,6 +15,7 @@ export interface PairedChart extends Document {
   readonly relType: string;
   readonly tags: Tag[];
   readonly startYear?: number;
+  readonly endYear?: number;
   readonly span?: number;
   readonly notes: string;
   readonly createdAt: Date;
