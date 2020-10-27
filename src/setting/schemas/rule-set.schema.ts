@@ -7,6 +7,11 @@ export const RuleSetSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  category: {
+    type: String,
+    required: true,
+    default: 'synastry',
+  },
   conditionSet: {
     type: Mixed,
     required: false,
