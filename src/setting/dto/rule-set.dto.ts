@@ -6,9 +6,6 @@ export class RuleSetDTO {
   readonly name: string;
 
   @ApiProperty()
-  readonly category: string;
-
-  @ApiProperty()
   readonly conditionSet: any;
 
   @ApiProperty()
