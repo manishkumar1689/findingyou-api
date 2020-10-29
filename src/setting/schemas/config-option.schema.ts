@@ -13,6 +13,6 @@ export const ConfigOptionSchema = new mongoose.Schema({
   type: {
     type: String,
     default: 'string',
-    enum: ['string', 'number', 'boolean'],
+    enum: ['string', 'number', 'boolean', 'key_num_grid'],
   },
 });
