@@ -495,7 +495,7 @@ export class UserService {
     return false;
   }
 
-  async members(criteria = null) {
+  async members(start = 0, limit = 100, criteria = null) {
     const filter = new Map<string, any>();
     filter.set('active', true);
     const latLngDist = { lat: 0, lng: 0 };
@@ -512,9 +512,22 @@ export class UserService {
       {
         $lookup: {
           from: 'charts',
-          localField: '_id',
-          foreignField: 'user',
+          /*  localField: '_id',
+          foreignField: 'user', */
           as: 'chart',
+          let: { userId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$user', '$$userId'] },
+                    { $eq: ['$isDefaultBirthChart', true] },
+                  ],
+                },
+              },
+            },
+          ],
         },
       },
       {
@@ -537,6 +550,12 @@ export class UserService {
             },
           },
         },
+      },
+      {
+        $limit: limit,
+      },
+      {
+        $skip: start,
       },
     ]);
     return userCharts.map(item => {

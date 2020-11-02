@@ -198,9 +198,17 @@ export class UserController {
     });
   }
 
-  @Get('members')
-  async listMembers(@Res() res) {
-    const data = await this.userService.members();
+  @Get('members/:start?/:limit?')
+  async listMembers(
+    @Res() res,
+    @Param('start') start,
+    @Param('limit') limit,
+    @Req() request: Request,
+  ) {
+    const { query } = request;
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 100);
+    const data = await this.userService.members(startInt, limitInt, query);
     return res.json(data);
   }
 
