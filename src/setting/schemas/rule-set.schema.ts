@@ -7,6 +7,11 @@ export const RuleSetSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  notes: {
+    type: String,
+    required: false,
+    default: '',
+  },
   conditionSet: {
     type: Mixed,
     required: false,
