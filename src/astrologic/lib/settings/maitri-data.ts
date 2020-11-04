@@ -1,3 +1,6 @@
+import { Graha } from '../models/graha-set';
+import rashiValues from './rashi-values';
+
 /*
    Pañcaka-maitri (5 fold Planetary Relationships)
 
@@ -101,6 +104,59 @@ const maitriData = {
     archEnemy: '1_as',
     debilitated: '0_ni',
   },
+};
+
+export const matchLord = (graha: Graha) => {
+  const rashiRow = rashiValues.find(rs => rs.num === graha.sign);
+  let ruler = '';
+  if (rashiRow) {
+    ruler = rashiRow.ruler;
+  }
+  return ruler;
+};
+
+export const matchRelations = (
+  rel1: string,
+  rel2: string,
+  comparison: string,
+): boolean => {
+  let relKey = '';
+  if (rel1 === 'friend' && rel2 === 'fiend') {
+    relKey = 'friends';
+  } else if (rel1 === 'enemy' && rel2 === 'enemy') {
+    relKey = 'enemies';
+  } else if (rel1 === 'neutral' && rel2 === 'neutral') {
+    relKey = 'neutral';
+  } else {
+    relKey = 'different';
+  }
+  return relKey === comparison;
+};
+
+export const matchNaturalGrahaMaitri = (g1: Graha, g2: Graha) => {
+  const ruler1 = matchLord(g1);
+  const ruler2 = matchLord(g2);
+  const sameRuler = ruler1 === ruler2;
+  const rel1 = sameRuler ? 'same' : matchNaturalMaitri(ruler1, ruler2);
+  const rel2 = sameRuler ? 'same' : matchNaturalMaitri(ruler2, ruler1);
+  return [rel1, rel2];
+};
+
+export const matchNaturalMaitri = (gk1: string, gk2: string): string => {
+  let natural = '';
+  const row = maitriData.natural.find(item => item.graha === gk1);
+  if (row) {
+    if (gk2.length > 1) {
+      if (row.friends.includes(gk2)) {
+        natural = 'friend';
+      } else if (row.neutral.includes(gk2)) {
+        natural = 'neutral';
+      } else if (row.enemies.includes(gk2)) {
+        natural = 'enemy';
+      }
+    }
+  }
+  return natural;
 };
 
 export default maitriData;

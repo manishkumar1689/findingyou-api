@@ -1,4 +1,4 @@
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { BodySpeed } from './interfaces/body-speed.interface';
@@ -209,7 +209,6 @@ export class AstrologicService {
         }
       });
     }
-    console.log(params, criteria);
     const items = await this.pairedChartModel
       .find(Object.fromEntries(criteria))
       .limit(max)
@@ -245,6 +244,13 @@ export class AstrologicService {
       .populate(['c1', 'c2'])
       .exec();
     return items.map(mapPairedCharts);
+  }
+
+  async getPairedByChartIDs(c1: string, c2: string) {
+    const charts = await this.getPairedByChart(c1, 'modifiedAt', 1, c2);
+    if (charts.length > 0) {
+      return charts[0];
+    }
   }
 
   async deletePaired(pairedID: string) {

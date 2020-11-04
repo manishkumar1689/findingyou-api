@@ -25,6 +25,7 @@ import {
   emptyString,
 } from '../lib/validators';
 import { locStringToGeo } from './lib/converters';
+import { simplifyChart } from './lib/member-charts';
 import {
   calcAllTransitions,
   fetchHouseData,
@@ -63,6 +64,7 @@ import {
   parseAstroBankJSON,
   Record,
 } from '../lib/parse-astro-csv';
+import { matchNaturalGrahaMaitri } from './lib/settings/maitri-data';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -679,6 +681,24 @@ export class AstrologicController {
       valid: true,
       items,
     });
+  }
+
+  @Get('kutas/:c1/:c2')
+  async getKutas(@Res() res, @Param('c1') c1: string, @Param('c2') c2: string) {
+    const paired = await this.astrologicService.getPairedByChartIDs(c1, c2);
+    const result: Map<string, any> = new Map();
+    if (paired instanceof Object) {
+      const c1 = simplifyChart(paired.c1, 'true_citra');
+      const c2 = simplifyChart(paired.c2, 'true_citra');
+      result.set('c1', c1);
+      result.set('c2', c2);
+      const gr2 = c1.grahas.find(gr2 => gr2.key === 'mo');
+      const kutas = c1.grahas.map(gr1 => {
+        return matchNaturalGrahaMaitri(gr1, gr2);
+      });
+      result.set('kutas', kutas);
+    }
+    return res.json(Object.fromEntries(result));
   }
 
   @Get('paired-by-chart/:chartID/:max?')
