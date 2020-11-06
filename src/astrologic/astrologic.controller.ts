@@ -789,6 +789,22 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  @Get('chart-names-by-user/:userID/:search')
+  async fetchChartsByName(
+    @Res() res,
+    @Param('userID') userID: string,
+    @Param('search') search: string,
+  ) {
+    const result: Map<string, any> = new Map();
+    const charts = await this.astrologicService.getChartNamesByUserAndName(
+      userID,
+      search,
+    );
+    result.set('items', charts);
+    const data = Object.fromEntries(result);
+    return res.status(HttpStatus.OK).json(data);
+  }
+
   @Delete('delete-chart/:userID/:chartID')
   async deleteChart(
     @Res() res,

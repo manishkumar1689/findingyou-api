@@ -54,7 +54,7 @@ export const decDegToDms = flDeg => {
 @param mode:string (raw|lat|lng)
 @return string
 */
-export const degAsDms = (flDeg, mode = 'raw') => {
+export const degAsDms = (flDeg, mode = 'raw', precision = 0) => {
   const dms = decDegToDms(flDeg);
   let letter = '';
   let hasLetter = false;
@@ -71,6 +71,6 @@ export const degAsDms = (flDeg, mode = 'raw') => {
   }
   const degrees = hasLetter ? Math.abs(dms.deg) : dms.deg;
   const suffix = hasLetter ? ' ' + letter : '';
-  const sec3dec = dms.sec.toFixed(3);
-  return `${degrees}º ${dms.min}' ${sec3dec}"${suffix}`;
+  const sec3dec = precision >= 0 ? ' ' + dms.sec.toFixed(precision) : '';
+  return `${degrees}º ${dms.min}'${sec3dec}"${suffix}`;
 };
