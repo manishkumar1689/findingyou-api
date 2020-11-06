@@ -1,4 +1,4 @@
-import { CACHE_MANAGER, Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { BodySpeed } from './interfaces/body-speed.interface';
@@ -25,6 +25,7 @@ import {
 } from '../lib/entities';
 import * as Redis from 'ioredis';
 import { SimpleTransition } from './interfaces/simple-transition.interface';
+import { degAsDms } from './lib/converters';
 
 @Injectable()
 export class AstrologicService {
@@ -174,7 +175,9 @@ export class AstrologicService {
         result = await pairedChart.save();
       }
       if (result) {
-        result = await this.pairedChartModel.findById(result._id);
+        result = await this.pairedChartModel
+          .findById(result._id)
+          .populate(['c1', 'c2']);
       }
     }
     return result;
@@ -209,7 +212,6 @@ export class AstrologicService {
         }
       });
     }
-    console.log(params, criteria);
     const items = await this.pairedChartModel
       .find(Object.fromEntries(criteria))
       .limit(max)
@@ -245,6 +247,13 @@ export class AstrologicService {
       .populate(['c1', 'c2'])
       .exec();
     return items.map(mapPairedCharts);
+  }
+
+  async getPairedByChartIDs(c1: string, c2: string) {
+    const charts = await this.getPairedByChart(c1, 'modifiedAt', 1, c2);
+    if (charts.length > 0) {
+      return charts[0];
+    }
   }
 
   async deletePaired(pairedID: string) {
@@ -304,6 +313,40 @@ export class AstrologicService {
       });
     }
     return charts;
+  }
+
+  async getChartNamesByUserAndName(userID: string, search: string, limit = 20) {
+    const condMap = new Map<string, any>();
+    condMap.set('subject.name', RegExp('\\b' + search, 'i'));
+    condMap.set('user', userID);
+    const charts = await this.chartModel
+      .find(Object.fromEntries(condMap))
+      .select({
+        _id: 1,
+        'subject.name': 1,
+        'subject.gender': 1,
+        datetime: 1,
+        geo: 1,
+        isDefaultBirthChart: 1,
+      })
+      .sort({ 'subject.name': 1 })
+      .skip(0)
+      .limit(limit)
+      .exec();
+    return charts.map(c => {
+      const loc = [
+        degAsDms(c.geo.lat, 'lat', -1),
+        degAsDms(c.geo.lng, 'lng', -1),
+      ].join(', ');
+      const year = c.datetime
+        .toISOString()
+        .split('-')
+        .shift();
+      return {
+        id: c._id,
+        name: `${c.subject.name} (${c.subject.gender}), ${loc}, ${year}`,
+      };
+    });
   }
 
   // save a single body speed record

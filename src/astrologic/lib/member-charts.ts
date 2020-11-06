@@ -1,4 +1,5 @@
 import { smartCastFloat, smartCastInt } from 'src/lib/converters';
+import { extractObject } from 'src/lib/entities';
 import { subtractLng360 } from './helpers';
 
 const removeIds = item => {
@@ -14,8 +15,7 @@ export const simplifyGraha = (gr, ayanamshaVal = 0, ayanamshaIndex = 0) => {
     lng: subtractLng360(gr.topo.lng, ayanamshaVal),
     lat: gr.topo.lat,
   };
-  delete gr._id;
-  gr.transitions = gr.transitions.map(tr => {
+  const transitions = gr.transitions.map(tr => {
     return {
       type: tr.type,
       jd: tr.jd,
@@ -23,11 +23,23 @@ export const simplifyGraha = (gr, ayanamshaVal = 0, ayanamshaIndex = 0) => {
   });
   let extra: any = {};
   if (gr.variants instanceof Array) {
-    extra = Object.assign({}, removeIds(gr.variants[ayanamshaIndex]));
+    extra = Object.assign(
+      {},
+      removeIds(extractObject(gr.variants[ayanamshaIndex])),
+    );
     delete extra.num;
   }
-  delete gr.variants;
-  return { ...gr, lng, topo, ...extra };
+  const { key, lat, lngSpeed, declination } = gr;
+  return {
+    key,
+    lng,
+    lat,
+    lngSpeed,
+    declination,
+    topo,
+    transitions,
+    ...extra,
+  };
 };
 
 export const simplifyChart = (chart = null, ayanamshaKey = 'true_citra') => {

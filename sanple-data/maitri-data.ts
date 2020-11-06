@@ -1,3 +1,6 @@
+import { Graha } from 'src/astrologic/lib/models/graha-set';
+import rashiValues from './rashi-values';
+
 /*
    Pañcaka-maitri (5 fold Planetary Relationships)
 
@@ -27,38 +30,76 @@ DIGNITIES:
 */
 const maitriData = {
   natural: [
-    { graha: "su", friends: ["mo", "ma", "ju"], neutral: ["me"], enemies: ["ve", "sa"] },
-    { graha: "mo", friends: ["su", "me"], neutral: ["ma", "ju", "ve", "sa"], enemies: [], },
-    { graha: "ma", friends: ["su", "mo", "ju"], neutral: ["ve", "sa"], enemies: ["me"] },
-    { graha: "me", friends: ["su", "ve"], neutral: ["ma", "ju", "sa"], enemies: ["mo"] },
-    { graha: "ju", friends: ["su", "mo", "ma"], neutral: ["sa"], enemies: ["me", "ve"] },
-    { graha: "ve", friends: ["me", "sa"], neutral: ["ma", "ju"], enemies: ["su", "mo"] },
-    { graha: "sa", friends: ["me", "ve"], neutral: ["ju"], enemies: ["su", "mo", "ma"] },
-    { graha: "ra", friends: [], neutral: [], enemies: [] },
-    { graha: "ke", friends: [], neutral: [], enemies: [] },
+    {
+      graha: 'su',
+      friends: ['mo', 'ma', 'ju'],
+      neutral: ['me'],
+      enemies: ['ve', 'sa'],
+    },
+    {
+      graha: 'mo',
+      friends: ['su', 'me'],
+      neutral: ['ma', 'ju', 've', 'sa'],
+      enemies: [],
+    },
+    {
+      graha: 'ma',
+      friends: ['su', 'mo', 'ju'],
+      neutral: ['ve', 'sa'],
+      enemies: ['me'],
+    },
+    {
+      graha: 'me',
+      friends: ['su', 've'],
+      neutral: ['ma', 'ju', 'sa'],
+      enemies: ['mo'],
+    },
+    {
+      graha: 'ju',
+      friends: ['su', 'mo', 'ma'],
+      neutral: ['sa'],
+      enemies: ['me', 've'],
+    },
+    {
+      graha: 've',
+      friends: ['me', 'sa'],
+      neutral: ['ma', 'ju'],
+      enemies: ['su', 'mo'],
+    },
+    {
+      graha: 'sa',
+      friends: ['me', 've'],
+      neutral: ['ju'],
+      enemies: ['su', 'mo', 'ma'],
+    },
+    { graha: 'ra', friends: [], neutral: [], enemies: [] },
+    { graha: 'ke', friends: [], neutral: [], enemies: [] },
   ],
   temporary: {
     friend: [2, 3, 4, 10, 11, 12],
-    enemy: [1, 5, 6, 7, 8, 9]
+    enemy: [1, 5, 6, 7, 8, 9],
   },
   compound: {
-    bestFriend: [{ natural: "friend", temporary: "friend" }],
-    friend: [{ natural: "neutral", temporary: "friend" }],
-    neutral: [{ natural: "friend", temporary: "enemy" }, { natural: "enemy", temporary: "friend" }],
-    enemy: [{ natural: "neutral", temporary: "enemy" }],
-    archEnemy: [{ natural: "enemy", temporary: "enemy" }],
+    bestFriend: [{ natural: 'friend', temporary: 'friend' }],
+    friend: [{ natural: 'neutral', temporary: 'friend' }],
+    neutral: [
+      { natural: 'friend', temporary: 'enemy' },
+      { natural: 'enemy', temporary: 'friend' },
+    ],
+    enemy: [{ natural: 'neutral', temporary: 'enemy' }],
+    archEnemy: [{ natural: 'enemy', temporary: 'enemy' }],
   },
   dictName: {
-    exalted:     "dignity__8_uc",
-    mulaTrikon:  "dignity__7_mt",
-    ownSign:     "dignity__6_sv",
-    bestFriend:  "dignity__5_am",
-    friend:      "dignity__4_mi",
-    neutral:     "dignity__3_sa",
-    enemy:       "dignity__2_sh",
-    archEnemy:   "dignity__1_as",
-    debilitated: "dignity__0_ni"
-  }
+    exalted: 'dignity__8_uc',
+    mulaTrikon: 'dignity__7_mt',
+    ownSign: 'dignity__6_sv',
+    bestFriend: 'dignity__5_am',
+    friend: 'dignity__4_mi',
+    neutral: 'dignity__3_sa',
+    enemy: 'dignity__2_sh',
+    archEnemy: 'dignity__1_as',
+    debilitated: 'dignity__0_ni',
+  },
 };
 
 export default maitriData;
