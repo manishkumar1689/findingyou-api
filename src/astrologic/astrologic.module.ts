@@ -10,6 +10,7 @@ import { LexemeSchema } from '../dictionary/schemas/lexeme.schema';
 import { DictionaryService } from './../dictionary/dictionary.service';
 import { UserService } from './../user/user.service';
 import { UserSchema } from '../user/schemas/user.schema';
+import { GeoNameSchema } from 'src/geo/schemas/geo-name.schema';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { UserSchema } from '../user/schemas/user.schema';
       { name: 'Lexeme', schema: LexemeSchema },
       { name: 'User', schema: UserSchema },
       { name: 'PairedChart', schema: PairedChartSchema },
+      { name: 'GeoName', schema: GeoNameSchema },
     ]),
   ],
   controllers: [AstrologicController],
