@@ -1,4 +1,6 @@
 import { Injectable, HttpService } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
 import { geonames, timezonedb, googleGeo } from '../.config';
 import { geonamesApiBase, timezonedbApiBase } from './api';
 import { objectToQueryString, mapToQueryString } from '../lib/converters';
@@ -18,10 +20,12 @@ import {
 } from '../lib/entities';
 import * as Redis from 'ioredis';
 import { RedisService } from 'nestjs-redis';
+import { GeoName } from './interfaces/geo-name.interface';
 
 @Injectable()
 export class GeoService {
   constructor(
+    @InjectModel('GeoName') private readonly geoNameModel: Model<GeoName>,
     private http: HttpService,
     private readonly redisService: RedisService,
   ) {}
@@ -271,19 +275,176 @@ export class GeoService {
   }
 
   async searchByFuzzyAddress(placename: string, geo: any = null) {
-    const apiBase =
-      'https://maps.googleapis.com/maps/api/place/autocomplete/json?key=' +
-      googleGeo.apiKey +
-      '&types=(cities)&input=';
-    const url = apiBase + placename;
+    const records = await this.matchStoredGeoName(placename);
+    if (records.length > 0) {
+      return {
+        valid: true,
+        items: records,
+      };
+    } else {
+      return await this.searchByFuzzyAddressRemote(placename, geo);
+    }
+  }
+
+  async searchByFuzzyAddressRemote(placename: string, geo: any = null) {
+    const params: Map<string, any> = new Map();
+    params.set('input', placename);
+    params.set('key', googleGeo.apiKey);
+    const qStr = mapToQueryString(params);
+    const url =
+      'https://maps.googleapis.com/maps/api/place/autocomplete/json' + qStr;
     const output = { valid: false, items: [], url };
+    await this.getHttp(url).then(async response => {
+      if (response) {
+        const { data } = response;
+        if (data instanceof Object) {
+          output.items = await this.extractSuggestedItems(data, placename);
+          output.items.sort((a, b) => b.pop - a.pop);
+          output.valid = output.items.length > 0;
+        }
+      }
+    });
+    if (!output.valid) {
+      output.items = await this.searchByPlaceName(placename);
+      output.valid = output.items.length > 0;
+    }
+    if (output.valid) {
+      if (output.items instanceof Array && output.items.length > 0) {
+        output.items.forEach(item => {
+          const altNames = [];
+          const nameLength = item.name.length;
+          const searchLength = placename.length;
+          const minAltNameLength = 2;
+          if (searchLength >= minAltNameLength) {
+            const name = placename.toLowerCase().trim();
+            const weight = (nameLength - name.length) * 10;
+            altNames.push({
+              name,
+              type: 'partial',
+              weight,
+            });
+          }
+          this.saveGeoName({ ...item, altNames });
+        });
+      }
+    }
+    return output;
+  }
+
+  async matchStoredGeoName(search: string) {
+    const rgx = new RegExp('\\b' + search);
+    /* const criteria = {
+      $or: [
+        {
+          name: rgx,
+        },
+        {
+          'altNames.name': rgx,
+        },
+      ],
+    }; */
+    const criteria = { 'altNames.name': search.toLowerCase() };
+    const records = await this.geoNameModel
+
+      .find(criteria)
+      .select({
+        _id: 0,
+        region: 1,
+        country: 1,
+        fcode: 1,
+        lat: 1,
+        lng: 1,
+        pop: 1,
+        name: 1,
+        fullName: 1,
+      })
+      .sort({ pop: -1 });
+    return records;
+  }
+
+  async saveGeoName(inData = null) {
+    if (inData instanceof Object) {
+      const records = await this.geoNameModel.find({
+        name: inData.name,
+        lng: inData.lng,
+        lat: inData.lat,
+      });
+      if (records.length < 1) {
+        const newGN = new this.geoNameModel(inData);
+        newGN.save();
+      } else {
+        const { altNames } = inData;
+        if (altNames.length > 0) {
+          const first = records[0];
+          const newAltNames =
+            first.altNames instanceof Array ? first.altNames : [];
+          altNames.forEach(altName => {
+            if (
+              newAltNames.some(
+                an => an.name.toLowerCase() === altName.name.toLowerCase(),
+              ) === false
+            ) {
+              newAltNames.push(altName);
+            }
+          });
+          this.geoNameModel
+            .findByIdAndUpdate(first._id, {
+              altNames: newAltNames,
+            })
+            .exec();
+        }
+      }
+    }
+  }
+
+  async extractSuggestedItems(data = null, placename = '') {
+    const items = [];
+    if (data instanceof Object) {
+      const rgx = RegExp('\\b' + placename, 'i');
+      const { predictions } = data;
+      if (predictions instanceof Array) {
+        for (const pred of predictions) {
+          const results = await this.searchByPlaceName(
+            pred.structured_formatting.main_text,
+            '',
+            0,
+            5,
+          );
+          if (results instanceof Array && results.length > 0) {
+            for (const item of results) {
+              if (rgx.test(item.fullName)) {
+                const isAdded = items.some(pl => {
+                  return pl.lng === item.lng && pl.lat === item.lat;
+                });
+                if (!isAdded) {
+                  items.push(item);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return items;
+  }
+
+  async getPlaceByGooglePlaceId(placeId: string) {
+    const params: Map<string, any> = new Map();
+    params.set('place_id', placeId);
+    params.set('fields', 'address_components,geometry');
+    params.set('key', googleGeo.apiKey);
+    const qStr = mapToQueryString(params);
+    const url =
+      'https://maps.googleapis.com/maps/api/place/details/json' + qStr;
+
+    let output: any = { valid: false };
     await this.getHttp(url).then(response => {
       if (response) {
         const { data } = response;
         if (data instanceof Object) {
-          const { predictions } = data;
-          if (predictions instanceof Array) {
-            output.items = predictions;
+          const { result } = data;
+          if (result instanceof Object) {
+            output = result;
           }
         }
       }
@@ -291,13 +452,18 @@ export class GeoService {
     return output;
   }
 
-  async searchByPlaceName(placename: string, cc = '') {
+  async searchByPlaceName(placename: string, cc = '', fuzzy = 1, max = 20) {
     const mp = new Map<string, string>();
     mp.set('q', decodeURI(placename));
     if (notEmptyString(cc)) {
       mp.set('countryBias', cc.toUpperCase());
     }
-    mp.set('fuzzy', '1');
+    if (fuzzy > 0) {
+      mp.set('fuzzy', fuzzy.toString());
+    }
+    if (max > 0) {
+      mp.set('maxRows', max.toString());
+    }
     let items = [];
     const data = await this.fetchGeoNames('searchJSON', Object.fromEntries(mp));
     const fcs = [

@@ -15,6 +15,7 @@ import { PairedChartSchema } from '../astrologic/schemas/paired-chart.schema';
 import { SnippetSchema } from '../snippet/schemas/snippet.schema';
 import { SnippetService } from '../snippet/snippet.service';
 import { ProtocolSchema } from '../setting/schemas/protocol.schema';
+import { GeoNameSchema } from 'src/geo/schemas/geo-name.schema';
 
 @Global()
 @Module({
@@ -29,6 +30,7 @@ import { ProtocolSchema } from '../setting/schemas/protocol.schema';
       { name: 'BodySpeed', schema: BodySpeedSchema },
       { name: 'PairedChart', schema: PairedChartSchema },
       { name: 'Protocol', schema: ProtocolSchema },
+      { name: 'GeoName', schema: GeoNameSchema },
     ]),
   ],
   providers: [
