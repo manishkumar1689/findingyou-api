@@ -75,7 +75,7 @@ export class GeoController {
     return res.send(data);
   }
 
-  @Get('address/:search/:loc/:skip')
+  @Get('address/:search/:loc?/:skip?')
   async byFuzzyAddress(
     @Res() res,
     @Param('search') search,
@@ -84,7 +84,8 @@ export class GeoController {
   ) {
     const data = { valid: false, items: [] };
     const skipStored = skip > 0;
-    const geo = /^\d+(\.\d+)?,\d+(\.\d+)/.test(loc)
+
+    const geo = /^-?\d+(\.\d+)?,-?\d+(\.\d+)/.test(loc)
       ? locStringToGeo(loc)
       : null;
     if (search.length > 1) {
