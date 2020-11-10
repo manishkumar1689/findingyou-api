@@ -738,6 +738,25 @@ export class AstrologicController {
     });
   }
 
+  @Get('search-paired/:userID/:search')
+  async getPairedBySearch(
+    @Res() res,
+    @Param('userID') userID: string,
+    @Param('search') search: string,
+  ) {
+    const isAdmin = await this.userService.isAdminUser(userID);
+    const items = await this.astrologicService.getPairedBySearchString(
+      userID,
+      search,
+      isAdmin,
+      20,
+    );
+    return res.json({
+      valid: items.length > 0,
+      items,
+    });
+  }
+
   @Get('chart/:chartID')
   async fetchChart(@Res() res, @Param('chartID') chartID: string) {
     const data: any = { valid: false, shortTz: '', chart: null, user: null };

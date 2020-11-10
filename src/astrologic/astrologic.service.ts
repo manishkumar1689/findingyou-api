@@ -6,7 +6,11 @@ import { Chart } from './interfaces/chart.interface';
 import { BodySpeedDTO } from './dto/body-speed.dto';
 import { calcAcceleration, calcStation } from './lib/astro-motion';
 import grahaValues from './lib/settings/graha-values';
-import { calcJulDate, calcJulDateFromParts } from './lib/date-funcs';
+import {
+  calcJulDate,
+  calcJulDateFromParts,
+  julToISODateObj,
+} from './lib/date-funcs';
 import {
   isNumeric,
   notEmptyString,
@@ -16,7 +20,7 @@ import { CreateChartDTO } from './dto/create-chart.dto';
 import moment = require('moment');
 import { PairedChartDTO } from './dto/paired-chart.dto';
 import { PairedChart } from './interfaces/paired-chart.interface';
-import { mapPairedCharts } from './lib/mappers';
+import { mapPairedCharts, mapSubChartMeta } from './lib/mappers';
 import { RedisService } from 'nestjs-redis';
 import {
   extractFromRedisClient,
@@ -247,6 +251,98 @@ export class AstrologicService {
       .populate(['c1', 'c2'])
       .exec();
     return items.map(mapPairedCharts);
+  }
+
+  async getPairedBySearchString(
+    userID: string,
+    search = '',
+    isAdmin = false,
+    limit = 20,
+  ) {
+    const max = limit > 0 && limit < 1000 ? limit : 1000;
+    const rgx = new RegExp('\\b' + search, 'i');
+    const criteria: Map<string, any> = new Map();
+
+    if (!isAdmin) {
+      criteria.set('user', userID);
+    }
+    criteria.set('$or', [
+      {
+        'chart1.subject.name': rgx,
+      },
+      {
+        'chart2.subject.name': rgx,
+      },
+    ]);
+
+    const chartFields = {
+      _id: 1,
+      datetime: 1,
+      jd: 1,
+      geo: {
+        lng: 1,
+        lat: 1,
+      },
+      placenames: {
+        type: 1,
+        name: 1,
+      },
+      subject: {
+        name: 1,
+        gender: 1,
+      },
+    };
+
+    const items = await this.pairedChartModel
+      .aggregate([
+        {
+          $lookup: {
+            from: 'charts',
+            localField: 'c1',
+            foreignField: '_id',
+            as: 'chart1',
+          },
+        },
+        {
+          $lookup: {
+            from: 'charts',
+            localField: 'c2',
+            foreignField: '_id',
+            as: 'chart2',
+          },
+        },
+        {
+          $match: Object.fromEntries(criteria),
+        },
+        {
+          $project: {
+            _id: 1,
+            jd: 1,
+            surfaceTzOffset: 1,
+            chart1: chartFields,
+            chart2: chartFields,
+            modifiedAt: 1,
+          },
+        },
+      ])
+      .limit(limit)
+      .exec();
+    return items.map(item => {
+      const { _id, surfaceTzOffset, chart1, chart2, modifiedAt } = item;
+      const c1 = mapSubChartMeta(chart1);
+      const c2 = mapSubChartMeta(chart2);
+      const jd = (c1.jd + c2.jd) / 2;
+      const year = julToISODateObj(jd, surfaceTzOffset).year();
+      return {
+        _id,
+        jd,
+        year,
+        surfaceTzOffset,
+        c1,
+        c2,
+        modifiedAt,
+      };
+    });
   }
 
   async getPairedByChartIDs(c1: string, c2: string) {

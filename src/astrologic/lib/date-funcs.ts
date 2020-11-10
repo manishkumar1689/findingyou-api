@@ -1,6 +1,7 @@
 import * as swisseph from 'swisseph';
 import * as moment from 'moment-timezone';
 import { isNumeric, isInteger, validISODateString } from '../../lib/validators';
+import { Moment } from 'moment';
 
 export const defaultDateParts = { year: 0, month: 0, day: 0, hour: 0 };
 
@@ -155,3 +156,12 @@ export const utcDate = (dt: Date | string) => {
 
 export const toShortTzAbbr = (dt, timezoneRef: string) =>
   moment.tz(dt, timezoneRef).format('z');
+
+export const julToUnixTime = (jd: number, tzOffset = 0): number => {
+  const epoch = 2440587.5; // Jan. 1, 1970 00:00:00 UTC
+  return jd !== undefined ? (jd - epoch) * 86400 + tzOffset : 0;
+};
+
+export const julToISODateObj = (jd: number, tzOffset = 0): Moment => {
+  return !isNaN(jd) ? moment.unix(julToUnixTime(jd, tzOffset)) : moment.unix(0);
+};
