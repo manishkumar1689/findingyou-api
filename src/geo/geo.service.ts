@@ -274,8 +274,12 @@ export class GeoService {
     return gmtOffset;
   }
 
-  async searchByFuzzyAddress(placename: string, geo: any = null) {
-    const records = await this.matchStoredGeoName(placename);
+  async searchByFuzzyAddress(
+    placename: string,
+    geo: any = null,
+    skipStored = false,
+  ) {
+    const records = !skipStored ? await this.matchStoredGeoName(placename) : [];
     if (records.length > 0) {
       return {
         valid: true,
@@ -293,6 +297,7 @@ export class GeoService {
     const qStr = mapToQueryString(params);
     const url =
       'https://maps.googleapis.com/maps/api/place/autocomplete/json' + qStr;
+
     const output = { valid: false, items: [], url };
     await this.getHttp(url).then(async response => {
       if (response) {
@@ -333,16 +338,6 @@ export class GeoService {
 
   async matchStoredGeoName(search: string) {
     const rgx = new RegExp('\\b' + search);
-    /* const criteria = {
-      $or: [
-        {
-          name: rgx,
-        },
-        {
-          'altNames.name': rgx,
-        },
-      ],
-    }; */
     const criteria = { 'altNames.name': search.toLowerCase() };
     const records = await this.geoNameModel
 
@@ -402,17 +397,18 @@ export class GeoService {
     if (data instanceof Object) {
       const rgx = RegExp('\\b' + placename, 'i');
       const { predictions } = data;
+
       if (predictions instanceof Array) {
         for (const pred of predictions) {
           const results = await this.searchByPlaceName(
             pred.structured_formatting.main_text,
             '',
             0,
-            5,
+            20,
           );
           if (results instanceof Array && results.length > 0) {
             for (const item of results) {
-              if (rgx.test(item.fullName)) {
+              if (rgx.test(item.fullName) && item.pop > 0) {
                 const isAdded = items.some(pl => {
                   return pl.lng === item.lng && pl.lat === item.lat;
                 });

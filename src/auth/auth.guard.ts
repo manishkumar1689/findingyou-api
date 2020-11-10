@@ -1,6 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { extractFromHeaderToken, maySkipValidation } from './auth.utils';
-import { globalApikey, authMode, ipWhitelist } from '../.config';
+import { globalApikey } from '../.config';
 import { Request } from 'express';
 import { IncomingHttpHeaders } from 'http';
 

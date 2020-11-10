@@ -2,7 +2,7 @@ import { Request } from 'express';
 import { fromBase64 } from '../lib/hash';
 import { globalApikey, suffixSplitChars } from '../.config';
 import { notEmptyString } from 'src/lib/validators';
-import { authMode, ipWhitelist } from '../.config';
+import { authMode, ipWhitelist, pathWhitelist } from '../.config';
 
 interface ValidAuthToken {
   valid: boolean;
@@ -90,7 +90,11 @@ export const maySkipValidation = (request: Request): boolean => {
   const ip = Object.keys(headers).includes('x-real-ip')
     ? headers['x-real-ip'].toString()
     : '0.0.0.0';
-  const mode = ipWhitelist.includes(ip) ? 'skip' : authMode.toString();
+  const { path } = request.route;
+  const mode =
+    ipWhitelist.includes(ip) || pathWhitelist.includes(path)
+      ? 'skip'
+      : authMode.toString();
   switch (mode) {
     case 'skip':
       valid = true;

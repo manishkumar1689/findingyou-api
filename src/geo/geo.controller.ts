@@ -75,11 +75,24 @@ export class GeoController {
     return res.send(data);
   }
 
-  @Get('address/:search')
-  async byFuzzyAddress(@Res() res, @Param('search') search) {
+  @Get('address/:search/:loc/:skip')
+  async byFuzzyAddress(
+    @Res() res,
+    @Param('search') search,
+    @Param('loc') loc,
+    @Param('skip') skip: number,
+  ) {
     const data = { valid: false, items: [] };
+    const skipStored = skip > 0;
+    const geo = /^\d+(\.\d+)?,\d+(\.\d+)/.test(loc)
+      ? locStringToGeo(loc)
+      : null;
     if (search.length > 1) {
-      const result = await this.geoService.searchByFuzzyAddress(search);
+      const result = await this.geoService.searchByFuzzyAddress(
+        search,
+        geo,
+        skipStored,
+      );
       if (result.items instanceof Array) {
         data.items = result.items;
         data.valid = true;
