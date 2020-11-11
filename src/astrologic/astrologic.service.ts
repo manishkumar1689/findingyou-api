@@ -318,6 +318,10 @@ export class AstrologicService {
           $project: {
             _id: 1,
             jd: 1,
+            timespace: {
+              jd: 1,
+              tzOffset: 1,
+            },
             surfaceTzOffset: 1,
             chart1: chartFields,
             chart2: chartFields,
@@ -328,16 +332,16 @@ export class AstrologicService {
       .limit(limit)
       .exec();
     return items.map(item => {
-      const { _id, surfaceTzOffset, chart1, chart2, modifiedAt } = item;
+      const { _id, timespace, chart1, chart2, modifiedAt } = item;
       const c1 = mapSubChartMeta(chart1);
       const c2 = mapSubChartMeta(chart2);
       const jd = (c1.jd + c2.jd) / 2;
-      const year = julToISODateObj(jd, surfaceTzOffset).year();
+      const year = julToISODateObj(jd, timespace.surfaceTzOffset).year();
       return {
         _id,
         jd,
         year,
-        surfaceTzOffset,
+        timespace,
         c1,
         c2,
         modifiedAt,
