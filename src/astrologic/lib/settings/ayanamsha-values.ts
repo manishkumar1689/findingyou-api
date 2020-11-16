@@ -1,4 +1,5 @@
 const ayanamshaValues = [
+  { key: 'raw', value: 0, name: 'Tropical' },
   { key: 'true_citra', value: 27, name: 'True Chitra' },
   { key: 'lahiri', value: 1, name: 'Lahiri' },
   { key: 'krishnamurti', value: 5, name: 'Krishnamurti' },

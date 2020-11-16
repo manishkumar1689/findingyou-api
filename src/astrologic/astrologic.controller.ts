@@ -190,18 +190,20 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('bodies-in-houses/:loc/:dt/:system?')
+  @Get('bodies-in-houses/:loc/:dt/:system?/:ayanamsha?')
   async bodiesInhousesByDateGeo(
     @Res() res,
     @Param('loc') loc,
     @Param('dt') dt,
     @Param('system') system,
+    @Param('ayanamsha') ayanamsha,
   ) {
     let data: any = { valid: false };
     if (notEmptyString(dt, 6) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const sysRef = notEmptyString(system) ? system : 'W';
-      data = await calcBodiesInHouses(dt, geo, sysRef);
+      const ayanamshaNum = isNumeric(ayanamsha) ? parseInt(ayanamsha, 10) : 27;
+      data = await calcBodiesInHouses(dt, geo, sysRef, ayanamshaNum);
     }
     return res.status(HttpStatus.OK).json(data);
   }

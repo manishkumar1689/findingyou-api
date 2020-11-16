@@ -8,7 +8,7 @@ import {
   getAyanamsa,
 } from './sweph-async';
 import { calcJulDate, jdToDateTime } from './date-funcs';
-import { subtractLng360 } from './math-funcs';
+import { calcInclusiveTwelfths, subtractLng360 } from './math-funcs';
 import {
   calcTransitionJd,
   calcJyotishSunRise,
@@ -37,6 +37,7 @@ import rashiValues from './settings/rashi-values';
 import arudhaValues from './settings/arudha-values';
 import sphutaValues from './settings/sphuta-values';
 import induValues from './settings/indu-values';
+import greekLots from './settings/greek-lots';
 import { GrahaSet, Graha } from './models/graha-set';
 import { RashiSet, Rashi } from './models/rashi-set';
 import { HouseSet } from './models/house-set';
@@ -51,6 +52,8 @@ import { hashMapToObject } from 'src/lib/entities';
 import { KeyValue } from '../interfaces/key-value';
 import { GeoPos } from '../interfaces/geo-pos';
 import { IndianTime } from './models/indian-time';
+import { Chart } from './models/chart';
+import { capitalize } from './helpers';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 
@@ -396,12 +399,7 @@ const processBodyResult = (result: any, body: any) => {
   return result;
 };
 
-export const fetchHouseDataJd = async (
-  jd,
-  geo,
-  system = 'W',
-  mode = 'RAW',
-): Promise<HouseSet> => {
+export const matchSideralMode = (mode: string) => {
   let iflag = swisseph.SEFLG_SWIEPH;
   let sid_mode_num = 0;
   if (notEmptyString(mode, 3) && mode !== 'RAW') {
@@ -414,7 +412,17 @@ export const fetchHouseDataJd = async (
     }
   }
   swisseph.swe_set_sid_mode(sid_mode_num, 0, 0);
+  return iflag;
+};
+
+export const fetchHouseDataJd = async (
+  jd,
+  geo,
+  system = 'W',
+  mode = 'RAW',
+): Promise<HouseSet> => {
   let houseData: any = { jd };
+  const iflag = matchSideralMode(mode);
   await getHouses(jd, iflag, geo.lat, geo.lng, system).catch(res => {
     if (res instanceof Object) {
       if (res.house) {
@@ -653,6 +661,7 @@ export const calcCompactChartData = async (
   grahaSet.mergeSunTransitions(indianTimeData.sunData());
   const sunAtSunRise = await calcSunJd(indianTimeData.dayStart(), false);
   const calcVariants = ayanamsaKey === 'top';
+  const rashiSets = [];
   const {
     grahas,
     sphutas,
@@ -662,6 +671,7 @@ export const calcCompactChartData = async (
     houses,
     numValues,
     objects,
+    rashis,
   } = calcCompactVariantSet(
     ayanamsha,
     grahaSet,
@@ -680,9 +690,11 @@ export const calcCompactChartData = async (
     },
   ];
   let sphutaSet = [];
+  const coreAyanamshas =
+    topKeys.length > 0 ? topKeys : ['true_citra', 'lahiri', 'krishnamurti'];
+  // arudha and greek lots only available for this ayanamsha
+  const extraDataAyanamshas = ['true_citra'];
   if (calcVariants) {
-    const coreAyanamshas =
-      topKeys.length > 0 ? topKeys : ['true_citra', 'lahiri', 'krishnamurti'];
     let prevAyaVal = 0;
     sphutaSet = [{ num: 0, items: sphutas }];
     coreAyanamshas.forEach(ak => {
@@ -707,16 +719,18 @@ export const calcCompactChartData = async (
         });
         sphutaSet.push({ num: aya.value, items: av.sphutas });
         objectSets.push({ num: aya.value, items: av.objects });
+        if (extraDataAyanamshas.includes(ak)) {
+          rashiSets.push({ num: aya.value, items: av.rashis });
+        }
       }
     });
   } else {
     sphutaSet = sphutas;
   }
-  return {
+  const chartData = {
     jd,
     datetime,
     geo,
-    ayanamsha,
     grahas: grahas.map(gr => {
       gr.variants = variants
         .filter(v => v.get('key') === gr.key)
@@ -733,7 +747,42 @@ export const calcCompactChartData = async (
     sphutas: sphutaSet,
     numValues,
     objects: objectSets,
+    rashis: rashiSets,
   };
+  const chart = new Chart(chartData);
+  const tithiSets = [];
+  extraDataAyanamshas.forEach(ak => {
+    const ar = ayanamshas.find(a => a.key === ak);
+    if (ar) {
+      const aya = ayanamshaValues.find(av => av.key === ar.key);
+      const ayaItem = {
+        ...ar,
+        num: aya.value,
+        name: aya.name,
+      };
+      chart.setAyanamshaItem(ayaItem);
+      chart.bodies.forEach(gr => {
+        gr.setAyanamshaItem(ayaItem);
+      });
+      greekLots.forEach(lot => {
+        const getMethod = 'lotOf' + capitalize(lot.key);
+        const sps = sphutaSet.find(sp => sp.num === ayaItem.num);
+        if (sps instanceof Object) {
+          const spItem = {
+            key: getMethod,
+            value: chart[getMethod],
+          };
+          sps.items.push(spItem);
+        }
+      });
+      tithiSets.push({
+        num: ayaItem.num,
+        item: chart.tithi,
+      });
+    }
+  });
+
+  return { ...chartData, tithis: tithiSets };
 };
 
 const mapToVariant = (mp: Map<string, any>) => {
@@ -830,6 +879,7 @@ const calcCompactVariantSet = (
         value,
       };
     });
+  const rashis = matchRashis(hdW, grahaSet);
   const numValues = numValueKeys.map(key => {
     const value = sphutaObj[key];
     return {
@@ -843,6 +893,7 @@ const calcCompactVariantSet = (
     ...houseData,
     numValues,
     objects,
+    rashis,
   };
 };
 
@@ -1053,9 +1104,37 @@ const calcGrahaSet = async (datetime, geo: any = null, applyTopo = false) => {
 @param geo: latLng
 @param system:string
 */
-export const calcBodiesInHouses = async (datetime, geo, system = 'W') => {
-  let grahaSet = await calcGrahaSet(datetime, geo, true);
-  const houseData = await fetchHouseData(datetime, geo, system);
+export const calcBodiesInHouses = async (
+  datetime,
+  geo,
+  system = 'W',
+  ayanamshaNum = 27,
+) => {
+  const jd = calcJulDate(datetime);
+  let ayaVal = 0;
+  const matchedRow = ayanamshaValues.find(item => item.value == ayanamshaNum);
+  const ayaRow = matchedRow instanceof Object ? matchedRow : ayanamshaValues[0];
+  if (ayanamshaNum > 0) {
+    matchSideralMode(ayaRow.key);
+    const { ayanamsa } = getAyanamsa(jd, swisseph.SEFLG_SIDEREAL);
+    ayaVal = ayanamsa;
+  }
+
+  const ayanamshaItem = {
+    num: ayanamshaNum,
+    value: ayaVal,
+    name: ayaRow.name,
+    key: ayaRow.key,
+  };
+  const grahaSet = await calcGrahaSet(datetime, geo, true);
+  if (ayaVal > 0) {
+    grahaSet.bodies.forEach(body => {
+      body.setAyanamshaItem(ayanamshaItem);
+    });
+  }
+
+  //
+  const houseData = await fetchHouseDataJd(jd, geo, system, ayanamshaItem.key);
 
   grahaSet.mergeHouseData(houseData);
   grahaSet.matchRelationships();
@@ -1084,9 +1163,9 @@ export const calcVargas = async (datetime, geo, system = 'W') => {
   return { jd: houseData.jd, datetime, geo, vargas };
 };
 
-const matchRashis = (houseData, bodyData) => {
+const matchRashis = (houseData, bodyData: GrahaSet) => {
   return houseData.houses.map((deg, houseIndex) => {
-    const houseSignIndex = Math.floor(deg / 30);
+    const houseSignIndex = Math.floor((deg % 360) / 30);
     const rashiRow = rashiValues[houseSignIndex];
     const graha = bodyData.bodies.find(b => b.key === rashiRow.ruler);
     const houseNum = houseIndex + 1;
@@ -1095,30 +1174,34 @@ const matchRashis = (houseData, bodyData) => {
     let lordInSign = null;
     if (graha) {
       lordInHouse = graha.house;
-      lordInSign = Math.ceil(graha.longitude / 30);
+      lordInSign = Math.floor(graha.longitude / 30) + 1;
     }
-    const diff = lordInSign - rashiRow.num;
-    let houseDifference = ((diff + 12) % 12) + 1;
-    switch (houseDifference) {
-      case 1:
-        //case 7:
-        houseDifference = 10;
-        break;
-    }
+    /* const diff = lordInHouse + houseNum;
+    const houseLordCount = diff <= 12 ? diff : (diff % 12) + 1; */
+    const houseLordCount = calcInclusiveTwelfths(lordInHouse, houseNum);
 
-    const arudhaIndex = (lordInHouse - 1 + (houseDifference - 1)) % 12;
+    const arudhaIndex = (lordInHouse - 1 + (houseLordCount - 1)) % 12;
     //const arudhaSignIndex = (lordInSign + signCount) % 12;
     //const arudhaHouseIndex = houseData.houses.indexOf(arudhaSignIndex * 30);
-    const arudhaInHouse = arudhaIndex + 1;
+    let arudhaInHouse = arudhaIndex + 1;
+    const plus7 = houseNum + 6;
+    const plus7House = plus7 <= 12 ? plus7 : plus7 % 12;
+    let mode = 'standard';
+    if (arudhaInHouse === houseNum || arudhaInHouse === plus7House) {
+      arudhaInHouse -= 3;
+      mode = '-3';
+      if (arudhaInHouse < 1) {
+        arudhaInHouse += 12;
+      }
+    }
     const arudhaRow = arudhaValues[houseIndex];
     const arudha = { house: arudhaInHouse, ...arudhaRow };
     return {
-      ...rashiRow,
       houseNum,
+      sign: rashiRow.num,
       lordInHouse,
-      houseDifference,
+      houseLordCount,
       arudhaInHouse,
-      arudha,
     };
   });
 };
@@ -1127,7 +1210,11 @@ const matchRashis = (houseData, bodyData) => {
 @param sunLng:number
 @param moonLng:number
 */
-const relativeAngle = (sunLng, moonLng, multiplier = 1) => {
+export const relativeAngle = (
+  sunLng: number,
+  moonLng: number,
+  multiplier = 1,
+) => {
   const mn = ((moonLng - sunLng) * multiplier) % 360;
   return mn < 0 ? 360 + mn : mn;
 };
@@ -1150,7 +1237,7 @@ const matchCaughadia = ({ jd, weekDay, dayStart, dayLength, isDaytime }) => {
   });
 };
 
-const calcJdPeriodRange = (num, startJd, periodLength) => {
+export const calcJdPeriodRange = (num, startJd, periodLength) => {
   const start = startJd + (num - 1) * periodLength;
   const end = startJd + num * periodLength;
   return {

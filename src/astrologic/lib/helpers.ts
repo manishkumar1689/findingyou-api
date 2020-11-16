@@ -59,6 +59,10 @@ export const stripHtml = (val: string) => {
   return str;
 };
 
+export const capitalize = (str: string) => {
+  return str.substring(0, 1).toUpperCase() + str.substring(1);
+};
+
 export const extractKeyValue = (obj: any, key: string, defVal: any) => {
   let output = defVal;
   if (obj instanceof Object) {

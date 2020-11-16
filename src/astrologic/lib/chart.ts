@@ -2,8 +2,6 @@ import * as util from 'util';
 import * as path from 'path';
 const exec = require('child_process').exec;
 import {
-  isNumeric,
-  isInteger,
   notEmptyString,
   emptyString,
   validLocationParameter,

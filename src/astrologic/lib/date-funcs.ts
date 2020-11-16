@@ -1,7 +1,13 @@
 import * as swisseph from 'swisseph';
 import * as moment from 'moment-timezone';
-import { isNumeric, isInteger, validISODateString } from '../../lib/validators';
+import {
+  isNumeric,
+  isInteger,
+  validISODateString,
+  notEmptyString,
+} from '../../lib/validators';
 import { Moment } from 'moment';
+import { zeroPad } from 'src/lib/converters';
 
 export const defaultDateParts = { year: 0, month: 0, day: 0, hour: 0 };
 
@@ -141,6 +147,48 @@ export const calcAstroWeekDayIndex = (datetime, afterSunrise = true) => {
     .weekday();
 };
 
+export const weekDayNum = (dt: Date | string, dayBefore = false): number => {
+  const isoNum = moment(dt).isoWeekday();
+  const dayNum = isoNum < 7 && isoNum > 0 ? isoNum - 1 : isoNum % 7;
+  const offset = dayBefore ? -1 : 0;
+  return (dayNum + 7 + offset) % 7;
+};
+
+export const toDateTime = (dt: Date | string): Date => {
+  return moment.utc(dt);
+};
+
+export const hourMinTz = (offset = 0) => {
+  const secs = Math.abs(offset);
+  const hours = Math.floor(secs / 3600);
+  const minutes = Math.floor(secs / 60) % 60;
+  const parts = [offset >= 0 ? '+' : '-', zeroPad(hours, 2)];
+  if (minutes > 0) {
+    parts.push(':');
+    parts.push(zeroPad(minutes, 2));
+  }
+  return parts.join('');
+};
+
+export const shortTzAbbr = (
+  dt: string | Date,
+  timeZone: string,
+  offset = -1,
+) => {
+  const mt = moment(dt).add({ seconds: offset });
+  let abbr = moment.tz(mt.toISOString(), timeZone).zoneAbbr();
+  if (abbr) {
+    switch (abbr) {
+      case '+00':
+        abbr = 'GMT';
+        break;
+    }
+  } else if (offset !== -1) {
+    abbr = hourMinTz(offset);
+  }
+  return abbr;
+};
+
 export const applyTzOffsetToDateString = (dt, offsetSecs: number) => {
   return moment
     .utc(dt)
@@ -164,4 +212,50 @@ export const julToUnixTime = (jd: number, tzOffset = 0): number => {
 
 export const julToISODateObj = (jd: number, tzOffset = 0): Moment => {
   return !isNaN(jd) ? moment.unix(julToUnixTime(jd, tzOffset)) : moment.unix(0);
+};
+
+export const julToISODate = (jd: number, tzOffset = 0): string => {
+  return julToISODateObj(jd, tzOffset).toISOString();
+};
+
+export const julToDateFormat = (
+  jd: number,
+  tzOffset = 0,
+  fmt = 'euro1',
+  timeOptions = {
+    time: true,
+    seconds: true,
+  },
+): string => {
+  const dtS = julToISODate(jd, tzOffset);
+  const [dt, tm] = dtS.split('T');
+  const [y, m, d] = dt.split('-');
+
+  let dp = [d, m, y];
+  let sep = '/';
+  switch (fmt) {
+    case 'us':
+      dp = [m, d, y];
+      break;
+    case 'euro2':
+      sep = '.';
+      break;
+    case 'iso':
+      dp = [y, m, d];
+      break;
+    case '-':
+    case '':
+      dp = [];
+      break;
+  }
+  const parts = dp.length > 1 ? [dp.join(sep)] : [];
+  if (timeOptions.time) {
+    const timeParts = tm
+      .split('.')
+      .shift()
+      .split(':');
+    const tp = timeOptions.seconds ? timeParts : timeParts.slice(0, 2);
+    parts.push(tp.join(':'));
+  }
+  return parts.join(' ');
 };

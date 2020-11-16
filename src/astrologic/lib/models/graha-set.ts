@@ -4,6 +4,7 @@ import { mapToObject } from '../mappers';
 import {
   mapSignToHouse,
   calcAllVargas,
+  calcVargaValue,
   calcVargaSet,
   calcInclusiveTwelfths,
   matchHouseNum,
@@ -13,13 +14,15 @@ import { TransitionData } from '../transitions';
 import nakshatraValues from '../settings/nakshatra-values';
 import charakarakaValues from '../settings/charakaraka-values';
 import grahaValues from '../settings/graha-values';
+import refValues from '../settings/ref-values';
 import { Nakshatra } from './nakshatra';
 import { Relationship } from './relationship';
 import maitriData from '../settings/maitri-data';
 import { GeoPos } from '../../interfaces/geo-pos';
 import { BodyTransition } from 'src/astrologic/interfaces/body-transition';
 import { HouseSet } from './house-set';
-import { nakshatra27, nakshatra28 } from '../helpers';
+import { nakshatra27, nakshatra28, subtractLng360 } from '../helpers';
+import { AyanamshaItem, DefaultAyanamshaItem } from '../interfaces';
 
 interface VariantGroup {
   num: number;
@@ -77,6 +80,8 @@ export class Graha extends BaseObject {
   ckNum = 0;
   house = 0;
   ownHouses = [];
+  ayanamshaItem = DefaultAyanamshaItem;
+  vargaNum = 1;
   transitions: Array<BodyTransition> = [];
   variants?: Array<VariantGroup> = [];
 
@@ -132,8 +137,21 @@ export class Graha extends BaseObject {
     return new Nakshatra(matchNakshatra(this.lng));
   }
 
-  get longitude() {
-    return this.lng;
+  get ayanamshaValue() {
+    if (this.ayanamshaItem instanceof Object) {
+      const { value } = this.ayanamshaItem;
+      if (isNumeric(value)) {
+        return value;
+      }
+    }
+    return 0;
+  }
+
+  get longitude(): number {
+    return calcVargaValue(
+      subtractLng360(this.lng, this.ayanamshaValue),
+      this.vargaNum,
+    );
   }
 
   get latitude() {
@@ -248,6 +266,14 @@ Calculate pachanga values for a body
 
   calcVargas() {
     return calcAllVargas(this.lng);
+  }
+
+  setAyanamshaItem(ayanamshaItem: AyanamshaItem) {
+    this.ayanamshaItem = ayanamshaItem;
+  }
+
+  setVarga(num = 1) {
+    this.vargaNum = num;
   }
 
   hasRuler = () => notEmptyString(this.ruler, 1);
@@ -490,3 +516,16 @@ export class GrahaSet {
     });
   }
 }
+
+export const matchReference = (key: string, attrs: any): Graha => {
+  let row: any = refValues.find(r => r.key === key);
+  if (row instanceof Object && attrs instanceof Object) {
+    row = refValues.find(r => r.key === key);
+  } else {
+    row = grahaValues.find(r => r.key === key);
+  }
+  if (row instanceof Object) {
+    row = { ...row, ...attrs };
+  }
+  return new Graha(row);
+};
