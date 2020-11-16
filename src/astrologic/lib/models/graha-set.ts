@@ -318,9 +318,10 @@ export class GrahaSet {
     }
   }
 
-  mergeHouseData(houseData: HouseSet) {
+  mergeHouseData(houseData: HouseSet, corrected = false) {
     this.bodies = this.bodies.map(b => {
-      b.house = matchHouseNum(b.longitude, houseData.houses);
+      const grLng = corrected ? b.lng : b.longitude;
+      b.house = matchHouseNum(grLng, houseData.houses);
       if (b.mulaTrikon) {
         if (b.ownSign.indexOf(b.mulaTrikon) > 0) {
           b.ownSign.reverse();

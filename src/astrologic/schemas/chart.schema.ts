@@ -104,6 +104,16 @@ export const ChartSchema = new mongoose.Schema({
     required: false,
     default: [],
   },
+  rashis: {
+    type: [ObjectMatchSetSchema],
+    required: false,
+    default: [],
+  },
+  tithis: {
+    type: [ObjectMatchSetSchema],
+    required: false,
+    default: [],
+  },
   notes: {
     type: String,
     required: false,

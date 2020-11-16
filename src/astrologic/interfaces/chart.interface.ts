@@ -8,6 +8,7 @@ import { ITime } from './i-time.interface';
 import { KeyNumValue } from './key-num-value.interface';
 import { VariantSet } from './variant-set.interface';
 import { ObjectMatchSet } from './object-match-set.interface';
+import { RashiSet } from '../lib/models/rashi-set';
 
 export interface Chart extends Document {
   readonly user: string;
@@ -31,6 +32,7 @@ export interface Chart extends Document {
   readonly sphutas: VariantSet[];
   readonly numValues: KeyNumValue[];
   readonly objects: ObjectMatchSet[];
+  readonly rashis?: RashiSet[];
   readonly notes: string;
   readonly createdAt: Date;
   readonly modifiedAt: Date;

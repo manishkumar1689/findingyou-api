@@ -6,5 +6,5 @@ export class ObjectMatchSetDTO {
   readonly num: number;
 
   @ApiProperty()
-  readonly items: ObjectMatchDTO;
+  readonly items: ObjectMatchDTO[];
 }

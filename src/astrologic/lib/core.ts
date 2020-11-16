@@ -837,7 +837,7 @@ const calcCompactVariantSet = (
 
   const wHouses = expandWholeHouses(firstHouseLng);
   const hdW = new HouseSet({ ...hdP, houses: wHouses });
-  grahaSet.mergeHouseData(hdW);
+  grahaSet.mergeHouseData(hdW, true);
   grahaSet.matchValues();
   const houses = [
     { system: 'P', values: hdP.houses.slice(0, 6) },
@@ -879,7 +879,7 @@ const calcCompactVariantSet = (
         value,
       };
     });
-  const rashis = matchRashis(hdW, grahaSet);
+  const rashis = matchRashis(hdW, grahaSet, true);
   const numValues = numValueKeys.map(key => {
     const value = sphutaObj[key];
     return {
@@ -1163,18 +1163,19 @@ export const calcVargas = async (datetime, geo, system = 'W') => {
   return { jd: houseData.jd, datetime, geo, vargas };
 };
 
-const matchRashis = (houseData, bodyData: GrahaSet) => {
+const matchRashis = (houseData, bodyData: GrahaSet, corrected = false) => {
   return houseData.houses.map((deg, houseIndex) => {
     const houseSignIndex = Math.floor((deg % 360) / 30);
     const rashiRow = rashiValues[houseSignIndex];
     const graha = bodyData.bodies.find(b => b.key === rashiRow.ruler);
+    const grLng = corrected ? graha.lng : graha.longitude;
     const houseNum = houseIndex + 1;
     //const houseSignNum = houseSignIndex + 1;
     let lordInHouse = -1;
     let lordInSign = null;
     if (graha) {
       lordInHouse = graha.house;
-      lordInSign = Math.floor(graha.longitude / 30) + 1;
+      lordInSign = Math.floor(grLng / 30) + 1;
     }
     /* const diff = lordInHouse + houseNum;
     const houseLordCount = diff <= 12 ? diff : (diff % 12) + 1; */
@@ -1200,7 +1201,6 @@ const matchRashis = (houseData, bodyData: GrahaSet) => {
       houseNum,
       sign: rashiRow.num,
       lordInHouse,
-      houseLordCount,
       arudhaInHouse,
     };
   });
