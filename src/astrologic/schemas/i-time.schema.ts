@@ -41,4 +41,8 @@ export const ITimeSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  weekDayNum: {
+    type: Number,
+    required: false,
+  },
 });

@@ -30,4 +30,7 @@ export class ITimeDTO {
 
   @ApiProperty()
   readonly lipta: number;
+
+  @ApiProperty()
+  readonly weekDayNum?: number;
 }

@@ -11,4 +11,5 @@ export interface ITime extends Document {
   readonly ghati: number;
   readonly vighati: number;
   readonly lipta: number;
+  readonly weekDayNum?: number;
 }
