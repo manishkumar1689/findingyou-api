@@ -8,5 +8,5 @@ export class ObjectMatchDTO {
   readonly type: string;
 
   @ApiProperty()
-  readonly value: string;
+  readonly value: string | string[];
 }

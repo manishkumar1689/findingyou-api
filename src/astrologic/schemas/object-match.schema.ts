@@ -1,4 +1,5 @@
 import * as mongoose from 'mongoose';
+const { Mixed } = mongoose.Schema.Types;
 
 export const ObjectMatchSchema = new mongoose.Schema({
   key: {
@@ -11,7 +12,7 @@ export const ObjectMatchSchema = new mongoose.Schema({
     default: 'graha',
   },
   value: {
-    type: String,
+    type: Mixed,
     required: true,
   },
 });

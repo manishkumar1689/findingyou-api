@@ -54,6 +54,7 @@ import { GeoPos } from '../interfaces/geo-pos';
 import { IndianTime } from './models/indian-time';
 import { Chart } from './models/chart';
 import { capitalize } from './helpers';
+import houseTypeData from './settings/house-type-data';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 
@@ -791,8 +792,22 @@ export const calcCompactChartData = async (
       yoga = chart.yoga;
       const objSet = objectSets.find(os => os.num === ayaItem.num);
       if (objSet) {
-        const lords = chart.matchLords();
-        objSet.items = objSet.items.concat(lords);
+        const extraObjects = chart.matchLords();
+
+        Object.keys(houseTypeData).forEach(houseType => {
+          const getMethod = houseType.replace(/s$/, 'Rulers');
+          extraObjects.push({
+            key: [houseType, 'ruler'].join('_'),
+            type: 'graha',
+            value: chart[getMethod],
+          });
+        });
+        extraObjects.push({
+          key: 'yogaKaraka',
+          type: 'graha',
+          value: chart.yogaKaraka,
+        });
+        objSet.items = objSet.items.concat(extraObjects);
       }
     }
   });

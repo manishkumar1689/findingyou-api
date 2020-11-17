@@ -25,6 +25,7 @@ import horaValues from './../settings/hora-values';
 import tithiValues from './../settings/tithi-values';
 import varaValues from './../settings/vara-values';
 import yogaValues from './../settings/yoga-values';
+import houseTypeData from './../settings/house-type-data';
 import { Graha } from './graha-set';
 import { KaranaSet } from './karana-set';
 import { MuhurtaSet, MuhurtaItem } from './muhurta-set';
@@ -99,7 +100,7 @@ export interface Variant {
 export interface ObjectMatch {
   key: string;
   type: string;
-  value: string;
+  value: string | string[];
 }
 
 export interface ObjectMatchSet {
@@ -738,6 +739,43 @@ export class Chart {
       ...row,
       percent,
     });
+  }
+
+  matchHouseSignRuler = (houseNum: number) => {
+    const sign = this.signHouse(houseNum);
+    const rashi = rashiValues.find(rv => rv.num === sign);
+    let ruler = '';
+    if (rashi instanceof Object) {
+      ruler = rashi.ruler;
+    }
+    return ruler;
+  };
+
+  get trikonaRulers() {
+    return houseTypeData.trikonas.map(this.matchHouseSignRuler);
+  }
+
+  get kendraRulers() {
+    return houseTypeData.kendras.map(this.matchHouseSignRuler);
+  }
+
+  get upachayasRulers() {
+    return houseTypeData.upachayas.map(this.matchHouseSignRuler);
+  }
+
+  get dushtanaRulers() {
+    return houseTypeData.dushtanas.map(this.matchHouseSignRuler);
+  }
+
+  get marakaRulers() {
+    return houseTypeData.marakas.map(this.matchHouseSignRuler);
+  }
+
+  get yogaKaraka() {
+    const matchedKey = this.kendraRulers.find(key =>
+      this.trikonaRulers.includes(key),
+    );
+    return matchedKey ? matchedKey : '';
   }
 
   get hasIndianTime() {
