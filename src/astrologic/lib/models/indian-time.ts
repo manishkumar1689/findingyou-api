@@ -25,7 +25,7 @@ export class IndianTime extends BaseObject {
 
   _sunData = null;
 
-  date = null;
+  date = moment.utc('0000-01-01T00:00:00');
 
   constructor(jDay: JyotishDay) {
     super();
@@ -46,6 +46,11 @@ export class IndianTime extends BaseObject {
   year = () => this.date.year();
 
   dayNum = () => this.date.dayOfYear();
+
+  weekDayNum = () => {
+    const isoDayIndex = this.date.isoWeekday();
+    return isoDayIndex === 7 ? 1 : isoDayIndex + 1;
+  };
 
   progress = () => this._jDay.progress();
 
@@ -113,6 +118,7 @@ export class IndianTime extends BaseObject {
       'ghati',
       'vighati',
       'lipta',
+      'weekDayNum',
     ];
     const mp = new Map<string, any>();
     keys.forEach(key => {

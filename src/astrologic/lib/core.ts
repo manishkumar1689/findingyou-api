@@ -750,7 +750,18 @@ export const calcCompactChartData = async (
     rashis: rashiSets,
   };
   const chart = new Chart(chartData);
-  const tithiSets = [];
+  let tithiSet: any = {
+    num: 0,
+    lord: '',
+    div: 0,
+    value: 0,
+    percent: 0,
+    waxing: false,
+    overHalfLight: false,
+    phase: 0,
+  };
+  let karana: any = {};
+  let yoga: any = {};
   extraDataAyanamshas.forEach(ak => {
     const ar = ayanamshas.find(a => a.key === ak);
     if (ar) {
@@ -775,14 +786,13 @@ export const calcCompactChartData = async (
           sps.items.push(spItem);
         }
       });
-      tithiSets.push({
-        num: ayaItem.num,
-        item: chart.tithi,
-      });
+      tithiSet = chart.tithi;
+      karana = chart.karana;
+      yoga = chart.yoga;
     }
   });
 
-  return { ...chartData, tithis: tithiSets };
+  return { ...chartData, tithi: tithiSet, karana, yoga };
 };
 
 const mapToVariant = (mp: Map<string, any>) => {
