@@ -789,6 +789,11 @@ export const calcCompactChartData = async (
       tithiSet = chart.tithi;
       karana = chart.karana;
       yoga = chart.yoga;
+      const objSet = objectSets.find(os => os.num === ayaItem.num);
+      if (objSet) {
+        const lords = chart.matchLords();
+        objSet.items = objSet.items.concat(lords);
+      }
     }
   });
 

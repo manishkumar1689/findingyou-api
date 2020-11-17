@@ -32,6 +32,8 @@ import { isNumeric, notEmptyString } from './../../../lib/validators';
 import { TransitionSet } from './transition-set';
 import { UpagrahaValue } from './upagraha-value';
 import { matchReference } from './graha-set';
+import rashiValues from '../settings/rashi-values';
+import { sign } from 'crypto';
 
 export interface Subject {
   name: string;
@@ -778,6 +780,52 @@ export class Chart {
       }
     }
     return items;
+  }
+
+  signHouse(houseNum: number, system = 'W') {
+    switch (system) {
+      case 'W':
+        return (
+          Math.floor(subtractLng360(this.lagna, (houseNum - 1) * 30) / 30) + 1
+        );
+      default:
+        return this.matchHouseSignValue(houseNum, system);
+    }
+  }
+
+  matchHouseSignValue(houseNum: number, system = 'W') {
+    const item = this.houses.find(hs => hs.system === system);
+    let signIndex = -1;
+    if (item) {
+      const numHouses = item.values.length;
+      const houseIndex = houseNum - 1;
+      const secondHalf = houseNum > 6;
+      const matchIndex = houseIndex % numHouses;
+      const lng = secondHalf
+        ? (item.values[matchIndex] + 180) % 360
+        : item.values[matchIndex];
+      signIndex = Math.floor(lng / 30);
+    }
+    return signIndex + 1;
+  }
+
+  matchLord(houseNum = 1) {
+    const signIndex = this.signHouse(houseNum) - 1;
+    const rashi = rashiValues[signIndex];
+    return rashi instanceof Object ? rashi.ruler : '';
+  }
+
+  matchLords() {
+    const lords: Array<ObjectMatch> = [];
+    for (let n = 1; n <= 12; n++) {
+      const value = this.matchLord(n);
+      lords.push({
+        key: ['houselord', n].join('_'),
+        type: 'graha',
+        value,
+      });
+    }
+    return lords;
   }
 
   get sphutaValues(): Array<KeyNumValue> {
