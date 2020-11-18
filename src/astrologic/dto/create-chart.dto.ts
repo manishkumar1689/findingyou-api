@@ -8,6 +8,7 @@ import { ITimeDTO } from './i-time.dto';
 import { KeyNumValueDTO } from './key-num-value.dto';
 import { VariantSetDTO } from './variant-set.dto';
 import { ObjectMatchSetDTO } from './object-match-set.dto';
+import { StringValueDTO } from './string-value.dto';
 
 export class CreateChartDTO {
   @ApiProperty()
@@ -68,7 +69,10 @@ export class CreateChartDTO {
   sphutas: VariantSetDTO[];
 
   @ApiProperty()
-  keyValues: Array<KeyNumValueDTO>;
+  numValues: Array<KeyNumValueDTO>;
+
+  @ApiProperty()
+  stringValues: StringValueDTO[];
 
   @ApiProperty()
   objects: Array<ObjectMatchSetDTO>;

@@ -9,6 +9,7 @@ import { KeyNumValue } from './key-num-value.interface';
 import { VariantSet } from './variant-set.interface';
 import { ObjectMatchSet } from './object-match-set.interface';
 import { RashiSet } from '../lib/models/rashi-set';
+import { StringValue } from './string-value.interface';
 
 export interface Chart extends Document {
   readonly user: string;
@@ -31,6 +32,7 @@ export interface Chart extends Document {
   readonly upagrahas: KeyNumValue[];
   readonly sphutas: VariantSet[];
   readonly numValues: KeyNumValue[];
+  readonly stringValues: StringValue[];
   readonly objects: ObjectMatchSet[];
   readonly rashis?: RashiSet[];
   readonly notes: string;

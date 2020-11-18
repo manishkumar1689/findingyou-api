@@ -8,6 +8,8 @@ import { ITimeSchema } from './i-time.schema';
 import { KeyNumValueSchema } from './upagraha.schema';
 import { VariantSetSchema } from './variant-set.schema';
 import { ObjectMatchSetSchema } from './object-match-set.schema';
+import { StringValueSchema } from './string-value.schema';
+import { RashiSetSchema } from './rashi-set.schema';
 const { ObjectId } = mongoose.Schema.Types;
 
 export const ChartSchema = new mongoose.Schema({
@@ -99,18 +101,18 @@ export const ChartSchema = new mongoose.Schema({
     required: false,
     default: [],
   },
+  stringValues: {
+    type: [StringValueSchema],
+    required: false,
+    default: [],
+  },
   objects: {
     type: [ObjectMatchSetSchema],
     required: false,
     default: [],
   },
   rashis: {
-    type: [ObjectMatchSetSchema],
-    required: false,
-    default: [],
-  },
-  tithis: {
-    type: [ObjectMatchSetSchema],
+    type: [RashiSetSchema],
     required: false,
     default: [],
   },

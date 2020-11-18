@@ -7,13 +7,10 @@ import {
   Body,
   Put,
   Query,
-  NotFoundException,
   Delete,
   Param,
-  UseInterceptors,
-  UploadedFile,
-  Req,
 } from '@nestjs/common';
+import { Model } from 'mongoose';
 import { AstrologicService } from './astrologic.service';
 import { GeoService } from './../geo/geo.service';
 import { UserService } from './../user/user.service';
@@ -47,6 +44,8 @@ import {
   toShortTzAbbr,
   jdToDateTime,
   utcDate,
+  julToDateFormat,
+  julToISODate,
 } from './lib/date-funcs';
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
@@ -65,6 +64,8 @@ import {
   Record,
 } from '../lib/parse-astro-csv';
 import { matchNaturalGrahaMaitri } from './lib/settings/maitri-data';
+import { Chart } from './interfaces/chart.interface';
+import { start } from 'repl';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -486,6 +487,72 @@ export class AstrologicController {
       data.message = 'User account cannot be verified';
     }
     return data;
+  }
+
+  @Get('recalc-charts/:start?/:limit?')
+  async recalcCharts(@Res() res, @Param('start') start, @Param('limit') limit) {
+    const criteria: Map<string, any> = new Map();
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 100);
+    const sourceCharts = await this.astrologicService.list(
+      criteria,
+      startInt,
+      limitInt,
+    );
+    const statusCode =
+      sourceCharts.length > 0 ? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
+    const items = [];
+    for (const ch of sourceCharts) {
+      const newChart = await this.recalcChart(ch);
+      items.push(newChart);
+    }
+    return res.status(statusCode).send({
+      valid: items.length > 0,
+      items,
+    });
+  }
+
+  async recalcChart(chart) {
+    const core = await calcCompactChartData(
+      julToISODate(chart.jd),
+      chart.geo,
+      'top',
+      [],
+      chart.tzOffset,
+    );
+    const {
+      grahas,
+      ascendant,
+      mc,
+      vertex,
+      houses,
+      indianTime,
+      ayanamshas,
+      upagrahas,
+      sphutas,
+      numValues,
+      stringValues,
+      objects,
+      rashis,
+    } = core;
+    const merged = {
+      ...chart.toObject(),
+      grahas,
+      ascendant,
+      mc,
+      vertex,
+      houses,
+      indianTime,
+      ayanamshas,
+      upagrahas,
+      sphutas,
+      numValues,
+      stringValues,
+      objects,
+      rashis,
+    };
+    this.astrologicService.updateChart(chart._id, merged);
+    return await this.astrologicService.getChart(chart._id);
   }
 
   @Post('save-paired')

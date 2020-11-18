@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { BodySpeed } from './interfaces/body-speed.interface';
 import { Chart } from './interfaces/chart.interface';
 import { BodySpeedDTO } from './dto/body-speed.dto';
@@ -473,10 +473,16 @@ export class AstrologicService {
       .exec();
   }
 
-  async list(criteria: Map<string, any> = new Map<string, any>()) {
+  async list(
+    criteria: Map<string, any> = new Map<string, any>(),
+    start = 0,
+    limit = 100,
+  ) {
     const filter = Object.fromEntries(criteria);
     return await this.chartModel
       .find(filter)
+      .skip(start)
+      .limit(limit)
       .sort({ isDefaultBirthChart: -1 })
       .exec();
   }

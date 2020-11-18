@@ -898,8 +898,8 @@ const calcCompactVariantSet = (
     upagrahas,
     sunAtSunRise,
   );
-  const numValueKeys = ['santanaTithi'];
-  const excludeKeys = ['grahaSet', 'houseSign', ...numValueKeys];
+
+  const excludeKeys = ['grahaSet', 'houseSign'];
 
   const sphutas = Object.entries(sphutaObj)
     .filter(
@@ -930,13 +930,7 @@ const calcCompactVariantSet = (
       };
     });
   const rashis = matchRashis(hdW, grahaSet, true);
-  const numValues = numValueKeys.map(key => {
-    const value = sphutaObj[key];
-    return {
-      key,
-      value,
-    };
-  });
+  const numValues = [];
   return {
     grahas,
     sphutas,
@@ -1035,8 +1029,6 @@ const addSphutaData = (
   data.bijaSphuta = grahaSet.calcBijaSphuta();
   data.ksetraSphuta = grahaSet.calcKsetraSphuta();
   // The tithi of result of = ceiling(mod(mod((Moon's degree-Sun's degree)*5,360)/12,15),1)
-
-  data.santanaTithi = matchTithiNum(bodies, 5);
 
   // prāṅasphuta    -> my chart= 156.55     -> formula= ((Lagna's degree x 5)+Gulika's degree) / mod 360
   const gulika = upagrahas.values.find(row => row.key === 'gu');
