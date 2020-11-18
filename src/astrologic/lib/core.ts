@@ -52,10 +52,9 @@ import { hashMapToObject } from 'src/lib/entities';
 import { KeyValue } from '../interfaces/key-value';
 import { GeoPos } from '../interfaces/geo-pos';
 import { IndianTime } from './models/indian-time';
-import { Chart } from './models/chart';
+import { Chart, ObjectMatch, ObjectMatchSet } from './models/chart';
 import { capitalize } from './helpers';
 import houseTypeData from './settings/house-type-data';
-import { KaranaSet } from './models/karana-set';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 
@@ -685,10 +684,11 @@ export const calcCompactChartData = async (
   const variants: Array<Map<string, any>> = grahaSet.bodies.map(gr =>
     mapToVariantMap(gr, 0),
   );
-  const objectSets = [
+  const objItems: Array<ObjectMatch> = [];
+  const objectSets: Array<ObjectMatchSet> = [
     {
       num: 0,
-      items: objects,
+      items: objItems,
     },
   ];
   let sphutaSet = [];
@@ -748,22 +748,11 @@ export const calcCompactChartData = async (
     upagrahas: upagrahas.values.map(mapUpagraha),
     sphutas: sphutaSet,
     numValues,
+    stringValues: [],
     objects: objectSets,
     rashis: rashiSets,
   };
   const chart = new Chart(chartData);
-  let tithiSet: any = {
-    num: 0,
-    lord: '',
-    div: 0,
-    value: 0,
-    percent: 0,
-    waxing: false,
-    overHalfLight: false,
-    phase: 0,
-  };
-  let karana: any = {};
-  let yoga: any = {};
   extraDataAyanamshas.forEach(ak => {
     const ar = ayanamshas.find(a => a.key === ak);
     if (ar) {
@@ -788,9 +777,6 @@ export const calcCompactChartData = async (
           sps.items.push(spItem);
         }
       });
-      tithiSet = chart.tithi;
-      karana = chart.karana;
-      yoga = chart.yoga;
       const objSet = objectSets.find(os => os.num === ayaItem.num);
       if (objSet) {
         const extraObjects = chart.matchLords();
@@ -812,16 +798,35 @@ export const calcCompactChartData = async (
       }
     }
   });
-  const lunar = {
-    sunMoonAngle: chart.sunMoonAngle,
-    tithi: tithiSet.num,
-    tithiLord: tithiSet.lord,
-    karana: karana.num,
-    karanaLord: karana.ruler,
-    yoga: yoga.num,
-    yogaLord: yoga.ruler,
-  };
-  return { ...chartData, lunar };
+  chartData.numValues.push({
+    key: 'sunMoonAngle',
+    value: chart.sunMoonAngle,
+  });
+  chartData.numValues.push({
+    key: 'tithi',
+    value: chart.tithi.num,
+  });
+  chartData.numValues.push({
+    key: 'karana',
+    value: chart.karana.num,
+  });
+  chartData.numValues.push({
+    key: 'yoga',
+    value: chart.yoga.num,
+  });
+  chartData.stringValues.push({
+    key: 'tithiLord',
+    value: chart.tithi.lord,
+  });
+  chartData.stringValues.push({
+    key: 'karanaLord',
+    value: chart.karana.ruler,
+  });
+  chartData.stringValues.push({
+    key: 'yogaLord',
+    value: chart.yoga.ruler,
+  });
+  return chartData;
 };
 
 const mapToVariant = (mp: Map<string, any>) => {
@@ -895,7 +900,7 @@ const calcCompactVariantSet = (
   );
   const numValueKeys = ['santanaTithi'];
   const excludeKeys = ['grahaSet', 'houseSign', ...numValueKeys];
-  const grahaKeys = ['yogi', 'avayogi'];
+
   const sphutas = Object.entries(sphutaObj)
     .filter(
       entry => excludeKeys.includes(entry[0]) === false && isNumeric(entry[1]),
@@ -907,15 +912,21 @@ const calcCompactVariantSet = (
         value,
       };
     });
-
+  const yogiAvayogiKeys = ['yogi', 'avayogi'];
   const objects = Object.entries(sphutaObj)
-    .filter(entry => grahaKeys.includes(entry[0]))
+    .filter(entry => yogiAvayogiKeys.includes(entry[0]))
     .map(entry => {
       const [key, value] = entry;
+      const gr = grahaSet.bodies.find(b => b.key === value);
+      let refVal = -1;
+      if (gr) {
+        refVal = gr.lng;
+      }
       return {
         key,
         type: 'graha',
         value,
+        refVal,
       };
     });
   const rashis = matchRashis(hdW, grahaSet, true);
@@ -965,8 +976,6 @@ const matchInduVal = (houseNum: number) => {
   }
   return indu;
 };
-
-const degreeDistance = (degOne, degTwo) => (degTwo - degOne + 360) % 360;
 
 const degreeToSign = deg => Math.floor(deg / 30) + 1;
 

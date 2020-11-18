@@ -11,10 +11,18 @@ export const RashiSchema = new mongoose.Schema({
   },
   lordInHouse: {
     type: Number,
-    required: true,
+    required: false,
   },
   arudhaInHouse: {
     type: Number,
     required: true,
+  },
+  arudhaInSign: {
+    type: Number,
+    required: false,
+  },
+  arudhaLord: {
+    type: String,
+    required: false,
   },
 });

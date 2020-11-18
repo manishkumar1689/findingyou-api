@@ -104,7 +104,7 @@ export interface VariantSet {
 export interface ObjectMatch {
   key: string;
   type: string;
-  value: string | string[];
+  value: any;
   refVal?: number;
 }
 
