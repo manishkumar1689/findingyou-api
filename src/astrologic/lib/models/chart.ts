@@ -70,6 +70,11 @@ export interface LngLat {
   lat: number;
 }
 
+export interface KeyValueNum {
+  key: string;
+  value: number;
+}
+
 export interface BaseGraha {
   key: string;
   num: number;
@@ -135,6 +140,25 @@ interface Muhurta {
   dt: string;
   exDays: Array<number>;
   active: boolean;
+}
+
+export interface RashiItem {
+  houseNum: number;
+  sign: number;
+  lordInHouse: number;
+  arudhaInHouse: number;
+  arudhaInSign: number;
+  arudhaLord: string;
+}
+
+export interface RashiItemSet {
+  num: number;
+  items: Array<RashiItem>;
+}
+
+export interface NumValueSet {
+  num: number;
+  items: Array<KeyValueNum>;
 }
 
 export class Chart {

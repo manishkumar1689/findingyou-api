@@ -52,7 +52,13 @@ import { hashMapToObject } from 'src/lib/entities';
 import { KeyValue } from '../interfaces/key-value';
 import { GeoPos } from '../interfaces/geo-pos';
 import { IndianTime } from './models/indian-time';
-import { Chart, ObjectMatch, ObjectMatchSet } from './models/chart';
+import {
+  Chart,
+  ObjectMatch,
+  ObjectMatchSet,
+  RashiItemSet,
+  NumValueSet,
+} from './models/chart';
 import { capitalize } from './helpers';
 import houseTypeData from './settings/house-type-data';
 
@@ -596,10 +602,6 @@ const jdOffset = 0;
 const calcSunJd = async (jd: number, sideralMode = true) =>
   calcBodyJd(jd, 'su', sideralMode);
 
-const fetchRashiSet = () => new RashiSet();
-
-const fetchRashi = key => new RashiSet().get(key);
-
 export const calcSphutaData = async (datetime: string, geo) => {
   const grahaSet = await calcGrahaSet(datetime);
   const houseData = await fetchHouseData(datetime, geo);
@@ -766,9 +768,9 @@ export const calcCompactChartData = async (
       chart.bodies.forEach(gr => {
         gr.setAyanamshaItem(ayaItem);
       });
+      const sps = sphutaSet.find(sp => sp.num === ayaItem.num);
       greekLots.forEach(lot => {
         const getMethod = 'lotOf' + capitalize(lot.key);
-        const sps = sphutaSet.find(sp => sp.num === ayaItem.num);
         if (sps instanceof Object) {
           const spItem = {
             key: getMethod,
@@ -777,6 +779,7 @@ export const calcCompactChartData = async (
           sps.items.push(spItem);
         }
       });
+      addUpapadaSecondAndLord(rashiSets, grahaSet, sps, ayaItem.num);
       const objSet = objectSets.find(os => os.num === ayaItem.num);
       if (objSet) {
         const extraObjects = chart.matchLords();
@@ -1249,6 +1252,33 @@ const matchRashis = (houseData, bodyData: GrahaSet, corrected = false) => {
       arudhaLord,
     };
   });
+};
+
+const addUpapadaSecondAndLord = (
+  rashiSets: Array<RashiItemSet>,
+  grahaSet: GrahaSet,
+  sps: NumValueSet,
+  ayanamshaNum = 27,
+) => {
+  const rashiSet = rashiSets.find(rs => rs.num === ayanamshaNum);
+  if (rashiSet instanceof Object) {
+    const rashiHouse12 = rashiSet.items.find(r => r.houseNum === 12);
+    const nextArudhaInHouse = rashiHouse12.arudhaInHouse + 1;
+    const upapadaSecond = nextArudhaInHouse > 12 ? 1 : nextArudhaInHouse;
+    sps.items.push({
+      key: 'upapadaSecond',
+      value: upapadaSecond,
+    });
+    const upapadaLord = grahaSet.bodies.find(
+      b => b.key === rashiHouse12.arudhaLord,
+    );
+    if (upagrahaData instanceof Object) {
+      sps.items.push({
+        key: 'upapadaLord',
+        value: upapadaLord.lng,
+      });
+    }
+  }
 };
 
 /*
