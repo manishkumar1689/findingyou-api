@@ -55,6 +55,7 @@ import { IndianTime } from './models/indian-time';
 import { Chart } from './models/chart';
 import { capitalize } from './helpers';
 import houseTypeData from './settings/house-type-data';
+import { KaranaSet } from './models/karana-set';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 
@@ -811,8 +812,16 @@ export const calcCompactChartData = async (
       }
     }
   });
-
-  return { ...chartData, tithi: tithiSet, karana, yoga };
+  const lunar = {
+    sunMoonAngle: chart.sunMoonAngle,
+    tithi: tithiSet.num,
+    tithiLord: tithiSet.lord,
+    karana: karana.num,
+    karanaLord: karana.ruler,
+    yoga: yoga.num,
+    yogaLord: yoga.ruler,
+  };
+  return { ...chartData, lunar };
 };
 
 const mapToVariant = (mp: Map<string, any>) => {
@@ -1200,6 +1209,7 @@ const matchRashis = (houseData, bodyData: GrahaSet, corrected = false) => {
     const graha = bodyData.bodies.find(b => b.key === rashiRow.ruler);
     const grLng = corrected ? graha.lng : graha.longitude;
     const houseNum = houseIndex + 1;
+    const houseSignDiff = (houseSignIndex - houseIndex + 12) % 12;
     //const houseSignNum = houseSignIndex + 1;
     let lordInHouse = -1;
     let lordInSign = null;
@@ -1225,13 +1235,17 @@ const matchRashis = (houseData, bodyData: GrahaSet, corrected = false) => {
         arudhaInHouse += 12;
       }
     }
-    const arudhaRow = arudhaValues[houseIndex];
-    const arudha = { house: arudhaInHouse, ...arudhaRow };
+    //const arudhaSignIndex = (lordInSign - 1 + (houseLordCount - 1)) % 12;
+    const arudhaSignIndex = (arudhaInHouse - 1 + houseSignDiff) % 12;
+    const arudhaInSign = arudhaSignIndex + 1;
+    const arudhaLord = rashiValues[arudhaSignIndex].ruler;
     return {
       houseNum,
       sign: rashiRow.num,
       lordInHouse,
       arudhaInHouse,
+      arudhaInSign,
+      arudhaLord,
     };
   });
 };

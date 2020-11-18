@@ -760,7 +760,7 @@ export class Chart {
     return houseTypeData.kendras.map(this.matchHouseSignRuler);
   }
 
-  get upachayasRulers() {
+  get upachayaRulers() {
     return houseTypeData.upachayas.map(this.matchHouseSignRuler);
   }
 
