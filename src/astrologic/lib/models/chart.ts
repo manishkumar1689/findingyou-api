@@ -34,7 +34,6 @@ import { TransitionSet } from './transition-set';
 import { UpagrahaValue } from './upagraha-value';
 import { matchReference } from './graha-set';
 import rashiValues from '../settings/rashi-values';
-import { sign } from 'crypto';
 
 export interface Subject {
   name: string;
@@ -97,20 +96,21 @@ export interface Variant {
   charaKaraka?: string;
 }
 
+export interface VariantSet {
+  num: number;
+  items: KeyNumValue[];
+}
+
 export interface ObjectMatch {
   key: string;
   type: string;
   value: string | string[];
+  refVal?: number;
 }
 
 export interface ObjectMatchSet {
   num: number;
   items: Array<ObjectMatch>;
-}
-
-export interface VariantSet {
-  num: number;
-  items: KeyNumValue[];
 }
 
 interface IndianTime {
@@ -125,6 +125,7 @@ interface IndianTime {
   ghati: number;
   vighati: number;
   lipta: number;
+  weekDayNum?: number;
 }
 
 interface Muhurta {
@@ -823,9 +824,7 @@ export class Chart {
   signHouse(houseNum: number, system = 'W') {
     switch (system) {
       case 'W':
-        return (
-          Math.floor(subtractLng360(this.lagna, (houseNum - 1) * 30) / 30) + 1
-        );
+        return ((this.firstHouseSign - 1 + houseNum - 1) % 12) + 1;
       default:
         return this.matchHouseSignValue(houseNum, system);
     }
@@ -857,10 +856,12 @@ export class Chart {
     const lords: Array<ObjectMatch> = [];
     for (let n = 1; n <= 12; n++) {
       const value = this.matchLord(n);
+      const refVal = this.graha(value).longitude;
       lords.push({
         key: ['houselord', n].join('_'),
         type: 'graha',
         value,
+        refVal,
       });
     }
     return lords;

@@ -15,4 +15,8 @@ export const ObjectMatchSchema = new mongoose.Schema({
     type: Mixed,
     required: true,
   },
+  refVal: {
+    type: Number,
+    required: false,
+  },
 });

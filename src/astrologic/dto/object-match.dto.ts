@@ -9,4 +9,7 @@ export class ObjectMatchDTO {
 
   @ApiProperty()
   readonly value: string | string[];
+
+  @ApiProperty()
+  readonly refVal?: number;
 }
