@@ -14,6 +14,7 @@ import { Model } from 'mongoose';
 import { AstrologicService } from './astrologic.service';
 import { GeoService } from './../geo/geo.service';
 import { UserService } from './../user/user.service';
+import { SettingService } from './../setting/setting.service';
 import { CreateChartDTO } from './dto/create-chart.dto';
 import {
   isNumeric,
@@ -64,8 +65,8 @@ import {
   Record,
 } from '../lib/parse-astro-csv';
 import { matchNaturalGrahaMaitri } from './lib/settings/maitri-data';
-import { Chart } from './interfaces/chart.interface';
-import { start } from 'repl';
+import { Kuta } from './lib/kuta';
+import { Chart } from './lib/models/chart';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -73,6 +74,7 @@ export class AstrologicController {
     private astrologicService: AstrologicService,
     private geoService: GeoService,
     private userService: UserService,
+    private settingService: SettingService,
   ) {}
 
   @Get('juldate/:isodate?')
@@ -757,15 +759,24 @@ export class AstrologicController {
     const paired = await this.astrologicService.getPairedByChartIDs(c1, c2);
     const result: Map<string, any> = new Map();
     if (paired instanceof Object) {
-      const c1 = simplifyChart(paired.c1, 'true_citra');
-      const c2 = simplifyChart(paired.c2, 'true_citra');
-      result.set('c1', c1);
-      result.set('c2', c2);
-      const gr2 = c1.grahas.find(gr2 => gr2.key === 'mo');
-      const kutas = c1.grahas.map(gr1 => {
+      const c1 = new Chart(paired.c1);
+      const c2 = new Chart(paired.c2);
+      c1.setAyanamshaItemByNum(27);
+      c2.setAyanamshaItemByNum(27);
+      /* const kutas = c1.grahas.map(gr1 => {
         return matchNaturalGrahaMaitri(gr1, gr2);
-      });
+      }); */
+      const kutaBuilder = new Kuta(c1, c2);
+      const setting = await this.settingService.getByKey('kuta_variants');
+      if (setting) {
+        kutaBuilder.loadCompatibility(setting.value);
+      }
+      const kutas = kutaBuilder.calcAllSingleKutas();
       result.set('kutas', kutas);
+      const simpleC1 = simplifyChart(paired.c1, 'true_citra');
+      const simpleC2 = simplifyChart(paired.c2, 'true_citra');
+      result.set('c1', simpleC1);
+      result.set('c2', simpleC2);
     }
     return res.json(Object.fromEntries(result));
   }

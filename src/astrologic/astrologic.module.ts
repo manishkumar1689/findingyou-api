@@ -10,7 +10,10 @@ import { LexemeSchema } from '../dictionary/schemas/lexeme.schema';
 import { DictionaryService } from './../dictionary/dictionary.service';
 import { UserService } from './../user/user.service';
 import { UserSchema } from '../user/schemas/user.schema';
-import { GeoNameSchema } from 'src/geo/schemas/geo-name.schema';
+import { GeoNameSchema } from '../geo/schemas/geo-name.schema';
+import { SettingSchema } from '../setting/schemas/setting.schema';
+import { SettingService } from '../setting/setting.service';
+import { ProtocolSchema } from '../setting/schemas/protocol.schema';
 
 @Module({
   imports: [
@@ -22,9 +25,17 @@ import { GeoNameSchema } from 'src/geo/schemas/geo-name.schema';
       { name: 'User', schema: UserSchema },
       { name: 'PairedChart', schema: PairedChartSchema },
       { name: 'GeoName', schema: GeoNameSchema },
+      { name: 'Setting', schema: SettingSchema },
+      { name: 'Protocol', schema: ProtocolSchema },
     ]),
   ],
   controllers: [AstrologicController],
-  providers: [AstrologicService, GeoService, DictionaryService, UserService],
+  providers: [
+    AstrologicService,
+    GeoService,
+    DictionaryService,
+    UserService,
+    SettingService,
+  ],
 })
 export class AstrologicModule {}

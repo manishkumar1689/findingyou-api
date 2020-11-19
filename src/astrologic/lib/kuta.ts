@@ -1,10 +1,9 @@
 import { inRange, notEmptyString } from 'src/lib/validators';
-import { deepClone } from './helpers';
 import { calcInclusiveNakshatras, calcInclusiveTwelfths } from './math-funcs';
+import { Chart } from './models/chart';
 import { Graha } from './models/graha-set';
 import { Nakshatra } from './models/nakshatra';
 import { Rashi } from './models/rashi-set';
-import { matchLord, matchNaturalGrahaMaitri } from './settings/maitri-data';
 import rashiValues from './settings/rashi-values';
 
 export class KutaValueSet {
@@ -107,7 +106,7 @@ export class KutaGrahaItem {
   }
 
   get nakshatraNum(): number {
-    return;
+    return this.nakshatra.num;
   }
   get nakshatraIndex(): number {
     return this.nakshatra.num - 1;
@@ -125,20 +124,16 @@ export class KutaGrahaItem {
 export class Kuta {
   vargaNum = 1;
   switching = false;
+  c1: Chart;
+  c2: Chart;
   private g1: Map<string, Graha> = new Map();
   private g2: Map<string, Graha> = new Map();
-  private activeTab = 0;
-
-  private tabKeys = [
-    { key: 'single', name: 'Single Kutas' },
-    { key: 'paired', name: 'Paired Kutas' },
-  ];
 
   private c2Key = 'mo';
 
   private c1Key = 'mo';
 
-  private kutaType = 'ashta';
+  private kutaType = 'all';
 
   private ashtaKeys = [
     'varna',
@@ -171,10 +166,18 @@ export class Kuta {
 
   private gender1 = 'f';
   private gender2 = 'm';
-  private refreshing = false;
+
+  constructor(chart1: Chart, chart2: Chart) {
+    this.c1 = chart1;
+    this.c2 = chart2;
+  }
 
   get dvadashaKeys() {
     return [...this.ashtaKeys, ...this.extraDvadashaKeys];
+  }
+
+  get allObjectKeys() {
+    return [...this.ashtaKeys, ...this.extraDvadashaKeys, ...this.otherKeys];
   }
 
   get coreBodies() {
@@ -185,9 +188,7 @@ export class Kuta {
     return ['as', 'ds'];
   }
   get activePairKeys() {
-    return this.refreshing
-      ? []
-      : this.allKeys.filter(k => this.pairKeys.includes(k));
+    return this.allKeys.filter(k => this.pairKeys.includes(k));
   }
 
   get itemVariants(): Array<KeyKeys> {
@@ -214,15 +215,13 @@ export class Kuta {
     return [...this.coreBodies, ...this.extraObjects];
   }
 
-  calcKutas() {
-    switch (this.activeTab) {
-      case 1:
-        this.calcMultiKutas();
-        break;
-      default:
-        //this.calcSingleKutas(this.g1, this.g2);
-        break;
-    }
+  loadCompatibility(value) {
+    this.compatabilitySet = new Map(Object.entries(value));
+    this.itemVariants
+      .filter(iv => iv.keys.length > 0)
+      .forEach(iv => {
+        this.itemOptions.set(iv.key, iv.keys[0]);
+      });
   }
 
   calcTotalRow(refValues: Array<any>) {
@@ -240,20 +239,23 @@ export class Kuta {
     };
   }
 
-  buildSingleValues() {
+  buildSingleValues(addTotal = false) {
     this.singleValues = this.currentKeys.map(key => {
       const row = this.valueSets.get(key);
       const result = row instanceof KutaValueSet ? row : new KutaValueSet(null);
       return result;
     });
-    const { score, max } = this.calcTotalRow(this.singleValues);
-    const totalRow = new KutaValueSet({
-      key: 'total',
-      head: 'Total',
-      score,
-      max,
-    });
-    this.singleValues.push(totalRow);
+    if (addTotal) {
+      const { score, max } = this.calcTotalRow(this.singleValues);
+      const totalRow = new KutaValueSet({
+        key: 'total',
+        head: 'Total',
+        score,
+        max,
+      });
+      this.singleValues.push(totalRow);
+    }
+    return this.singleValues;
   }
 
   get currentKeys() {
@@ -262,6 +264,8 @@ export class Kuta {
         return this.dvadashaKeys;
       case 'other':
         return this.otherKeys;
+      case 'all':
+        return this.allObjectKeys;
       default:
         return this.ashtaKeys;
     }
@@ -300,8 +304,8 @@ export class Kuta {
     this.multiValues.push(totalRow);
   }
 
-  matchRowLabel(field: string) {
-    const refCols = this.activeTab < 1 ? this.singleColumns : this.multiColumns;
+  matchRowLabel(field: string, singleMode = true) {
+    const refCols = singleMode ? this.singleColumns : this.multiColumns;
     const col = refCols.find(col => col.key === field);
     if (col instanceof Object) {
       return col.label;
@@ -368,6 +372,38 @@ export class Kuta {
     return grahas;
   } */
 
+  calcAllSingleKutas() {
+    const items = [];
+    const simplifyKuta = (item: KutaValueSet) => {
+      return {
+        key: item.key,
+        score: item.score,
+      };
+    };
+    this.allKeys.forEach(k1 => {
+      this.allKeys.forEach(k2 => {
+        items.push({
+          k1,
+          k2,
+          values: this.calcSingleKutas(
+            this.c1.graha(k1),
+            this.c2.graha(k2),
+          ).map(simplifyKuta),
+        });
+      });
+    });
+    return items;
+  }
+
+  calcSingleKutasAsObj(gr1: Graha, gr2: Graha) {
+    const values = this.calcSingleKutas(gr1, gr2);
+    const mp: Map<string, number> = new Map();
+    values.forEach(item => {
+      mp.set(item.key, item.score);
+    });
+    return Object.fromEntries(mp.entries());
+  }
+
   calcSingleKutas(gr1: Graha, gr2: Graha) {
     this.valueSets = new Map<string, KutaValueSet>();
     if (gr1 instanceof Graha && gr2 instanceof Graha) {
@@ -379,7 +415,7 @@ export class Kuta {
         });
       }
     }
-    this.buildSingleValues();
+    return this.buildSingleValues();
   }
 
   buildSubjects(gr1: Graha, gr2: Graha) {
@@ -549,6 +585,7 @@ export class Kuta {
     );
     const taraIndex1 = taraValOne % 9;
     const taraIndex2 = taraValTwo % 9;
+
     const { scores } = settings;
     if (scores instanceof Array && scores.length > 8) {
       result.score = scores[taraIndex1] + scores[taraIndex2];

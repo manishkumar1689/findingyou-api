@@ -34,6 +34,7 @@ import { TransitionSet } from './transition-set';
 import { UpagrahaValue } from './upagraha-value';
 import { matchReference } from './graha-set';
 import rashiValues from '../settings/rashi-values';
+import ayanamshaValues from '../settings/ayanamsha-values';
 
 export interface Subject {
   name: string;
@@ -273,6 +274,19 @@ export class Chart {
     const value = this.getAyanamshaValue(ayanamshaItem.key);
     const av = value >= 0 ? { ...ayanamshaItem, value } : ayanamshaItem;
     this.ayanamshaItem = Object.assign({}, av);
+    return this.ayanamshaItem;
+  }
+
+  setAyanamshaItemByNum(num: number) {
+    let key = 'true_citra';
+    const aRow = ayanamshaValues.find(a => a.value === num);
+    const value = this.getAyanamshaValue(aRow.key);
+    this.ayanamshaItem = {
+      num,
+      key: aRow.key,
+      value,
+      name: aRow.name,
+    };
     return this.ayanamshaItem;
   }
 
