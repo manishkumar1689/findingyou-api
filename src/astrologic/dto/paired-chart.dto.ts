@@ -2,6 +2,8 @@ import { ApiProperty } from '@nestjs/swagger';
 import { TagDTO } from './tag.dto';
 import { BaseChartDTO } from './base-chart.dto';
 import { GeoDTO } from '../../user/dto/geo.dto';
+import { KutaSetDTO } from './kuta-set.dto';
+import { KeyPairValueDTO } from './key-pair-value.dto';
 
 export class PairedChartDTO {
   @ApiProperty()
@@ -30,6 +32,10 @@ export class PairedChartDTO {
   readonly endYear?: number;
   @ApiProperty()
   readonly span?: number;
+  @ApiProperty()
+  readonly aspects: KeyPairValueDTO[];
+  @ApiProperty()
+  readonly kutas: KutaSetDTO[];
   @ApiProperty()
   readonly notes: string;
   @ApiProperty()

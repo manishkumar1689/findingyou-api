@@ -37,6 +37,7 @@ import {
   calcSphutaData,
   fetchAllSettings,
   calcCompactChartData,
+  calcAllAspects,
 } from './lib/core';
 import {
   calcJulianDate,
@@ -644,7 +645,12 @@ export class AstrologicController {
         relType: inData.relType,
         tags,
       } as PairedChartDTO;
-      const paired = await this.astrologicService.savePaired(pairedDTO);
+
+      const setting = await this.settingService.getByKey('kuta_variants');
+      const paired = await this.astrologicService.savePaired(
+        pairedDTO,
+        setting,
+      );
       return {
         valid: true,
         paired,
@@ -773,6 +779,54 @@ export class AstrologicController {
       }
       const kutas = kutaBuilder.calcAllSingleKutas();
       result.set('kutas', kutas);
+      const simpleC1 = simplifyChart(paired.c1, 'true_citra');
+      const simpleC2 = simplifyChart(paired.c2, 'true_citra');
+      result.set('c1', simpleC1);
+      result.set('c2', simpleC2);
+    }
+    return res.json(Object.fromEntries(result));
+  }
+
+  @Get('recalc-paired/:start/:limit')
+  async recalcPaired(
+    @Res() res,
+    @Param('start') start: string,
+    @Param('limit') limit: string,
+  ) {
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 0);
+    const setting = await this.settingService.getByKey('kuta_variants');
+    const data = await this.astrologicService.bulkUpdatePaired(
+      startInt,
+      limitInt,
+      setting,
+    );
+    return res.json(data);
+  }
+
+  @Get('aspects/:c1/:c2')
+  async getAspects(
+    @Res() res,
+    @Param('c1') c1: string,
+    @Param('c2') c2: string,
+  ) {
+    const paired = await this.astrologicService.getPairedByChartIDs(c1, c2);
+    const result: Map<string, any> = new Map();
+    if (paired instanceof Object) {
+      const c1 = new Chart(paired.c1);
+      const c2 = new Chart(paired.c2);
+      c1.setAyanamshaItemByNum(27);
+      c2.setAyanamshaItemByNum(27);
+      /* const kutas = c1.grahas.map(gr1 => {
+        return matchNaturalGrahaMaitri(gr1, gr2);
+      }); */
+      const kutaBuilder = new Kuta(c1, c2);
+      const setting = await this.settingService.getByKey('kuta_variants');
+      if (setting) {
+        kutaBuilder.loadCompatibility(setting.value);
+      }
+      const aspects = calcAllAspects(c1, c2);
+      result.set('aspects', aspects);
       const simpleC1 = simplifyChart(paired.c1, 'true_citra');
       const simpleC2 = simplifyChart(paired.c2, 'true_citra');
       result.set('c1', simpleC1);

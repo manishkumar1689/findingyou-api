@@ -30,6 +30,9 @@ import {
 import * as Redis from 'ioredis';
 import { SimpleTransition } from './interfaces/simple-transition.interface';
 import { degAsDms } from './lib/converters';
+import { calcAllAspects } from './lib/core';
+import { Chart as ChartClass } from './lib/models/chart';
+import { Kuta } from './lib/kuta';
 
 @Injectable()
 export class AstrologicService {
@@ -154,7 +157,40 @@ export class AstrologicService {
     return chart;
   }
 
-  async savePaired(pairedDTO: PairedChartDTO) {
+  async bulkUpdatePaired(start = 0, limit = 100, setting = null) {
+    const records = await this.pairedChartModel
+      .find({})
+      .skip(start)
+      .limit(limit);
+    let updated = 0;
+    const ids: Array<string> = [];
+    for (const record of records) {
+      const { aspects, kutas } = await this.saveExtraValues(
+        record.c1,
+        record.c2,
+        setting,
+      );
+      if (aspects.length > 0) {
+        await this.pairedChartModel.findByIdAndUpdate(
+          record._id,
+          { aspects, kutas },
+          {
+            new: false,
+          },
+        );
+        ids.push(record._id);
+        updated++;
+      }
+    }
+    return {
+      start,
+      limit,
+      updated,
+      ids,
+    };
+  }
+
+  async savePaired(pairedDTO: PairedChartDTO, setting = null) {
     const { c1, c2 } = pairedDTO;
     const numCharts = await this.chartModel
       .count({ _id: { $in: [c1, c2] } })
@@ -162,7 +198,8 @@ export class AstrologicService {
     let result: any = { valid: false };
 
     const nowDt = new Date();
-    pairedDTO = { ...pairedDTO, modifiedAt: nowDt };
+    const { aspects, kutas } = await this.saveExtraValues(c1, c2);
+    pairedDTO = { ...pairedDTO, aspects, kutas, modifiedAt: nowDt };
     if (numCharts === 2) {
       const currPairedChart = await this.pairedChartModel
         .findOne({
@@ -185,6 +222,24 @@ export class AstrologicService {
       }
     }
     return result;
+  }
+
+  async saveExtraValues(c1: string, c2: string, setting = null) {
+    let kutas = [];
+    let aspects = [];
+    if (setting instanceof Object) {
+      const c1C = await this.chartModel.findById(c1);
+      const c2C = await this.chartModel.findById(c2);
+      const chart1 = new ChartClass(c1C.toObject());
+      const chart2 = new ChartClass(c2C.toObject());
+      chart1.setAyanamshaItemByNum(27);
+      chart2.setAyanamshaItemByNum(27);
+      const kutaBuilder = new Kuta(chart1, chart2);
+      kutaBuilder.loadCompatibility(setting.value);
+      kutas = kutaBuilder.calcAllSingleKutas();
+      aspects = calcAllAspects(chart1, chart2);
+    }
+    return { aspects, kutas };
   }
 
   async getPairedByUser(userID: string, limit = 0, params = null) {

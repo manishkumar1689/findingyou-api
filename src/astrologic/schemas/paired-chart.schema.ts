@@ -2,6 +2,10 @@ import * as mongoose from 'mongoose';
 import { BaseChartSchema } from './base-chart.schema';
 import { TagSchema } from './tag.schema';
 import { GeoSchema } from 'src/user/schemas/geo.schema';
+import { KeyNumValueSchema } from './key-num-value.schema';
+import { KutaSetSchema } from './kuta-set.schema';
+import { KeyPairValueSchema } from './key-pair-value.schema';
+
 const { ObjectId } = mongoose.Schema.Types;
 
 export const PairedChartSchema = new mongoose.Schema({
@@ -67,6 +71,16 @@ export const PairedChartSchema = new mongoose.Schema({
     type: Number,
     required: false,
     default: 0,
+  },
+  aspects: {
+    type: [KeyPairValueSchema],
+    required: false,
+    default: [],
+  },
+  kutas: {
+    type: [KutaSetSchema],
+    required: false,
+    default: [],
   },
   notes: {
     type: String,

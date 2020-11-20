@@ -377,7 +377,7 @@ export class Kuta {
     const simplifyKuta = (item: KutaValueSet) => {
       return {
         key: item.key,
-        score: item.score,
+        value: item.score,
       };
     };
     this.allKeys.forEach(k1 => {

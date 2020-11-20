@@ -1281,6 +1281,24 @@ const addUpapadaSecondAndLord = (
   }
 };
 
+export const calcAllAspects = (c1: Chart, c2: Chart) => {
+  const aspects = [];
+  const keys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa', 'as', 'ds'];
+  keys.forEach(k1 => {
+    keys.forEach(k2 => {
+      const gr1 = c1.graha(k1);
+      const gr2 = c2.graha(k2);
+      const angle = relativeAngle(gr1.longitude, gr2.longitude);
+      aspects.push({
+        k1,
+        k2,
+        value: angle,
+      });
+    });
+  });
+  return aspects;
+};
+
 /*
 @param sunLng:number
 @param moonLng:number
