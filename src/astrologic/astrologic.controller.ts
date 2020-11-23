@@ -558,6 +558,26 @@ export class AstrologicController {
     return await this.astrologicService.getChart(chart._id);
   }
 
+  @Get('core-values/:ayanamsha?/:start?/:limit?')
+  async getCoreValues(
+    @Res() res,
+    @Param('ayanamsha') ayanamsha,
+    @Param('start') start,
+    @Param('limit') limit,
+  ) {
+    const ayanamshaKey = notEmptyString(ayanamsha, 4)
+      ? ayanamsha.replace(/-+/g, '_')
+      : 'true_citra';
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 100);
+    const items = await this.astrologicService.getCoreAdjustedValues(
+      ayanamshaKey,
+      startInt,
+      limitInt,
+    );
+    return res.send(items);
+  }
+
   @Post('save-paired')
   async savePairedChart(@Res() res, @Body() inData: PairedChartInputDTO) {
     const data = await this.savePairedChartData(inData);

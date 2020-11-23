@@ -6,6 +6,7 @@ import { Chart } from './interfaces/chart.interface';
 import { BodySpeedDTO } from './dto/body-speed.dto';
 import { calcAcceleration, calcStation } from './lib/astro-motion';
 import grahaValues from './lib/settings/graha-values';
+import { unwoundChartFields } from './../lib/query-builders';
 import {
   calcJulDate,
   calcJulDateFromParts,
@@ -81,6 +82,16 @@ export class AstrologicService {
     if (isNew) {
       return this.chartModel.create(saveData);
     }
+  }
+
+  async getCoreAdjustedValues(
+    ayanamshaKey = 'true_citra',
+    start = 0,
+    limit = 100,
+  ) {
+    const steps = unwoundChartFields(ayanamshaKey, start, limit);
+    console.log(steps);
+    return await this.chartModel.aggregate(steps);
   }
 
   adjustDatetimeByServerTz(data: any = null) {
