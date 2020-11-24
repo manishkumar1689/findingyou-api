@@ -6,7 +6,10 @@ import { Chart } from './interfaces/chart.interface';
 import { BodySpeedDTO } from './dto/body-speed.dto';
 import { calcAcceleration, calcStation } from './lib/astro-motion';
 import grahaValues from './lib/settings/graha-values';
-import { unwoundChartFields } from './../lib/query-builders';
+import {
+  addOrbRangeMatchStep,
+  unwoundChartFields,
+} from './../lib/query-builders';
 import {
   calcJulDate,
   calcJulDateFromParts,
@@ -92,6 +95,21 @@ export class AstrologicService {
     const steps = unwoundChartFields(ayanamshaKey, start, limit);
     console.log(steps);
     return await this.chartModel.aggregate(steps);
+  }
+
+  async getPairedByIds(ids: Array<string> = [], max = 1000) {
+    return await this.getPairedByUser('all', max, { ids });
+  }
+
+  async filterPairedByAspect(
+    aspectKey: string,
+    k1: string,
+    k2: string,
+    orb = 1,
+  ) {
+    const conditions = addOrbRangeMatchStep(aspectKey, k1, k2, orb);
+
+    return await this.pairedChartModel.aggregate(conditions);
   }
 
   adjustDatetimeByServerTz(data: any = null) {
@@ -278,10 +296,15 @@ export class AstrologicService {
             criteria.set('span', {
               $lt: val,
             });
+          case 'ids':
+            criteria.set('_id', {
+              $in: val,
+            });
             break;
         }
       });
     }
+
     const items = await this.pairedChartModel
       .find(Object.fromEntries(criteria))
       .limit(max)

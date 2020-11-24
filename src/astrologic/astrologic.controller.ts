@@ -55,7 +55,7 @@ import { calcRetroGrade, calcStation } from './lib/astro-motion';
 import { toIndianTime, calcTransition } from './lib/transitions';
 import { readEpheFiles } from './lib/files';
 import { ChartInputDTO } from './dto/chart-input.dto';
-import { smartCastInt, sanitize } from '../lib/converters';
+import { smartCastInt, sanitize, smartCastFloat } from '../lib/converters';
 import { PairedChartInputDTO } from './dto/paired-chart-input.dto';
 import { midPointSurface, medianLatlng } from './lib/math-funcs';
 import { PairedChartDTO } from './dto/paired-chart.dto';
@@ -576,6 +576,41 @@ export class AstrologicController {
       limitInt,
     );
     return res.send(items);
+  }
+
+  @Get('aspect-match/:aspect?/:k1?/:k2?/:orb?/:max?')
+  async getByAspectRange(
+    @Res() res,
+    @Param('aspect') aspect,
+    @Param('k1') k1,
+    @Param('k2') k2,
+    @Param('orb') orb,
+    @Param('max') max,
+  ) {
+    const orbDouble = smartCastFloat(orb, 1);
+    const maxInt = smartCastInt(max, 100);
+    const data = await this.astrologicService.filterPairedByAspect(
+      aspect,
+      k1,
+      k2,
+      orbDouble,
+    );
+    const results = await this.astrologicService.getPairedByIds(
+      data.map(row => row._id),
+      maxInt,
+    );
+    const items = results.map(item => {
+      const row = data.find(row => row._id === item._id);
+      const diff = row instanceof Object ? row.diff : 0;
+      return {
+        ...item,
+        diff,
+      };
+    });
+    return res.status(200).send({
+      valid: items.length > 0,
+      items,
+    });
   }
 
   @Post('save-paired')
