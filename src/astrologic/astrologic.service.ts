@@ -93,7 +93,6 @@ export class AstrologicService {
     limit = 100,
   ) {
     const steps = unwoundChartFields(ayanamshaKey, start, limit);
-    console.log(steps);
     return await this.chartModel.aggregate(steps);
   }
 
