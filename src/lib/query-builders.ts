@@ -173,3 +173,46 @@ export const addOrbRangeMatchStep = (
   });
   return steps;
 };
+
+export const buildChartProjection = (prefix = '') => {
+  const mp: Map<string, string> = new Map();
+  const chartKeys = [
+    'user',
+    'isDefaultBirthChart',
+    'datetime',
+    'jd',
+    'tz',
+    'tzOffset',
+    'ascendant',
+    'mc',
+    'vertex',
+    'notes',
+    'createdAt',
+    'modifiedAt',
+  ];
+
+  const nestedObjKeys = ['subject', 'geo'];
+
+  const nestedSetKeys = [
+    'placenames',
+    'grahas',
+    'houses',
+    'indianTime',
+    'ayanamshas',
+    'upagrahas',
+    'sphutas',
+    'numValues',
+    'stringValues',
+    'objects',
+    'rashis',
+  ];
+
+  const subjectKeys = [
+    'name',
+    'notes',
+    'type',
+    'gender',
+    'eventType',
+    'roddenScale',
+  ];
+};

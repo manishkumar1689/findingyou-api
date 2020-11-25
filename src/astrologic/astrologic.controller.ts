@@ -10,7 +10,6 @@ import {
   Delete,
   Param,
 } from '@nestjs/common';
-import { Model } from 'mongoose';
 import { AstrologicService } from './astrologic.service';
 import { GeoService } from './../geo/geo.service';
 import { UserService } from './../user/user.service';
@@ -65,9 +64,9 @@ import {
   parseAstroBankJSON,
   Record,
 } from '../lib/parse-astro-csv';
-import { matchNaturalGrahaMaitri } from './lib/settings/maitri-data';
 import { Kuta } from './lib/kuta';
 import { Chart } from './lib/models/chart';
+import { calcOrb } from './lib/calc-orbs';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -587,7 +586,13 @@ export class AstrologicController {
     @Param('orb') orb,
     @Param('max') max,
   ) {
-    const orbDouble = smartCastFloat(orb, 1);
+    let orbDouble = smartCastFloat(orb, -1);
+    if (orbDouble < 0) {
+      if (orb === 'auto') {
+        const matchedOrbData = calcOrb(aspect, k1, k2);
+        orbDouble = matchedOrbData.orb;
+      }
+    }
     const maxInt = smartCastInt(max, 100);
     const data = await this.astrologicService.filterPairedByAspect(
       aspect,
@@ -609,6 +614,8 @@ export class AstrologicController {
     });
     return res.status(200).send({
       valid: items.length > 0,
+      orb: orbDouble,
+      aspect,
       items,
     });
   }
