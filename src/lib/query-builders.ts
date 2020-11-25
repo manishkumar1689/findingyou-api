@@ -144,7 +144,7 @@ export const addOrbRangeMatchStep = (
       input: '$aspects',
       as: 'item',
       cond: {
-        $and: [{ $eq: ['$$item.k1', k2] }, { $eq: ['$$item.k2', k2] }],
+        $and: [{ $eq: ['$$item.k1', k1] }, { $eq: ['$$item.k2', k2] }],
       },
     },
   });
@@ -163,13 +163,22 @@ export const addOrbRangeMatchStep = (
       },
     },
   });
+  const angleRangeOpts =
+    range[1] > range[0]
+      ? {
+          angle: {
+            $gte: range[0],
+            $lte: range[1],
+          },
+        }
+      : {
+          $or: [
+            { angle: { $gte: range[0], $lte: 360 } },
+            { angle: { $gte: 0, $lte: range[1] } },
+          ],
+        };
   steps.push({
-    $match: {
-      angle: {
-        $gte: range[0],
-        $lte: range[1],
-      },
-    },
+    $match: angleRangeOpts,
   });
   return steps;
 };

@@ -116,6 +116,58 @@ export class SettingService {
     return await this.protocolModel.findById(itemID);
   }
 
+  async matchProtocolSetting(
+    itemID: string,
+    settingKey = '',
+    defaultVal = null,
+  ) {
+    const protocol = await this.getProtocol(itemID);
+    let hasProtocol = false;
+    if (protocol instanceof Object) {
+      const { settings } = protocol;
+      hasProtocol = true;
+      if (settings instanceof Array) {
+        const settingRow = settings.find(s => s.key === settingKey);
+        if (settingRow instanceof Object) {
+          return { hasProtocol: true, protocol, value: settingRow.value };
+        }
+      }
+    }
+    return { hasProtocol, protocol, value: defaultVal };
+  }
+
+  async getProtocolSetting(itemID: string, settingKey = '', defaultVal = null) {
+    const { value } = await this.matchProtocolSetting(
+      itemID,
+      settingKey,
+      defaultVal,
+    );
+    return value;
+  }
+
+  async getProtocolCustomOrbs(itemID: string) {
+    const { value, protocol, hasProtocol } = await this.matchProtocolSetting(
+      itemID,
+      'custom_orbs',
+      false,
+    );
+    if (hasProtocol) {
+      if (value) {
+        const { settings } = protocol;
+        if (settings instanceof Array) {
+          const settingRow = settings.find(s => s.key === 'customOrbs');
+          if (
+            settingRow instanceof Object &&
+            settingRow.value instanceof Array
+          ) {
+            return settingRow.value;
+          }
+        }
+      }
+    }
+    return [];
+  }
+
   async getProtcols(userID = null) {
     const mp: Map<string, any> = new Map();
     const userNotMatched = userID === '-';

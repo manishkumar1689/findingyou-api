@@ -586,7 +586,25 @@ export class AstrologicController {
     @Param('orb') orb,
     @Param('max') max,
   ) {
-    let orbDouble = smartCastFloat(orb, -1);
+    let orbDouble = 1;
+    if (notEmptyString(orb, 12)) {
+      const orbs = await this.settingService.getProtocolCustomOrbs(orb);
+      if (orbs.length > 0) {
+        const orbRow1 = orbs.find(orbRow => orbRow.key === k1);
+        const orbRow2 = orbs.find(orbRow => orbRow.key === k2);
+        if (orbRow1 instanceof Object && orbRow2 instanceof Object) {
+          const aspRow1 = orbRow1.orbs.find(row => row.key === aspect);
+          const aspRow2 = orbRow2.orbs.find(row => row.key === aspect);
+          if (aspRow1 instanceof Object && aspRow2 instanceof Object) {
+            orbDouble =
+              (smartCastFloat(aspRow1.value) + smartCastFloat(aspRow2.value)) /
+              2;
+          }
+        }
+      }
+    } else if (isNumeric(orb)) {
+      smartCastFloat(orb, -1);
+    }
     if (orbDouble < 0) {
       if (orb === 'auto') {
         const matchedOrbData = calcOrb(aspect, k1, k2);
