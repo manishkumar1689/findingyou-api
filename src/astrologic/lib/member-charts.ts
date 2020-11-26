@@ -83,9 +83,15 @@ export const simplifyChart = (chart = null, ayanamshaKey = 'true_citra') => {
   }
   if (
     chart.numValues instanceof Array &&
-    ayanamshaIndex < chart.numValues.length
+    ayanamshaIndex < chart.numValues.length &&
+    ayanamshaIndex >= 0
   ) {
-    chart.numValues = chart.numValues[ayanamshaIndex].items.map(removeIds);
+    if (chart.numValues[ayanamshaIndex] instanceof Object) {
+      const { items } = (chart.numValues = chart.numValues[ayanamshaIndex]);
+      if (items instanceof Array) {
+        chart.numValues = items.map(removeIds);
+      }
+    }
   }
   delete chart.__v;
   return chart;

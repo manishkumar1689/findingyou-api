@@ -67,6 +67,13 @@ import {
 import { Kuta } from './lib/kuta';
 import { Chart } from './lib/models/chart';
 import { calcOrb } from './lib/calc-orbs';
+import { PairedChartSchema } from './schemas/paired-chart.schema';
+import { Schema } from 'mongoose';
+import {
+  buildChartProjection,
+  buildPairedChartProjection,
+  deconstructSchema,
+} from 'src/lib/query-builders';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -589,12 +596,14 @@ export class AstrologicController {
     let orbDouble = 1;
     if (notEmptyString(orb, 12)) {
       const orbs = await this.settingService.getProtocolCustomOrbs(orb);
+
       if (orbs.length > 0) {
         const orbRow1 = orbs.find(orbRow => orbRow.key === k1);
         const orbRow2 = orbs.find(orbRow => orbRow.key === k2);
         if (orbRow1 instanceof Object && orbRow2 instanceof Object) {
           const aspRow1 = orbRow1.orbs.find(row => row.key === aspect);
           const aspRow2 = orbRow2.orbs.find(row => row.key === aspect);
+
           if (aspRow1 instanceof Object && aspRow2 instanceof Object) {
             orbDouble =
               (smartCastFloat(aspRow1.value) + smartCastFloat(aspRow2.value)) /

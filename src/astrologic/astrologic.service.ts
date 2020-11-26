@@ -107,7 +107,7 @@ export class AstrologicService {
     orb = 1,
   ) {
     const conditions = addOrbRangeMatchStep(aspectKey, k1, k2, orb);
-
+    console.log(conditions[conditions.length - 1].$match.$or);
     return await this.pairedChartModel.aggregate(conditions);
   }
 
