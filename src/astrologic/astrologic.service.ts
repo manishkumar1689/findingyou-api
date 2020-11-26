@@ -37,6 +37,7 @@ import { degAsDms } from './lib/converters';
 import { calcAllAspects } from './lib/core';
 import { Chart as ChartClass } from './lib/models/chart';
 import { Kuta } from './lib/kuta';
+import { AspectSet } from './lib/calc-orbs';
 
 @Injectable()
 export class AstrologicService {
@@ -108,6 +109,29 @@ export class AstrologicService {
   ) {
     const { steps, conditions } = addOrbRangeMatchStep(aspectKey, k1, k2, orb);
     const comboSteps = [...steps, ...conditions];
+    return await this.pairedChartModel.aggregate(comboSteps);
+  }
+
+  async filterPairedByAspectSets(aspectSets: Array<AspectSet>) {
+    const projSteps = [];
+    const condSteps = [];
+    for (let i = 0; i < aspectSets.length; i++) {
+      const { aspectKey, k1, k2, orb } = aspectSets[i];
+      const { steps, conditions } = addOrbRangeMatchStep(
+        aspectKey,
+        k1,
+        k2,
+        orb,
+        i,
+      );
+      steps.forEach(step => {
+        projSteps.push(step);
+      });
+      conditions.forEach(step => {
+        condSteps.push(step);
+      });
+    }
+    const comboSteps = [...projSteps, ...condSteps];
     return await this.pairedChartModel.aggregate(comboSteps);
   }
 
