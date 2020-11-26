@@ -20,6 +20,7 @@ import {
   validISODateString,
   notEmptyString,
   emptyString,
+  isNumber,
 } from '../lib/validators';
 import { locStringToGeo } from './lib/converters';
 import { simplifyChart } from './lib/member-charts';
@@ -66,7 +67,7 @@ import {
 } from '../lib/parse-astro-csv';
 import { Kuta } from './lib/kuta';
 import { Chart } from './lib/models/chart';
-import { calcOrb } from './lib/calc-orbs';
+import { AspectSet, calcOrb } from './lib/calc-orbs';
 import { PairedChartSchema } from './schemas/paired-chart.schema';
 import { Schema } from 'mongoose';
 import {
@@ -74,6 +75,7 @@ import {
   buildPairedChartProjection,
   deconstructSchema,
 } from 'src/lib/query-builders';
+import { AspectSetDTO } from './dto/aspect-set.dto';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -584,6 +586,58 @@ export class AstrologicController {
     return res.send(items);
   }
 
+  @Post('aspect-match')
+  async getByAspectRanges(@Res() res, @Body() inData: AspectSetDTO) {
+    let resultItems: Array<any>;
+    let items: Array<AspectSet> = [];
+    if (inData instanceof Object) {
+      const hasProtocolID = notEmptyString(inData.protocolID, 12);
+      const isAuto = inData.protocolID === 'auto';
+      const hasOverride = hasProtocolID || isAuto;
+      const protocolRef = hasOverride ? inData.protocolID : '';
+      for (const aspSet of inData.items) {
+        const orbRef = hasOverride ? protocolRef : aspSet.orb;
+        const orb = await this.matchOrb(
+          aspSet.key,
+          aspSet.k1,
+          aspSet.k2,
+          orbRef,
+        );
+        items.push({
+          key: aspSet.key,
+          k1: aspSet.k1,
+          k2: aspSet.k2,
+          orb,
+        });
+      }
+      const start = isNumber(inData.start) ? inData.start : 0;
+      const limit = isNumber(inData.limit) ? inData.limit : 100;
+      const data = await this.astrologicService.filterPairedByAspectSets(
+        items,
+        start,
+        limit,
+      );
+
+      const results = await this.astrologicService.getPairedByIds(
+        data.map(row => row._id),
+        limit,
+      );
+      resultItems = results.map(item => {
+        const row = data.find(row => row._id === item._id);
+        const diff = row instanceof Object ? row.diff : 0;
+        return {
+          ...item,
+          diff,
+        };
+      });
+    }
+    return res.status(200).send({
+      valid: resultItems.length > 0,
+      items: resultItems,
+      input: items,
+    });
+  }
+
   @Get('aspect-match/:aspect?/:k1?/:k2?/:orb?/:max?')
   async getByAspectRange(
     @Res() res,
@@ -593,10 +647,36 @@ export class AstrologicController {
     @Param('orb') orb,
     @Param('max') max,
   ) {
-    let orbDouble = 1;
-    if (notEmptyString(orb, 12)) {
-      const orbs = await this.settingService.getProtocolCustomOrbs(orb);
+    const maxInt = smartCastInt(max, 100);
+    const orbDouble = await this.matchOrb(aspect, k1, k2, orb);
+    const data = await this.astrologicService.filterPairedByAspect(
+      aspect,
+      k1,
+      k2,
+      orbDouble,
+    );
+    const results = await this.astrologicService.getPairedByIds(
+      data.map(row => row._id),
+      maxInt,
+    );
+    return res.status(200).send({
+      valid: results.length > 0,
+      orb: orbDouble,
+      aspect,
+      results,
+    });
+  }
 
+  async matchOrb(
+    aspect: string,
+    k1: string,
+    k2: string,
+    orbRef: string | number,
+  ) {
+    let orbDouble = 1;
+    const protocolId = typeof orbRef === 'string' ? orbRef : '';
+    if (notEmptyString(protocolId, 12)) {
+      const orbs = await this.settingService.getProtocolCustomOrbs(protocolId);
       if (orbs.length > 0) {
         const orbRow1 = orbs.find(orbRow => orbRow.key === k1);
         const orbRow2 = orbs.find(orbRow => orbRow.key === k2);
@@ -611,40 +691,16 @@ export class AstrologicController {
           }
         }
       }
-    } else if (isNumeric(orb)) {
-      smartCastFloat(orb, -1);
+    } else if (isNumeric(orbRef)) {
+      orbDouble = smartCastFloat(orbRef, -1);
     }
     if (orbDouble < 0) {
-      if (orb === 'auto') {
+      if (orbRef === 'auto') {
         const matchedOrbData = calcOrb(aspect, k1, k2);
         orbDouble = matchedOrbData.orb;
       }
     }
-    const maxInt = smartCastInt(max, 100);
-    const data = await this.astrologicService.filterPairedByAspect(
-      aspect,
-      k1,
-      k2,
-      orbDouble,
-    );
-    const results = await this.astrologicService.getPairedByIds(
-      data.map(row => row._id),
-      maxInt,
-    );
-    const items = results.map(item => {
-      const row = data.find(row => row._id === item._id);
-      const diff = row instanceof Object ? row.diff : 0;
-      return {
-        ...item,
-        diff,
-      };
-    });
-    return res.status(200).send({
-      valid: items.length > 0,
-      orb: orbDouble,
-      aspect,
-      items,
-    });
+    return orbDouble;
   }
 
   @Post('save-paired')

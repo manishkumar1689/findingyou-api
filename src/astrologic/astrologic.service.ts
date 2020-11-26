@@ -8,6 +8,8 @@ import { calcAcceleration, calcStation } from './lib/astro-motion';
 import grahaValues from './lib/settings/graha-values';
 import {
   addOrbRangeMatchStep,
+  buildPairedChartLookupPath,
+  buildPairedChartProjection,
   unwoundChartFields,
 } from './../lib/query-builders';
 import {
@@ -98,7 +100,23 @@ export class AstrologicService {
   }
 
   async getPairedByIds(ids: Array<string> = [], max = 1000) {
-    return await this.getPairedByUser('all', max, { ids });
+    const lookupSteps = buildPairedChartLookupPath();
+    const projectionStep = buildPairedChartProjection();
+    const steps = [
+      ...lookupSteps,
+      {
+        $project: projectionStep,
+      },
+    ];
+    steps.push({
+      $match: {
+        _id: {
+          $in: ids,
+        },
+      },
+    });
+    steps.push({ $limit: max });
+    return await this.pairedChartModel.aggregate(steps);
   }
 
   async filterPairedByAspect(
@@ -112,13 +130,18 @@ export class AstrologicService {
     return await this.pairedChartModel.aggregate(comboSteps);
   }
 
-  async filterPairedByAspectSets(aspectSets: Array<AspectSet>) {
+  async filterPairedByAspectSets(
+    aspectSets: Array<AspectSet>,
+    start = 0,
+    limit = 0,
+  ) {
     const projSteps = [];
     const condSteps = [];
+    const outFieldProjections = [];
     for (let i = 0; i < aspectSets.length; i++) {
-      const { aspectKey, k1, k2, orb } = aspectSets[i];
-      const { steps, conditions } = addOrbRangeMatchStep(
-        aspectKey,
+      const { key, k1, k2, orb } = aspectSets[i];
+      const { steps, outFieldProject, conditions } = addOrbRangeMatchStep(
+        key,
         k1,
         k2,
         orb,
@@ -130,8 +153,27 @@ export class AstrologicService {
       conditions.forEach(step => {
         condSteps.push(step);
       });
+      outFieldProjections.push(outFieldProject);
     }
-    const comboSteps = [...projSteps, ...condSteps];
+    let outFieldCombo: any = {};
+    for (const outFields of outFieldProjections) {
+      outFieldCombo = { ...outFieldCombo, ...outFields };
+    }
+    const outFieldsProjectStep = {
+      $project: outFieldCombo,
+    };
+    const condStep = {
+      $match: {
+        $and: condSteps.map(cs => cs.$match),
+      },
+    };
+    const comboSteps = [...projSteps, outFieldsProjectStep, condStep];
+    if (start > 0) {
+      comboSteps.push({ $skip: start });
+    }
+    if (limit > 0) {
+      comboSteps.push({ $limit: limit });
+    }
     return await this.pairedChartModel.aggregate(comboSteps);
   }
 

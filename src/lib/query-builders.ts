@@ -155,15 +155,17 @@ export const addOrbRangeMatchStep = (
   }
 
   const baseFields = ['_id', 'aspects'];
-  const steps: Array<any> = [
-    { $project: Object.fromEntries(baseFields.map(k => [k, 1])) },
-  ];
+  const steps: Array<any> = [];
+  if (index < 1) {
+    steps.push({ $project: Object.fromEntries(baseFields.map(k => [k, 1])) });
+  }
 
   const conditions: Array<any> = [];
 
   const addFields: Map<string, any> = new Map();
   const angleRowName = ['angleRow', index].join('');
   const angleFieldName = ['angle', index].join('');
+  const diffFieldName = ['diff', index].join('');
   addFields.set(angleRowName, {
     $filter: {
       input: '$aspects',
@@ -179,15 +181,16 @@ export const addOrbRangeMatchStep = (
   steps.push({
     $unwind: '$' + angleRowName,
   });
-  steps.push({
-    $project: {
-      _id: 1,
-      [angleFieldName]: '$' + angleRowName + '.value',
-      diff: {
-        $subtract: ['$' + angleRowName + '.value', aspectAngle],
-      },
+  const outFieldProject = {
+    _id: 1,
+    [angleFieldName]: '$' + angleRowName + '.value',
+    [diffFieldName]: {
+      $mod: [
+        { $subtract: ['$' + angleRowName + '.value', aspectAngle] },
+        aspectAngle,
+      ],
     },
-  });
+  };
   const orConditions = [];
   for (const aspAngle of aspectAngles) {
     const range = [subtractLng360(aspAngle, orb), (aspAngle + orb) % 360];
@@ -219,7 +222,7 @@ export const addOrbRangeMatchStep = (
     },
   });
 
-  return { steps, conditions };
+  return { steps, outFieldProject, conditions };
 };
 
 export const combineKey = (key: string, prefix = '') => {
@@ -230,7 +233,7 @@ export const combineKey = (key: string, prefix = '') => {
   return parts.join('.');
 };
 
-export const buildPairedChartLookupPath = () => {
+export const buildPairedChartLookupPath = (): Array<any> => {
   return [
     {
       $lookup: {
@@ -303,7 +306,7 @@ export const buildPairedChartProjection = () => {
     switch (baseKey) {
       case 'c1':
       case 'c2':
-        buildInnerChartProjection(mp, baseKey);
+        buildInnerChartProjection(mp, baseKey, true);
         break;
       default:
         buildFromSchema(item, mp);
