@@ -106,9 +106,9 @@ export class AstrologicService {
     k2: string,
     orb = 1,
   ) {
-    const conditions = addOrbRangeMatchStep(aspectKey, k1, k2, orb);
-    console.log(conditions[conditions.length - 1].$match.$or);
-    return await this.pairedChartModel.aggregate(conditions);
+    const { steps, conditions } = addOrbRangeMatchStep(aspectKey, k1, k2, orb);
+    const comboSteps = [...steps, ...conditions];
+    return await this.pairedChartModel.aggregate(comboSteps);
   }
 
   adjustDatetimeByServerTz(data: any = null) {

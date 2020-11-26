@@ -1,4 +1,5 @@
 import { Schema } from 'mongoose';
+import { stringify } from 'querystring';
 import { matchAspectAngle } from 'src/astrologic/lib/calc-orbs';
 import { subtractLng360 } from 'src/astrologic/lib/math-funcs';
 import { ChartSchema } from 'src/astrologic/schemas/chart.schema';
@@ -139,6 +140,7 @@ export const addOrbRangeMatchStep = (
   k1: string,
   k2: string,
   orb = 0,
+  index = 0,
 ) => {
   const aspectAngle = matchAspectAngle(aspectKey);
   const aspectAngles = [aspectAngle];
@@ -157,9 +159,12 @@ export const addOrbRangeMatchStep = (
     { $project: Object.fromEntries(baseFields.map(k => [k, 1])) },
   ];
 
-  const addFields: Map<string, any> = new Map();
+  const conditions: Array<any> = [];
 
-  addFields.set('angleRow', {
+  const addFields: Map<string, any> = new Map();
+  const angleRowName = ['angleRow', index].join('');
+  const angleFieldName = ['angle', index].join('');
+  addFields.set(angleRowName, {
     $filter: {
       input: '$aspects',
       as: 'item',
@@ -172,14 +177,14 @@ export const addOrbRangeMatchStep = (
     $addFields: Object.fromEntries(addFields.entries()),
   });
   steps.push({
-    $unwind: '$angleRow',
+    $unwind: '$' + angleRowName,
   });
   steps.push({
     $project: {
       _id: 1,
-      angle: '$angleRow.value',
+      [angleFieldName]: '$' + angleRowName + '.value',
       diff: {
-        $subtract: ['$angleRow.value', aspectAngle],
+        $subtract: ['$' + angleRowName + '.value', aspectAngle],
       },
     },
   });
@@ -188,32 +193,33 @@ export const addOrbRangeMatchStep = (
     const range = [subtractLng360(aspAngle, orb), (aspAngle + orb) % 360];
     if (range[1] >= range[0]) {
       orConditions.push({
-        angle: {
+        [angleFieldName]: {
           $gte: range[0],
           $lte: range[1],
         },
       });
     } else {
       orConditions.push({
-        angle: {
+        [angleFieldName]: {
           $gte: range[0],
           $lte: 360,
         },
       });
       orConditions.push({
-        angle: {
+        [angleFieldName]: {
           $gte: 0,
           $lte: range[1],
         },
       });
     }
   }
-  steps.push({
+  conditions.push({
     $match: {
       $or: orConditions,
     },
   });
-  return steps;
+
+  return { steps, conditions };
 };
 
 export const combineKey = (key: string, prefix = '') => {
