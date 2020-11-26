@@ -306,6 +306,7 @@ export const buildPairedChartProjection = () => {
     switch (baseKey) {
       case 'c1':
       case 'c2':
+      case 'timespace':
         buildInnerChartProjection(mp, baseKey, true);
         break;
       default:
@@ -327,11 +328,16 @@ export const buildFromSchema = (
     if (item.subPaths.length < 1) {
       mp.set(baseKey, 1);
     } else {
+      mp.delete(baseKey);
       item.subPaths.forEach(sp => {
         const cp = [baseKey, sp].join('.');
         switch (sp) {
           case 'items':
           case 'variants':
+          case 'transitions':
+          case 'geo':
+          case 'topo':
+          case 'contacts':
             addThirdLevel(mp, baseKey, sp);
             break;
           default:
@@ -362,7 +368,7 @@ export const buildInnerChartProjection = (
         if (expandUser) {
           buildInnerUserProjection(mp, 'user');
         } else {
-          buildFromSchema(item, mp, prefix);
+          buildFromSchema(item, mp, prefix, ['password']);
         }
         break;
       default:
@@ -380,7 +386,7 @@ export const buildUserProjection = (prefix = '') => {
 
 export const buildInnerUserProjection = (mp: Map<string, any>, prefix = '') => {
   const chartFields = deconstructSchema(UserSchema);
-  mp.set('_id', 1);
+  mp.delete(prefix);
   chartFields.forEach(item => {
     buildFromSchema(item, mp, prefix, ['password']);
   });
@@ -421,7 +427,20 @@ export const addThirdLevel = (
         'relationship',
       ];
       break;
+    case 'transitions':
+      subFields = ['type', 'jd'];
+      break;
+    case 'geo':
+      subFields = ['lat', 'lng', 'alt'];
+      break;
+    case 'topo':
+      subFields = ['lat', 'lng'];
+      break;
+    case 'contacts':
+      subFields = ['identifier', 'mode', 'type'];
+      break;
   }
+  mp.delete([baseKey, key].join('.'));
   subFields.forEach(sk => {
     mp.set([baseKey, key, sk].join('.'), 1);
   });
