@@ -145,8 +145,16 @@ export class AstrologicService {
     k2: string,
     orb = 1,
   ) {
-    const { steps, conditions } = addOrbRangeMatchStep(aspectKey, k1, k2, orb);
-    const comboSteps = [...steps, ...conditions];
+    const { steps, outFieldProject, conditions } = addOrbRangeMatchStep(
+      aspectKey,
+      k1,
+      k2,
+      orb,
+    );
+    const projectionStep = {
+      $project: outFieldProject,
+    };
+    const comboSteps = [...steps, projectionStep, ...conditions];
     return await this.pairedChartModel.aggregate(comboSteps);
   }
 
