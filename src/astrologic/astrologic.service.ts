@@ -99,6 +99,26 @@ export class AstrologicService {
     return await this.chartModel.aggregate(steps);
   }
 
+  async getPairedChartSteps(ids: Array<string> = [], max = 1000) {
+    const lookupSteps = buildPairedChartLookupPath();
+    const projectionStep = buildPairedChartProjection();
+    const steps = [
+      ...lookupSteps,
+      {
+        $project: projectionStep,
+      },
+    ];
+    steps.push({
+      $match: {
+        _id: {
+          $in: ids,
+        },
+      },
+    });
+    steps.push({ $limit: max });
+    return steps;
+  }
+
   async getPairedByIds(ids: Array<string> = [], max = 1000) {
     const lookupSteps = buildPairedChartLookupPath();
     const projectionStep = buildPairedChartProjection();

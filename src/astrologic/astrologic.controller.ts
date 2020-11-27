@@ -703,6 +703,12 @@ export class AstrologicController {
     return orbDouble;
   }
 
+  @Get('paired-charts-steps')
+  async showPairedChartSteps(@Res() res) {
+    const steps = await this.astrologicService.getPairedChartSteps();
+    return res.json(steps);
+  }
+
   @Post('save-paired')
   async savePairedChart(@Res() res, @Body() inData: PairedChartInputDTO) {
     const data = await this.savePairedChartData(inData);

@@ -309,6 +309,9 @@ export const buildPairedChartProjection = () => {
       case 'timespace':
         buildInnerChartProjection(mp, baseKey, true);
         break;
+      case 'kutas':
+        addKutaFields(mp);
+        break;
       default:
         buildFromSchema(item, mp);
         break;
@@ -349,6 +352,77 @@ export const buildFromSchema = (
   }
 };
 
+export const addGrahaFields = (mp: Map<string, any>, prefix = '') => {
+  const fields = [
+    'num',
+    'key',
+    'lng',
+    'lat',
+    'lngSpeed',
+    'declination',
+    'topo.lng',
+    'topo.lat',
+    'transitions.type',
+    'transitions.jd',
+    'variants.charaKaraka',
+    'variants.num',
+    'variants.sign',
+    'variants.house',
+    'variants.nakshatra',
+    'variants.relationship',
+  ];
+  fields.forEach(key => {
+    const parts = ['grahas', key];
+    if (prefix.length > 0) {
+      parts.unshift(prefix);
+    }
+    const cp = parts.join('.');
+    mp.set(cp, 1);
+  });
+};
+
+export const addKeyValueFields = (
+  mp: Map<string, any>,
+  key: string,
+  prefix = '',
+) => {
+  const fields = ['key', 'value'];
+  fields.forEach(fieldKey => {
+    const parts = [key, fieldKey];
+    if (prefix.length > 0) {
+      parts.unshift(prefix);
+    }
+    const cp = parts.join('.');
+    mp.set(cp, 1);
+  });
+};
+
+export const addNestedKeyValueFields = (
+  mp: Map<string, any>,
+  key: string,
+  prefix = '',
+  extraFields: Array<string> = [],
+) => {
+  const fields = ['num', 'items.key', 'items.value', ...extraFields];
+  fields.forEach(fieldKey => {
+    const parts = [key, fieldKey];
+    if (prefix.length > 0) {
+      parts.unshift(prefix);
+    }
+    const cp = parts.join('.');
+    mp.set(cp, 1);
+  });
+};
+
+export const addKutaFields = (mp: Map<string, any>) => {
+  const fields = ['k1', 'k2', 'values.key', 'values.value'];
+  fields.forEach(fieldKey => {
+    const parts = ['kutas', fieldKey];
+    const cp = parts.join('.');
+    mp.set(cp, 1);
+  });
+};
+
 export const buildChartProjection = (prefix = '', expandUser = false) => {
   const mp: Map<string, any> = new Map();
   buildInnerChartProjection(mp, prefix, expandUser);
@@ -362,14 +436,34 @@ export const buildInnerChartProjection = (
 ) => {
   const chartFields = deconstructSchema(ChartSchema);
   mp.set('_id', 1);
+
   chartFields.forEach(item => {
+    const cp = prefix.length > 0 ? [prefix, item.key].join('.') : item.key;
     switch (item.key) {
       case 'user':
         if (expandUser) {
-          buildInnerUserProjection(mp, 'user');
+          buildInnerUserProjection(mp, cp);
         } else {
           buildFromSchema(item, mp, prefix, ['password']);
         }
+        break;
+      case 'grahas':
+        addGrahaFields(mp, prefix);
+        break;
+      case 'upagrahas':
+      case 'ayanamshas':
+      case 'stringValues':
+      case 'numValues':
+        addKeyValueFields(mp, item.key, prefix);
+        break;
+      case 'sphutas':
+        addNestedKeyValueFields(mp, item.key, prefix);
+        break;
+      case 'objects':
+        addNestedKeyValueFields(mp, item.key, prefix, [
+          'items.type',
+          'items.refVal',
+        ]);
         break;
       default:
         buildFromSchema(item, mp, prefix);
