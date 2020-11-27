@@ -703,6 +703,15 @@ export class AstrologicController {
     return orbDouble;
   }
 
+  @Get('translate-conditions/:protocolID')
+  async translateConditions(
+    @Res() res,
+    @Param('protocolID') protocolID: string,
+  ) {
+    const data = await this.settingService.getProtocol(protocolID);
+    return res.json(data);
+  }
+
   @Get('paired-charts-steps')
   async showPairedChartSteps(@Res() res) {
     const steps = await this.astrologicService.getPairedChartSteps();
