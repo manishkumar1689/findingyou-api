@@ -1351,7 +1351,10 @@ export class PairedChart {
     if (condition.contextType.isAspect) {
       let aspectValue = 0;
       let aspectMatched = false;
-      if (condition.usesMidChart || !this.aspectIsInPaired(obj1, obj2)) {
+      if (
+        condition.usesMidChart ||
+        !this.aspectIsInPaired(obj1, obj2, k1, k2)
+      ) {
         const val1 = fromChart.matchObjectValue(obj1, k1);
         const val2 = toChart.matchObjectValue(obj2, k2);
         aspectValue = relativeAngle(val1, val2);
@@ -1393,10 +1396,12 @@ export class PairedChart {
     return val;
   }
 
-  aspectIsInPaired(obj1: ObjectType, obj2: ObjectType) {
+  aspectIsInPaired(obj1: ObjectType, obj2: ObjectType, k1 = '', k2 = '') {
     if (obj1.type === 'graha' || obj2.type === 'graha') {
+      const g1 = k1.length === 2 ? k1 : obj1.key;
+      const g2 = k2.length === 2 ? k2 : obj2.key;
       const keys = ['su', 'mo', 'me', 've', 'ma', 'ju', 'sa', 'as', 'ds'];
-      return keys.includes(obj1.key) && keys.includes(obj2.key);
+      return keys.includes(g1) && keys.includes(g2);
     } else {
       return false;
     }
@@ -1416,7 +1421,7 @@ export class PairedChart {
           const num = parseInt(lastPart);
           if (section === 'house') {
             matchedKey = chart.matchHouseSignRuler(num);
-          } else if (section === 'house') {
+          } else if (section === 'chara') {
             matchedKey = chart.matchCharaKaraka(num);
           }
         }
