@@ -1,0 +1,564 @@
+import { KeyName, KeyNameMax } from '../interfaces';
+import { isNumeric, notEmptyString } from '../../../lib/validators';
+import { smartCastFloat } from 'src/lib/converters';
+import { contextTypes } from '../settings/compatibility-sets';
+import { calcOrb } from '../calc-orbs';
+import { subtractLng360 } from '../helpers';
+import ayanamshaValues from '../settings/ayanamsha-values';
+
+export interface KeyNumVal {
+  key: string;
+  value: number;
+}
+
+export interface KeyOrbs {
+  key: string;
+  orbs: KeyNumVal[];
+}
+
+export class Condition {
+  fromMode = '';
+  toMode = '';
+  c1Key = '';
+  c2Key = '';
+  varga1 = 1;
+  varga2 = 1;
+  context = '';
+  aspectQuality = '';
+  lordRev = false; // reverse lordship order from A => B to B <= A
+  isSet = false;
+  kutaRange = [-1, -1];
+
+  constructor(inData = null) {
+    if (inData instanceof Object) {
+      Object.entries(inData).forEach(entry => {
+        const [key, val] = entry;
+        switch (typeof val) {
+          case 'string':
+            switch (key) {
+              case 'fromMode':
+              case 'toMode':
+              case 'c1Key':
+              case 'c2Key':
+              case 'context':
+              case 'aspectQuality':
+                this[key] = val;
+                break;
+            }
+            break;
+          case 'number':
+            switch (key) {
+              case 'varga1':
+              case 'varga2':
+                this[key] = val;
+                break;
+            }
+            break;
+          case 'boolean':
+            switch (key) {
+              case 'lordRev':
+                this[key] = val;
+                break;
+            }
+            break;
+        }
+        if (key === 'kutaRange' && val instanceof Array && val.length === 2) {
+          this.kutaRange = val;
+        }
+      });
+    }
+  }
+
+  get contextType() {
+    const matched = contextTypes.find(ct => ct.key === this.context);
+    return new ContextType(matched);
+  }
+
+  get object1() {
+    return new ObjectType(this.c1Key);
+  }
+
+  get object2() {
+    return new ObjectType(this.c2Key);
+  }
+
+  get compareGrahas() {
+    return this.object1.type === 'graha' && this.object2.type === 'graha';
+  }
+
+  get hasContext() {
+    return this.context.length > 1 && this.context !== '-';
+  }
+
+  get usesMidChart() {
+    const midModes = ['midpoint', 'timespace'];
+    return (
+      [this.fromMode, this.toMode].filter(md => midModes.includes(md)).length >
+      0
+    );
+  }
+}
+
+export class ConditionSet {
+  conditionRefs: Array<ConditionRef> = [];
+  operator = 'and';
+  min = 0; // min. that must be true
+  isSet = true;
+
+  constructor(conditionRef = null, operatorRef = 'and') {
+    const isConditionClass = this.isValidConditionReference(conditionRef);
+
+    if (!isConditionClass && conditionRef instanceof Array) {
+      this.operator = operatorRef;
+      if (conditionRef instanceof Array) {
+        const cr = conditionRef
+          .map(this.mapConditionRefs)
+          .filter(this.isValidConditionReference);
+        this.conditionRefs = cr;
+      }
+    } else {
+      if (isConditionClass) {
+        this.conditionRefs = [conditionRef];
+      } else if (conditionRef instanceof Array) {
+        this.conditionRefs = conditionRef.filter(
+          this.isValidConditionReference,
+        );
+      }
+    }
+    this.operator = operatorRef;
+  }
+
+  add(condRef: Condition | ConditionSet, operator = '') {
+    this.conditionRefs.push(condRef);
+    if (operator.length > 1) {
+      this.operator = operator;
+    }
+  }
+
+  update(index = 0, condRef: Condition | ConditionSet, operator = '') {
+    if (index >= 0 && index < this.length) {
+      this.conditionRefs[index] = condRef;
+    }
+    if (operator.length > 1) {
+      this.operator = operator;
+    }
+  }
+
+  mapConditionRefs(condRef = null) {
+    if (condRef instanceof Object) {
+      const { isSet } = condRef;
+      if (isSet) {
+        const { conditionRefs, operator } = condRef;
+        if (conditionRefs instanceof Array) {
+          return new ConditionSet(conditionRefs, operator);
+        }
+      } else {
+        return new Condition(condRef);
+      }
+    }
+  }
+
+  hasConditions() {
+    return this.conditionRefs.length > 0;
+  }
+
+  isValidConditionReference(condRef = null) {
+    return condRef instanceof Condition || condRef instanceof ConditionSet;
+  }
+
+  get length() {
+    return this.conditionRefs.length;
+  }
+
+  get lastIndex() {
+    return this.getLastIndex();
+  }
+
+  getLastIndex() {
+    return this.conditionRefs.length - 1;
+  }
+}
+
+type ConditionRef = Condition | ConditionSet;
+
+class Score {
+  key = 'emotional';
+  value = 0;
+
+  constructor(key = 'emotional', value = 0) {
+    if (typeof key === 'string') {
+      this.key = key;
+    }
+    if (typeof value === 'number') {
+      this.value = value;
+    }
+  }
+}
+
+export class RuleSet {
+  name = '';
+
+  notes = '';
+
+  conditionSet: ConditionSet = new ConditionSet();
+
+  scores: Array<Score> = [];
+
+  constructor(inData = null) {
+    if (inData instanceof Object) {
+      const { name, notes, scores, conditionSet } = inData;
+      if (typeof name === 'string') {
+        this.name = name;
+      }
+      if (typeof notes === 'string') {
+        this.notes = notes;
+      }
+      if (scores instanceof Array) {
+        this.scores = scores
+          .filter(sc => sc instanceof Object)
+          .map(sc => {
+            const { key, value } = sc;
+            return new Score(key, value);
+          });
+      }
+
+      if (conditionSet instanceof Object) {
+        const { conditionRefs, operator } = conditionSet;
+        this.conditionSet = new ConditionSet(conditionRefs, operator);
+      }
+    }
+  }
+
+  setScores(scoreSet = null) {
+    if (scoreSet instanceof Object) {
+      this.scores = Object.entries(scoreSet).map(entry => {
+        const [key, val] = entry;
+        const value =
+          typeof val === 'number'
+            ? val
+            : typeof val === 'string'
+            ? parseFloat(val)
+            : 0;
+        return new Score(key, value);
+      });
+    }
+  }
+
+  matchConditionSet(parents: Array<number> = []) {
+    let cs = this.conditionSet;
+    if (parents instanceof Array) {
+      if (parents.length > 1) {
+        parents.slice(1, parents.length).forEach(itemIndex => {
+          if (itemIndex < cs.conditionRefs.length) {
+            const inner = cs.conditionRefs[itemIndex];
+            if (inner instanceof ConditionSet) {
+              cs = inner;
+            }
+          }
+        });
+      }
+    }
+    return cs;
+  }
+
+  getScore(key: string) {
+    let value = 0;
+    const score = this.scores.find(sc => sc.key === key);
+    if (score instanceof Score) {
+      value = score.value;
+    }
+    return value;
+  }
+
+  get hasConditions() {
+    return this.conditionSet.conditionRefs.length > 0;
+  }
+}
+
+export interface SimpleUser {
+  _id: string;
+  identifier: string;
+  nickName: string;
+  fullName: string;
+  active: boolean;
+  roles: string[];
+}
+
+const defaultSimpleUser = {
+  _id: '',
+  identifier: '',
+  nickName: '',
+  fullName: '',
+  active: false,
+  roles: [],
+};
+
+export class RulesCollection {
+  type = '';
+  percent: number;
+  rules: Array<RuleSet> = [];
+
+  constructor(inData = null) {
+    if (inData instanceof Object) {
+      const { _id, type, rules, percent } = inData;
+      if (notEmptyString(type)) {
+        this.type = type;
+      }
+      if (isNumeric(percent)) {
+        this.percent =
+          typeof percent === 'number' ? percent : parseFloat(percent);
+      }
+      if (rules instanceof Object) {
+        this.rules = rules
+          .filter(r => r instanceof Object)
+          .map(r => new RuleSet(r));
+      }
+    }
+  }
+
+  getRule(index: number) {
+    if (index >= 0 && index < this.rules.length) {
+      return this.rules[index];
+    }
+  }
+
+  get length() {
+    return this.rules.length;
+  }
+}
+
+export class Protocol {
+  _id?: string;
+  user: string; // user id
+  name = '';
+  notes = '';
+  categories: Array<KeyNameMax> = [];
+  collections: Array<RulesCollection> = [];
+  settings: Map<string, any> = new Map();
+  userRecord: SimpleUser = defaultSimpleUser;
+  kutaData: Map<string, any> = new Map();
+
+  constructor(inData = null, kutaData: Map<string, any> = new Map()) {
+    if (inData instanceof Object) {
+      const {
+        _id,
+        user,
+        name,
+        notes,
+        categories,
+        collections,
+        settings,
+        createdAt,
+        modifiedAt,
+      } = inData;
+      if (notEmptyString(_id, 16)) {
+        this._id = _id;
+      }
+      if (notEmptyString(user, 16)) {
+        this.user = user;
+      } else if (user instanceof Object) {
+        const keys = Object.keys(user);
+        if (
+          keys.includes('_id') &&
+          keys.includes('identifier') &&
+          keys.includes('nickName') &&
+          keys.includes('roles')
+        ) {
+          this.user = user._id;
+          this.userRecord = user;
+        }
+      }
+      if (notEmptyString(name)) {
+        this.name = name;
+      }
+      if (notEmptyString(notes)) {
+        this.notes = notes;
+      }
+      if (categories instanceof Object) {
+        this.categories = categories
+          .filter(c => c instanceof Object)
+          .filter(c => {
+            const keys = Object.keys(c);
+            return keys.includes('key') && keys.includes('name');
+          })
+          .map(c => {
+            const { key, name, maxScore } = c;
+            return {
+              key,
+              name,
+              maxScore,
+            };
+          });
+      }
+      if (collections instanceof Object) {
+        this.collections = collections
+          .filter(c => c instanceof Object)
+          .map(c => new RulesCollection(c));
+      }
+      if (settings instanceof Array) {
+        settings.forEach(item => {
+          const { key, value } = item;
+          if (notEmptyString(key)) {
+            this.settings.set(key, value);
+          }
+        });
+      }
+    }
+    if (kutaData instanceof Map && kutaData.size > 0) {
+      this.kutaData = kutaData;
+    }
+  }
+
+  getCollection(index: number) {
+    if (index >= 0 && index < this.collections.length) {
+      return this.collections[index];
+    }
+  }
+
+  get length() {
+    return this.collections.length;
+  }
+
+  setting(settingKey: string, defaultVal = null) {
+    const settingRow = this.settings.get(settingKey);
+    if (settingRow instanceof Object) {
+      return settingRow.value;
+    }
+    return defaultVal;
+  }
+
+  matchOrb(aspect: string, k1: string, k2: string, aspectData = null) {
+    let orbDouble = 1;
+
+    if (this.orbs.length > 0) {
+      orbDouble = matchOrbFromGrid(aspect, k1, k2, this.orbs);
+    }
+    if (orbDouble < 0) {
+      const matchedOrbData =
+        aspectData instanceof Object ? aspectData : calcOrb(aspect, k1, k2);
+      orbDouble = matchedOrbData.orb;
+    }
+    return orbDouble;
+  }
+
+  orbFromGrid(aspect: string, k1: string, k2: string) {
+    return matchOrbFromGrid(aspect, k1, k2, this.orbs);
+  }
+
+  matchRange(aspect: string, k1: string, k2: string) {
+    const aspectData = calcOrb(aspect, k1, k2);
+    const orb = this.matchOrb(aspect, k1, k2, aspectData);
+    const range =
+      orb !== aspectData.orb
+        ? [subtractLng360(aspectData.deg, orb), (aspectData.deg + orb) % 360]
+        : aspectData.range;
+    return range;
+  }
+
+  kutaMax(kutaType = '', variantKey = '') {
+    let maxVal = 0;
+    if (this.kutaData.has(kutaType)) {
+      const item = this.kutaData.get(kutaType);
+      if (item instanceof Object) {
+        const keys = Object.keys(item);
+        if (keys.includes('max')) {
+          maxVal = item.max;
+          if (variantKey.length > 0 && keys.includes(variantKey)) {
+            if (item[variantKey] instanceof Object) {
+              const vKeys = Object.keys(item[variantKey]);
+              if (vKeys.includes('max')) {
+                maxVal = item[variantKey].max;
+              }
+            }
+          }
+        }
+      }
+    }
+    return maxVal;
+  }
+
+  get orbs() {
+    const useCustom = this.setting('custom_orbs', false);
+    let orbs = [];
+    if (useCustom) {
+      orbs = this.setting('customOrbs', []);
+    }
+    return orbs;
+  }
+
+  get ayanamshaNum() {
+    const key = this.setting('ayanamsha', 'true_citra');
+    const row = ayanamshaValues.find(ay => ay.key === key);
+    let num = 27;
+    if (row instanceof Object) {
+      num = row.value;
+    }
+    return num;
+  }
+}
+
+export class ObjectType {
+  type = '';
+  key = '';
+
+  constructor(comboKey = '') {
+    const [objectType, objectKey] = comboKey.split('__');
+    this.key = objectKey;
+    this.type = objectType;
+  }
+}
+
+export class ContextType {
+  key = '';
+  isAspect = false;
+  isKuta = false;
+
+  constructor(inData = null) {
+    if (inData instanceof Object) {
+      Object.entries(inData).forEach(entry => {
+        const [k, v] = entry;
+        switch (k) {
+          case 'key':
+            if (typeof v === 'string') {
+              this[k] = v;
+            }
+            break;
+          case 'isAspect':
+          case 'isKuta':
+            if (typeof v === 'boolean') {
+              this[k] = v;
+            }
+            break;
+        }
+      });
+    }
+  }
+
+  get kutaKey() {
+    return this.key
+      .toLowerCase()
+      .replace(/_kuta$/, '')
+      .replace(/^dina_/, '');
+  }
+}
+
+export const matchOrbFromGrid = (
+  aspect: string,
+  k1: string,
+  k2: string,
+  orbs: Array<KeyOrbs> = [],
+) => {
+  let orbDouble = 1;
+  const orbRow1 = orbs.find(orbRow => orbRow.key === k1);
+  const orbRow2 = orbs.find(orbRow => orbRow.key === k2);
+  if (orbRow1 instanceof Object && orbRow2 instanceof Object) {
+    const aspRow1 = orbRow1.orbs.find(row => row.key === aspect);
+    const aspRow2 = orbRow2.orbs.find(row => row.key === aspect);
+
+    if (aspRow1 instanceof Object && aspRow2 instanceof Object) {
+      orbDouble =
+        (smartCastFloat(aspRow1.value) + smartCastFloat(aspRow2.value)) / 2;
+    }
+  }
+  return orbDouble;
+};
