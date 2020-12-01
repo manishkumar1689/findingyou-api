@@ -67,6 +67,12 @@ export class SettingService {
     return await this.settingModel.findOne({ key }).exec();
   }
 
+  async getKutas() {
+    const data = await this.getByKey('kuta_variants');
+    const settingValue = data instanceof Object ? data.value : {};
+    return new Map(Object.entries(settingValue));
+  }
+
   // post a single Setting
   async addSetting(createSettingDTO: CreateSettingDTO): Promise<Setting> {
     const newSetting = new this.settingModel(createSettingDTO);
@@ -124,16 +130,22 @@ export class SettingService {
     const protocol = await this.getProtocol(itemID);
     let hasProtocol = false;
     if (protocol instanceof Object) {
-      const { settings } = protocol;
       hasProtocol = true;
-      if (settings instanceof Array) {
-        const settingRow = settings.find(s => s.key === settingKey);
-        if (settingRow instanceof Object) {
-          return { hasProtocol: true, protocol, value: settingRow.value };
-        }
-      }
+      const value = this.matchSettingInProtocol(protocol, settingKey);
+      return { hasProtocol: true, protocol, value };
     }
     return { hasProtocol, protocol, value: defaultVal };
+  }
+
+  matchSettingInProtocol(protocol, settingKey = '', defaultVal = null) {
+    const { settings } = protocol;
+    if (settings instanceof Array) {
+      const settingRow = settings.find(s => s.key === settingKey);
+      if (settingRow instanceof Object) {
+        return settingRow.value;
+      }
+    }
+    return defaultVal;
   }
 
   async getProtocolSetting(itemID: string, settingKey = '', defaultVal = null) {

@@ -7,6 +7,8 @@ import {
   subtractSign,
   deepClone,
   midLng,
+  calcDist360,
+  calcAspects,
 } from '../helpers';
 import { calcJdPeriodRange, relativeAngle } from './../core';
 import {
@@ -29,12 +31,13 @@ import houseTypeData from './../settings/house-type-data';
 import { Graha } from './graha-set';
 import { KaranaSet } from './karana-set';
 import { MuhurtaSet, MuhurtaItem } from './muhurta-set';
-import { isNumeric, notEmptyString } from './../../../lib/validators';
+import { inRange, isNumeric, notEmptyString } from './../../../lib/validators';
 import { TransitionSet } from './transition-set';
 import { UpagrahaValue } from './upagraha-value';
 import { matchReference } from './graha-set';
 import rashiValues from '../settings/rashi-values';
 import ayanamshaValues from '../settings/ayanamsha-values';
+import { Condition, ObjectType, Protocol } from './protocol-models';
 
 export interface Subject {
   name: string;
@@ -99,7 +102,7 @@ export interface Variant {
   house: number;
   nakshatra: number;
   relationship: string;
-  charaKaraka?: string;
+  charaKaraka?: number;
 }
 
 export interface VariantSet {
@@ -160,6 +163,18 @@ export interface RashiItemSet {
 export interface NumValueSet {
   num: number;
   items: Array<KeyValueNum>;
+}
+
+export interface KeyPairVal {
+  k1: string;
+  k2: string;
+  value: number;
+}
+
+export interface KutaValSet {
+  k1: string;
+  k2: string;
+  values: KeyNumValue[];
 }
 
 export class Chart {
@@ -296,6 +311,16 @@ export class Chart {
       return item.value;
     } else {
       return -1;
+    }
+  }
+
+  matchObjectValue(objType: ObjectType, key = '') {
+    const refKey = key.length > 1 ? key : objType.key;
+    switch (objType.type) {
+      case 'graha':
+        return this.graha(refKey).longitude;
+      default:
+        return null;
     }
   }
 
@@ -790,6 +815,19 @@ export class Chart {
     return ruler;
   };
 
+  matchCharaKaraka(num: number) {
+    let key = '';
+    const matchedGr = this.grahas.find(gr =>
+      gr.variants.some(
+        v => v.num === this.ayanamshaNum && v.charaKaraka === num,
+      ),
+    );
+    if (matchedGr instanceof Object) {
+      key = matchedGr.key;
+    }
+    return key;
+  }
+
   get trikonaRulers() {
     return houseTypeData.trikonas.map(this.matchHouseSignRuler);
   }
@@ -1210,12 +1248,16 @@ export class PairedChart {
   endYear = -1;
   span = 0;
   notes = '';
+  aspects: KeyPairVal[] = [];
+  kutas: KutaValSet[];
   createdAt: Date;
   modifiedAt: Date;
+  ayanamshaNum = 27;
 
   constructor(inData = null) {
     if (inData instanceof Object) {
       let timespace = null;
+      this.aspects = [];
       Object.entries(inData).forEach(entry => {
         const [key, val] = entry;
 
@@ -1223,6 +1265,27 @@ export class PairedChart {
           switch (key) {
             case 'tags':
               this.tags = val.map(tg => new Tag(tg));
+              break;
+
+            case 'aspects':
+              this.aspects = val.map(asp => {
+                const { k1, k2, value } = asp;
+                return {
+                  k1,
+                  k2,
+                  value,
+                };
+              });
+              break;
+            case 'kutas':
+              this.kutas = val.map(kt => {
+                const { k1, k2, values } = kt;
+                return {
+                  k1,
+                  k2,
+                  values,
+                };
+              });
               break;
           }
         } else if (val instanceof Object) {
@@ -1268,13 +1331,142 @@ export class PairedChart {
       }
     }
   }
+
+  setAyanamshaNum(num: number) {
+    this.ayanamshaNum = num;
+  }
+
+  matchCondition(condition: Condition, protocol: Protocol) {
+    let matched = false;
+    const fromChart = this.matchChart(condition.fromMode);
+    const toChart = this.matchChart(condition.toMode);
+    const ayanamshaNum = protocol.ayanamshaNum;
+    fromChart.setAyanamshaItemByNum(ayanamshaNum);
+    toChart.setAyanamshaItemByNum(ayanamshaNum);
+    const obj1 = condition.object1;
+    const obj2 = condition.object2;
+    const { context } = condition;
+    const k1 = this.matchGrahaEquivalent(obj1.key, condition.fromMode);
+    const k2 = this.matchGrahaEquivalent(obj2.key, condition.toMode);
+    if (condition.contextType.isAspect) {
+      let aspectValue = 0;
+      let aspectMatched = false;
+      if (condition.usesMidChart || !this.aspectIsInPaired(obj1, obj2)) {
+        const val1 = fromChart.matchObjectValue(obj1, k1);
+        const val2 = toChart.matchObjectValue(obj2, k2);
+        aspectValue = relativeAngle(val1, val2);
+        aspectMatched = true;
+      } else {
+        if (condition.compareGrahas) {
+          aspectValue = this.matchAspects(k1, k2);
+          aspectMatched = true;
+        }
+      }
+      if (aspectMatched) {
+        const [minVal, maxVal] = protocol.matchRange(context, k1, k2);
+        matched = aspectValue >= minVal && aspectValue <= maxVal;
+      }
+    } else if (condition.contextType.isKuta) {
+      const kutaVal = this.matchKuta(condition);
+
+      const max = protocol.kutaMax(condition.contextType.kutaKey);
+      const percent = max > 0 ? (kutaVal / max) * 100 : 0;
+      matched = inRange(percent, condition.kutaRange);
+    }
+    return matched;
+  }
+
+  matchKuta(condition: Condition) {
+    const matchedKutaKey = condition.contextType.kutaKey;
+    const matchedKutaRow = this.kutas.find(
+      ks => ks.k1 === condition.object1.key && ks.k2 === condition.object2.key,
+    );
+    let val = 0;
+    if (matchedKutaRow instanceof Object) {
+      const kutaValRow = matchedKutaRow.values.find(
+        kv => kv.key === matchedKutaKey,
+      );
+      if (kutaValRow instanceof Object) {
+        val = kutaValRow.value;
+      }
+    }
+    return val;
+  }
+
+  aspectIsInPaired(obj1: ObjectType, obj2: ObjectType) {
+    if (obj1.type === 'graha' || obj2.type === 'graha') {
+      const keys = ['su', 'mo', 'me', 've', 'ma', 'ju', 'sa', 'as', 'ds'];
+      return keys.includes(obj1.key) && keys.includes(obj2.key);
+    } else {
+      return false;
+    }
+  }
+
+  matchGrahaEquivalent(subkey: string, chartKey = 'c1') {
+    let matchedKey = subkey;
+    if (subkey.length > 2) {
+      const chart = this.matchChart(chartKey);
+      chart.setAyanamshaItemByNum(this.ayanamshaNum);
+      const parts = subkey.split('_');
+
+      if (parts.length > 0) {
+        const lastPart = parts[parts.length - 1];
+        const section = parts[parts.length - 2];
+        if (isNumeric(lastPart)) {
+          const num = parseInt(lastPart);
+          if (section === 'house') {
+            matchedKey = chart.matchHouseSignRuler(num);
+          } else if (section === 'house') {
+            matchedKey = chart.matchCharaKaraka(num);
+          }
+        }
+      }
+    }
+    return matchedKey;
+  }
+
+  matchAspects(k1: string, k2: string) {
+    const asp = this.aspects.find(asp => asp.k1 === k1 && asp.k2 === k2);
+    return asp instanceof Object ? asp.value : 0;
+  }
+
+  matchChart(key = 'female') {
+    switch (key) {
+      case 'c1':
+        return this.c1;
+      case 'c2':
+        return this.c2;
+      case 'female':
+      case 'f':
+        return this.femaleChart;
+      case 'male':
+      case 'm':
+        return this.maleChart;
+      case 'female':
+      case 'midpoint':
+        return this.midpoint;
+      case 'timespace':
+        return this.timespace;
+    }
+  }
+
+  get maleChart() {
+    return this.c1.gender === 'm' ? this.c1 : this.c2;
+  }
+
+  get femaleChart() {
+    return this.c1.gender === 'f' ? this.c1 : this.c2;
+  }
+
+  get midpoint() {
+    return combineCharts(this.c1, this.c2, this.ayanamshaNum);
+  }
 }
 
-export const combineCharts = (
-  c1: Chart,
-  c2: Chart,
-  ayanamsha: AyanamshaItem,
-) => {
+export const combineCharts = (c1: Chart, c2: Chart, ayanamshaNum = 27) => {
+  c1.setAyanamshaItemByNum(ayanamshaNum);
+  c2.setAyanamshaItemByNum(ayanamshaNum);
+
   const grahas = c1.grahas.map(gr => {
     const mb = c2.grahas.find(g2 => g2.key === gr.key);
     const midG = deepClone(gr);
@@ -1341,7 +1533,8 @@ export const combineCharts = (
     sphutas,
   };
   const nc = new Chart(chart);
-  applyAyanamsha(nc, nc.bodies, ayanamsha);
+  const ayanamshaItem = nc.setAyanamshaItemByNum(ayanamshaNum);
+  applyAyanamsha(nc, nc.bodies, ayanamshaItem);
   return nc;
 };
 

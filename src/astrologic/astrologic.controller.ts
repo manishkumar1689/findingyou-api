@@ -66,16 +66,14 @@ import {
   Record,
 } from '../lib/parse-astro-csv';
 import { Kuta } from './lib/kuta';
-import { Chart } from './lib/models/chart';
+import { Chart, PairedChart } from './lib/models/chart';
 import { AspectSet, calcOrb } from './lib/calc-orbs';
-import { PairedChartSchema } from './schemas/paired-chart.schema';
-import { Schema } from 'mongoose';
-import {
-  buildChartProjection,
-  buildPairedChartProjection,
-  deconstructSchema,
-} from 'src/lib/query-builders';
 import { AspectSetDTO } from './dto/aspect-set.dto';
+import {
+  Condition,
+  matchOrbFromGrid,
+  Protocol,
+} from './lib/models/protocol-models';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -678,18 +676,7 @@ export class AstrologicController {
     if (notEmptyString(protocolId, 12)) {
       const orbs = await this.settingService.getProtocolCustomOrbs(protocolId);
       if (orbs.length > 0) {
-        const orbRow1 = orbs.find(orbRow => orbRow.key === k1);
-        const orbRow2 = orbs.find(orbRow => orbRow.key === k2);
-        if (orbRow1 instanceof Object && orbRow2 instanceof Object) {
-          const aspRow1 = orbRow1.orbs.find(row => row.key === aspect);
-          const aspRow2 = orbRow2.orbs.find(row => row.key === aspect);
-
-          if (aspRow1 instanceof Object && aspRow2 instanceof Object) {
-            orbDouble =
-              (smartCastFloat(aspRow1.value) + smartCastFloat(aspRow2.value)) /
-              2;
-          }
-        }
+        orbDouble = matchOrbFromGrid(aspect, k1, k2, orbs);
       }
     } else if (isNumeric(orbRef)) {
       orbDouble = smartCastFloat(orbRef, -1);
@@ -708,8 +695,35 @@ export class AstrologicController {
     @Res() res,
     @Param('protocolID') protocolID: string,
   ) {
-    const data = await this.settingService.getProtocol(protocolID);
-    return res.json(data);
+    const randomPairedChart = await this.astrologicService.getPairedRandom();
+    const samplePairedChart = new PairedChart(randomPairedChart);
+    const result = await this.settingService.getProtocol(protocolID);
+    const kutaData = await this.settingService.getKutas();
+    const results: Array<any> = [];
+    let protocol = new Protocol(null, kutaData);
+    if (result instanceof Object) {
+      const keys = Object.keys(result.toObject());
+      if (keys.includes('collections')) {
+        protocol = new Protocol(result, kutaData);
+      }
+    }
+    protocol.collections.forEach(collection => {
+      collection.rules.forEach(rs => {
+        if (rs.conditionSet.conditionRefs.length > 0) {
+          rs.conditionSet.conditionRefs.forEach(cond => {
+            if (!cond.isSet && cond instanceof Condition) {
+              const matched = samplePairedChart.matchCondition(cond, protocol);
+              results.push({ matched, condition: cond });
+            }
+          });
+        }
+      });
+    });
+    return res.json({
+      results,
+      paired: samplePairedChart,
+      protocol,
+    });
   }
 
   @Get('paired-charts-steps')

@@ -139,6 +139,24 @@ export class AstrologicService {
     return await this.pairedChartModel.aggregate(steps);
   }
 
+  async getPairedRandom() {
+    const count = await this.pairedChartModel.count({});
+    const skip = Math.floor(Math.random() * count * 0.999999);
+    const lookupSteps = buildPairedChartLookupPath();
+    const projectionStep = buildPairedChartProjection();
+    const steps = [
+      { $skip: skip },
+      { $limit: 1 },
+      ...lookupSteps,
+      {
+        $project: projectionStep,
+      },
+    ];
+
+    const items = await this.pairedChartModel.aggregate(steps);
+    return items.length > 0 ? items[0] : null;
+  }
+
   async filterPairedByAspect(
     aspectKey: string,
     k1: string,
