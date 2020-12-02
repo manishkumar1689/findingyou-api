@@ -5,6 +5,7 @@ import { contextTypes } from '../settings/compatibility-sets';
 import { calcOrb } from '../calc-orbs';
 import { subtractLng360 } from '../helpers';
 import ayanamshaValues from '../settings/ayanamsha-values';
+import { match } from 'assert';
 
 export interface KeyNumVal {
   key: string;
@@ -67,6 +68,10 @@ export class Condition {
         }
       });
     }
+  }
+
+  get singleMode() {
+    return this.fromMode === 'single';
   }
 
   get contextType() {
@@ -494,6 +499,76 @@ export class Protocol {
       num = row.value;
     }
     return num;
+  }
+}
+
+export class ProtocolResultSet {
+  scores: Map<string, number> = new Map();
+  operator = 'and';
+  results: BooleanSet[] = [];
+  constructor(scores: Array<KeyNumVal>, operator = 'and') {
+    scores.forEach(row => {
+      this.scores.set(row.key, row.value);
+    });
+    switch (operator) {
+      case 'or':
+      case 'and':
+        this.operator = operator;
+        break;
+    }
+  }
+
+  addBooleanSet(bs: BooleanSet) {
+    this.results.push(bs);
+  }
+
+  get matched(): boolean {
+    if (this.operator === 'or') {
+      return this.results.some(rs => rs.matched);
+    } else {
+      return this.results.length > 0 && this.results.every(rs => rs.matched);
+    }
+  }
+}
+
+export class BooleanSet {
+  operator = 'and';
+
+  matches: Array<BooleanMatch> = [];
+
+  constructor(operator: string) {
+    switch (operator) {
+      case 'or':
+      case 'and':
+        this.operator = operator;
+        break;
+    }
+  }
+
+  addMatch(condRef: Condition | ConditionSet, matched = false) {
+    this.matches.push(new BooleanMatch(condRef, matched));
+  }
+
+  get matched(): boolean {
+    if (this.operator === 'or') {
+      return this.matches.some(bm => bm.matched);
+    } else {
+      return this.matches.length > 0 && this.matches.every(bm => bm.matched);
+    }
+  }
+}
+
+export class BooleanMatch {
+  matched = false;
+  conditionRef: Condition | ConditionSet;
+
+  constructor(condRef: Condition | ConditionSet, matched = false) {
+    this.conditionRef = condRef;
+    this.matched = matched;
+  }
+
+  get isSet() {
+    return this.conditionRef.isSet;
   }
 }
 

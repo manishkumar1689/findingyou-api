@@ -71,8 +71,10 @@ import { AspectSet, calcOrb } from './lib/calc-orbs';
 import { AspectSetDTO } from './dto/aspect-set.dto';
 import {
   Condition,
+  ConditionSet,
   matchOrbFromGrid,
   Protocol,
+  ProtocolResultSet,
 } from './lib/models/protocol-models';
 
 @Controller('astrologic')
@@ -709,18 +711,32 @@ export class AstrologicController {
     }
     protocol.collections.forEach(collection => {
       collection.rules.forEach(rs => {
+        const resultSet = samplePairedChart.matchRuleSet(rs, protocol);
+        results.push(resultSet);
+        /* const resultSet = new ProtocolResultSet(
+          rs.scores,
+          rs.conditionSet.operator,
+        );
         if (rs.conditionSet.conditionRefs.length > 0) {
           rs.conditionSet.conditionRefs.forEach(cond => {
             if (!cond.isSet && cond instanceof Condition) {
               const matched = samplePairedChart.matchCondition(cond, protocol);
               results.push({ matched, condition: cond });
+            } else if (cond instanceof ConditionSet) {
+              console.log(cond.conditionRefs);
             }
           });
-        }
+        } */
       });
     });
     return res.json({
-      results,
+      results: results.map(rs => {
+        return {
+          ...rs,
+          scores: Object.fromEntries(rs.scores.entries()),
+          matched: rs.matched,
+        };
+      }),
       paired: samplePairedChart,
       protocol,
     });

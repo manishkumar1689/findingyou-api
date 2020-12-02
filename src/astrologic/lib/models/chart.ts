@@ -37,7 +37,16 @@ import { UpagrahaValue } from './upagraha-value';
 import { matchReference } from './graha-set';
 import rashiValues from '../settings/rashi-values';
 import ayanamshaValues from '../settings/ayanamsha-values';
-import { Condition, ObjectType, Protocol } from './protocol-models';
+import {
+  BooleanMatch,
+  BooleanSet,
+  Condition,
+  ConditionSet,
+  ObjectType,
+  Protocol,
+  ProtocolResultSet,
+  RuleSet,
+} from './protocol-models';
 
 export interface Subject {
   name: string;
@@ -1334,6 +1343,32 @@ export class PairedChart {
 
   setAyanamshaNum(num: number) {
     this.ayanamshaNum = num;
+  }
+
+  matchRuleSet(rs: RuleSet, protocol: Protocol) {
+    const protoRs = new ProtocolResultSet(rs.scores, rs.conditionSet.operator);
+    this.matchConditionSet(rs.conditionSet, protocol, protoRs, true);
+    return protoRs;
+  }
+
+  matchConditionSet(
+    conditionSet: ConditionSet,
+    protocol: Protocol,
+    rs: ProtocolResultSet,
+    init = false,
+  ) {
+    const bs = new BooleanSet(conditionSet.operator);
+    conditionSet.conditionRefs.forEach(cond => {
+      if (!cond.isSet && cond instanceof Condition) {
+        const matched = this.matchCondition(cond, protocol);
+        bs.addMatch(cond, matched);
+      } else if (cond instanceof ConditionSet) {
+        const matched = this.matchConditionSet(cond, protocol, rs);
+        bs.addMatch(cond, matched);
+      }
+    });
+    rs.addBooleanSet(bs);
+    return bs.matched;
   }
 
   matchCondition(condition: Condition, protocol: Protocol) {
