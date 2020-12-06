@@ -5,7 +5,6 @@ import { contextTypes } from '../settings/compatibility-sets';
 import { calcOrb } from '../calc-orbs';
 import { subtractLng360 } from '../helpers';
 import ayanamshaValues from '../settings/ayanamsha-values';
-import { match } from 'assert';
 
 export interface KeyNumVal {
   key: string;
@@ -95,12 +94,102 @@ export class Condition {
     return this.context.length > 1 && this.context !== '-';
   }
 
+  get isDeclination() {
+    return this.contextType.isDeclination;
+  }
+
+  get sameSign() {
+    return this.contextType.sameSign;
+  }
+
   get usesMidChart() {
     const midModes = ['midpoint', 'timespace'];
     return (
       [this.fromMode, this.toMode].filter(md => midModes.includes(md)).length >
       0
     );
+  }
+
+  get isDivisional() {
+    return this.contextType.isDivisional;
+  }
+
+  get isNeutral() {
+    switch (this.aspectQuality) {
+      case 'applying':
+      case 'separating':
+        return false;
+      default:
+        return true;
+    }
+  }
+
+  get isSeparating() {
+    switch (this.aspectQuality) {
+      case 'separating':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  get isApplying() {
+    switch (this.aspectQuality) {
+      case 'applying':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  get isAspectGroup() {
+    switch (this.context) {
+      case 'soft_aspect':
+      case 'hard_aspect':
+      case 'any_aspect':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  get matchedAspects() {
+    switch (this.context) {
+      case 'soft_aspect':
+        return ['trine', 'sextile', 'inconjunction'];
+      case 'hard_aspect':
+        return ['opposition', 'square', 'conjunction'];
+      case 'any_aspect':
+        return [
+          'opposition',
+          'square',
+          'trine',
+          'sextile',
+          'conjunction',
+          'quinquix',
+          'inconjunction',
+        ];
+      default:
+        return this.contextType.isAspect ? [this.context] : [];
+    }
+  }
+
+  get isLongAspect() {
+    return this.contextType.isAspect && !this.contextType.isDeclination;
+  }
+
+  matchedNum(target = 1) {
+    const refKey = target === 1 ? this.c1Key : this.c2Key;
+    const refVal = refKey.split('_').pop();
+    return isNumeric(refVal) ? parseInt(refVal) : -1;
+  }
+
+  get c1Num() {
+    return this.matchedNum(1);
+  }
+
+  get c2Num() {
+    return this.matchedNum(2);
   }
 }
 
@@ -450,6 +539,11 @@ export class Protocol {
     return matchOrbFromGrid(aspect, k1, k2, this.orbs);
   }
 
+  matchOrbValue(aspect: string, k1: string, k2: string) {
+    const aspectData = calcOrb(aspect, k1, k2);
+    return this.matchOrb(aspect, k1, k2, aspectData);
+  }
+
   matchRange(aspect: string, k1: string, k2: string) {
     const aspectData = calcOrb(aspect, k1, k2);
     const orb = this.matchOrb(aspect, k1, k2, aspectData);
@@ -614,6 +708,75 @@ export class ContextType {
       .toLowerCase()
       .replace(/_kuta$/, '')
       .replace(/^dina_/, '');
+  }
+
+  get isDivisional() {
+    switch (this.key) {
+      case 'in_sign':
+      case 'sign':
+      case 'signs':
+      case 'in_house':
+      case 'house':
+      case 'houses':
+      case 'nakshatra':
+      case 'nakshatras':
+      case 'in_nakshatra':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  get isDeclination() {
+    switch (this.key) {
+      case 'incontra_parallel':
+      case 'decl_parallel':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  get sameSign() {
+    switch (this.key) {
+      case 'in_same_sign':
+      case 'same_sign':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  get bySign() {
+    switch (this.key) {
+      case 'in_sign':
+      case 'sign':
+      case 'signs':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  get byHouse() {
+    switch (this.key) {
+      case 'in_house':
+      case 'house':
+      case 'houses':
+        return true;
+      default:
+        return false;
+    }
+  }
+  get byNakshatra() {
+    switch (this.key) {
+      case 'nakshatra':
+      case 'nakshatras':
+      case 'in_nakshatra':
+        return true;
+      default:
+        return false;
+    }
   }
 }
 

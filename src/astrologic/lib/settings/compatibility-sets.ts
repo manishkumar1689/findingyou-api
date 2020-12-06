@@ -9,16 +9,23 @@ export const defaultCompatibilityCategoryOpts = [
 export const contextTypes = [
   {
     key: 'in_house',
-    name: 'in (house)',
+    name: 'in house',
     isAspect: false,
     c2groups: ['houses'],
+    isKuta: false,
+  },
+  {
+    key: 'in_sign',
+    name: 'in sign',
+    isAspect: false,
+    c2groups: ['signs'],
     isKuta: false,
   },
   {
     key: 'nakshatra',
     name: 'in nakṣatra',
     isAspect: false,
-    c2groups: ['nakshtra'],
+    c2groups: ['nakshatra'],
     isKuta: false,
   },
   {
@@ -125,7 +132,7 @@ export const contextTypes = [
   {
     key: 'same_sign',
     name: 'in Same Sign as',
-    isAspect: true,
+    isAspect: false,
     c2groups: ['graha', 'lordship', 'cara_karakas', 'bm', 'special'],
     isKuta: false,
   },

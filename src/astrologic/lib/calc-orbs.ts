@@ -67,6 +67,20 @@ export const aspects: Array<AspectRow> = [
   { key: 'conjunction', deg: 0.0 },
 ];
 
+const matchAspectKey = (key: string) => {
+  let matchedKey = key
+    .toLowerCase()
+    .replace(/_+/g, '-')
+    .replace(/^bi-/i, 'bi');
+  switch (matchedKey) {
+    case 'inconjunct':
+    case 'quincunx':
+      matchedKey = 'inconjunction';
+      break;
+  }
+  return matchedKey;
+};
+
 const matchGrahaGroupIndex = (grahaKey: string): number => {
   const index = grahaOrbGroups.findIndex(keys => keys.includes(grahaKey));
   return index < 0 ? 5 : index;
@@ -78,7 +92,7 @@ const matchAspectGroupIndex = (aspectKey: string): number => {
 };
 
 export const calcOrb = (aspectKey: string, k1: string, k2: string) => {
-  const matchedKey = aspectKey.replace(/_+/g, '-');
+  const matchedKey = matchAspectKey(aspectKey);
   const g1Index = matchGrahaGroupIndex(k1);
   const g2Index = matchGrahaGroupIndex(k2);
   const aspectIndex = matchAspectGroupIndex(matchedKey);

@@ -33,6 +33,15 @@ interface VariantGroup {
   charaKaraka: number;
 }
 
+const defaultVariant = {
+  num: 0,
+  sign: -1,
+  house: -1,
+  nakshatra: 0,
+  relationship: '',
+  charaKaraka: 0,
+};
+
 interface withinSignBody {
   key: string;
   deg: number;
@@ -129,8 +138,30 @@ export class Graha extends BaseObject {
     }
   }
 
+  get variant() {
+    const row = this.variants.find(row => row.num === this.ayanamshaItem.num);
+    return row instanceof Object ? row : defaultVariant;
+  }
+
   get sign() {
     return Math.floor(this.lng / 30) + 1;
+  }
+
+  get signNum() {
+    return Math.floor(this.longitude / 30) + 1;
+  }
+
+  get nakshatra27Num() {
+    return Math.floor(this.longitude / (360 / 27)) + 1;
+  }
+
+  get houseW() {
+    const row = this.variants.find(row => row.num === this.ayanamshaItem.num);
+    if (row instanceof Object) {
+      return row.house;
+    } else {
+      return -1;
+    }
   }
 
   get nakshatra(): Nakshatra {

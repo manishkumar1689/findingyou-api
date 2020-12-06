@@ -8,6 +8,7 @@ import grahaValues, {
   rulerSignsMap,
   aspectGroups,
 } from './settings/graha-values';
+import { Graha } from './models/graha-set';
 
 export const extractString = (obj: any, key: string): string => {
   let str = '';
@@ -140,6 +141,12 @@ export const mapSignToHouse = (sign: number, houses: Array<number>): number => {
     hn = hnr < 1 ? hnr + numH : hnr;
   }
   return hn;
+};
+
+export const calcAspectIsApplying = (gr1: Graha, gr2: Graha): boolean => {
+  const firstFaster = gr1.lngSpeed > gr2.lngSpeed;
+  const firstHigher = gr1.longitude > gr2.longitude;
+  return firstFaster ? !firstHigher : firstHigher;
 };
 
 export const calcVargaValue = (lng: number, num: number) => (lng * num) % 360;

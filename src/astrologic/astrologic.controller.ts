@@ -713,20 +713,6 @@ export class AstrologicController {
       collection.rules.forEach(rs => {
         const resultSet = samplePairedChart.matchRuleSet(rs, protocol);
         results.push(resultSet);
-        /* const resultSet = new ProtocolResultSet(
-          rs.scores,
-          rs.conditionSet.operator,
-        );
-        if (rs.conditionSet.conditionRefs.length > 0) {
-          rs.conditionSet.conditionRefs.forEach(cond => {
-            if (!cond.isSet && cond instanceof Condition) {
-              const matched = samplePairedChart.matchCondition(cond, protocol);
-              results.push({ matched, condition: cond });
-            } else if (cond instanceof ConditionSet) {
-              console.log(cond.conditionRefs);
-            }
-          });
-        } */
       });
     });
     return res.json({

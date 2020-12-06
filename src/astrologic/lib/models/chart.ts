@@ -9,6 +9,8 @@ import {
   midLng,
   calcDist360,
   calcAspects,
+  inSignDegree,
+  calcAspectIsApplying,
 } from '../helpers';
 import { calcJdPeriodRange, relativeAngle } from './../core';
 import {
@@ -47,6 +49,8 @@ import {
   ProtocolResultSet,
   RuleSet,
 } from './protocol-models';
+import values from './../settings/tithi-values';
+import { parseTwoDigitYear } from 'moment';
 
 export interface Subject {
   name: string;
@@ -328,9 +332,76 @@ export class Chart {
     switch (objType.type) {
       case 'graha':
         return this.graha(refKey).longitude;
+      case 'special':
+        switch (refKey) {
+          case 'yogi_graha':
+          case 'avayogi_graha':
+            const gk = this.matchObject(refKey.replace(/_graha$/, ''));
+            return this.graha(gk).longitude;
+          case 'mandi':
+          case 'gulika':
+            return this.matchUpagraha(refKey);
+          default:
+            return this.matchSpecial(refKey);
+        }
+
       default:
         return null;
     }
+  }
+
+  matchSpecial(key: string) {
+    const row = this.sphutas.find(
+      spSet => spSet.num === this.ayanamshaItem.num,
+    );
+    let numVal = 0;
+    const camelKey = key
+      .split('_')
+      .map((part, pi) => {
+        return pi > 0
+          ? [part.substring(0, 1).toUpperCase(), part.substring(1)].join('')
+          : part;
+      })
+      .join('');
+    if (row instanceof ObjectType) {
+      const item = row.items.find(sp => sp.key === camelKey);
+      if (item instanceof ObjectType) {
+        numVal = item.value;
+      }
+    }
+    return numVal;
+  }
+
+  matchObject(key: string) {
+    const row = this.objects.find(
+      spSet => spSet.num === this.ayanamshaItem.num,
+    );
+    let strVal = '';
+    if (row instanceof ObjectType) {
+      const item = row.items.find(sp => sp.key === key);
+      if (item instanceof ObjectType) {
+        strVal = item.value;
+      }
+    }
+    return strVal;
+  }
+
+  matchUpagraha(refKey: string) {
+    let numVal = 0;
+    let key = refKey.length > 2 ? refKey.substring(0, 2) : refKey;
+    switch (refKey) {
+      case 'gulika':
+        key = 'gk';
+        break;
+      case 'mandi':
+        key = 'md';
+        break;
+    }
+    const item = this.upagrahaValues.find(sp => sp.key === key);
+    if (item instanceof ObjectType) {
+      numVal = item.value;
+    }
+    return numVal;
   }
 
   get ayanamshaOffset() {
@@ -1371,9 +1442,38 @@ export class PairedChart {
     return bs.matched;
   }
 
+  matchAspectItem(
+    condition: Condition,
+    fromChart: Chart,
+    toChart: Chart,
+    k1: string,
+    k2: string,
+  ) {
+    let aspectValue = 0;
+    let aspectMatched = false;
+    if (
+      condition.usesMidChart ||
+      !this.aspectIsInPaired(condition.object1, condition.object2, k1, k2)
+    ) {
+      const val1 = fromChart.matchObjectValue(condition.object1, k1);
+      const val2 = toChart.matchObjectValue(condition.object2, k2);
+      aspectValue = relativeAngle(val1, val2);
+      aspectMatched = true;
+    } else {
+      if (condition.compareGrahas) {
+        aspectValue = this.matchAspects(k1, k2);
+        aspectMatched = true;
+      }
+    }
+    return { aspectValue, aspectMatched };
+  }
+
   matchCondition(condition: Condition, protocol: Protocol) {
     let matched = false;
-    const fromChart = this.matchChart(condition.fromMode);
+
+    const fromChart = condition.singleMode
+      ? this.matchChart(condition.toMode)
+      : this.matchChart(condition.fromMode);
     const toChart = this.matchChart(condition.toMode);
     const ayanamshaNum = protocol.ayanamshaNum;
     fromChart.setAyanamshaItemByNum(ayanamshaNum);
@@ -1381,35 +1481,89 @@ export class PairedChart {
     const obj1 = condition.object1;
     const obj2 = condition.object2;
     const { context } = condition;
-    const k1 = this.matchGrahaEquivalent(obj1.key, condition.fromMode);
-    const k2 = this.matchGrahaEquivalent(obj2.key, condition.toMode);
-    if (condition.contextType.isAspect) {
-      let aspectValue = 0;
-      let aspectMatched = false;
-      if (
-        condition.usesMidChart ||
-        !this.aspectIsInPaired(obj1, obj2, k1, k2)
-      ) {
-        const val1 = fromChart.matchObjectValue(obj1, k1);
-        const val2 = toChart.matchObjectValue(obj2, k2);
-        aspectValue = relativeAngle(val1, val2);
-        aspectMatched = true;
-      } else {
-        if (condition.compareGrahas) {
-          aspectValue = this.matchAspects(k1, k2);
-          aspectMatched = true;
+    const k1 = this.matchGrahaEquivalent(obj1.key, fromChart);
+    const k2 = this.matchGrahaEquivalent(obj2.key, toChart);
+    if (condition.isLongAspect) {
+      const { aspectValue, aspectMatched } = this.matchAspectItem(
+        condition,
+        fromChart,
+        toChart,
+        k1,
+        k2,
+      );
+
+      const aspectMatches = condition.matchedAspects.map(aspectKey => {
+        let aspected = false;
+        if (aspectMatched) {
+          const [minVal, maxVal] = protocol.matchRange(aspectKey, k1, k2);
+          const isApplying = condition.isNeutral
+            ? true
+            : calcAspectIsApplying(fromChart.graha(k1), fromChart.graha(k2));
+          const applyModeMatched = condition.isSeparating
+            ? !isApplying
+            : isApplying;
+          aspected =
+            aspectValue >= minVal && aspectValue <= maxVal && applyModeMatched;
         }
-      }
-      if (aspectMatched) {
-        const [minVal, maxVal] = protocol.matchRange(context, k1, k2);
-        matched = aspectValue >= minVal && aspectValue <= maxVal;
+        return aspected;
+      });
+      matched = aspectMatches.some(matched => matched);
+    } else if (condition.isDeclination) {
+      const orb = protocol.matchOrbValue(context, k1, k2);
+      const { parallel, incontraParallel } = this.matchDeclination(
+        fromChart.graha(k1),
+        toChart.graha(k2),
+        orb,
+      );
+      switch (condition.context) {
+        case 'decl_parallel':
+          matched = parallel === true;
+          break;
+        case 'incontra_parallel':
+          matched = incontraParallel === true;
+          break;
       }
     } else if (condition.contextType.isKuta) {
       const kutaVal = this.matchKuta(condition);
-
       const max = protocol.kutaMax(condition.contextType.kutaKey);
       const percent = max > 0 ? (kutaVal / max) * 100 : 0;
       matched = inRange(percent, condition.kutaRange);
+    } else if (condition.contextType.isDivisional) {
+      const graha = fromChart.graha(k1);
+      if (condition.contextType.bySign) {
+        matched = graha.signNum === condition.c2Num;
+      } else if (condition.contextType.byHouse) {
+        matched = graha.houseW === condition.c2Num;
+      } else if (condition.contextType.byNakshatra) {
+        matched = graha.nakshatra27Num === condition.c2Num;
+      }
+    } else if (condition.sameSign) {
+      const g1 = fromChart.graha(k1);
+      const g2 = fromChart.graha(k2);
+      matched = g1.signNum === g2.signNum;
+    } else if (context === 'graha_yuti') {
+      const grKeys = ['su', 'mo', 'me', 've', 'ma', 'ju', 'sa'];
+      const yutiMatches = [];
+      grKeys.forEach(gk1 => {
+        grKeys.forEach(gk2 => {
+          const shouldCheck = condition.singleMode ? gk1 !== gk2 : true;
+          if (shouldCheck) {
+            const angle = relativeAngle(
+              fromChart.graha(gk1).longitude,
+              toChart.graha(gk2).longitude,
+            );
+            const aspected = angle >= -1 && angle <= 1;
+            if (aspected) {
+              yutiMatches.push({
+                k1: gk1,
+                k2: gk2,
+                aspected,
+              });
+            }
+          }
+        });
+      });
+      matched = yutiMatches.length > 1;
     }
     return matched;
   }
@@ -1442,10 +1596,9 @@ export class PairedChart {
     }
   }
 
-  matchGrahaEquivalent(subkey: string, chartKey = 'c1') {
+  matchGrahaEquivalent(subkey: string, chart: Chart) {
     let matchedKey = subkey;
     if (subkey.length > 2) {
-      const chart = this.matchChart(chartKey);
       chart.setAyanamshaItemByNum(this.ayanamshaNum);
       const parts = subkey.split('_');
 
@@ -1470,6 +1623,26 @@ export class PairedChart {
     return asp instanceof Object ? asp.value : 0;
   }
 
+  matchDeclination(g1: Graha, g2: Graha, orb: number) {
+    const sameSide =
+      (g1.declination >= 0 && g2.declination >= 0) ||
+      (g1.declination < 0 && g2.declination < 0);
+    const range = [
+      Math.abs(g1.declination) - orb,
+      Math.abs(g1.declination) + orb,
+    ];
+    const withinOrb = inRange(Math.abs(g1.declination), range);
+    const parallel = sameSide && withinOrb;
+    const incontraParallel = !sameSide && withinOrb;
+    const distance = Math.abs(g1.declination - g2.declination);
+    return {
+      sameSide,
+      parallel,
+      incontraParallel,
+      distance,
+    };
+  }
+
   matchChart(key = 'female') {
     switch (key) {
       case 'c1':
@@ -1487,6 +1660,8 @@ export class PairedChart {
         return this.midpoint;
       case 'timespace':
         return this.timespace;
+      default:
+        return new Chart(null);
     }
   }
 
