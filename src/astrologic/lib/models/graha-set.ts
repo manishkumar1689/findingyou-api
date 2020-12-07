@@ -561,3 +561,15 @@ export const matchReference = (key: string, attrs: any): Graha => {
   }
   return new Graha(row);
 };
+
+export const coreIndianGrahaKeys = ['su', 'mo', 'me', 've', 'ma', 'ju', 'sa'];
+
+export const extendedIndianGrahaKeys = [...coreIndianGrahaKeys, 'ra', 'ke'];
+
+export const indianGrahaAndPointKeys = [...coreIndianGrahaKeys, 'as', 'ds'];
+
+export const extendedIndianGrahaPointKeys = [
+  ...extendedIndianGrahaKeys,
+  'as',
+  'ds',
+];

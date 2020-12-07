@@ -69,6 +69,29 @@ export class Condition {
     }
   }
 
+  // may match multiple objects
+  mayMatchMultiple(num = 1) {
+    const obj = num === 2 ? this.object2 : this.object1;
+    switch (obj.type) {
+      case 'num_grahas':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  get bothSingleGrahaMatch() {
+    return !this.matchesMultiple1 && !this.matchesMultiple2;
+  }
+
+  get matchesMultiple1() {
+    return this.mayMatchMultiple(1);
+  }
+
+  get matchesMultiple2() {
+    return this.mayMatchMultiple(2);
+  }
+
   get singleMode() {
     return this.fromMode === 'single';
   }
@@ -112,6 +135,10 @@ export class Condition {
 
   get isDivisional() {
     return this.contextType.isDivisional;
+  }
+
+  get isIndianAspect() {
+    return this.contextType.isIndianAspect;
   }
 
   get isNeutral() {
@@ -777,6 +804,18 @@ export class ContextType {
       default:
         return false;
     }
+  }
+
+  get isIndianAspect() {
+    const keys = [
+      'graha_yuti',
+      'sends_graha_drishti',
+      'receives_graha_drishti',
+      'mutual_graha_drishti',
+      'rashi_drishti',
+      'kartari_yoga',
+    ];
+    return keys.includes(this.key);
   }
 }
 

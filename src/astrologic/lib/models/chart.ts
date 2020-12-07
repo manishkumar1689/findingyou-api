@@ -12,7 +12,7 @@ import {
   inSignDegree,
   calcAspectIsApplying,
 } from '../helpers';
-import { calcJdPeriodRange, relativeAngle } from './../core';
+import { calcJdPeriodRange, coreGrahaKeys, relativeAngle } from './../core';
 import {
   julToISODate,
   weekDayNum,
@@ -30,13 +30,17 @@ import tithiValues from './../settings/tithi-values';
 import varaValues from './../settings/vara-values';
 import yogaValues from './../settings/yoga-values';
 import houseTypeData from './../settings/house-type-data';
-import { Graha } from './graha-set';
 import { KaranaSet } from './karana-set';
 import { MuhurtaSet, MuhurtaItem } from './muhurta-set';
 import { inRange, isNumeric, notEmptyString } from './../../../lib/validators';
 import { TransitionSet } from './transition-set';
 import { UpagrahaValue } from './upagraha-value';
-import { matchReference } from './graha-set';
+import {
+  matchReference,
+  Graha,
+  coreIndianGrahaKeys,
+  indianGrahaAndPointKeys,
+} from './graha-set';
 import rashiValues from '../settings/rashi-values';
 import ayanamshaValues from '../settings/ayanamsha-values';
 import {
@@ -49,8 +53,6 @@ import {
   ProtocolResultSet,
   RuleSet,
 } from './protocol-models';
-import values from './../settings/tithi-values';
-import { parseTwoDigitYear } from 'moment';
 
 export interface Subject {
   name: string;
@@ -1442,6 +1444,149 @@ export class PairedChart {
     return bs.matched;
   }
 
+  matchAspectCondition(
+    protocol: Protocol,
+    condition: Condition,
+    fromChart: Chart,
+    toChart: Chart,
+    k1: string,
+    k2: string,
+  ) {
+    const { aspectValue, aspectMatched } = this.matchAspectItem(
+      condition,
+      fromChart,
+      toChart,
+      k1,
+      k2,
+    );
+    const aspectMatches = condition.matchedAspects.map(aspectKey => {
+      let aspected = false;
+      if (aspectMatched) {
+        const [minVal, maxVal] = protocol.matchRange(aspectKey, k1, k2);
+        const isApplying = condition.isNeutral
+          ? true
+          : calcAspectIsApplying(fromChart.graha(k1), fromChart.graha(k2));
+        const applyModeMatched = condition.isSeparating
+          ? !isApplying
+          : isApplying;
+        aspected =
+          aspectValue >= minVal && aspectValue <= maxVal && applyModeMatched;
+      }
+      return aspected;
+    });
+    return aspectMatches.some(matched => matched);
+  }
+
+  matchDeclinationCondition(
+    protocol: Protocol,
+    condition: Condition,
+    fromChart: Chart,
+    toChart: Chart,
+    k1: string,
+    k2: string,
+  ) {
+    const orb = protocol.matchOrbValue(condition.context, k1, k2);
+    const { parallel, incontraParallel } = this.matchDeclination(
+      fromChart.graha(k1),
+      toChart.graha(k2),
+      orb,
+    );
+    switch (condition.context) {
+      case 'decl_parallel':
+        return parallel === true;
+      case 'incontra_parallel':
+        return incontraParallel === true;
+      default:
+        return false;
+    }
+  }
+
+  matchKutaCondition(
+    protocol: Protocol,
+    condition: Condition,
+    k1: string,
+    k2: string,
+  ) {
+    const kutaVal = this.matchKuta(condition, k1, k2);
+    const max = protocol.kutaMax(condition.contextType.kutaKey);
+    const percent = max > 0 ? (kutaVal / max) * 100 : 0;
+    return inRange(percent, condition.kutaRange);
+  }
+
+  matchDivisionalCondition(condition: Condition, fromChart: Chart, k1: string) {
+    const keys1 = condition.matchesMultiple1 ? coreIndianGrahaKeys : [k1];
+    const matches = keys1.map(key1 => {
+      const graha = fromChart.graha(key1);
+      let matched = false;
+      if (condition.contextType.bySign) {
+        matched = graha.signNum === condition.c2Num;
+      } else if (condition.contextType.byHouse) {
+        matched = graha.houseW === condition.c2Num;
+      } else if (condition.contextType.byNakshatra) {
+        matched = graha.nakshatra27Num === condition.c2Num;
+      }
+    });
+    const numMatched = matches.filter(m => m).length;
+    if (condition.matchesMultiple1) {
+      return numMatched >= condition.c2Num;
+    } else {
+      return numMatched > 0;
+    }
+  }
+
+  matchSameSignCondition(
+    condition: Condition,
+    fromChart: Chart,
+    toChart: Chart,
+    k1: string,
+    k2: string,
+  ) {
+    const keys1 = condition.matchesMultiple1 ? coreIndianGrahaKeys : [k1];
+    const matches = keys1.map(key1 => {
+      const g1 = fromChart.graha(key1);
+      const g2 = toChart.graha(k2);
+      return g1.signNum === g2.signNum;
+    });
+    const numMatches = matches.map(m => m).length;
+    return condition.matchesMultiple1
+      ? numMatches >= condition.c2Num
+      : numMatches > 0;
+  }
+
+  matchIndianAspectCondition(
+    condition: Condition,
+    fromChart: Chart,
+    toChart: Chart,
+  ) {
+    const grKeys = coreIndianGrahaKeys;
+    const yutiMatches = [];
+    grKeys.forEach(gk1 => {
+      grKeys.forEach(gk2 => {
+        const shouldCheck = condition.singleMode ? gk1 !== gk2 : true;
+        if (shouldCheck) {
+          const angle = relativeAngle(
+            fromChart.graha(gk1).longitude,
+            toChart.graha(gk2).longitude,
+          );
+          const aspected = angle >= -1 && angle <= 1;
+          if (aspected) {
+            yutiMatches.push({
+              k1: gk1,
+              k2: gk2,
+              aspected,
+            });
+          }
+        }
+      });
+    });
+    switch (condition.contextType.key) {
+      case 'graha_yuti':
+        return yutiMatches.length > 1;
+      default:
+        return false;
+    }
+  }
+
   matchAspectItem(
     condition: Condition,
     fromChart: Chart,
@@ -1484,95 +1629,66 @@ export class PairedChart {
     const k1 = this.matchGrahaEquivalent(obj1.key, fromChart);
     const k2 = this.matchGrahaEquivalent(obj2.key, toChart);
     if (condition.isLongAspect) {
-      const { aspectValue, aspectMatched } = this.matchAspectItem(
+      const keys1 = condition.matchesMultiple1 ? coreIndianGrahaKeys : [k1];
+      const keys2 = condition.matchesMultiple2 ? coreIndianGrahaKeys : [k2];
+      const aspectedGrid = keys1.map(key1 => {
+        return keys2.map(key2 => {
+          const aspected = this.matchAspectCondition(
+            protocol,
+            condition,
+            fromChart,
+            toChart,
+            key1,
+            key2,
+          );
+          return {
+            aspected,
+            k1: key1,
+            k2: key2,
+          };
+        });
+      });
+      if (aspectedGrid.length > 0) {
+        const c1ToC2Matches = aspectedGrid.map(
+          aspSet => aspSet.filter(aspItem => aspItem.aspected).length,
+        );
+        if (condition.matchesMultiple1) {
+          matched =
+            c1ToC2Matches.filter(num => num > 0).length >= condition.c1Num;
+        } else {
+          matched = c1ToC2Matches.some(num => num > 0);
+        }
+      }
+    } else if (condition.isDeclination) {
+      matched = this.matchDeclinationCondition(
+        protocol,
         condition,
         fromChart,
         toChart,
         k1,
         k2,
       );
-
-      const aspectMatches = condition.matchedAspects.map(aspectKey => {
-        let aspected = false;
-        if (aspectMatched) {
-          const [minVal, maxVal] = protocol.matchRange(aspectKey, k1, k2);
-          const isApplying = condition.isNeutral
-            ? true
-            : calcAspectIsApplying(fromChart.graha(k1), fromChart.graha(k2));
-          const applyModeMatched = condition.isSeparating
-            ? !isApplying
-            : isApplying;
-          aspected =
-            aspectValue >= minVal && aspectValue <= maxVal && applyModeMatched;
-        }
-        return aspected;
-      });
-      matched = aspectMatches.some(matched => matched);
-    } else if (condition.isDeclination) {
-      const orb = protocol.matchOrbValue(context, k1, k2);
-      const { parallel, incontraParallel } = this.matchDeclination(
-        fromChart.graha(k1),
-        toChart.graha(k2),
-        orb,
-      );
-      switch (condition.context) {
-        case 'decl_parallel':
-          matched = parallel === true;
-          break;
-        case 'incontra_parallel':
-          matched = incontraParallel === true;
-          break;
-      }
     } else if (condition.contextType.isKuta) {
-      const kutaVal = this.matchKuta(condition);
-      const max = protocol.kutaMax(condition.contextType.kutaKey);
-      const percent = max > 0 ? (kutaVal / max) * 100 : 0;
-      matched = inRange(percent, condition.kutaRange);
+      matched = this.matchKutaCondition(protocol, condition, k1, k2);
     } else if (condition.contextType.isDivisional) {
-      const graha = fromChart.graha(k1);
-      if (condition.contextType.bySign) {
-        matched = graha.signNum === condition.c2Num;
-      } else if (condition.contextType.byHouse) {
-        matched = graha.houseW === condition.c2Num;
-      } else if (condition.contextType.byNakshatra) {
-        matched = graha.nakshatra27Num === condition.c2Num;
-      }
+      matched = this.matchDivisionalCondition(condition, fromChart, k1);
     } else if (condition.sameSign) {
-      const g1 = fromChart.graha(k1);
-      const g2 = fromChart.graha(k2);
-      matched = g1.signNum === g2.signNum;
-    } else if (context === 'graha_yuti') {
-      const grKeys = ['su', 'mo', 'me', 've', 'ma', 'ju', 'sa'];
-      const yutiMatches = [];
-      grKeys.forEach(gk1 => {
-        grKeys.forEach(gk2 => {
-          const shouldCheck = condition.singleMode ? gk1 !== gk2 : true;
-          if (shouldCheck) {
-            const angle = relativeAngle(
-              fromChart.graha(gk1).longitude,
-              toChart.graha(gk2).longitude,
-            );
-            const aspected = angle >= -1 && angle <= 1;
-            if (aspected) {
-              yutiMatches.push({
-                k1: gk1,
-                k2: gk2,
-                aspected,
-              });
-            }
-          }
-        });
-      });
-      matched = yutiMatches.length > 1;
+      matched = this.matchSameSignCondition(
+        condition,
+        fromChart,
+        toChart,
+        k1,
+        k2,
+      );
+    } else if (condition.isIndianAspect) {
+      this.matchIndianAspectCondition(condition, fromChart, toChart);
     }
     return matched;
   }
 
-  matchKuta(condition: Condition) {
+  matchKuta(condition: Condition, k1: string, k2: string) {
     const matchedKutaKey = condition.contextType.kutaKey;
-    const matchedKutaRow = this.kutas.find(
-      ks => ks.k1 === condition.object1.key && ks.k2 === condition.object2.key,
-    );
+    const matchedKutaRow = this.kutas.find(ks => ks.k1 === k1 && ks.k2 === k2);
     let val = 0;
     if (matchedKutaRow instanceof Object) {
       const kutaValRow = matchedKutaRow.values.find(
@@ -1589,7 +1705,7 @@ export class PairedChart {
     if (obj1.type === 'graha' || obj2.type === 'graha') {
       const g1 = k1.length === 2 ? k1 : obj1.key;
       const g2 = k2.length === 2 ? k2 : obj2.key;
-      const keys = ['su', 'mo', 'me', 've', 'ma', 'ju', 'sa', 'as', 'ds'];
+      const keys = indianGrahaAndPointKeys;
       return keys.includes(g1) && keys.includes(g2);
     } else {
       return false;
