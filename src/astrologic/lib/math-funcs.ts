@@ -59,6 +59,9 @@ export const calcInclusiveDistance = (
 export const calcInclusiveTwelfths = (posOne: number, posTwo: number) =>
   calcInclusiveDistance(posOne, posTwo, 12);
 
+export const calcInclusiveSignPositions = (sign1: number, sign2: number) =>
+  calcInclusiveDistance(sign2, sign1, 12);
+
 export const calcInclusiveNakshatras = (posOne: number, posTwo: number) =>
   calcInclusiveDistance(posOne, posTwo, 27);
 

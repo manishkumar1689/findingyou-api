@@ -53,6 +53,11 @@ import {
   ProtocolResultSet,
   RuleSet,
 } from './protocol-models';
+import {
+  calcInclusiveDistance,
+  calcInclusiveSignPositions,
+} from '../math-funcs';
+import grahaValues, { naturalBenefics } from '../settings/graha-values';
 
 export interface Subject {
   name: string;
@@ -1554,20 +1559,41 @@ export class PairedChart {
   }
 
   matchIndianAspectCondition(
+    protocol: Protocol,
     condition: Condition,
     fromChart: Chart,
     toChart: Chart,
+    k1 = '',
+    k2 = '',
   ) {
+    const grKeys1 = [k1];
+    const grKeys2 = [k2];
+    let matched = false;
+    grKeys1.forEach(gk1 => {
+      grKeys2.forEach(gk2 => {
+        const gr1 = fromChart.graha(gk1);
+        const gr2 = toChart.graha(gk2);
+        const diff1 = calcInclusiveSignPositions(gr1.signNum, gr2.signNum);
+        const val1 = protocol.matchDrishti(gk1, diff1);
+        const diff2 = calcInclusiveSignPositions(gr2.signNum, gr1.signNum);
+        const val2 = protocol.matchDrishti(gk2, diff2);
+        console.log({ gk1, diff1, val1, gk2, diff2, val2 });
+      });
+    });
+    return matched;
+  }
+
+  matchYutiCondition(condition: Condition, fromChart: Chart, toChart: Chart) {
     const grKeys = coreIndianGrahaKeys;
     const yutiMatches = [];
     grKeys.forEach(gk1 => {
       grKeys.forEach(gk2 => {
         const shouldCheck = condition.singleMode ? gk1 !== gk2 : true;
         if (shouldCheck) {
-          const angle = relativeAngle(
-            fromChart.graha(gk1).longitude,
-            toChart.graha(gk2).longitude,
-          );
+          const gr1 = fromChart.graha(gk1);
+          const gr2 = toChart.graha(gk2);
+          const angle = relativeAngle(gr1.longitude, gr2.longitude);
+          // always within orb of 1º
           const aspected = angle >= -1 && angle <= 1;
           if (aspected) {
             yutiMatches.push({
@@ -1579,12 +1605,7 @@ export class PairedChart {
         }
       });
     });
-    switch (condition.contextType.key) {
-      case 'graha_yuti':
-        return yutiMatches.length > 1;
-      default:
-        return false;
-    }
+    return yutiMatches.length > 1;
   }
 
   matchAspectItem(
@@ -1680,8 +1701,17 @@ export class PairedChart {
         k1,
         k2,
       );
+    } else if (condition.isYuti) {
+      this.matchYutiCondition(condition, fromChart, toChart);
     } else if (condition.isIndianAspect) {
-      this.matchIndianAspectCondition(condition, fromChart, toChart);
+      this.matchIndianAspectCondition(
+        protocol,
+        condition,
+        fromChart,
+        toChart,
+        k1,
+        k2,
+      );
     }
     return matched;
   }
@@ -1727,6 +1757,13 @@ export class PairedChart {
             matchedKey = chart.matchHouseSignRuler(num);
           } else if (section === 'chara') {
             matchedKey = chart.matchCharaKaraka(num);
+          }
+        } else {
+          switch (lastPart) {
+            case 'malefics':
+            case 'benefics':
+              matchedKey = lastPart;
+              break;
           }
         }
       }

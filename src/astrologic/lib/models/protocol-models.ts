@@ -16,7 +16,14 @@ export interface KeyOrbs {
   orbs: KeyNumVal[];
 }
 
+export interface SignHouse {
+  house: number;
+  sign: number;
+  key?: string;
+}
+
 export class Condition {
+  isTrue = true;
   fromMode = '';
   toMode = '';
   c1Key = '';
@@ -57,6 +64,7 @@ export class Condition {
           case 'boolean':
             switch (key) {
               case 'lordRev':
+              case 'isTrue':
                 this[key] = val;
                 break;
             }
@@ -139,6 +147,10 @@ export class Condition {
 
   get isIndianAspect() {
     return this.contextType.isIndianAspect;
+  }
+
+  get isYuti() {
+    return this.contextType.isYuti;
   }
 
   get isNeutral() {
@@ -458,8 +470,13 @@ export class Protocol {
   settings: Map<string, any> = new Map();
   userRecord: SimpleUser = defaultSimpleUser;
   kutaData: Map<string, any> = new Map();
+  drishtiMap: Map<string, number[]> = new Map();
 
-  constructor(inData = null, kutaData: Map<string, any> = new Map()) {
+  constructor(
+    inData = null,
+    kutaData: Map<string, any> = new Map(),
+    drishtiSettings: Map<string, number[]> = new Map(),
+  ) {
     if (inData instanceof Object) {
       const {
         _id,
@@ -528,6 +545,18 @@ export class Protocol {
     if (kutaData instanceof Map && kutaData.size > 0) {
       this.kutaData = kutaData;
     }
+    if (drishtiSettings instanceof Map && drishtiSettings.size > 0) {
+      this.drishtiMap = drishtiSettings;
+    }
+  }
+
+  matchDrishti(grahaKey: string, signNum = 0) {
+    const aspects = this.drishtiMap.get(grahaKey);
+    if (aspects instanceof Array && signNum > 0 && signNum <= 12) {
+      const index = signNum - 1;
+      return aspects[index];
+    }
+    return 0;
   }
 
   getCollection(index: number) {
@@ -806,9 +835,12 @@ export class ContextType {
     }
   }
 
+  get isYuti() {
+    return this.key === 'graha_yuti';
+  }
+
   get isIndianAspect() {
     const keys = [
-      'graha_yuti',
       'sends_graha_drishti',
       'receives_graha_drishti',
       'mutual_graha_drishti',

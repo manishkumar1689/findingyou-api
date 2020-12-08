@@ -73,6 +73,13 @@ export class SettingService {
     return new Map(Object.entries(settingValue));
   }
 
+  async getDrishtiMatches() {
+    const data = await this.getByKey('graha__drishti');
+    const settingValue = data instanceof Object ? data.value : {};
+    const entries = settingValue.map(row => [row.key, row.aspects]);
+    return new Map(entries);
+  }
+
   // post a single Setting
   async addSetting(createSettingDTO: CreateSettingDTO): Promise<Setting> {
     const newSetting = new this.settingModel(createSettingDTO);

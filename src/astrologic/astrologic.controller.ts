@@ -701,6 +701,8 @@ export class AstrologicController {
     const samplePairedChart = new PairedChart(randomPairedChart);
     const result = await this.settingService.getProtocol(protocolID);
     const kutaData = await this.settingService.getKutas();
+    const drishtiSettings = await this.settingService.getDrishtiMatches();
+    console.log(drishtiSettings);
     const results: Array<any> = [];
     let protocol = new Protocol(null, kutaData);
     if (result instanceof Object) {
