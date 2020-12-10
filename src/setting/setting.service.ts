@@ -7,6 +7,7 @@ import defaultFlags from './sources/flags';
 import { notEmptyString } from 'src/lib/validators';
 import { Protocol } from './interfaces/protocol.interface';
 import { ProtocolDTO } from './dto/protocol.dto';
+import { ProtocolSettings } from 'src/astrologic/lib/models/protocol-models';
 
 @Injectable()
 export class SettingService {
@@ -67,6 +68,14 @@ export class SettingService {
     return await this.settingModel.findOne({ key }).exec();
   }
 
+  async getProtocolSettings() {
+    return {
+      kuta: await this.getKutas(),
+      grahaDrishti: await this.getDrishtiMatches(),
+      rashiDrishti: await this.getRashiDrishtiMatches(),
+    };
+  }
+
   async getKutas() {
     const data = await this.getByKey('kuta_variants');
     const settingValue = data instanceof Object ? data.value : {};
@@ -77,6 +86,13 @@ export class SettingService {
     const data = await this.getByKey('graha__drishti');
     const settingValue = data instanceof Object ? data.value : {};
     const entries = settingValue.map(row => [row.key, row.aspects]);
+    return new Map(entries);
+  }
+
+  async getRashiDrishtiMatches(): Promise<Map<number, number[]>> {
+    const data = await this.getByKey('rashi__drishti');
+    const settingValue = data instanceof Object ? data.value : {};
+    const entries = settingValue.map(row => [row.sign, row.aspects]);
     return new Map(entries);
   }
 

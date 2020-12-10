@@ -145,6 +145,18 @@ export class Condition {
     return this.contextType.isIndianAspect;
   }
 
+  get isDrishtiAspect() {
+    return this.contextType.isDrishtiAspect;
+  }
+
+  get isRashiDrishti() {
+    return this.contextType.isRashiDrishti;
+  }
+
+  get isKartariYoga() {
+    return this.contextType.isKartariYoga;
+  }
+
   get isYuti() {
     return this.contextType.isYuti;
   }
@@ -439,6 +451,12 @@ export interface SimpleUser {
   roles: string[];
 }
 
+export interface ProtocolSettings {
+  kuta: Map<string, any>;
+  grahaDrishti: Map<string, number[]>;
+  rashiDrishti: Map<number, number[]>;
+}
+
 const defaultSimpleUser = {
   _id: '',
   identifier: '',
@@ -492,13 +510,10 @@ export class Protocol {
   settings: Map<string, any> = new Map();
   userRecord: SimpleUser = defaultSimpleUser;
   kutaData: Map<string, any> = new Map();
-  drishtiMap: Map<string, number[]> = new Map();
+  grahaDrishtiMap: Map<string, number[]> = new Map();
+  rashiDrishtiMap: Map<number, number[]> = new Map();
 
-  constructor(
-    inData = null,
-    kutaData: Map<string, any> = new Map(),
-    drishtiSettings: Map<string, number[]> = new Map(),
-  ) {
+  constructor(inData = null, settings: ProtocolSettings) {
     if (inData instanceof Object) {
       const {
         _id,
@@ -564,19 +579,36 @@ export class Protocol {
         });
       }
     }
-    if (kutaData instanceof Map && kutaData.size > 0) {
-      this.kutaData = kutaData;
+    if (settings.kuta instanceof Map && settings.kuta.size > 0) {
+      this.kutaData = settings.kuta;
     }
-    if (drishtiSettings instanceof Map && drishtiSettings.size > 0) {
-      this.drishtiMap = drishtiSettings;
+    if (
+      settings.grahaDrishti instanceof Map &&
+      settings.grahaDrishti.size > 0
+    ) {
+      this.grahaDrishtiMap = settings.grahaDrishti;
+    }
+    if (
+      settings.rashiDrishti instanceof Map &&
+      settings.rashiDrishti.size > 0
+    ) {
+      this.rashiDrishtiMap = settings.rashiDrishti;
     }
   }
 
   matchDrishti(grahaKey: string, signNum = 0) {
-    const aspects = this.drishtiMap.get(grahaKey);
+    const aspects = this.grahaDrishtiMap.get(grahaKey);
     if (aspects instanceof Array && signNum > 0 && signNum <= 12) {
       const index = signNum - 1;
       return aspects[index];
+    }
+    return 0;
+  }
+
+  matchRashiDrishti(sign1 = 0, sign2 = 0) {
+    const aspects = this.rashiDrishtiMap.get(sign1);
+    if (aspects instanceof Array && sign2 > 0 && sign2 <= 12) {
+      return aspects.indexOf(sign2);
     }
     return 0;
   }
@@ -879,7 +911,8 @@ export class ContextType {
       'receives_graha_drishti',
       'mutual_graha_drishti',
       'rashi_drishti',
-      'kartari_yoga',
+      'shubha_kartari_yoga',
+      'papa_kartari_yoga',
     ];
     return keys.includes(this.key);
   }
@@ -894,8 +927,13 @@ export class ContextType {
     return keys.includes(this.key);
   }
 
+  get isRashiDrishti() {
+    return this.key === 'rashi_drishti';
+  }
+
   get isKartariYoga() {
-    return this.key === 'kartari_yoga';
+    const keys = ['shubha_kartari_yoga', 'papa_kartari_yoga', 'kartari_yoga'];
+    return keys.includes(this.key);
   }
 
   get sendsDrishti() {

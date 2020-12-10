@@ -1582,8 +1582,7 @@ export class PairedChart {
             return [];
         }
       } else if (condition.isFunctional) {
-        const hsRows = chart.buildSignHouseRows();
-        const bm = buildFunctionalBMMap(coreIndianGrahaKeys, hsRows);
+        const bm = this.funcBmMap(chart);
         switch (key) {
           case 'benefics':
             return bm.get('b');
@@ -1598,7 +1597,7 @@ export class PairedChart {
   }
 
   /*
-  
+
   */
   matchDrishtiCondition(
     protocol: Protocol,
@@ -1621,9 +1620,16 @@ export class PairedChart {
             gr1.signNum,
             gr2.signNum,
           );
-          const sendsVal = protocol.matchDrishti(gk1, sendsDiff); // sends
+          const applyRashi = condition.isRashiDrishti;
+          // sends drishti
+          const sendsVal = applyRashi
+            ? protocol.matchRashiDrishti(gr1.signNum, sendsDiff)
+            : protocol.matchDrishti(gk1, sendsDiff);
           const getsDiff = calcInclusiveSignPositions(gr2.signNum, gr1.signNum);
-          const getsVal = protocol.matchDrishti(gk2, getsDiff); // gets
+          // receives / gets drishti
+          const getsVal = applyRashi
+            ? protocol.matchRashiDrishti(gr1.signNum, getsDiff)
+            : protocol.matchDrishti(gk2, getsDiff);
           bmRows.push({
             k1: gk1,
             sendsDiff,
@@ -1652,6 +1658,61 @@ export class PairedChart {
         break;
     }
     return matched;
+  }
+
+  matchYogaKartariCondition(
+    protocol: Protocol,
+    condition: Condition,
+    fromChart: Chart,
+    toChart: Chart,
+    k1 = '',
+    k2 = '',
+  ) {
+    const grKeys1 = this.matchBmGrahaKeys(k1, condition, fromChart);
+    //const grKeys2 = this.matchBmGrahaKeys(k2, condition, toChart);
+
+    const bmMatches = [];
+    const isFunctional = condition.isFunctional;
+    const bm = this.funcBmMap(toChart, isFunctional);
+    const beneficKeys = isFunctional ? bm.get('b') : naturalBenefics;
+    const maleficKeys = isFunctional ? bm.get('m') : naturalMalefics;
+
+    grKeys1.forEach(gk1 => {
+      const signNum = fromChart.graha(gk1).signNum;
+      const nextSign = signNum + 1 > 12 ? 1 : signNum + 1;
+      const prevSign = signNum - 1 < 1 ? 12 : signNum - 1;
+      coreIndianGrahaKeys.forEach(key => {
+        const signNum = toChart.graha(key).signNum;
+        if (signNum === prevSign || signNum === nextSign) {
+          bmMatches.push({
+            key,
+            b: beneficKeys.includes(key),
+            m: maleficKeys.includes(key),
+            isNext: signNum === nextSign,
+          });
+        }
+      });
+    });
+    const matchKartariYoga = (nature = 'b') =>
+      bmMatches.filter(bm => bm.isNext && bm[nature]).length >= 1 &&
+      bmMatches.filter(bm => !bm.isNext && bm[nature]).length >= 1;
+    let matched = false;
+    switch (condition.contextType.key) {
+      case 'shubha_kartari_yoga':
+        matched = matchKartariYoga('b');
+        break;
+      case 'papa_kartari_yoga':
+        matched = matchKartariYoga('m');
+        break;
+    }
+    return matched;
+  }
+
+  funcBmMap(chart: Chart, build = true): Map<string, Array<string>> {
+    const hsRows = build ? chart.buildSignHouseRows() : [];
+    return build
+      ? buildFunctionalBMMap(coreIndianGrahaKeys, hsRows)
+      : new Map();
   }
 
   matchYutiCondition(condition: Condition, fromChart: Chart, toChart: Chart) {
@@ -1775,7 +1836,7 @@ export class PairedChart {
       );
     } else if (condition.isYuti) {
       this.matchYutiCondition(condition, fromChart, toChart);
-    } else if (condition.isIndianAspect) {
+    } else if (condition.isDrishtiAspect) {
       this.matchDrishtiCondition(
         protocol,
         condition,

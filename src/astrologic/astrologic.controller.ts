@@ -700,14 +700,13 @@ export class AstrologicController {
     const randomPairedChart = await this.astrologicService.getPairedRandom();
     const samplePairedChart = new PairedChart(randomPairedChart);
     const result = await this.settingService.getProtocol(protocolID);
-    const kutaData = await this.settingService.getKutas();
-    const drishtiSettings = await this.settingService.getDrishtiMatches();
+    const settings = await this.settingService.getProtocolSettings();
     const results: Array<any> = [];
-    let protocol = new Protocol(null, kutaData, drishtiSettings);
+    let protocol = new Protocol(null, settings);
     if (result instanceof Object) {
       const keys = Object.keys(result.toObject());
       if (keys.includes('collections')) {
-        protocol = new Protocol(result, kutaData);
+        protocol = new Protocol(result, settings);
       }
     }
     protocol.collections.forEach(collection => {
