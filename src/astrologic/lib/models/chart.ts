@@ -917,6 +917,11 @@ export class Chart {
     return key;
   }
 
+  matchKarana(num: number) {
+    //let key = '';
+    return this.karana.ruler;
+  }
+
   buildSignHouseRows(): Array<SignHouse> {
     return buildSignHouse(this.firstHouseSign);
   }
@@ -1780,8 +1785,8 @@ export class PairedChart {
     const obj1 = condition.object1;
     const obj2 = condition.object2;
     const { context } = condition;
-    const k1 = this.matchGrahaEquivalent(obj1.key, fromChart);
-    const k2 = this.matchGrahaEquivalent(obj2.key, toChart);
+    const k1 = this.matchGrahaEquivalent(obj1, fromChart);
+    const k2 = this.matchGrahaEquivalent(obj2, toChart);
     if (condition.isLongAspect) {
       const keys1 = condition.matchesMultiple1 ? coreIndianGrahaKeys : [k1];
       const keys2 = condition.matchesMultiple2 ? coreIndianGrahaKeys : [k2];
@@ -1875,12 +1880,12 @@ export class PairedChart {
     }
   }
 
-  matchGrahaEquivalent(subkey: string, chart: Chart) {
-    let matchedKey = subkey;
-    if (subkey.length > 2) {
+  matchGrahaEquivalent(obj: ObjectType, chart: Chart) {
+    const { key, type } = obj;
+    let matchedKey = key;
+    if (key.length > 2) {
       chart.setAyanamshaItemByNum(this.ayanamshaNum);
-      const parts = subkey.split('_');
-
+      const parts = key.split('_');
       if (parts.length > 0) {
         const lastPart = parts[parts.length - 1];
         const section = parts[parts.length - 2];
@@ -1890,6 +1895,8 @@ export class PairedChart {
             matchedKey = chart.matchHouseSignRuler(num);
           } else if (section === 'chara') {
             matchedKey = chart.matchCharaKaraka(num);
+          } else if (type === 'karana') {
+            matchedKey = chart.matchKarana(num);
           }
         } else {
           switch (lastPart) {
