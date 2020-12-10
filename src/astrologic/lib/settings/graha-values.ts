@@ -32,6 +32,8 @@ Pluto	9	247.94 years
   bhuta: bhuta
 */
 
+import { SignHouse } from 'src/astrologic/interfaces/sign-house';
+
 const grahaValues = [
   {
     num: 0,
@@ -380,6 +382,55 @@ export const rulerSignsMap = (): Map<string, number[]> => {
         }
       }
     }
+  });
+  return mp;
+};
+
+export const buildFunctionalBMMap = (
+  grahaKeys: Array<string>,
+  signHouses: Array<SignHouse>,
+) => {
+  const grahaNatures = grahaKeys.map(key => {
+    const signs = rulerSignsMap().get(key);
+    const matches: Array<any> = [];
+    const houses = [];
+    const natures: Array<string> = [];
+    signs.forEach(sign => {
+      const signHouse = signHouses.find(sh => sh.sign === sign);
+      const { house } = signHouse;
+      const match = functionalHouseNatures.find(fh => fh.house === house);
+      if (match) {
+        matches.push(match);
+        natures.push(match.nature);
+        houses.push(house);
+      }
+    });
+    const numBenefics = natures.filter(n => n === 'b').length;
+    const numMalefics = natures.filter(n => n === 'm').length;
+    const numNeutral = natures.filter(n => n === 'n').length;
+    let nature = natures[0];
+    if (numBenefics === 2 || (numBenefics === 1 && numNeutral === 1)) {
+      nature = 'b';
+    } else if (numNeutral === 2 || (numBenefics === 1 && numMalefics === 1)) {
+      nature = 'n';
+    } else if (numMalefics === 2 || (numMalefics === 1 && numNeutral === 1)) {
+      nature = 'm';
+    }
+    return {
+      key,
+      nature,
+      matches,
+    };
+  });
+  const mp = new Map<string, Array<string>>();
+  const natures = ['b', 'm', 'n'];
+  natures.forEach(n => {
+    mp.set(n, []);
+  });
+  grahaNatures.forEach(row => {
+    const nSet = mp.get(row.nature);
+    nSet.push(row.key);
+    mp.set(row.nature, nSet);
   });
   return mp;
 };

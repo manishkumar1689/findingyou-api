@@ -9,3 +9,12 @@ export interface SignHouse {
   sign: number;
   key?: string;
 }
+
+export interface BmMatchRow {
+  k1: string;
+  sendsDiff: number;
+  sendsVal: number;
+  k2: string;
+  getsDiff: number;
+  getsVal: number;
+}

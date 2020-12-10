@@ -44,8 +44,8 @@ import {
 import rashiValues from '../settings/rashi-values';
 import ayanamshaValues from '../settings/ayanamsha-values';
 import {
-  BooleanMatch,
   BooleanSet,
+  buildSignHouse,
   Condition,
   ConditionSet,
   ObjectType,
@@ -53,11 +53,13 @@ import {
   ProtocolResultSet,
   RuleSet,
 } from './protocol-models';
-import {
-  calcInclusiveDistance,
-  calcInclusiveSignPositions,
-} from '../math-funcs';
-import grahaValues, { naturalBenefics } from '../settings/graha-values';
+import { calcInclusiveSignPositions } from '../math-funcs';
+import grahaValues, {
+  buildFunctionalBMMap,
+  naturalBenefics,
+  naturalMalefics,
+} from '../settings/graha-values';
+import { BmMatchRow, SignHouse } from 'src/astrologic/interfaces/sign-house';
 
 export interface Subject {
   name: string;
@@ -915,6 +917,10 @@ export class Chart {
     return key;
   }
 
+  buildSignHouseRows(): Array<SignHouse> {
+    return buildSignHouse(this.firstHouseSign);
+  }
+
   get trikonaRulers() {
     return houseTypeData.trikonas.map(this.matchHouseSignRuler);
   }
@@ -1424,7 +1430,11 @@ export class PairedChart {
   }
 
   matchRuleSet(rs: RuleSet, protocol: Protocol) {
-    const protoRs = new ProtocolResultSet(rs.scores, rs.conditionSet.operator);
+    const protoRs = new ProtocolResultSet(
+      rs.scores,
+      rs.conditionSet.operator,
+      rs.conditionSet.min,
+    );
     this.matchConditionSet(rs.conditionSet, protocol, protoRs, true);
     return protoRs;
   }
@@ -1435,7 +1445,7 @@ export class PairedChart {
     rs: ProtocolResultSet,
     init = false,
   ) {
-    const bs = new BooleanSet(conditionSet.operator);
+    const bs = new BooleanSet(conditionSet.operator, conditionSet.min);
     conditionSet.conditionRefs.forEach(cond => {
       if (!cond.isSet && cond instanceof Condition) {
         const matched = this.matchCondition(cond, protocol);
@@ -1558,7 +1568,39 @@ export class PairedChart {
       : numMatches > 0;
   }
 
-  matchIndianAspectCondition(
+  matchBmGrahaKeys(key: string, condition: Condition, chart: Chart) {
+    if (key.length === 2) {
+      return [key];
+    } else {
+      if (condition.isNatural) {
+        switch (key) {
+          case 'benefics':
+            return naturalBenefics;
+          case 'malefics':
+            return naturalMalefics;
+          default:
+            return [];
+        }
+      } else if (condition.isFunctional) {
+        const hsRows = chart.buildSignHouseRows();
+        const bm = buildFunctionalBMMap(coreIndianGrahaKeys, hsRows);
+        switch (key) {
+          case 'benefics':
+            return bm.get('b');
+          case 'malefics':
+            return bm.get('m');
+          default:
+            return bm.get('n');
+        }
+      }
+    }
+    return [];
+  }
+
+  /*
+  
+  */
+  matchDrishtiCondition(
     protocol: Protocol,
     condition: Condition,
     fromChart: Chart,
@@ -1566,20 +1608,49 @@ export class PairedChart {
     k1 = '',
     k2 = '',
   ) {
-    const grKeys1 = [k1];
-    const grKeys2 = [k2];
+    const grKeys1 = this.matchBmGrahaKeys(k1, condition, fromChart);
+    const grKeys2 = this.matchBmGrahaKeys(k2, condition, toChart);
     let matched = false;
+    const bmRows: Array<BmMatchRow> = [];
     grKeys1.forEach(gk1 => {
       grKeys2.forEach(gk2 => {
         const gr1 = fromChart.graha(gk1);
         const gr2 = toChart.graha(gk2);
-        const diff1 = calcInclusiveSignPositions(gr1.signNum, gr2.signNum);
-        const val1 = protocol.matchDrishti(gk1, diff1);
-        const diff2 = calcInclusiveSignPositions(gr2.signNum, gr1.signNum);
-        const val2 = protocol.matchDrishti(gk2, diff2);
-        console.log({ gk1, diff1, val1, gk2, diff2, val2 });
+        if (gr1 instanceof Object && gr2 instanceof Object) {
+          const sendsDiff = calcInclusiveSignPositions(
+            gr1.signNum,
+            gr2.signNum,
+          );
+          const sendsVal = protocol.matchDrishti(gk1, sendsDiff); // sends
+          const getsDiff = calcInclusiveSignPositions(gr2.signNum, gr1.signNum);
+          const getsVal = protocol.matchDrishti(gk2, getsDiff); // gets
+          bmRows.push({
+            k1: gk1,
+            sendsDiff,
+            sendsVal,
+            k2: gk2,
+            getsDiff,
+            getsVal,
+          });
+        }
       });
     });
+    const keyParts = condition.contextType.key.split('_');
+    const firstPart = keyParts[0];
+    const numVal = isNumeric(firstPart) ? parseInt(firstPart) : -1;
+    switch (firstPart) {
+      case 'any':
+        matched = bmRows.some(row => filterBmMatchRow(row, condition));
+        break;
+      case 'all':
+        matched = bmRows.every(row => filterBmMatchRow(row, condition));
+        break;
+      default:
+        matched =
+          bmRows.filter(row => filterBmMatchRow(row, condition)).length ===
+          numVal;
+        break;
+    }
     return matched;
   }
 
@@ -1640,6 +1711,7 @@ export class PairedChart {
     const fromChart = condition.singleMode
       ? this.matchChart(condition.toMode)
       : this.matchChart(condition.fromMode);
+
     const toChart = this.matchChart(condition.toMode);
     const ayanamshaNum = protocol.ayanamshaNum;
     fromChart.setAyanamshaItemByNum(ayanamshaNum);
@@ -1704,7 +1776,7 @@ export class PairedChart {
     } else if (condition.isYuti) {
       this.matchYutiCondition(condition, fromChart, toChart);
     } else if (condition.isIndianAspect) {
-      this.matchIndianAspectCondition(
+      this.matchDrishtiCondition(
         protocol,
         condition,
         fromChart,
@@ -1920,4 +1992,16 @@ export const extractSurfaceData = (paired: any) => {
     }
   }
   return surface;
+};
+
+export const filterBmMatchRow = (row: BmMatchRow, condition: Condition) => {
+  if (condition.sendsDrishti) {
+    return row.sendsVal === 1;
+  } else if (condition.receivesDrishti) {
+    return row.getsVal === 1;
+  } else if (condition.mutualDrishti) {
+    return row.sendsVal === 1 && row.getsVal === 1;
+  } else {
+    return false;
+  }
 };

@@ -5,6 +5,8 @@ import { contextTypes } from '../settings/compatibility-sets';
 import { calcOrb } from '../calc-orbs';
 import { subtractLng360 } from '../helpers';
 import ayanamshaValues from '../settings/ayanamsha-values';
+import { SignHouse } from '../../interfaces/sign-house';
+import { calcInclusiveTwelfths } from '../math-funcs';
 
 export interface KeyNumVal {
   key: string;
@@ -14,12 +16,6 @@ export interface KeyNumVal {
 export interface KeyOrbs {
   key: string;
   orbs: KeyNumVal[];
-}
-
-export interface SignHouse {
-  house: number;
-  sign: number;
-  key?: string;
 }
 
 export class Condition {
@@ -230,6 +226,26 @@ export class Condition {
   get c2Num() {
     return this.matchedNum(2);
   }
+
+  get isFunctional() {
+    return this.c1Key.startsWith('funcbm_');
+  }
+
+  get isNatural() {
+    return this.c1Key.startsWith('natbm_');
+  }
+
+  get sendsDrishti() {
+    return this.contextType.sendsDrishti;
+  }
+
+  get receivesDrishti() {
+    return this.contextType.receivesDrishti;
+  }
+
+  get mutualDrishti() {
+    return this.contextType.mutualDrishti;
+  }
 }
 
 export class ConditionSet {
@@ -238,7 +254,7 @@ export class ConditionSet {
   min = 0; // min. that must be true
   isSet = true;
 
-  constructor(conditionRef = null, operatorRef = 'and') {
+  constructor(conditionRef = null, operatorRef = 'and', min = 0) {
     const isConditionClass = this.isValidConditionReference(conditionRef);
 
     if (!isConditionClass && conditionRef instanceof Array) {
@@ -259,12 +275,18 @@ export class ConditionSet {
       }
     }
     this.operator = operatorRef;
+    if (min > 0 && operatorRef === 'min') {
+      this.min = min;
+    }
   }
 
-  add(condRef: Condition | ConditionSet, operator = '') {
+  add(condRef: Condition | ConditionSet, operator = '', min = 0) {
     this.conditionRefs.push(condRef);
     if (operator.length > 1) {
       this.operator = operator;
+    }
+    if (min > 0 && operator === 'min') {
+      this.min = min;
     }
   }
 
@@ -281,9 +303,9 @@ export class ConditionSet {
     if (condRef instanceof Object) {
       const { isSet } = condRef;
       if (isSet) {
-        const { conditionRefs, operator } = condRef;
+        const { conditionRefs, operator, min } = condRef;
         if (conditionRefs instanceof Array) {
-          return new ConditionSet(conditionRefs, operator);
+          return new ConditionSet(conditionRefs, operator, min);
         }
       } else {
         return new Condition(condRef);
@@ -655,17 +677,20 @@ export class Protocol {
 export class ProtocolResultSet {
   scores: Map<string, number> = new Map();
   operator = 'and';
+  min = -1;
   results: BooleanSet[] = [];
-  constructor(scores: Array<KeyNumVal>, operator = 'and') {
+  constructor(scores: Array<KeyNumVal>, operator = 'and', min = -1) {
     scores.forEach(row => {
       this.scores.set(row.key, row.value);
     });
     switch (operator) {
       case 'or':
       case 'and':
+      case 'min':
         this.operator = operator;
         break;
     }
+    this.min = min;
   }
 
   addBooleanSet(bs: BooleanSet) {
@@ -675,6 +700,8 @@ export class ProtocolResultSet {
   get matched(): boolean {
     if (this.operator === 'or') {
       return this.results.some(rs => rs.matched);
+    } else if (this.operator === 'min') {
+      return this.results.filter(rs => rs.matched).length >= this.min;
     } else {
       return this.results.length > 0 && this.results.every(rs => rs.matched);
     }
@@ -683,15 +710,20 @@ export class ProtocolResultSet {
 
 export class BooleanSet {
   operator = 'and';
+  min = -1;
 
   matches: Array<BooleanMatch> = [];
 
-  constructor(operator: string) {
+  constructor(operator: string, min = -1) {
     switch (operator) {
       case 'or':
       case 'and':
+      case 'min':
         this.operator = operator;
         break;
+    }
+    if (min >= 0) {
+      this.min = min;
     }
   }
 
@@ -702,6 +734,8 @@ export class BooleanSet {
   get matched(): boolean {
     if (this.operator === 'or') {
       return this.matches.some(bm => bm.matched);
+    } else if (this.operator === 'min') {
+      return this.matches.length >= this.min;
     } else {
       return this.matches.length > 0 && this.matches.every(bm => bm.matched);
     }
@@ -849,6 +883,32 @@ export class ContextType {
     ];
     return keys.includes(this.key);
   }
+
+  get isDrishtiAspect() {
+    const keys = [
+      'sends_graha_drishti',
+      'receives_graha_drishti',
+      'mutual_graha_drishti',
+      'rashi_drishti',
+    ];
+    return keys.includes(this.key);
+  }
+
+  get isKartariYoga() {
+    return this.key === 'kartari_yoga';
+  }
+
+  get sendsDrishti() {
+    return this.key.startsWith('sends_');
+  }
+
+  get receivesDrishti() {
+    return this.key.startsWith('receives_');
+  }
+
+  get mutualDrishti() {
+    return this.key.startsWith('mutual_');
+  }
 }
 
 export const matchOrbFromGrid = (
@@ -870,4 +930,19 @@ export const matchOrbFromGrid = (
     }
   }
   return orbDouble;
+};
+
+export const matchHouse = (sign: number, firstHouseSign: number) => {
+  return calcInclusiveTwelfths(firstHouseSign, sign);
+};
+
+export const buildSignHouse = (firstHouseSign = 1): Array<SignHouse> => {
+  const signs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  let values = signs.map(sign => {
+    return {
+      sign,
+      house: matchHouse(sign, firstHouseSign),
+    };
+  });
+  return values;
 };

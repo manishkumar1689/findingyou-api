@@ -702,9 +702,8 @@ export class AstrologicController {
     const result = await this.settingService.getProtocol(protocolID);
     const kutaData = await this.settingService.getKutas();
     const drishtiSettings = await this.settingService.getDrishtiMatches();
-    console.log(drishtiSettings);
     const results: Array<any> = [];
-    let protocol = new Protocol(null, kutaData);
+    let protocol = new Protocol(null, kutaData, drishtiSettings);
     if (result instanceof Object) {
       const keys = Object.keys(result.toObject());
       if (keys.includes('collections')) {

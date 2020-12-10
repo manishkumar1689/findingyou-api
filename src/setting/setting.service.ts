@@ -73,7 +73,7 @@ export class SettingService {
     return new Map(Object.entries(settingValue));
   }
 
-  async getDrishtiMatches() {
+  async getDrishtiMatches(): Promise<Map<string, number[]>> {
     const data = await this.getByKey('graha__drishti');
     const settingValue = data instanceof Object ? data.value : {};
     const entries = settingValue.map(row => [row.key, row.aspects]);
