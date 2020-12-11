@@ -76,6 +76,7 @@ import {
   Protocol,
   ProtocolResultSet,
 } from './lib/models/protocol-models';
+import { mapNestedKaranaTithiYoga } from './lib/mappers';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -726,6 +727,29 @@ export class AstrologicController {
       paired: samplePairedChart,
       protocol,
     });
+  }
+
+  @Get('karana-yogas/:start?/:limit?')
+  async showKaranaYogas(
+    @Res() res,
+    @Param('start') start,
+    @Param('limit') limit,
+  ) {
+    const startInt = smartCastInt(start, 0);
+    const maxInt = smartCastInt(limit, 1000);
+    const limitInt = maxInt > 0 ? maxInt : 1000;
+    const items = await this.astrologicService.getPairedCharts(
+      startInt,
+      limitInt,
+      ['numValues', 'stringValues'],
+    );
+
+    const result = {
+      valid: items.length > 0,
+      num: items.length,
+      items: items.map(mapNestedKaranaTithiYoga),
+    };
+    return res.json(result);
   }
 
   @Get('paired-charts-steps')

@@ -5,6 +5,7 @@ import { subtractLng360 } from 'src/astrologic/lib/math-funcs';
 import { ChartSchema } from 'src/astrologic/schemas/chart.schema';
 import { UserSchema } from 'src/user/schemas/user.schema';
 import { PairedChartSchema } from '../astrologic/schemas/paired-chart.schema';
+import { notEmptyString } from './validators';
 
 interface schemaItem {
   key: string;
@@ -298,7 +299,9 @@ export const buildChartLookupPath = () => {
   ];
 };
 
-export const buildPairedChartProjection = () => {
+export const buildPairedChartProjection = (
+  fieldFilters: Array<string> = [],
+) => {
   const chartFields = deconstructSchema(PairedChartSchema);
   const mp: Map<string, any> = new Map();
   chartFields.forEach(item => {
@@ -317,7 +320,14 @@ export const buildPairedChartProjection = () => {
         break;
     }
   });
-  return Object.fromEntries(mp.entries());
+  const applyFilter = fieldFilters.length > 0;
+  const rgx = new RegExp('\\b(' + fieldFilters.join('|') + ')');
+  const entries = [...mp.entries()];
+  return Object.fromEntries(
+    entries.filter(entry => {
+      return applyFilter ? rgx.test(entry[0]) : true;
+    }),
+  );
 };
 
 export const buildFromSchema = (

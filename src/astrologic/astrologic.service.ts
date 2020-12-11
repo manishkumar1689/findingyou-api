@@ -119,6 +119,25 @@ export class AstrologicService {
     return steps;
   }
 
+  async getPairedCharts(
+    start = 0,
+    max = 1000,
+    fieldFilters: Array<string> = [],
+    criteria = null,
+  ) {
+    const lookupSteps = buildPairedChartLookupPath();
+    const projectionStep = buildPairedChartProjection(fieldFilters);
+    const steps = [
+      ...lookupSteps,
+      {
+        $project: projectionStep,
+      },
+    ];
+    steps.push({ $skip: start });
+    steps.push({ $limit: max });
+    return await this.pairedChartModel.aggregate(steps);
+  }
+
   async getPairedByIds(ids: Array<string> = [], max = 1000) {
     const lookupSteps = buildPairedChartLookupPath();
     const projectionStep = buildPairedChartProjection();
