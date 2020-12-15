@@ -7,6 +7,7 @@ import { subtractLng360 } from '../helpers';
 import ayanamshaValues from '../settings/ayanamsha-values';
 import { SignHouse } from '../../interfaces/sign-house';
 import { calcInclusiveTwelfths } from '../math-funcs';
+import { PairedChart } from './chart';
 
 export interface KeyNumVal {
   key: string;
@@ -16,6 +17,47 @@ export interface KeyNumVal {
 export interface KeyOrbs {
   key: string;
   orbs: KeyNumVal[];
+}
+
+export interface KeyNumPair {
+  key: string;
+  pair: number[];
+}
+
+export class SectionScore {
+  type = '';
+  scores: Array<KeyNumPair> = [];
+  percent = 0;
+
+  constructor(inData = null) {
+    if (inData instanceof Object) {
+      if (typeof inData.type === 'string') {
+        this.type = inData.type;
+      }
+      if (typeof inData.percent === 'number') {
+        this.percent = inData.percent;
+      }
+    }
+  }
+
+  addScores(scores: Array<KeyNumPair> = []) {
+    if (scores instanceof Array) {
+      scores.forEach(sp => {
+        const currSpIndex = this.scores.findIndex(sc => sc.key === sp.key);
+
+        let currPair = [0, 0];
+        if (currSpIndex >= 0) {
+          currPair = this.scores[currSpIndex].pair;
+          this.scores[currSpIndex].pair = [
+            currPair[0] + sp.pair[0],
+            currPair[1] + sp.pair[1],
+          ];
+        } else {
+          this.scores.push(sp);
+        }
+      });
+    }
+  }
 }
 
 export class Condition {
@@ -549,11 +591,15 @@ export class Protocol {
       if (notEmptyString(notes)) {
         this.notes = notes;
       }
-      if (categories instanceof Object) {
+
+      if (categories instanceof Array) {
         this.categories = categories
           .filter(c => c instanceof Object)
           .filter(c => {
-            const keys = Object.keys(c);
+            const rawKeys = Object.keys(c);
+            const keys = rawKeys.includes('_doc')
+              ? Object.keys(c.toObject())
+              : [];
             return keys.includes('key') && keys.includes('name');
           })
           .map(c => {
@@ -983,4 +1029,107 @@ export const buildSignHouse = (firstHouseSign = 1): Array<SignHouse> => {
     };
   });
   return values;
+};
+
+export const assessChart = (protocol: Protocol, paired: PairedChart) => {
+  const pairedChart = new PairedChart(paired);
+  const resultRows: Array<any> = [];
+  protocol.collections.forEach(collection => {
+    collection.rules.forEach(rs => {
+      const resultSet = pairedChart.matchRuleSet(rs, protocol);
+      resultRows.push({ resultSet, collection });
+    });
+  });
+  const results = resultRows.map(row => {
+    const { resultSet, collection } = row;
+    const ruleMatched = resultSet.matched;
+    const scoreEntries = resultSet.scores.entries();
+    const resultsEntries = [...scoreEntries].map(entry => {
+      const [k, v] = entry;
+      const val = ruleMatched ? v : 0;
+      return [k, [val, v]];
+    });
+    return {
+      ...resultSet,
+      scores: resultsEntries.map(entry => {
+        const [key, pair] = entry;
+        return {
+          key,
+          pair,
+        };
+      }),
+      percent: collection.percent,
+      type: collection.type,
+      matched: ruleMatched,
+    };
+  });
+  const subtotals: Array<SectionScore> = [];
+
+  protocol.collections.forEach(col => {
+    const subResults = results.filter(rs => rs.type === col.type);
+    const secScore = new SectionScore({
+      type: col.type,
+      percent: col.percent,
+    });
+    if (subResults instanceof Array) {
+      subResults.forEach(rs => {
+        secScore.addScores(rs.scores);
+      });
+    }
+    subtotals.push(secScore);
+  });
+  const totals = protocol.categories
+    .map(ct => {
+      const scoreRows = subtotals
+        .map(st => {
+          const scores = st.scores.filter(sc => sc.key === ct.key);
+          return {
+            ...st,
+            scores,
+          };
+        })
+        .filter(sr => sr.scores.length > 0);
+      const scores: Map<string, any> = new Map();
+      scoreRows.forEach(sr => {
+        sr.scores.forEach(sc => {
+          const scItem = scores.get(sc.key);
+          if (scItem instanceof Object) {
+            const currPair = scItem.pair;
+            const frac = sr.percent / 100;
+            const rowMax = (sc.pair[1] + currPair[1]) * frac;
+            const runningTotal = (sc.pair[0] + currPair[0]) * frac;
+            const pair = [runningTotal, rowMax];
+            scItem.pair = pair;
+            scores.set(sc.key, scItem);
+          } else {
+            scores.set(sc.key, { ...sc, max: ct.maxScore });
+          }
+        });
+      });
+      return Object.fromEntries(scores.entries());
+    })
+    .map(sr => Object.values(sr))
+    .filter(rows => rows.length > 0)
+    .map(rows => rows[0]);
+
+  const totalRow = {
+    key: 'total',
+    pair: [0, 0],
+    max: 10,
+  };
+  Object.entries(totals).forEach(entry => {
+    const [k, v] = entry;
+    const { pair } = v;
+    const running = pair[0] + totalRow.pair[0];
+    const max = pair[1] + totalRow.pair[1];
+    totalRow.pair = [running, max];
+  });
+  totals.push(totalRow);
+  const info = pairedChart.info;
+  return {
+    results,
+    subtotals,
+    totals,
+    info,
+  };
 };

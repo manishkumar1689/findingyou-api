@@ -64,6 +64,20 @@ export const capitalize = (str: string) => {
   return str.substring(0, 1).toUpperCase() + str.substring(1);
 };
 
+export const toCamelCase = (str: string) => {
+  return str
+    .split(/[ _-]+/)
+    .map((part, pi) => {
+      return pi > 0
+        ? [
+            part.substring(0, 1).toUpperCase(),
+            part.substring(1).toLowerCase(),
+          ].join('')
+        : part;
+    })
+    .join('');
+};
+
 export const extractKeyValue = (obj: any, key: string, defVal: any) => {
   let output = defVal;
   if (obj instanceof Object) {

@@ -70,13 +70,17 @@ import { Chart, PairedChart } from './lib/models/chart';
 import { AspectSet, calcOrb } from './lib/calc-orbs';
 import { AspectSetDTO } from './dto/aspect-set.dto';
 import {
+  assessChart,
   Condition,
   ConditionSet,
   matchOrbFromGrid,
   Protocol,
   ProtocolResultSet,
+  SectionScore,
 } from './lib/models/protocol-models';
 import { mapNestedKaranaTithiYoga } from './lib/mappers';
+import { Collection, Model } from 'mongoose';
+import { MediaItemSchema } from 'src/user/schemas/media-item.schema';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -510,6 +514,7 @@ export class AstrologicController {
       criteria,
       startInt,
       limitInt,
+      true,
     );
     const statusCode =
       sourceCharts.length > 0 ? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
@@ -548,7 +553,7 @@ export class AstrologicController {
       rashis,
     } = core;
     const merged = {
-      ...chart.toObject(),
+      ...chart,
       grahas,
       ascendant,
       mc,
@@ -699,10 +704,36 @@ export class AstrologicController {
     @Param('protocolID') protocolID: string,
   ) {
     const randomPairedChart = await this.astrologicService.getPairedRandom();
-    const samplePairedChart = new PairedChart(randomPairedChart);
+    const protocol = await this.buildProtocol(protocolID);
+    const data = assessChart(protocol, randomPairedChart);
+    return res.json(data);
+  }
+
+  @Get('test-protcols/:protocolID/:start?/:limit?')
+  async testProtocols(
+    @Res() res,
+    @Param('protocolID') protocolID: string,
+    @Param('start') start: string,
+    @Param('limit') limit: string,
+  ) {
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 100);
+    const pairedcCharts = await this.astrologicService.getPairedCharts(
+      startInt,
+      limitInt,
+    );
+    const protocol = await this.buildProtocol(protocolID);
+    const data = { items: [] };
+    pairedcCharts.forEach(pc => {
+      const row = assessChart(protocol, pc);
+      data.items.push(row);
+    });
+    return res.json(data);
+  }
+
+  async buildProtocol(protocolID: string): Promise<Protocol> {
     const result = await this.settingService.getProtocol(protocolID);
     const settings = await this.settingService.getProtocolSettings();
-    const results: Array<any> = [];
     let protocol = new Protocol(null, settings);
     if (result instanceof Object) {
       const keys = Object.keys(result.toObject());
@@ -710,23 +741,7 @@ export class AstrologicController {
         protocol = new Protocol(result, settings);
       }
     }
-    protocol.collections.forEach(collection => {
-      collection.rules.forEach(rs => {
-        const resultSet = samplePairedChart.matchRuleSet(rs, protocol);
-        results.push(resultSet);
-      });
-    });
-    return res.json({
-      results: results.map(rs => {
-        return {
-          ...rs,
-          scores: Object.fromEntries(rs.scores.entries()),
-          matched: rs.matched,
-        };
-      }),
-      paired: samplePairedChart,
-      protocol,
-    });
+    return protocol;
   }
 
   @Get('karana-yogas/:start?/:limit?')

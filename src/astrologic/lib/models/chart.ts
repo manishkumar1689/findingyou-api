@@ -7,10 +7,9 @@ import {
   subtractSign,
   deepClone,
   midLng,
-  calcDist360,
-  calcAspects,
-  inSignDegree,
   calcAspectIsApplying,
+  toCamelCase,
+  capitalize,
 } from '../helpers';
 import { calcJdPeriodRange, coreGrahaKeys, relativeAngle } from './../core';
 import {
@@ -342,6 +341,7 @@ export class Chart {
       case 'graha':
         return this.graha(refKey).longitude;
       case 'special':
+      case 'lots':
         switch (refKey) {
           case 'yogi_graha':
           case 'avayogi_graha':
@@ -364,17 +364,10 @@ export class Chart {
       spSet => spSet.num === this.ayanamshaItem.num,
     );
     let numVal = 0;
-    const camelKey = key
-      .split('_')
-      .map((part, pi) => {
-        return pi > 0
-          ? [part.substring(0, 1).toUpperCase(), part.substring(1)].join('')
-          : part;
-      })
-      .join('');
-    if (row instanceof ObjectType) {
+    const camelKey = toCamelCase(key);
+    if (row instanceof Object) {
       const item = row.items.find(sp => sp.key === camelKey);
-      if (item instanceof ObjectType) {
+      if (item instanceof Object) {
         numVal = item.value;
       }
     }
@@ -917,11 +910,6 @@ export class Chart {
     return key;
   }
 
-  matchKarana(num: number) {
-    //let key = '';
-    return this.karana.ruler;
-  }
-
   buildSignHouseRows(): Array<SignHouse> {
     return buildSignHouse(this.firstHouseSign);
   }
@@ -1430,6 +1418,33 @@ export class PairedChart {
     }
   }
 
+  get info() {
+    return {
+      names: [this.c1.subject.name, this.c2.subject.name],
+      jds: [this.c1.jd, this.c2.jd],
+      midJd: this.midJd,
+      locations: [this.c1.geo, this.c2.geo],
+      midGeo: this.midGeo,
+      tags: this.tags,
+      startYear: this.startYear,
+      endYear: this.endYear,
+      span: this.span,
+      relType: this.relType,
+    };
+  }
+
+  get midJd() {
+    return (this.c1.jd + this.c2.jd) / 2;
+  }
+
+  get midGeo() {
+    return {
+      lat: (this.c1.geo.lat + this.c2.geo.lat) / 2,
+      lng: (this.c1.geo.lng + this.c2.geo.lng) / 2,
+      alt: (this.c1.geo.alt + this.c2.geo.alt) / 2,
+    };
+  }
+
   setAyanamshaNum(num: number) {
     this.ayanamshaNum = num;
   }
@@ -1895,14 +1910,17 @@ export class PairedChart {
             matchedKey = chart.matchHouseSignRuler(num);
           } else if (section === 'chara') {
             matchedKey = chart.matchCharaKaraka(num);
-          } else if (type === 'karana') {
-            matchedKey = chart.matchKarana(num);
           }
         } else {
           switch (lastPart) {
             case 'malefics':
             case 'benefics':
               matchedKey = lastPart;
+              break;
+          }
+          switch (type) {
+            case 'lots':
+              matchedKey = ['lot', capitalize(lastPart)].join('Of');
               break;
           }
         }

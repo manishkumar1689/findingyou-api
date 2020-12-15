@@ -696,14 +696,28 @@ export class AstrologicService {
     criteria: Map<string, any> = new Map<string, any>(),
     start = 0,
     limit = 100,
+    useAggregation = false,
   ) {
     const filter = Object.fromEntries(criteria);
-    return await this.chartModel
-      .find(filter)
-      .skip(start)
-      .limit(limit)
-      .sort({ isDefaultBirthChart: -1 })
-      .exec();
+    const sort = { isDefaultBirthChart: -1 };
+    if (useAggregation) {
+      return await this.chartModel
+        .aggregate([
+          { $match: filter },
+          { $skip: start },
+          { $limit: limit },
+          { $sort: sort },
+        ])
+        .allowDiskUse(true)
+        .exec();
+    } else {
+      return await this.chartModel
+        .find(filter)
+        .skip(start)
+        .limit(limit)
+        .sort(sort)
+        .exec();
+    }
   }
 
   async deleteChart(chartID: string) {
