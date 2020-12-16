@@ -1866,7 +1866,8 @@ export class PairedChart {
         k2,
       );
     }
-    return matched;
+    // If isTrue is false, matched state is inverted
+    return matched === condition.isTrue;
   }
 
   matchKuta(condition: Condition, k1: string, k2: string) {

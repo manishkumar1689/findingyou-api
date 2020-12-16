@@ -73,6 +73,7 @@ export class Condition {
   lordRev = false; // reverse lordship order from A => B to B <= A
   isSet = false;
   kutaRange = [-1, -1];
+  outcome = false;
 
   constructor(inData = null) {
     if (inData instanceof Object) {
@@ -213,6 +214,10 @@ export class Condition {
     }
   }
 
+  get mayHaveAspectQuality() {
+    return this.object1.mayBeGraha && this.object2.mayBeGraha;
+  }
+
   get isSeparating() {
     switch (this.aspectQuality) {
       case 'separating':
@@ -300,6 +305,27 @@ export class Condition {
   get mutualDrishti() {
     return this.contextType.mutualDrishti;
   }
+
+  setOutcome(matched: boolean) {
+    this.outcome = matched;
+  }
+
+  toJson() {
+    return {
+      isTrue: this.isTrue,
+      fromMode: this.fromMode,
+      toMode: this.toMode,
+      c1Key: this.c1Key,
+      c2Key: this.c2Key,
+      varga1: this.varga1,
+      varga2: this.varga2,
+      context: this.context,
+      aspectQuality: this.aspectQuality,
+      lordRev: this.lordRev,
+      kutaRange: this.kutaRange[0] >= 0 ? this.kutaRange : [],
+      outcome: this.outcome,
+    };
+  }
 }
 
 export class ConditionSet {
@@ -385,6 +411,15 @@ export class ConditionSet {
 
   getLastIndex() {
     return this.conditionRefs.length - 1;
+  }
+
+  toJson() {
+    return {
+      operator: this.operator,
+      min: this.min,
+      numChildren: this.conditionRefs.length,
+      conditionRefs: this.conditionRefs.map(cr => cr.toJson()),
+    };
   }
 }
 
@@ -806,6 +841,9 @@ export class BooleanSet {
   }
 
   addMatch(condRef: Condition | ConditionSet, matched = false) {
+    if (!condRef.isSet && condRef instanceof Condition) {
+      condRef.setOutcome(matched);
+    }
     this.matches.push(new BooleanMatch(condRef, matched));
   }
 
@@ -822,10 +860,10 @@ export class BooleanSet {
 
 export class BooleanMatch {
   matched = false;
-  conditionRef: Condition | ConditionSet;
+  conditionRef: any;
 
   constructor(condRef: Condition | ConditionSet, matched = false) {
-    this.conditionRef = condRef;
+    this.conditionRef = condRef.toJson();
     this.matched = matched;
   }
 
@@ -842,6 +880,22 @@ export class ObjectType {
     const [objectType, objectKey] = comboKey.split('__');
     this.key = objectKey;
     this.type = objectType;
+  }
+
+  get mayBeGraha() {
+    switch (this.type) {
+      case 'lots':
+      case 'upapada':
+      case 'p_tithi':
+      case 'p_karana':
+      case 'p_yoga':
+      case 'p_vara':
+      case 'special':
+      case 'kutas':
+        return false;
+      default:
+        return true;
+    }
   }
 }
 
@@ -1131,5 +1185,6 @@ export const assessChart = (protocol: Protocol, paired: PairedChart) => {
     subtotals,
     totals,
     info,
+    id: pairedChart._id,
   };
 };
