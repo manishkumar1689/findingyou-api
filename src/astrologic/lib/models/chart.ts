@@ -1335,7 +1335,7 @@ export class PairedChart {
   span = 0;
   notes = '';
   aspects: KeyPairVal[] = [];
-  kutas: KutaValSet[];
+  kutas: KutaValSet[] = [];
   createdAt: Date;
   modifiedAt: Date;
   ayanamshaNum = 27;
