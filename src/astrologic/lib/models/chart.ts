@@ -1420,16 +1420,17 @@ export class PairedChart {
 
   get info() {
     return {
-      names: [this.c1.subject.name, this.c2.subject.name],
       jds: [this.c1.jd, this.c2.jd],
       midJd: this.midJd,
       locations: [this.c1.geo, this.c2.geo],
+      places: [this.c1.placenames, this.c2.placenames],
       midGeo: this.midGeo,
       tags: this.tags,
       startYear: this.startYear,
       endYear: this.endYear,
       span: this.span,
       relType: this.relType,
+      subjects: [this.c1.subject, this.c2.subject],
     };
   }
 
