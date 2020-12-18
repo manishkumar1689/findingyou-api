@@ -1152,7 +1152,7 @@ export class Chart {
     return [abbr, hoursOffset].join(' ').trim();
   }
 
-  get corePlacenames() {
+  get corePlacenames(): string {
     const detailTypes = ['PSCD', 'STRT'];
     return this.placenames.length > 0
       ? this.placenames
@@ -1418,12 +1418,22 @@ export class PairedChart {
     }
   }
 
+  get locations() {
+    const places = [this.c1.corePlacenames, this.c2.corePlacenames];
+    const locations = [this.c1.geo, this.c2.geo];
+    return locations.map((loc, index) => {
+      return {
+        ...loc,
+        place: places[index],
+      };
+    });
+  }
+
   get info() {
     return {
       jds: [this.c1.jd, this.c2.jd],
       midJd: this.midJd,
-      locations: [this.c1.geo, this.c2.geo],
-      places: [this.c1.placenames, this.c2.placenames],
+      locations: this.locations,
       midGeo: this.midGeo,
       tags: this.tags,
       startYear: this.startYear,
