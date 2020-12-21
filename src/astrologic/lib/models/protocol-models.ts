@@ -1085,8 +1085,10 @@ export const buildSignHouse = (firstHouseSign = 1): Array<SignHouse> => {
   return values;
 };
 
-export const assessChart = (protocol: Protocol, paired: PairedChart) => {
+export const assessChart = (protocol: Protocol, paired = null) => {
   const pairedChart = new PairedChart(paired);
+
+  console.log(pairedChart.c1._id);
   const resultRows: Array<any> = [];
   protocol.collections.forEach(collection => {
     collection.rules.forEach(rs => {
@@ -1186,5 +1188,7 @@ export const assessChart = (protocol: Protocol, paired: PairedChart) => {
     totals,
     info,
     id: pairedChart._id,
+    c1Id: pairedChart.c1._id,
+    c2Id: pairedChart.c2._id,
   };
 };

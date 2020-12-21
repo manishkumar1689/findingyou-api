@@ -241,6 +241,8 @@ export class Chart {
           case 'tz':
             if (typeof v === 'string') {
               this[k] = v;
+            } else {
+              this[k] = v.toString();
             }
             break;
           case 'subject':
@@ -1378,7 +1380,7 @@ export class PairedChart {
           switch (key) {
             case 'c1':
             case 'c2':
-              this[key] = new Chart(val);
+              this[key] = new Chart({ ...val });
               break;
             case 'timespace':
               timespace = val;

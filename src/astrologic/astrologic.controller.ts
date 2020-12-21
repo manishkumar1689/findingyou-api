@@ -55,7 +55,12 @@ import { calcRetroGrade, calcStation } from './lib/astro-motion';
 import { toIndianTime, calcTransition } from './lib/transitions';
 import { readEpheFiles } from './lib/files';
 import { ChartInputDTO } from './dto/chart-input.dto';
-import { smartCastInt, sanitize, smartCastFloat } from '../lib/converters';
+import {
+  smartCastInt,
+  sanitize,
+  smartCastFloat,
+  smartCastBool,
+} from '../lib/converters';
 import { PairedChartInputDTO } from './dto/paired-chart-input.dto';
 import { midPointSurface, medianLatlng } from './lib/math-funcs';
 import { PairedChartDTO } from './dto/paired-chart.dto';
@@ -642,6 +647,30 @@ export class AstrologicController {
       items: resultItems,
       input: items,
     });
+  }
+
+  @Delete('delete-paired/:c1/:c2/:userID/:remCharts?')
+  async deletePairedAndRelated(
+    @Res() res,
+    @Param('c1') c1,
+    @Param('c2') c2,
+    @Param('userID') userID,
+    @Param('remCharts') remCharts,
+  ) {
+    const data = { valid: false, paired: null, chart1: null, chart2: null };
+    if (this.userService.isAdminUser(userID)) {
+      const removeCharts = smartCastBool(remCharts);
+      const result = await this.astrologicService.removePairedAndCharts(
+        c1,
+        c2,
+        removeCharts,
+      );
+      data.paired = result.paired;
+      data.chart1 = result.chart1;
+      data.chart2 = result.chart2;
+      data.valid = true;
+    }
+    return res.json(data);
   }
 
   @Get('aspect-match/:aspect?/:k1?/:k2?/:orb?/:max?')

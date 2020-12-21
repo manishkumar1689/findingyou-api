@@ -445,8 +445,8 @@ export const buildInnerChartProjection = (
   expandUser = false,
 ) => {
   const chartFields = deconstructSchema(ChartSchema);
-  mp.set('_id', 1);
-
+  const pk = prefix.length > 0 ? [prefix, '_id'].join('.') : '_id';
+  mp.set(pk, 1);
   chartFields.forEach(item => {
     const cp = prefix.length > 0 ? [prefix, item.key].join('.') : item.key;
     switch (item.key) {

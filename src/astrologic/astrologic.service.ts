@@ -176,6 +176,16 @@ export class AstrologicService {
     return items.length > 0 ? items[0] : null;
   }
 
+  async removePairedAndCharts(c1: string, c2: string, removeCharts = false) {
+    const data = { paired: null, chart1: null, chart2: null };
+    data.paired = await this.pairedChartModel.findOneAndDelete({ c1, c2 });
+    if (removeCharts) {
+      data.chart1 = await this.deleteChart(c1);
+      data.chart2 = await this.deleteChart(c2);
+    }
+    return data;
+  }
+
   async filterPairedByAspect(
     aspectKey: string,
     k1: string,
