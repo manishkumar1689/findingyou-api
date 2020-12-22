@@ -788,11 +788,18 @@ export class Protocol {
 }
 
 export class ProtocolResultSet {
+  name = '';
   scores: Map<string, number> = new Map();
   operator = 'and';
   min = -1;
   results: BooleanSet[] = [];
-  constructor(scores: Array<KeyNumVal>, operator = 'and', min = -1) {
+  constructor(
+    name: string,
+    scores: Array<KeyNumVal>,
+    operator = 'and',
+    min = -1,
+  ) {
+    this.name = name;
     scores.forEach(row => {
       this.scores.set(row.key, row.value);
     });
@@ -1087,8 +1094,6 @@ export const buildSignHouse = (firstHouseSign = 1): Array<SignHouse> => {
 
 export const assessChart = (protocol: Protocol, paired = null) => {
   const pairedChart = new PairedChart(paired);
-
-  console.log(pairedChart.c1._id);
   const resultRows: Array<any> = [];
   protocol.collections.forEach(collection => {
     collection.rules.forEach(rs => {

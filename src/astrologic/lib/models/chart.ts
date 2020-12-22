@@ -1464,6 +1464,7 @@ export class PairedChart {
 
   matchRuleSet(rs: RuleSet, protocol: Protocol) {
     const protoRs = new ProtocolResultSet(
+      rs.name,
       rs.scores,
       rs.conditionSet.operator,
       rs.conditionSet.min,
