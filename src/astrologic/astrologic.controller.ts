@@ -649,30 +649,6 @@ export class AstrologicController {
     });
   }
 
-  @Delete('delete-paired/:c1/:c2/:userID/:remCharts?')
-  async deletePairedAndRelated(
-    @Res() res,
-    @Param('c1') c1,
-    @Param('c2') c2,
-    @Param('userID') userID,
-    @Param('remCharts') remCharts,
-  ) {
-    const data = { valid: false, paired: null, chart1: null, chart2: null };
-    if (this.userService.isAdminUser(userID)) {
-      const removeCharts = smartCastBool(remCharts);
-      const result = await this.astrologicService.removePairedAndCharts(
-        c1,
-        c2,
-        removeCharts,
-      );
-      data.paired = result.paired;
-      data.chart1 = result.chart1;
-      data.chart2 = result.chart2;
-      data.valid = true;
-    }
-    return res.json(data);
-  }
-
   @Get('aspect-match/:aspect?/:k1?/:k2?/:orb?/:max?')
   async getByAspectRange(
     @Res() res,
@@ -744,12 +720,15 @@ export class AstrologicController {
     @Param('protocolID') protocolID: string,
     @Param('start') start: string,
     @Param('limit') limit: string,
+    @Query() query,
   ) {
     const startInt = smartCastInt(start, 0);
     const limitInt = smartCastInt(limit, 100);
     const pairedcCharts = await this.astrologicService.getPairedCharts(
       startInt,
       limitInt,
+      [],
+      query,
     );
     const protocol = await this.buildProtocol(protocolID);
     const data = { items: [] };
@@ -914,6 +893,36 @@ export class AstrologicController {
         msg: `Chart IDs not matched ${chartIds}`,
       };
     }
+  }
+
+  @Get('has-other-pairings/:c1/:c2')
+  async hasOtherPairings(@Res() res, @Param('c1') c1, @Param('c2') c2) {
+    const data = await this.astrologicService.findPairings(c1, c2);
+    return res.json(data);
+  }
+
+  @Delete('delete-paired/:c1/:c2/:userID/:remCharts?')
+  async deletePairedAndRelated(
+    @Res() res,
+    @Param('c1') c1,
+    @Param('c2') c2,
+    @Param('userID') userID,
+    @Param('remCharts') remCharts,
+  ) {
+    const data = { valid: false, paired: null, chart1: null, chart2: null };
+    if (this.userService.isAdminUser(userID)) {
+      const removeCharts = smartCastBool(remCharts);
+      const result = await this.astrologicService.removePairedAndCharts(
+        c1,
+        c2,
+        removeCharts,
+      );
+      data.paired = result.paired;
+      data.chart1 = result.chart1;
+      data.chart2 = result.chart2;
+      data.valid = true;
+    }
+    return res.json(data);
   }
 
   @Delete('delete-paired/:pairedID/:userID')

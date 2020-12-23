@@ -125,6 +125,8 @@ export class AstrologicService {
     fieldFilters: Array<string> = [],
     criteria = null,
   ) {
+    const hasCriteria =
+      criteria instanceof Object && Object.keys(criteria).length > 0;
     const lookupSteps = buildPairedChartLookupPath();
     const projectionStep = buildPairedChartProjection(fieldFilters);
     const steps = [
@@ -133,6 +135,22 @@ export class AstrologicService {
         $project: projectionStep,
       },
     ];
+    if (hasCriteria) {
+      const cm: Map<string, any> = new Map();
+      Object.entries(criteria).forEach(entry => {
+        const [k, v] = entry;
+        if (typeof v === 'string') {
+          switch (k) {
+            case 'tags':
+              cm.set('tags.slug', { $in: v.split(',') });
+              break;
+          }
+        }
+      });
+      steps.push({
+        $match: Object.fromEntries(cm.entries()),
+      });
+    }
     steps.push({ $skip: start });
     steps.push({ $limit: max });
     return await this.pairedChartModel.aggregate(steps);
@@ -184,6 +202,39 @@ export class AstrologicService {
       data.chart2 = await this.deleteChart(c2);
     }
     return data;
+  }
+
+  async findPairings(c1: string, c2: string) {
+    const pairing1 = await this.pairedChartModel
+      .find({
+        $or: [
+          {
+            c1,
+          },
+          { c2: c1 },
+        ],
+      })
+      .select({ _id: 1, c1: 1, c2: 1 });
+    const pairing2 = await this.pairedChartModel
+      .find({
+        $or: [
+          {
+            c1: c2,
+          },
+          { c2 },
+        ],
+      })
+      .select({ _id: 1, c1: 1, c2: 1 });
+
+    const pairEqual = row =>
+      (row.c1.toString() === c1.toString() &&
+        row.c2.toString() === c2.toString()) ||
+      (row.c1.toString() === c2.toString() &&
+        row.c2.toString() === c1.toString());
+
+    const pc1 = pairing1.filter(row => !pairEqual(row)).length;
+    const pc2 = pairing2.filter(row => !pairEqual(row)).length;
+    return { pc1, pc2 };
   }
 
   async filterPairedByAspect(
