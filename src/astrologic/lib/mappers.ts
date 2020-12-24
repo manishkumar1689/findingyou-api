@@ -7,6 +7,7 @@ import { Subject } from 'rxjs';
 import { NumValue } from '../interfaces/num-value';
 import { PairedChart } from '../interfaces/paired-chart.interface';
 import { PairedChartSchema } from '../schemas/paired-chart.schema';
+import { jdToDateParts } from './date-funcs';
 import { KeyValueNum } from './models/chart';
 
 export const mapToObject = map => {
@@ -65,7 +66,9 @@ export const mapSubChartMeta = (chart: any) => {
     chartObj = chart;
   }
   if (chartObj instanceof Object) {
-    const { _id, datetime, jd, subject, geo, placenames } = chartObj;
+    const { _id, jd, subject, geo, placenames } = chartObj;
+    const dateParts = jdToDateParts(jd);
+    const { year } = dateParts;
     const filteredPlacenames =
       placenames instanceof Array
         ? placenames
@@ -76,13 +79,7 @@ export const mapSubChartMeta = (chart: any) => {
       chartObj = {
         _id,
         ...subject,
-        year: parseInt(
-          datetime
-            .toISOString()
-            .split('-')
-            .shift(),
-          10,
-        ),
+        year,
         jd,
         ...geo,
         placenames: filteredPlacenames,

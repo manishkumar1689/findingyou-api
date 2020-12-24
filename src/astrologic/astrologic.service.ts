@@ -205,26 +205,81 @@ export class AstrologicService {
   }
 
   async findPairings(c1: string, c2: string) {
-    const pairing1 = await this.pairedChartModel
-      .find({
-        $or: [
-          {
-            c1,
-          },
-          { c2: c1 },
-        ],
-      })
-      .select({ _id: 1, c1: 1, c2: 1 });
-    const pairing2 = await this.pairedChartModel
-      .find({
-        $or: [
-          {
-            c1: c2,
-          },
-          { c2 },
-        ],
-      })
-      .select({ _id: 1, c1: 1, c2: 1 });
+    const pairing1 = await this.pairedChartModel.aggregate([
+      {
+        $lookup: {
+          from: 'charts',
+          localField: 'c1',
+          foreignField: '_id',
+          as: 'chart1',
+        },
+      },
+      {
+        $lookup: {
+          from: 'charts',
+          localField: 'c2',
+          foreignField: '_id',
+          as: 'chart2',
+        },
+      },
+      {
+        $match: {
+          $or: [
+            {
+              c1,
+            },
+            {
+              c1: c2,
+            },
+          ],
+          'chart1.isDefaultBirthChart': false,
+        },
+      },
+      {
+        $project: {
+          c1: 1,
+          c2: 1,
+        },
+      },
+    ]);
+    const pairing2 = await this.pairedChartModel.aggregate([
+      {
+        $lookup: {
+          from: 'charts',
+          localField: 'c1',
+          foreignField: '_id',
+          as: 'chart1',
+        },
+      },
+      {
+        $lookup: {
+          from: 'charts',
+          localField: 'c2',
+          foreignField: '_id',
+          as: 'chart2',
+        },
+      },
+      {
+        $match: {
+          $or: [
+            {
+              c2,
+            },
+            {
+              c2: c1,
+            },
+          ],
+          'chart1.isDefaultBirthChart': false,
+          'chart2.isDefaultBirthChart': false,
+        },
+      },
+      {
+        $project: {
+          c1: 1,
+          c2: 1,
+        },
+      },
+    ]);
 
     const pairEqual = row =>
       (row.c1.toString() === c1.toString() &&
