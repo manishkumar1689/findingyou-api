@@ -646,8 +646,20 @@ export const yearSpanAddFieldSteps = () => {
     {
       $addFields: {
         yearSpan: { $subtract: ['$endYear', '$startYear'] },
-        hasEnd: { $gte: ['$endYear', '$startYear'] },
-        ongoingSpan: { $subtract: [currYear, '$startYear'] },
+        hasEnd: {
+          $and: [
+            { $gte: ['$endYear', '$startYear'] },
+            { $gt: ['$startYear', 0] },
+          ],
+        },
+        hasSpan: { $gt: ['$span', 0] },
+        ongoingSpan: {
+          $cond: {
+            if: { $gt: ['$startYear', 0] },
+            then: { $subtract: [currYear, '$startYear'] },
+            else: -1,
+          },
+        },
         currYear: currYear,
       },
     },
@@ -657,7 +669,13 @@ export const yearSpanAddFieldSteps = () => {
           $cond: {
             if: '$hasEnd',
             then: '$yearSpan',
-            else: '$ongoingSpan',
+            else: {
+              $cond: {
+                if: '$hasSpan',
+                then: '$span',
+                else: '$ongoingSpan',
+              },
+            },
           },
         },
       },

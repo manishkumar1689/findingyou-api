@@ -141,12 +141,15 @@ export class AstrologicService {
     ];
     if (hasCriteria) {
       const cm: Map<string, any> = new Map();
+      let qualityTags = [];
+      const extraTags = [];
+      let tagsOp = 'or';
       Object.entries(criteria).forEach(entry => {
         const [k, v] = entry;
         if (typeof v === 'string') {
           switch (k) {
             case 'tags':
-              cm.set('tags.slug', { $in: v.split(',') });
+              qualityTags = v.split(',');
               break;
             case 'gt':
             case 'lt':
@@ -155,9 +158,33 @@ export class AstrologicService {
               const refKey = ['$', k].join('');
               cm.set('yearLength', { [refKey]: smartCastInt(v, 0) });
               break;
+            case 'relType':
+            case 'type':
+              cm.set('relType', v);
+              break;
+            case 'tagsOp':
+              tagsOp = v;
+              break;
+            case 'endWho':
+            case 'endHow':
+              extraTags.push(v);
+              break;
           }
         }
       });
+      if (qualityTags.length > 0) {
+        const tagsMap: Map<string, any> = new Map();
+        const allTags =
+          tagsOp === 'and' ? [...qualityTags, ...extraTags] : extraTags;
+        const inTags = tagsOp !== 'and' ? qualityTags : [];
+        if (inTags.length > 0) {
+          tagsMap.set('$in', inTags);
+        }
+        if (allTags.length > 0) {
+          tagsMap.set('$all', allTags);
+        }
+        cm.set('tags.slug', Object.fromEntries(tagsMap.entries()));
+      }
       steps.push({
         $match: Object.fromEntries(cm.entries()),
       });

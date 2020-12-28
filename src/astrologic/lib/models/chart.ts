@@ -1398,6 +1398,9 @@ export class PairedChart {
             case 'span':
               this[key] = val;
               break;
+            case 'yearLength':
+              this.span = val;
+              break;
           }
         } else if (typeof val === 'string') {
           switch (key) {
