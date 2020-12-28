@@ -259,3 +259,11 @@ export const julToDateFormat = (
   }
   return parts.join(' ');
 };
+
+export const decimalYear = (strDate = '') => {
+  const mom = validISODateString(strDate) ? moment.utc(strDate) : moment.utc();
+  const years = mom.year();
+  const numDaysInYear = mom.isLeapYear() ? 366 : 365;
+  const yearProgress = mom.dayOfYear() / numDaysInYear;
+  return years + yearProgress;
+};

@@ -86,6 +86,7 @@ import {
 import { mapNestedKaranaTithiYoga } from './lib/mappers';
 import { Collection, Model } from 'mongoose';
 import { MediaItemSchema } from 'src/user/schemas/media-item.schema';
+import { start } from 'repl';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -778,6 +779,24 @@ export class AstrologicController {
   @Get('paired-charts-steps')
   async showPairedChartSteps(@Res() res) {
     const steps = await this.astrologicService.getPairedChartSteps();
+    return res.json(steps);
+  }
+
+  @Get('get-paired-charts/:start/:limit')
+  async getPairedCharts(
+    @Res() res,
+    @Param('start') start,
+    @Param('limit') limit,
+    @Query() query,
+  ) {
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 10);
+    const steps = await this.astrologicService.getPairedCharts(
+      startInt,
+      limitInt,
+      [],
+      query,
+    );
     return res.json(steps);
   }
 

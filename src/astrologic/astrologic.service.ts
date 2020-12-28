@@ -11,6 +11,7 @@ import {
   buildPairedChartLookupPath,
   buildPairedChartProjection,
   unwoundChartFields,
+  yearSpanAddFieldSteps,
 } from './../lib/query-builders';
 import {
   calcJulDate,
@@ -40,6 +41,7 @@ import { calcAllAspects } from './lib/core';
 import { Chart as ChartClass } from './lib/models/chart';
 import { Kuta } from './lib/kuta';
 import { AspectSet } from './lib/calc-orbs';
+import { smartCastInt, smartCastString } from 'src/lib/converters';
 
 @Injectable()
 export class AstrologicService {
@@ -128,9 +130,11 @@ export class AstrologicService {
     const hasCriteria =
       criteria instanceof Object && Object.keys(criteria).length > 0;
     const lookupSteps = buildPairedChartLookupPath();
-    const projectionStep = buildPairedChartProjection(fieldFilters);
+    const addSteps = yearSpanAddFieldSteps();
+    const projectionStep = buildPairedChartProjection(fieldFilters, true);
     const steps = [
       ...lookupSteps,
+      ...addSteps,
       {
         $project: projectionStep,
       },
@@ -143,6 +147,13 @@ export class AstrologicService {
           switch (k) {
             case 'tags':
               cm.set('tags.slug', { $in: v.split(',') });
+              break;
+            case 'gt':
+            case 'lt':
+            case 'gte':
+            case 'lte':
+              const refKey = ['$', k].join('');
+              cm.set('yearLength', { [refKey]: smartCastInt(v, 0) });
               break;
           }
         }

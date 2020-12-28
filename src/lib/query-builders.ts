@@ -1,11 +1,10 @@
 import { Schema } from 'mongoose';
-import { stringify } from 'querystring';
-import { matchAspectAngle } from 'src/astrologic/lib/calc-orbs';
-import { subtractLng360 } from 'src/astrologic/lib/math-funcs';
-import { ChartSchema } from 'src/astrologic/schemas/chart.schema';
-import { UserSchema } from 'src/user/schemas/user.schema';
+import { matchAspectAngle } from '../astrologic/lib/calc-orbs';
+import { decimalYear } from '../astrologic/lib/date-funcs';
+import { subtractLng360 } from '../astrologic/lib/math-funcs';
+import { ChartSchema } from '../astrologic/schemas/chart.schema';
+import { UserSchema } from '../user/schemas/user.schema';
 import { PairedChartSchema } from '../astrologic/schemas/paired-chart.schema';
-import { notEmptyString } from './validators';
 
 interface schemaItem {
   key: string;
@@ -301,6 +300,7 @@ export const buildChartLookupPath = () => {
 
 export const buildPairedChartProjection = (
   fieldFilters: Array<string> = [],
+  hasYearSpanFields = false,
 ) => {
   const chartFields = deconstructSchema(PairedChartSchema);
   const mp: Map<string, any> = new Map();
@@ -322,6 +322,11 @@ export const buildPairedChartProjection = (
   });
   const applyFilter = fieldFilters.length > 0;
   const rgx = new RegExp('\\b(' + fieldFilters.join('|') + ')');
+  if (hasYearSpanFields) {
+    mp.set('yearLength', 1);
+    mp.set('yearSpan', 1);
+    mp.set('currYear', 1);
+  }
   const entries = [...mp.entries()];
   return Object.fromEntries(
     entries.filter(entry => {
@@ -634,3 +639,28 @@ export const deconstructSchema = (schemaClass: Schema) => {
     'roddenScale',
   ];
 }; */
+
+export const yearSpanAddFieldSteps = () => {
+  const currYear = decimalYear();
+  return [
+    {
+      $addFields: {
+        yearSpan: { $subtract: ['$endYear', '$startYear'] },
+        hasEnd: { $gte: ['$endYear', '$startYear'] },
+        ongoingSpan: { $subtract: [currYear, '$startYear'] },
+        currYear: currYear,
+      },
+    },
+    {
+      $addFields: {
+        yearLength: {
+          $cond: {
+            if: '$hasEnd',
+            then: '$yearSpan',
+            else: '$ongoingSpan',
+          },
+        },
+      },
+    },
+  ];
+};
