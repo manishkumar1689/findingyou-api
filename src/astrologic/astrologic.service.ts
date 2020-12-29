@@ -169,6 +169,18 @@ export class AstrologicService {
             case 'endHow':
               extraTags.push(v);
               break;
+            case 'search':
+              const pattern = new RegExp(
+                '\\b' + v.trim().replace(/[^a-z0-9]/gi, '.*?'),
+                'i',
+              );
+              cm.set('$or', [
+                { 'c1.subject.name': { $regex: pattern } },
+                {
+                  'c2.subject.name': { $regex: pattern },
+                },
+              ]);
+              break;
           }
         }
       });
