@@ -121,6 +121,31 @@ export class AstrologicService {
     return steps;
   }
 
+  matchRoddenFromRgx(rating: string) {
+    const parts = rating.split('_');
+    const ratingsFromLetter = parts.pop().toLocaleLowerCase();
+    const mode = ratingsFromLetter === 'any' ? 'any' : parts.pop();
+    const applicable = ratingsFromLetter === 'any' ? 'both' : parts.pop();
+    let rgxStr = '';
+    if (applicable === 'both' && mode === 'gte') {
+      switch (ratingsFromLetter) {
+        case 'aa':
+          rgxStr = 'AA';
+          break;
+        case 'a':
+          rgxStr = 'A';
+          break;
+        case 'b':
+          rgxStr = '[AB]';
+          break;
+        case 'c':
+          rgxStr = '[ABC]';
+          break;
+      }
+    }
+    return new RegExp('^' + rgxStr, 'i');
+  }
+
   async getPairedCharts(
     start = 0,
     max = 1000,
@@ -168,6 +193,17 @@ export class AstrologicService {
             case 'endWho':
             case 'endHow':
               extraTags.push(v);
+              break;
+            case 'rating':
+              const roddenRgx = this.matchRoddenFromRgx(v);
+              cm.set('$and', [
+                {
+                  'c1.subject.roddenScale': roddenRgx,
+                },
+                {
+                  'c2.subject.roddenScale': roddenRgx,
+                },
+              ]);
               break;
             case 'search':
               const pattern = new RegExp(
