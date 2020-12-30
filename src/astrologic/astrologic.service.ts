@@ -854,20 +854,15 @@ export class AstrologicService {
       .skip(0)
       .limit(limit)
       .exec();
-    return charts.map(c => {
-      const loc = [
-        degAsDms(c.geo.lat, 'lat', -1),
-        degAsDms(c.geo.lng, 'lng', -1),
-      ].join(', ');
-      const year = c.datetime
-        .toISOString()
-        .split('-')
-        .shift();
-      return {
-        id: c._id,
-        name: `${c.subject.name} (${c.subject.gender}), ${loc}, ${year}`,
-      };
-    });
+    return charts
+      .filter(c => c instanceof Object)
+      .map(c => {
+        const year = julToISODateObj(c.jd, c.tzOffset).year();
+        return {
+          id: c._id,
+          name: `${c.subject.name} (${c.subject.gender}), ${year}`,
+        };
+      });
   }
 
   // save a single body speed record
