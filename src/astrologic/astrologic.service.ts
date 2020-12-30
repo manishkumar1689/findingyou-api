@@ -847,6 +847,8 @@ export class AstrologicService {
         'subject.name': 1,
         'subject.gender': 1,
         datetime: 1,
+        jd: 1,
+        tzOffset: 1,
         geo: 1,
         isDefaultBirthChart: 1,
       })
@@ -857,6 +859,7 @@ export class AstrologicService {
     return charts
       .filter(c => c instanceof Object)
       .map(c => {
+        console.log(c);
         const year = julToISODateObj(c.jd, c.tzOffset).year();
         return {
           id: c._id,
