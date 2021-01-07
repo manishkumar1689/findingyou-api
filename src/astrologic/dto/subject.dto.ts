@@ -17,5 +17,8 @@ export class SubjectDTO {
   readonly eventType: string;
 
   @ApiProperty()
-  readonly roddenScale: string;
+  readonly roddenValue?: number;
+
+  @ApiProperty()
+  readonly roddenScale?: string;
 }

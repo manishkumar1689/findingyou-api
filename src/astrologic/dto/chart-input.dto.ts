@@ -60,7 +60,7 @@ export class ChartInputDTO {
   readonly eventType?: string;
 
   @ApiProperty()
-  readonly roddenScale?: string;
+  readonly roddenValue?: number;
 
   @ApiProperty()
   readonly locality?: string;

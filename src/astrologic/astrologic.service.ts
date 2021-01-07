@@ -6,6 +6,7 @@ import { Chart } from './interfaces/chart.interface';
 import { BodySpeedDTO } from './dto/body-speed.dto';
 import { calcAcceleration, calcStation } from './lib/astro-motion';
 import grahaValues from './lib/settings/graha-values';
+import roddenScaleValues from './lib/settings/rodden-scale-values';
 import {
   addOrbRangeMatchStep,
   buildPairedChartLookupPath,
@@ -121,31 +122,6 @@ export class AstrologicService {
     return steps;
   }
 
-  matchRoddenFromRgx(rating: string) {
-    const parts = rating.split('_');
-    const ratingsFromLetter = parts.pop().toLocaleLowerCase();
-    const mode = ratingsFromLetter === 'any' ? 'any' : parts.pop();
-    const applicable = ratingsFromLetter === 'any' ? 'both' : parts.pop();
-    let rgxStr = '';
-    if (applicable === 'both' && mode === 'gte') {
-      switch (ratingsFromLetter) {
-        case 'aa':
-          rgxStr = 'AA';
-          break;
-        case 'a':
-          rgxStr = 'A';
-          break;
-        case 'b':
-          rgxStr = '[AB]';
-          break;
-        case 'c':
-          rgxStr = '[ABC]';
-          break;
-      }
-    }
-    return new RegExp('^' + rgxStr, 'i');
-  }
-
   async getPairedCharts(
     start = 0,
     max = 1000,
@@ -195,13 +171,13 @@ export class AstrologicService {
               extraTags.push(v);
               break;
             case 'rating':
-              const roddenRgx = this.matchRoddenFromRgx(v);
+              const roddenGt = { $gte: parseInt(v) };
               cm.set('$and', [
                 {
-                  'c1.subject.roddenScale': roddenRgx,
+                  'c1.subject.roddenValue': roddenGt,
                 },
                 {
-                  'c2.subject.roddenScale': roddenRgx,
+                  'c2.subject.roddenValue': roddenGt,
                 },
               ]);
               break;
@@ -376,6 +352,30 @@ export class AstrologicService {
     const pc1 = pairing1.filter(row => !pairEqual(row)).length;
     const pc2 = pairing2.filter(row => !pairEqual(row)).length;
     return { pc1, pc2 };
+  }
+
+  async migrateRodden(start = 0, limit = 1000) {
+    const mp: Map<string, any> = new Map();
+    const items = await this.list(mp, start, limit, true);
+    const editedIds = [];
+    for (const item of items) {
+      const { _id, subject } = item;
+      const rKey = notEmptyString(subject.roddenScale)
+        ? subject.roddenScale
+        : 'XX';
+      const rv = roddenScaleValues.find(ri => ri.key === rKey);
+      if (rv instanceof Object) {
+        const { value } = rv;
+        const newSubject = { ...subject, roddenValue: value };
+        await this.chartModel
+          .findByIdAndUpdate(_id.toString(), {
+            subject: newSubject,
+          })
+          .exec();
+        editedIds.push(_id.toString());
+      }
+    }
+    return editedIds;
   }
 
   async filterPairedByAspect(
@@ -859,7 +859,6 @@ export class AstrologicService {
     return charts
       .filter(c => c instanceof Object)
       .map(c => {
-        console.log(c);
         const year = julToISODateObj(c.jd, c.tzOffset).year();
         return {
           id: c._id,

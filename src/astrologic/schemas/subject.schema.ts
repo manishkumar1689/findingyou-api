@@ -25,6 +25,10 @@ export const SubjectSchema = new mongoose.Schema({
     required: true,
     default: 'birth',
   },
+  roddenValue: {
+    type: Number,
+    required: false,
+  },
   roddenScale: {
     type: String,
     required: false,

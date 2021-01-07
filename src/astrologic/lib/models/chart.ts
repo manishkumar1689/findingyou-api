@@ -66,6 +66,7 @@ export interface Subject {
   notes?: string;
   gender: string;
   eventType: string;
+  roddenValue: number;
   roddenScale: string;
 }
 
@@ -74,7 +75,8 @@ const emptySubject = {
   type: 'person',
   gender: '-',
   eventType: 'birth',
-  roddenScale: 'XX',
+  roddenValue: 100000,
+  roddenScale: '',
 };
 
 export interface GrahaTransition {

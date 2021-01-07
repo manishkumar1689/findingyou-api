@@ -352,7 +352,7 @@ export class AstrologicController {
         isDefaultBirthChart: true,
         gender,
         eventType: 'birth',
-        roddenScale: 'AAX',
+        roddenValue: 100,
       } as ChartInputDTO;
       const data = await this.saveChartData(inData);
     }
@@ -374,7 +374,7 @@ export class AstrologicController {
       tzOffset,
       placenames,
     } = inData;
-    let { name, type, gender, eventType, roddenScale } = inData;
+    let { name, type, gender, eventType, roddenValue } = inData;
     const userRecord = await this.userService.getUser(user);
 
     if (userRecord instanceof Object) {
@@ -388,8 +388,8 @@ export class AstrologicController {
             if (notEmptyString(userRecord.gender, 1)) {
               gender = userRecord.gender;
             }
-            if (emptyString(roddenScale, 3)) {
-              roddenScale = 'XX';
+            if (typeof roddenValue !== 'number') {
+              roddenValue = 10000;
             }
           }
           const subject = {
@@ -397,7 +397,7 @@ export class AstrologicController {
             type,
             gender,
             eventType,
-            roddenScale,
+            roddenValue,
             notes,
           };
           const hasGeoTzData =
@@ -1612,5 +1612,18 @@ export class AstrologicController {
       }
     }
     return res.send(Object.fromEntries(result.entries()));
+  }
+
+  @Get('migrate-rodden/:start?/:limit?')
+  async migrateRoddenScale(
+    @Res() res,
+    @Param('start') start,
+    @Param('limit') limit,
+  ) {
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 1000);
+    const data = await this.astrologicService.migrateRodden(startInt, limitInt);
+
+    return res.json(data);
   }
 }
