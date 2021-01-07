@@ -120,4 +120,19 @@ const roddenScaleValues = [
   },
 ];
 
+const mergeRoddenValue = (item: any) => {
+  const { value, key } = item;
+  if (typeof value !== 'number') {
+    const defaultItem = roddenScaleValues.find(ri => ri.key === key);
+    if (defaultItem instanceof Object) {
+      item.value = defaultItem.value;
+    }
+  }
+  return item;
+};
+
+export const mergeRoddenValues = (items: Array<any>) => {
+  return items.filter(item => item instanceof Object).map(mergeRoddenValue);
+};
+
 export default roddenScaleValues;

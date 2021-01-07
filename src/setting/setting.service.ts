@@ -8,6 +8,7 @@ import { notEmptyString } from 'src/lib/validators';
 import { Protocol } from './interfaces/protocol.interface';
 import { ProtocolDTO } from './dto/protocol.dto';
 import { ProtocolSettings } from 'src/astrologic/lib/models/protocol-models';
+import { mergeRoddenValues } from 'src/astrologic/lib/settings/rodden-scale-values';
 
 @Injectable()
 export class SettingService {
@@ -65,7 +66,18 @@ export class SettingService {
 
   // get a single setting by key
   async getByKey(key: string): Promise<Setting> {
-    return await this.settingModel.findOne({ key }).exec();
+    const data = await this.settingModel.findOne({ key }).exec();
+    let newValue = null;
+    if (data instanceof Object) {
+      switch (key) {
+        case 'rodden_scale_values':
+          newValue = mergeRoddenValues(data.value);
+          break;
+        default:
+          newValue = data.value;
+      }
+    }
+    return { ...data.toObject(), value: newValue };
   }
 
   async getProtocolSettings() {

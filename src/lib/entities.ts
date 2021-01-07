@@ -101,13 +101,14 @@ export const extractDocId = (matchedModel): string => {
   let idStr = '';
   if (matchedModel) {
     const matchedDoc = extractObjValue(matchedModel, '_doc');
-
     if (matchedDoc) {
       idStr = extractObjValue(matchedDoc, '_id');
-      if (idStr) {
-        idStr = idStr.toString();
-      }
+    } else {
+      idStr = extractObjValue(matchedModel, '_id');
     }
+  }
+  if (idStr) {
+    idStr = idStr.toString();
   }
   return idStr;
 };
