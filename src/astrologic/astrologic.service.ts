@@ -6,7 +6,9 @@ import { Chart } from './interfaces/chart.interface';
 import { BodySpeedDTO } from './dto/body-speed.dto';
 import { calcAcceleration, calcStation } from './lib/astro-motion';
 import grahaValues from './lib/settings/graha-values';
-import roddenScaleValues from './lib/settings/rodden-scale-values';
+import roddenScaleValues, {
+  matchRoddenKeyValue,
+} from './lib/settings/rodden-scale-values';
 import {
   addOrbRangeMatchStep,
   buildPairedChartLookupPath,
@@ -171,13 +173,16 @@ export class AstrologicService {
               extraTags.push(v);
               break;
             case 'rating':
-              const roddenGt = { $gte: parseInt(v) };
+              const roddenItem = matchRoddenKeyValue(v);
+              const roddenCompare = {
+                [roddenItem.comparison]: roddenItem.value,
+              };
               cm.set('$and', [
                 {
-                  'c1.subject.roddenValue': roddenGt,
+                  'c1.subject.roddenValue': roddenCompare,
                 },
                 {
-                  'c2.subject.roddenValue': roddenGt,
+                  'c2.subject.roddenValue': roddenCompare,
                 },
               ]);
               break;
@@ -360,19 +365,22 @@ export class AstrologicService {
     const editedIds = [];
     for (const item of items) {
       const { _id, subject } = item;
-      const rKey = notEmptyString(subject.roddenScale)
-        ? subject.roddenScale
-        : 'XX';
-      const rv = roddenScaleValues.find(ri => ri.key === rKey);
-      if (rv instanceof Object) {
-        const { value } = rv;
-        const newSubject = { ...subject, roddenValue: value };
-        await this.chartModel
-          .findByIdAndUpdate(_id.toString(), {
-            subject: newSubject,
-          })
-          .exec();
-        editedIds.push(_id.toString());
+      if (subject instanceof Object) {
+        const { roddenScale, roddenValue } = subject;
+        if (typeof roddenValue !== 'number' || roddenValue < 50) {
+          const rKey = notEmptyString(roddenScale) ? roddenScale : 'XX';
+          const rv = roddenScaleValues.find(ri => ri.key === rKey);
+          if (rv instanceof Object) {
+            const { value } = rv;
+            const newSubject = { ...subject, roddenValue: value };
+            await this.chartModel
+              .findByIdAndUpdate(_id.toString(), {
+                subject: newSubject,
+              })
+              .exec();
+            editedIds.push(_id.toString());
+          }
+        }
       }
     }
     return editedIds;

@@ -135,4 +135,24 @@ export const mergeRoddenValues = (items: Array<any>) => {
   return items.filter(item => item instanceof Object).map(mergeRoddenValue);
 };
 
+export const matchRoddenKeyValue = (longKey: string) => {
+  const parts = longKey.split('_');
+  const roddenKey = parts.pop().toUpperCase();
+  let comparison = '$gte';
+  let mode = 'both';
+  if (parts.length > 0) {
+    const compKey = parts.pop().toLowerCase();
+    comparison = ['$', compKey].join('');
+    if (parts.length > 0) {
+      mode = parts.pop().toLowerCase();
+    }
+  }
+  let value = 1000;
+  const row = roddenScaleValues.find(item => item.key === roddenKey);
+  if (row instanceof Object) {
+    value = row.value;
+  }
+  return { key: roddenKey, mode, comparison, value };
+};
+
 export default roddenScaleValues;

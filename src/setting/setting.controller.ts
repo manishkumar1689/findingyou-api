@@ -79,7 +79,6 @@ export class SettingController {
     if (notEmptyString(userID, 9)) {
       const matchedSetting = await this.settingService.getByKey(key);
       if (matchedSetting) {
-        console.log(extractDocId(matchedSetting));
         setting = await this.settingService.updateSetting(
           extractDocId(matchedSetting),
           createSettingDTO,
