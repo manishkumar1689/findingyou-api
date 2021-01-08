@@ -138,13 +138,26 @@ export const mergeRoddenValues = (items: Array<any>) => {
 export const matchRoddenKeyValue = (longKey: string) => {
   const parts = longKey.split('_');
   const roddenKey = parts.pop().toUpperCase();
-  let comparison = '$gte';
+  let comparison = '$lte';
   let mode = 'both';
   if (parts.length > 0) {
     const compKey = parts.pop().toLowerCase();
-    comparison = ['$', compKey].join('');
-    if (parts.length > 0) {
-      mode = parts.pop().toLowerCase();
+    switch (compKey) {
+      case 'lt':
+        comparison = '$gt';
+        break;
+      case 'gt':
+        comparison = '$lt';
+        break;
+      case 'gte':
+        comparison = '$lte';
+        break;
+      case 'lte':
+        comparison = '$gte';
+        break;
+      case 'eq':
+        comparison = '$eq';
+        break;
     }
   }
   let value = 1000;
