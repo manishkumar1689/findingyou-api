@@ -765,7 +765,11 @@ export class AstrologicService {
       const c1 = mapSubChartMeta(chart1);
       const c2 = mapSubChartMeta(chart2);
       const jd = (c1.jd + c2.jd) / 2;
-      const year = julToISODateObj(jd, timespace.surfaceTzOffset).year();
+      const offset =
+        typeof timespace.surfaceTzOffset === 'number'
+          ? timespace.surfaceTzOffset
+          : 0;
+      const year = julToISODateObj(jd, offset).year();
       return {
         _id,
         jd,

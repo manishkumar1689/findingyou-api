@@ -1175,7 +1175,7 @@ export class AstrologicController {
       data.shortTz = toShortTzAbbr(chart.datetime, chart.tz);
       data.valid = true;
     }
-    return data;
+    return res.json(data);
   }
 
   @Get('charts-by-user/:userID/:start?/:limit?/:defaultOnly?')
