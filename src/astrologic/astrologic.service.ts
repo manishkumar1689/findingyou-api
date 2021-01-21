@@ -747,6 +747,7 @@ export class AstrologicService {
           $project: {
             _id: 1,
             jd: 1,
+            relType: 1,
             timespace: {
               jd: 1,
               tzOffset: 1,
@@ -761,7 +762,7 @@ export class AstrologicService {
       .limit(limit)
       .exec();
     return items.map(item => {
-      const { _id, timespace, chart1, chart2, modifiedAt } = item;
+      const { _id, timespace, relType, chart1, chart2, modifiedAt } = item;
       const c1 = mapSubChartMeta(chart1);
       const c2 = mapSubChartMeta(chart2);
       const jd = (c1.jd + c2.jd) / 2;
@@ -774,6 +775,7 @@ export class AstrologicService {
         _id,
         jd,
         year,
+        relType,
         timespace,
         c1,
         c2,
