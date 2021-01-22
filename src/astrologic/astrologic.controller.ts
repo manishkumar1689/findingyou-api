@@ -1125,11 +1125,12 @@ export class AstrologicController {
     });
   }
 
-  @Get('paired-by-charts/:chartID1/:chartID2')
+  @Get('paired-by-charts/:chartID1/:chartID2/:relType?')
   async getPairedByChartIDs(
     @Res() res,
     @Param('chartID1') chartID1: string,
     @Param('chartID2') chartID2: string,
+    @Param('relType') relType: string,
   ) {
     const items = await this.astrologicService.getPairedByChart(
       chartID1,

@@ -67,7 +67,8 @@ export const mapSubChartMeta = (chart: any) => {
   }
   if (chartObj instanceof Object) {
     const { _id, jd, subject, geo, placenames } = chartObj;
-    const dateParts = jdToDateParts(jd);
+    const jdInt = typeof jd === 'number' ? jd : 0;
+    const dateParts = jdToDateParts(jdInt);
     const { year } = dateParts;
     const filteredPlacenames =
       placenames instanceof Array
