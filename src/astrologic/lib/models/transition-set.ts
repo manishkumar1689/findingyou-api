@@ -2,7 +2,7 @@ import { toDateTime } from './../date-funcs';
 
 export class BodyTransition {
   readonly jd: number = 0;
-  readonly datetime: Date = new Date();
+  readonly datetime?: Date = new Date();
 
   constructor(inData: any = null) {
     if (inData instanceof Object) {

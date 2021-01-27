@@ -20,6 +20,6 @@ export const GrahaTransitionSchema = new mongoose.Schema({
   },
   datetime: {
     type: Date,
-    required: true,
+    required: false,
   },
 });

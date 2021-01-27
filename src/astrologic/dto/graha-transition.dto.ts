@@ -8,5 +8,5 @@ export class GrahaTransitionDTO {
   readonly jd: number;
 
   @ApiProperty()
-  readonly datetime: Date;
+  readonly datetime?: Date;
 }
