@@ -944,6 +944,9 @@ export class AstrologicController {
     return res.json(data);
   }
 
+  /*
+    Delete chart by paired id with userID to check permissions
+  */
   @Delete('delete-paired/:pairedID/:userID')
   async deletePairedChart(
     @Res() res,
