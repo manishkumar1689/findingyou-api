@@ -1366,7 +1366,12 @@ export class AstrologicController {
     if (notEmptyString(dt, 6) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const data = await this.geoService.fetchTzData(geo, dt);
-      return res.status(HttpStatus.OK).json(data);
+      if (data.valid) {
+        const shortTz = toShortTzAbbr(dt, data.tz);
+        return res.status(HttpStatus.OK).json({ ...data, shortTz });
+      } else {
+        return res.status(HttpStatus.NOT_ACCEPTABLE).json(data);
+      }
     } else {
       return res.status(HttpStatus.NOT_ACCEPTABLE).json({ valid: false });
     }
