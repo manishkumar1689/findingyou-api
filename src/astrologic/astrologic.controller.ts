@@ -951,13 +951,16 @@ export class AstrologicController {
     @Param('userID') userID: string,
   ) {
     const data = { valid: false, pairedID: '' };
+    let status = HttpStatus.NOT_ACCEPTABLE;
     if (this.userService.isAdminUser(userID)) {
       const deleted = await this.astrologicService.deletePaired(pairedID);
       if (deleted) {
         data.pairedID = deleted;
+        data.valid = true;
+        status = HttpStatus.OK;
       }
     }
-    return data;
+    return res.status(status).json(data);
   }
 
   @Get('calc-paired/:loc1/:dt1/:loc2/:dt2/:mode?')
