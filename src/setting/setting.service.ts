@@ -9,6 +9,8 @@ import { Protocol } from './interfaces/protocol.interface';
 import { ProtocolDTO } from './dto/protocol.dto';
 import { ProtocolSettings } from 'src/astrologic/lib/models/protocol-models';
 import { mergeRoddenValues } from 'src/astrologic/lib/settings/rodden-scale-values';
+import { KeyName } from 'src/astrologic/lib/interfaces';
+import { extractDocId } from 'src/lib/entities';
 
 @Injectable()
 export class SettingService {
@@ -68,7 +70,9 @@ export class SettingService {
   async getByKey(key: string): Promise<Setting> {
     const data = await this.settingModel.findOne({ key }).exec();
     let newValue = null;
+    let result: any = {};
     if (data instanceof Object) {
+      result = data.toObject();
       switch (key) {
         case 'rodden_scale_values':
           newValue = mergeRoddenValues(data.value);
@@ -77,7 +81,27 @@ export class SettingService {
           newValue = data.value;
       }
     }
-    return { ...data.toObject(), value: newValue };
+    return { ...result, value: newValue };
+  }
+
+  async saveRelationshipType(newType: KeyName) {
+    const setting = await this.getByKey('relationship_types');
+    let types: KeyName[] = [];
+    if (setting instanceof Object) {
+      if (setting.value instanceof Array) {
+        types = setting.value;
+        const typeIndex = types.findIndex(tp => tp.key === newType.key);
+        if (typeIndex < 0) {
+          types.push(newType);
+          const _id = extractDocId(setting);
+          this.updateSetting(_id, {
+            value: types,
+            modifiedAt: new Date(),
+          } as CreateSettingDTO);
+        }
+      }
+    }
+    return types;
   }
 
   async getProtocolSettings() {

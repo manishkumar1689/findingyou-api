@@ -660,6 +660,7 @@ export class AstrologicService {
     sort = 'modifiedAt',
     limit = 0,
     chartID2 = '',
+    relType = '',
   ) {
     const max = limit > 0 && limit < 1000 ? limit : 1000;
     let sortDir = -1;
@@ -935,6 +936,13 @@ export class AstrologicService {
 
   async deleteChart(chartID: string) {
     return await this.chartModel.deleteOne({ _id: chartID });
+  }
+
+  async uniqueTagSlugs() {
+    const slugs = await this.pairedChartModel.distinct('relType', {
+      relType: /\w+/,
+    });
+    return slugs instanceof Array ? slugs : [];
   }
 
   async savePlanetStations(

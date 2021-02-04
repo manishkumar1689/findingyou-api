@@ -76,17 +76,13 @@ import { AspectSet, calcOrb } from './lib/calc-orbs';
 import { AspectSetDTO } from './dto/aspect-set.dto';
 import {
   assessChart,
-  Condition,
-  ConditionSet,
   matchOrbFromGrid,
   Protocol,
-  ProtocolResultSet,
-  SectionScore,
 } from './lib/models/protocol-models';
 import { mapNestedKaranaTithiYoga } from './lib/mappers';
-import { Collection, Model } from 'mongoose';
-import { MediaItemSchema } from 'src/user/schemas/media-item.schema';
-import { start } from 'repl';
+import { CreateSettingDTO } from 'src/setting/dto/create-setting.dto';
+import typeTags from './lib/settings/relationship-types';
+import { KeyName } from './lib/interfaces';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -801,7 +797,19 @@ export class AstrologicController {
   }
 
   @Post('save-paired')
-  async savePairedChart(@Res() res, @Body() inData: PairedChartInputDTO) {
+  async savePairedChart(
+    @Res() res,
+    @Body() inData: PairedChartInputDTO,
+    @Query() query,
+  ) {
+    const { relName } = query;
+    if (notEmptyString(relName, 2)) {
+      const newType = {
+        key: inData.relType,
+        name: relName,
+      };
+      this.settingService.saveRelationshipType(newType);
+    }
     const data = await this.savePairedChartData(inData);
     const statusCode = data.valid ? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
     return res.status(statusCode).send(data);
@@ -1551,6 +1559,39 @@ export class AstrologicController {
       valid,
       results,
     });
+  }
+
+  @Get('relationship-types')
+  async getRelTypes(@Res() res) {
+    const key = 'relationship_types';
+    const setting = await this.settingService.getByKey(key);
+    let defaultTags: KeyName[] = [];
+    if (setting.value instanceof Array) {
+      defaultTags = setting.value;
+    } else {
+      defaultTags = typeTags;
+      const newSetting = {
+        key,
+        value: typeTags,
+        type: 'lookup_set',
+        weight: 11,
+      } as CreateSettingDTO;
+      this.settingService.addSetting(newSetting);
+    }
+    const existing = await this.astrologicService.uniqueTagSlugs();
+    const usedTags = existing.map(key => {
+      const tag = defaultTags.find(tg => tg.key === key);
+      const name =
+        tag instanceof Object ? tag.name : key.replace(/[_-]+/g, ' ').trim();
+      return { key, name };
+    });
+    usedTags.forEach(kn => {
+      const tagIndex = existing.findIndex(tg => tg.key === kn.key);
+      if (tagIndex < 0) {
+        defaultTags.push(kn);
+      }
+    });
+    return res.status(HttpStatus.OK).json(defaultTags);
   }
 
   @Get('settings/:filter?')
