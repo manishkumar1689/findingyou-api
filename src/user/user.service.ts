@@ -247,15 +247,14 @@ export class UserService {
     if (isNew) {
       userData.set('roles', ['active']);
     }
+
     Object.entries(inData).forEach(entry => {
       const [key, val] = entry;
       switch (key) {
         case 'password':
-          if (inData.password) {
-            const tsSalt = dt.getTime() % 16;
-            userData.set(key, bcrypt.hashSync(val, tsSalt));
-            userData.set('mode', 'local');
-          }
+          const tsSalt = dt.getTime() % 16;
+          userData.set(key, bcrypt.hashSync(val, tsSalt));
+          userData.set('mode', 'local');
           break;
         case 'roles':
           if (val instanceof Array) {
