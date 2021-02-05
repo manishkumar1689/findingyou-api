@@ -89,11 +89,19 @@ export class UserService {
             break;
           case 'fullName':
           case 'nickName':
-            filter.set(key, new RegExp(val));
+            filter.set(key, new RegExp(val, 'i'));
             break;
           case 'email':
           case 'identifier':
-            filter.set('identifier', new RegExp(val));
+            filter.set('identifier', new RegExp(val, 'i'));
+            break;
+          case 'usearch':
+            const rgx = new RegExp('\\b' + val, 'i');
+            filter.set('$or', [
+              { identifier: rgx },
+              { nickName: rgx },
+              { fullName: rgx },
+            ]);
             break;
         }
       }
