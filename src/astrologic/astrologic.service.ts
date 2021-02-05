@@ -44,7 +44,7 @@ import { calcAllAspects } from './lib/core';
 import { Chart as ChartClass } from './lib/models/chart';
 import { Kuta } from './lib/kuta';
 import { AspectSet } from './lib/calc-orbs';
-import { smartCastInt, smartCastString } from 'src/lib/converters';
+import { sanitize, smartCastInt, smartCastString } from 'src/lib/converters';
 
 @Injectable()
 export class AstrologicService {
@@ -871,7 +871,7 @@ export class AstrologicService {
       .skip(0)
       .limit(limit)
       .exec();
-    return charts
+    const matchedItems = charts
       .filter(c => c instanceof Object)
       .map(c => {
         const year = julToISODateObj(c.jd, c.tzOffset).year();
@@ -880,6 +880,17 @@ export class AstrologicService {
           name: `${c.subject.name} (${c.subject.gender}), ${year}`,
         };
       });
+    // dedupe results
+    const items = [];
+    const strings: string[] = [];
+    matchedItems.forEach(item => {
+      const str = sanitize(item.name);
+      if (strings.includes(str) === false) {
+        strings.push(str);
+        items.push(item);
+      }
+    });
+    return items;
   }
 
   // save a single body speed record

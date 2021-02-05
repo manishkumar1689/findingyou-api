@@ -696,7 +696,6 @@ export class UserController {
       };
       data = { valid: false, fileData };
       const intSize = parseInt(size, 10);
-      const params = imageSizes.thumb;
       const { filename, attributes, variants } = uploadMediaFile(
         userID,
         originalname,
@@ -718,6 +717,7 @@ export class UserController {
           fileData,
         );
         data.user = savedSub;
+        data.valid = true;
       }
     }
     return res.json(data);
