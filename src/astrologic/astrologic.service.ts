@@ -22,6 +22,7 @@ import {
   julToISODateObj,
 } from './lib/date-funcs';
 import {
+  emptyString,
   isNumeric,
   notEmptyString,
   validISODateString,
@@ -39,7 +40,11 @@ import {
 } from '../lib/entities';
 import * as Redis from 'ioredis';
 import { SimpleTransition } from './interfaces/simple-transition.interface';
-import { degAsDms } from './lib/converters';
+import {
+  matchDefaultVocabOptionKeys,
+  SlugNameVocab,
+  matchVocabKey,
+} from './lib/settings/vocab-values';
 import { calcAllAspects } from './lib/core';
 import { Chart as ChartClass } from './lib/models/chart';
 import { Kuta } from './lib/kuta';
@@ -947,6 +952,52 @@ export class AstrologicService {
 
   async deleteChart(chartID: string) {
     return await this.chartModel.deleteOne({ _id: chartID });
+  }
+
+  async sanitizePairedCharts(start = 0, limit = 1000) {
+    const pcs = await this.getPairedCharts(start, limit);
+    const relTypeKeys = matchDefaultVocabOptionKeys('type');
+    for (const pc of pcs) {
+      const { _id, tags, relType } = pc;
+      let newRelType = relType;
+      const newTags: SlugNameVocab[] = [];
+      if (emptyString(relType)) {
+        const first = tags.find(tg =>
+          relTypeKeys.includes(tg.slug.replace(/-/g, '_')),
+        );
+        if (first instanceof Object) {
+          newRelType = first.slug.replace(/-/g, '_');
+        }
+      }
+      tags.forEach(tg => {
+        if (tg instanceof Object) {
+          const { slug, name, vocab } = tg;
+          if (notEmptyString(slug)) {
+            const slugStr = slug.replace(/-/g, '_');
+            const matchedVocab = matchVocabKey(slug);
+            const newVocab = notEmptyString(matchedVocab)
+              ? matchedVocab
+              : notEmptyString(vocab)
+              ? vocab
+              : 'trait';
+            const newTag = {
+              slug: slugStr,
+              name,
+              vocab: newVocab,
+            };
+            newTags.push(newTag);
+          }
+        }
+      });
+      const updated = await this.pairedChartModel
+        .findByIdAndUpdate(_id, {
+          relType: newRelType,
+          tags: newTags,
+        })
+        .exec();
+      console.log(updated);
+    }
+    return pcs.map(pc => pc._id);
   }
 
   async uniqueTagSlugs() {

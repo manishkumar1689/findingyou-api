@@ -6,4 +6,7 @@ export class TagDTO {
 
   @ApiProperty()
   readonly name: string;
+
+  @ApiProperty()
+  readonly vocab?: string;
 }

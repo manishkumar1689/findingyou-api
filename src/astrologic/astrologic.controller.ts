@@ -83,6 +83,7 @@ import { mapNestedKaranaTithiYoga } from './lib/mappers';
 import { CreateSettingDTO } from 'src/setting/dto/create-setting.dto';
 import typeTags from './lib/settings/relationship-types';
 import { KeyName } from './lib/interfaces';
+import { defaultPairedTagOptionSets } from './lib/settings/vocab-values';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -920,6 +921,26 @@ export class AstrologicController {
         msg: `Chart IDs not matched ${chartIds}`,
       };
     }
+  }
+
+  @Get('paired-tag-options/:defOpts?')
+  async pairedTagOptions(@Res() res, @Param('defOpts') defOpts) {
+    const useDefaultOpts = smartCastBool(defOpts, false);
+    const data = useDefaultOpts
+      ? defaultPairedTagOptionSets
+      : await this.settingService.getPairedVocabs();
+    return res.json(data);
+  }
+
+  @Get('sanitize-tags/:start?/:limit?')
+  async sanitizeTags(@Res() res, @Param('start') start, @Param('limit') limit) {
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 1000);
+    const data = await this.astrologicService.sanitizePairedCharts(
+      startInt,
+      limitInt,
+    );
+    return res.json(data);
   }
 
   @Get('has-other-pairings/:c1/:c2')

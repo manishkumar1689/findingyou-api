@@ -9,4 +9,9 @@ export const TagSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  vocab: {
+    type: String,
+    required: false,
+    default: 'rel',
+  },
 });

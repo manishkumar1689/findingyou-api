@@ -11,6 +11,7 @@ import { ProtocolSettings } from 'src/astrologic/lib/models/protocol-models';
 import { mergeRoddenValues } from 'src/astrologic/lib/settings/rodden-scale-values';
 import { KeyName } from 'src/astrologic/lib/interfaces';
 import { extractDocId } from 'src/lib/entities';
+import { defaultPairedTagOptionSets } from 'src/astrologic/lib/settings/vocab-values';
 
 @Injectable()
 export class SettingService {
@@ -130,6 +131,26 @@ export class SettingService {
     const settingValue = data instanceof Object ? data.value : {};
     const entries = settingValue.map(row => [row.sign, row.aspects]);
     return new Map(entries);
+  }
+
+  async getPairedVocabs() {
+    const key = 'paired_vocabs';
+    const data = await this.getByKey(key);
+    const settingValue = data instanceof Object ? data.value : {};
+    if (settingValue instanceof Array && settingValue.length > 2) {
+      return settingValue;
+    } else {
+      const settingDTO = {
+        key,
+        type: 'custom',
+        value: defaultPairedTagOptionSets,
+        createdAt: new Date(),
+        modifiedAt: new Date(),
+      } as CreateSettingDTO;
+      const setting = new this.settingModel(settingDTO);
+      setting.save();
+      return settingDTO.value;
+    }
   }
 
   // post a single Setting
