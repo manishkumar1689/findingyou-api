@@ -133,12 +133,27 @@ export class SettingService {
     return new Map(entries);
   }
 
-  async getPairedVocabs() {
+  async getPairedVocabs(useDefaultOpts = false, resetOpts = false) {
     const key = 'paired_vocabs';
+
+    const skipStored = useDefaultOpts && !resetOpts;
     const data = await this.getByKey(key);
-    const settingValue = data instanceof Object ? data.value : {};
-    if (settingValue instanceof Array && settingValue.length > 2) {
-      return settingValue;
+    if (
+      data instanceof Object &&
+      data.value instanceof Array &&
+      data.value.length > 0
+    ) {
+      if (useDefaultOpts) {
+        const settingDTO = {
+          value: defaultPairedTagOptionSets,
+          modifiedAt: new Date(),
+        } as CreateSettingDTO;
+        if (!skipStored) {
+          const { _id } = data;
+          this.updateSetting(_id, settingDTO);
+        }
+      }
+      return useDefaultOpts ? defaultPairedTagOptionSets : data.value;
     } else {
       const settingDTO = {
         key,

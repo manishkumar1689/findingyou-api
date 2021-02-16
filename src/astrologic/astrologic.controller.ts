@@ -923,12 +923,21 @@ export class AstrologicController {
     }
   }
 
-  @Get('paired-tag-options/:defOpts?')
-  async pairedTagOptions(@Res() res, @Param('defOpts') defOpts) {
-    const useDefaultOpts = smartCastBool(defOpts, false);
-    const data = useDefaultOpts
-      ? defaultPairedTagOptionSets
-      : await this.settingService.getPairedVocabs();
+  @Get('paired-tag-options/:reset?/:userID?')
+  async pairedTagOptions(
+    @Res() res,
+    @Param('reset') reset,
+    @Param('userID') userID,
+  ) {
+    const useDefaultOpts = smartCastBool(reset, false);
+    const resetOpts =
+      useDefaultOpts &&
+      notEmptyString(userID, 12) &&
+      (await this.userService.isAdminUser(userID));
+    const data = await this.settingService.getPairedVocabs(
+      useDefaultOpts,
+      resetOpts,
+    );
     return res.json(data);
   }
 

@@ -3,6 +3,7 @@ import { KeyName } from '../interfaces';
 export interface SlugName {
   slug: string;
   name: string;
+  parents?: string[];
 }
 
 export interface SlugNameVocab extends SlugName {
@@ -75,28 +76,28 @@ export const endHowTags = [
 export const endWhoTags = [
   { slug: '-', name: 'N/A', parents: [] },
   {
-    slug: 'p1-divorces-p2',
+    slug: 'p1_divorces_p2',
     name: 'P1 divorces P2',
     parents: ['divorce'],
   },
   {
-    slug: 'p2-divorces-p1',
+    slug: 'p2_divorces_p1',
     name: 'P2 divorces P1',
     parents: ['divorce'],
   },
-  { slug: 'p1-leaves-p2', name: 'P1 leaves P2', parents: ['separation'] },
-  { slug: 'p2-leaves-p1', name: 'P2 leaves P1', parents: ['separation'] },
-  { slug: 'p1-dies', name: 'P1 passes away', parents: ['death'] },
-  { slug: 'p2-dies', name: 'P2 passes away', parents: ['death'] },
-  { slug: 'p1-kills-p2', name: 'P1 kills P2', parents: ['murder'] },
-  { slug: 'p2-kills-p1', name: 'P2 kills P1', parents: ['murder'] },
+  { slug: 'p1_leaves_p2', name: 'P1 leaves P2', parents: ['separation'] },
+  { slug: 'p2_leaves_p1', name: 'P2 leaves P1', parents: ['separation'] },
+  { slug: 'p1_dies', name: 'P1 passes away', parents: ['death'] },
+  { slug: 'p2_dies', name: 'P2 passes away', parents: ['death'] },
+  { slug: 'p1_kills_p2', name: 'P1 kills P2', parents: ['murder'] },
+  { slug: 'p2_kills_p1', name: 'P2 kills P1', parents: ['murder'] },
   {
     slug: 'p1_murder_other',
     name: 'P1 murdered by other',
     parents: ['murder'],
   },
   {
-    slug: 'p2-_murder_other',
+    slug: 'p2_murder_other',
     name: 'P2 murdered by other',
     parents: ['murder'],
   },

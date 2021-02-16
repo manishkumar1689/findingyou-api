@@ -206,7 +206,7 @@ export class AstrologicService {
           }
         }
       });
-      if (qualityTags.length > 0) {
+      if (qualityTags.length > 0 || extraTags.length > 0) {
         const tagsMap: Map<string, any> = new Map();
         const allTags =
           tagsOp === 'and' ? [...qualityTags, ...extraTags] : extraTags;
@@ -217,6 +217,7 @@ export class AstrologicService {
         if (allTags.length > 0) {
           tagsMap.set('$all', allTags);
         }
+        console.log(Object.fromEntries(tagsMap.entries()));
         cm.set('tags.slug', Object.fromEntries(tagsMap.entries()));
       }
       steps.push({
