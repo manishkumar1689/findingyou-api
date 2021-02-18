@@ -805,6 +805,7 @@ export class AstrologicService {
         {
           $project: {
             _id: 0,
+            relType: 1,
             'tags.slug': 1,
             'tags.vocab': 1,
           },
@@ -814,7 +815,7 @@ export class AstrologicService {
       .exec();
     const tagTypes: Map<string, KeyValue> = new Map();
     pcs.forEach(pc => {
-      const { tags } = pc;
+      const { relType, tags } = pc;
       if (tags instanceof Array) {
         tags.forEach(tg => {
           const tagOpt = tagTypes.get(tg.slug);
@@ -826,7 +827,20 @@ export class AstrologicService {
           });
         });
       }
+      if (notEmptyString(relType, 2)) {
+        const relTypeMatched =
+          tags.find(tg => tg.slug === relType) instanceof Object;
+        if (!relTypeMatched) {
+          const relTag = tagTypes.get(relType);
+          const value = relTag instanceof Object ? relTag.value + 1 : 1;
+          tagTypes.set(relType, {
+            key: 'type',
+            value,
+          });
+        }
+      }
     });
+
     const types: Map<string, KeyValue[]> = new Map();
     [...tagTypes.entries()].forEach(entry => {
       const [key, keyVal] = entry;
