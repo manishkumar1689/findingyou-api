@@ -829,7 +829,7 @@ export class AstrologicService {
       }
       if (notEmptyString(relType, 2)) {
         const relTypeMatched =
-          tags.find(tg => tg.slug === relType) instanceof Object;
+          tags.filter(tg => tg.slug === relType).length > 0;
         if (!relTypeMatched) {
           const relTag = tagTypes.get(relType);
           const value = relTag instanceof Object ? relTag.value + 1 : 1;
