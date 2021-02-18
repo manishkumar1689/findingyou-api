@@ -44,13 +44,12 @@ import {
   matchDefaultVocabOptionKeys,
   SlugNameVocab,
   matchVocabKey,
-  SlugNameVocabStat,
 } from './lib/settings/vocab-values';
 import { calcAllAspects } from './lib/core';
 import { Chart as ChartClass } from './lib/models/chart';
 import { Kuta } from './lib/kuta';
 import { AspectSet } from './lib/calc-orbs';
-import { sanitize, smartCastInt, smartCastString } from 'src/lib/converters';
+import { sanitize, smartCastInt } from 'src/lib/converters';
 import { KeyValue } from './interfaces/key-value';
 
 @Injectable()
