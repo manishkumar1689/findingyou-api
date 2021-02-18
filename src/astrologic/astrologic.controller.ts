@@ -941,6 +941,13 @@ export class AstrologicController {
     return res.json(data);
   }
 
+  @Get('tag-stats/:limit?')
+  async getTagStats(@Res() res, @Param('limit') limit) {
+    const limitInt = smartCastInt(limit, 100 * 1000);
+    const data = await this.astrologicService.tagStats(limitInt);
+    return res.json(data);
+  }
+
   @Get('sanitize-tags/:start?/:limit?')
   async sanitizeTags(@Res() res, @Param('start') start, @Param('limit') limit) {
     const startInt = smartCastInt(start, 0);

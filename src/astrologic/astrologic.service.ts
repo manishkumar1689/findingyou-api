@@ -44,12 +44,14 @@ import {
   matchDefaultVocabOptionKeys,
   SlugNameVocab,
   matchVocabKey,
+  SlugNameVocabStat,
 } from './lib/settings/vocab-values';
 import { calcAllAspects } from './lib/core';
 import { Chart as ChartClass } from './lib/models/chart';
 import { Kuta } from './lib/kuta';
 import { AspectSet } from './lib/calc-orbs';
 import { sanitize, smartCastInt, smartCastString } from 'src/lib/converters';
+import { KeyValue } from './interfaces/key-value';
 
 @Injectable()
 export class AstrologicService {
@@ -796,6 +798,48 @@ export class AstrologicService {
     if (charts.length > 0) {
       return charts[0];
     }
+  }
+
+  async tagStats(limit = 10000) {
+    const pcs = await this.pairedChartModel
+      .aggregate([
+        {
+          $project: {
+            _id: 0,
+            'tags.slug': 1,
+            'tags.vocab': 1,
+          },
+        },
+      ])
+      .limit(limit)
+      .exec();
+    const tagTypes: Map<string, KeyValue> = new Map();
+    pcs.forEach(pc => {
+      const { tags } = pc;
+      if (tags instanceof Array) {
+        tags.forEach(tg => {
+          const tagOpt = tagTypes.get(tg.slug);
+          const value = tagOpt instanceof Object ? tagOpt.value + 1 : 1;
+          const key = notEmptyString(tg.vocab, 1) ? tg.vocab : 'trait';
+          tagTypes.set(tg.slug, {
+            key,
+            value,
+          });
+        });
+      }
+    });
+    const types: Map<string, KeyValue[]> = new Map();
+    [...tagTypes.entries()].forEach(entry => {
+      const [key, keyVal] = entry;
+      const typeSet = types.get(keyVal.key);
+      const innerTags = typeSet instanceof Object ? typeSet : [];
+      innerTags.push({
+        key,
+        value: keyVal.value,
+      });
+      types.set(keyVal.key, innerTags);
+    });
+    return Object.fromEntries(types);
   }
 
   async deletePaired(pairedID: string) {
