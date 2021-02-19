@@ -51,6 +51,7 @@ import { Kuta } from './lib/kuta';
 import { AspectSet } from './lib/calc-orbs';
 import { sanitize, smartCastInt } from 'src/lib/converters';
 import { KeyValue } from './interfaces/key-value';
+import { TagDTO } from './dto/tag.dto';
 
 @Injectable()
 export class AstrologicService {
@@ -818,13 +819,16 @@ export class AstrologicService {
       const { relType, tags } = pc;
       if (tags instanceof Array) {
         tags.forEach(tg => {
-          const tagOpt = tagTypes.get(tg.slug);
-          const value = tagOpt instanceof Object ? tagOpt.value + 1 : 1;
-          const key = notEmptyString(tg.vocab, 1) ? tg.vocab : 'trait';
-          tagTypes.set(tg.slug, {
-            key,
-            value,
-          });
+          const slugKey = sanitize(tg.slug, '_');
+          if (slugKey.length > 0 && slugKey !== '_') {
+            const tagOpt = tagTypes.get(slugKey);
+            const value = tagOpt instanceof Object ? tagOpt.value + 1 : 1;
+            const key = notEmptyString(tg.vocab, 1) ? tg.vocab : 'trait';
+            tagTypes.set(slugKey, {
+              key,
+              value,
+            });
+          }
         });
       }
       if (notEmptyString(relType, 2)) {
@@ -853,6 +857,111 @@ export class AstrologicService {
       types.set(keyVal.key, innerTags);
     });
     return Object.fromEntries(types);
+  }
+
+  async getTraits(shortOnly = true, limit = 100000) {
+    const pcs = await this.pairedChartModel
+      .aggregate([
+        {
+          $project: {
+            _id: 0,
+            'tags.slug': 1,
+            'tags.name': 1,
+            'tags.vocab': 1,
+          },
+        },
+        {
+          $match: {
+            'tags.vocab': 'trait',
+          },
+        },
+      ])
+      .limit(limit)
+      .exec();
+    const tagOpts: Map<string, KeyValue> = new Map();
+    const descriptiveName = (name: string) => {
+      return name.length > 36 || (name.length > 20 && /[.,)()_-]/.test(name));
+    };
+    pcs.forEach(pc => {
+      const { tags } = pc;
+      if (tags instanceof Array) {
+        tags.forEach(tg => {
+          const slugKey = sanitize(tg.slug, '_');
+          const valid = shortOnly ? !descriptiveName(tg.name) : true;
+          if (valid && slugKey.length > 0 && slugKey !== '_') {
+            const tagOpt = tagOpts.get(slugKey);
+            const exists = tagOpt instanceof Object;
+            const value = exists ? tagOpt.value + 1 : 1;
+            const key = exists ? tagOpt.key : tg.name;
+            tagOpts.set(slugKey, {
+              key,
+              value,
+            });
+          }
+        });
+      }
+    });
+    return [...tagOpts.entries()].map(entry => {
+      const [key, obj] = entry;
+      return {
+        key,
+        name: obj.key,
+        value: obj.value,
+      };
+    });
+  }
+
+  async reassignTags(source: TagDTO, target: TagDTO, limit = 100000) {
+    const pcs = await this.pairedChartModel
+      .aggregate([
+        {
+          $project: {
+            _id: 1,
+            relType: 1,
+            'tags.slug': 1,
+            'tags.name': 1,
+            'tags.vocab': 1,
+          },
+        },
+        {
+          $match: {
+            'tags.vocab': source.vocab,
+            'tags.slug': source.slug,
+          },
+        },
+      ])
+      .limit(limit)
+      .exec();
+    pcs.forEach(pc => {
+      const { _id, relType, tags } = pc;
+      const filteredTags = tags.filter(
+        tg => !(tg.slug === source.slug && tg.vocab === source.vocab),
+      );
+      filteredTags.push(target);
+      const newTags = this.dedupeTags(filteredTags);
+      if (newTags.length > 0) {
+        const firstRelTag = newTags.find(tg => tg.vocab === 'type');
+        const newRelType =
+          firstRelTag instanceof Object ? firstRelTag.slug : relType;
+        this.pairedChartModel.findByIdAndUpdate(_id, {
+          relType: newRelType,
+          tags: newTags,
+        });
+      }
+    });
+    return pcs.map(pc => pc._id);
+  }
+
+  dedupeTags(tags: TagDTO[] = []) {
+    const filteredTags = [];
+    const slugIds: string[] = [];
+    tags.forEach(tg => {
+      const slugId = [tg.slug, tg.vocab].join('__');
+      if (slugIds.includes(slugId) === false) {
+        filteredTags.push(tg);
+      }
+    });
+    return filteredTags;
   }
 
   async deletePaired(pairedID: string) {

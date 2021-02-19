@@ -948,6 +948,14 @@ export class AstrologicController {
     return res.json(data);
   }
 
+  @Get('trait-tags/:mode?/:limit?')
+  async getTraitTags(@Res() res, @Param('mode') mode, @Param('limit') limit) {
+    const limitInt = smartCastInt(limit, 100 * 1000);
+    const shortOnly = mode !== 'long';
+    const data = await this.astrologicService.getTraits(shortOnly, limitInt);
+    return res.json(data);
+  }
+
   @Get('sanitize-tags/:start?/:limit?')
   async sanitizeTags(@Res() res, @Param('start') start, @Param('limit') limit) {
     const startInt = smartCastInt(start, 0);

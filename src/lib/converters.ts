@@ -92,7 +92,8 @@ export const sanitize = (str: string, separator = '-') => {
   return str
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9]+/g, separator);
+    .replace(/[^a-z0-9]+/g, separator)
+    .replace(/([a-z0-9])[^a-z0-9]+$/, '$1');
 };
 
 export const zeroPad = (inval: number | string, places = 2) => {
