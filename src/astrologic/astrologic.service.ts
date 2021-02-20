@@ -911,13 +911,19 @@ export class AstrologicService {
     });
   }
 
-  async reassignTags(source: TagDTO, target: TagDTO, limit = 100000) {
+  async reassignTags(
+    source: TagDTO,
+    target: TagDTO,
+    yearSpan = -1,
+    limit = 100000,
+  ) {
     const pcs = await this.pairedChartModel
       .aggregate([
         {
           $project: {
             _id: 1,
             relType: 1,
+            span: 1,
             'tags.slug': 1,
             'tags.name': 1,
             'tags.vocab': 1,
@@ -933,20 +939,26 @@ export class AstrologicService {
       .limit(limit)
       .exec();
     pcs.forEach(pc => {
-      const { _id, relType, tags } = pc;
+      const { _id, relType, tags, span } = pc;
       const filteredTags = tags.filter(
         tg => !(tg.slug === source.slug && tg.vocab === source.vocab),
       );
-      filteredTags.push(target);
+      if (notEmptyString(target.name) && notEmptyString(target.vocab, 2)) {
+        filteredTags.push(target);
+      }
+      const newSpan = yearSpan > 0 && span <= 0 ? yearSpan : span;
       const newTags = this.dedupeTags(filteredTags);
       if (newTags.length > 0) {
         const firstRelTag = newTags.find(tg => tg.vocab === 'type');
         const newRelType =
           firstRelTag instanceof Object ? firstRelTag.slug : relType;
-        this.pairedChartModel.findByIdAndUpdate(_id, {
-          relType: newRelType,
-          tags: newTags,
-        });
+        this.pairedChartModel
+          .findByIdAndUpdate(_id, {
+            relType: newRelType,
+            tags: newTags,
+            span: newSpan,
+          })
+          .exec();
       }
     });
     return pcs.map(pc => pc._id);

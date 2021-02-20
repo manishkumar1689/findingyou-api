@@ -83,7 +83,8 @@ import { mapNestedKaranaTithiYoga } from './lib/mappers';
 import { CreateSettingDTO } from 'src/setting/dto/create-setting.dto';
 import typeTags from './lib/settings/relationship-types';
 import { KeyName } from './lib/interfaces';
-import { defaultPairedTagOptionSets } from './lib/settings/vocab-values';
+import { TagReassignDTO } from './dto/tag-reassign.dto';
+import { TagDTO } from './dto/tag.dto';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -954,6 +955,30 @@ export class AstrologicController {
     const shortOnly = mode !== 'long';
     const data = await this.astrologicService.getTraits(shortOnly, limitInt);
     return res.json(data);
+  }
+
+  @Post('reassign-paired-tags')
+  async reassignPairedTags(@Res() res, @Body() tagReassignDto: TagReassignDTO) {
+    const { source, target, years } = tagReassignDto;
+
+    const emptyTagDTO = { slug: '', name: '', vocab: '' } as TagDTO;
+    const hasSource = source instanceof Object;
+    const sourceTag = hasSource ? source : emptyTagDTO;
+    const hasTarget = target instanceof Object;
+    const targetTag = hasTarget ? target : emptyTagDTO;
+    const yearSpan = typeof years === 'number' && years > 0 ? years : -1;
+    const validInput = hasSource && (hasTarget || yearSpan > 0);
+    const data = {
+      source: sourceTag,
+      target: targetTag,
+      years: yearSpan,
+      validInput,
+    };
+    let ids: string[] = [];
+    if (validInput) {
+      ids = await this.astrologicService.reassignTags(source, target, years);
+    }
+    return res.json(ids);
   }
 
   @Get('sanitize-tags/:start?/:limit?')
