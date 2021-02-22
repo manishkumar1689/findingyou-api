@@ -10,4 +10,10 @@ export class TagReassignDTO {
 
   @ApiProperty()
   readonly years?: number; // optionally set a duration based on a source tag
+
+  @ApiProperty()
+  readonly notes?: boolean; // append tag display text (name) to notes
+
+  @ApiProperty()
+  readonly remove?: boolean; // remove tag without a replacement
 }

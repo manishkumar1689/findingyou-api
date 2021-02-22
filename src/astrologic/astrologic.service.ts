@@ -219,7 +219,6 @@ export class AstrologicService {
         if (allTags.length > 0) {
           tagsMap.set('$all', allTags);
         }
-        console.log(Object.fromEntries(tagsMap.entries()));
         cm.set('tags.slug', Object.fromEntries(tagsMap.entries()));
       }
       steps.push({
@@ -913,9 +912,10 @@ export class AstrologicService {
 
   async reassignTags(
     source: TagDTO,
-    target: TagDTO,
+    target: TagDTO = null,
     yearSpan = -1,
-    limit = 100000,
+    addToNotes = false,
+    limit = 1000000,
   ) {
     const pcs = await this.pairedChartModel
       .aggregate([
@@ -927,6 +927,7 @@ export class AstrologicService {
             'tags.slug': 1,
             'tags.name': 1,
             'tags.vocab': 1,
+            notes: 1,
           },
         },
         {
@@ -939,29 +940,43 @@ export class AstrologicService {
       .limit(limit)
       .exec();
     pcs.forEach(pc => {
-      const { _id, relType, tags, span } = pc;
-      const filteredTags = tags.filter(
-        tg => !(tg.slug === source.slug && tg.vocab === source.vocab),
-      );
-      if (notEmptyString(target.name) && notEmptyString(target.vocab, 2)) {
-        filteredTags.push(target);
-      }
-      const newSpan = yearSpan > 0 && span <= 0 ? yearSpan : span;
-      const newTags = this.dedupeTags(filteredTags);
-      if (newTags.length > 0) {
-        const firstRelTag = newTags.find(tg => tg.vocab === 'type');
-        const newRelType =
-          firstRelTag instanceof Object ? firstRelTag.slug : relType;
-        this.pairedChartModel
-          .findByIdAndUpdate(_id, {
-            relType: newRelType,
-            tags: newTags,
-            span: newSpan,
-          })
-          .exec();
-      }
+      this._reassignTagsInPaired(pc, source, target, yearSpan, addToNotes);
     });
     return pcs.map(pc => pc._id);
+  }
+
+  _reassignTagsInPaired(
+    pc,
+    source: TagDTO,
+    target: TagDTO,
+    yearSpan = -1,
+    addToNotes = false,
+  ) {
+    const { _id, relType, tags, span, notes } = pc;
+    const filteredTags = tags.filter(
+      tg => !(tg.slug === source.slug && tg.vocab === source.vocab),
+    );
+    if (notEmptyString(target.name) && notEmptyString(target.vocab, 2)) {
+      filteredTags.push(target);
+    }
+    const updatedFields: Map<string, any> = new Map();
+    const newTags = this.dedupeTags(filteredTags);
+    updatedFields.set('tags', newTags);
+    if (yearSpan > 0 && span <= 0) {
+      updatedFields.set('span', yearSpan);
+    }
+    const firstRelTag = newTags.find(tg => tg.vocab === 'type');
+    if (firstRelTag instanceof Object && firstRelTag.slug !== relType) {
+      updatedFields.set('relType', firstRelTag.slug);
+    }
+    if (addToNotes) {
+      const noteParts = notEmptyString(notes) ? [notes] : [];
+      noteParts.push(source.name);
+      updatedFields.set('notes', noteParts.join('.\n'));
+    }
+    this.pairedChartModel
+      .findByIdAndUpdate(_id, Object.fromEntries(updatedFields))
+      .exec();
   }
 
   dedupeTags(tags: TagDTO[] = []) {
@@ -1174,7 +1189,6 @@ export class AstrologicService {
           tags: newTags,
         })
         .exec();
-      console.log(updated);
     }
     return pcs.map(pc => pc._id);
   }

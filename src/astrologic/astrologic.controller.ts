@@ -959,7 +959,7 @@ export class AstrologicController {
 
   @Post('reassign-paired-tags')
   async reassignPairedTags(@Res() res, @Body() tagReassignDto: TagReassignDTO) {
-    const { source, target, years } = tagReassignDto;
+    const { source, target, years, notes, remove } = tagReassignDto;
 
     const emptyTagDTO = { slug: '', name: '', vocab: '' } as TagDTO;
     const hasSource = source instanceof Object;
@@ -967,7 +967,10 @@ export class AstrologicController {
     const hasTarget = target instanceof Object;
     const targetTag = hasTarget ? target : emptyTagDTO;
     const yearSpan = typeof years === 'number' && years > 0 ? years : -1;
-    const validInput = hasSource && (hasTarget || yearSpan > 0);
+    const removeTag = remove === true && !hasTarget;
+    const addToNotes = notes === true;
+    const validInput =
+      hasSource && (hasTarget || yearSpan > 0 || addToNotes || removeTag);
     const data = {
       source: sourceTag,
       target: targetTag,
@@ -976,9 +979,21 @@ export class AstrologicController {
     };
     let ids: string[] = [];
     if (validInput) {
-      ids = await this.astrologicService.reassignTags(source, target, years);
+      ids = await this.astrologicService.reassignTags(
+        source,
+        target,
+        years,
+        addToNotes,
+      );
     }
-    return res.json(ids);
+    return res.json({
+      ids,
+      source: sourceTag,
+      target: targetTag,
+      years: yearSpan,
+      notes: addToNotes,
+      valid: validInput,
+    });
   }
 
   @Get('sanitize-tags/:start?/:limit?')
