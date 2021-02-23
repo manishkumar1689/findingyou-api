@@ -8,6 +8,7 @@ import {
   filesDirectory,
 } from '../.config';
 import { buildFullPath } from './files';
+import { notEmptyString } from './validators';
 
 interface FileDetails {
   name: string;
@@ -88,12 +89,14 @@ export const listFiles = async (
     if (refs instanceof Array) {
       data.files = [];
       data.numRefs = refs.length;
-      for (let i = 0; i < data.numRefs; i++) {
-        const fd = await buildFileData(path, refs[i]);
-        data.files.push(fd);
+      for (const fn of refs) {
+        if (notEmptyString(fn) && !fn.startsWith('.')) {
+          const fd = await buildFileData(path, fn);
+          data.files.push(fd);
+        }
       }
     }
-    data.valid = data.numRefs > 0;
+    data.valid = data.files.length > 0;
     data.size = data.files.map(f => f.size).reduce((a, b) => a + b, 0);
   }
   return data;

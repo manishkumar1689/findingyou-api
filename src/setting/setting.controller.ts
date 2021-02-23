@@ -17,7 +17,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SettingService } from './setting.service';
 import { CreateSettingDTO } from './dto/create-setting.dto';
-import { notEmptyString } from '../lib/validators';
+import { isNumeric, notEmptyString } from '../lib/validators';
 import { extractDocId } from '../lib/entities';
 import { UserService } from '../user/user.service';
 import { exportCollection, listFiles } from '../lib/operations';
@@ -26,6 +26,7 @@ import {
   buildFullPath,
   extractJsonData,
   writeSettingFile,
+  uploadSwissEphDataFile,
 } from '../lib/files';
 import moment = require('moment');
 import availableLanguages from './sources/languages';
@@ -368,6 +369,57 @@ export class SettingController {
       }
     }
     return res.status(statusCode).json(Object.fromEntries(jsonData));
+  }
+
+  @Post('upload-swiss-ephemeris/:userID/:newName?/:subDir?/:mode?')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadSwissEphFile(
+    @Res() res,
+    @Param('userID') userID,
+    @Param('newName') newName,
+    @Param('subDir') subDir,
+    @Param('mode') mode,
+    @UploadedFile() file,
+  ) {
+    const result: Map<string, any> = new Map();
+    let msg = '';
+    let statusCode = HttpStatus.ACCEPTED;
+    if (this.userService.isAdminUser(userID)) {
+      const { originalname, mimetype, size, buffer } = file;
+      const targetName = notEmptyString(newName, 5) ? newName : originalname;
+      const subDirKey =
+        notEmptyString(subDir) && /\w+/.test(subDir) ? subDir : '';
+      const modeKey = notEmptyString(mode) ? mode : 'add';
+      const data = uploadSwissEphDataFile(
+        targetName,
+        subDirKey,
+        buffer,
+        modeKey,
+      );
+
+      Object.entries(data).forEach(entry => {
+        const [key, val] = entry;
+        result.set(key, val);
+      });
+      const newSize = result.has('newSize') ? result.get('newSize') : 0;
+      result.set('dataSize', size);
+      result.set('mimetype', mimetype);
+      const validSize = newSize > 0;
+      result.set('valid', validSize);
+      const exists = result.get('exists') === true;
+      const replaced = result.get('replaced') === true;
+      if (validSize) {
+        msg = replaced ? 'File uploaded and replaced' : 'New file uploaded';
+      } else if (exists === true && !replaced) {
+        msg = 'Could not be replaced';
+      }
+    } else {
+      result.set('valid', false);
+      msg = 'Not authorised';
+      statusCode = HttpStatus.FORBIDDEN;
+    }
+    result.set('message', msg);
+    return res.status(statusCode).json(Object.fromEntries(result));
   }
 
   @Post('import/:mode/:key')

@@ -81,25 +81,27 @@ const readDataFilesSync = directoryPath => {
   if (fs.existsSync(directoryPath)) {
     files = fs.readdirSync(directoryPath);
   }
-  return files.map(fn => {
-    const fp = [directoryPath, fn].join('/');
-    const fd = getFileData(fp);
-    if (fd.isDir) {
-      const children = readDataFilesSync(fp);
-      return { ...fd, children };
-    } else {
-      const file = fd.path.split('/').pop();
-      let infoItem = fileValues.find(fi => fi.file === file);
-      if (!infoItem) {
-        infoItem = {
-          file,
-          info: '',
-          yearRange: [0, 0],
-        };
+  return files
+    .filter(fn => !fn.startsWith('.'))
+    .map(fn => {
+      const fp = [directoryPath, fn].join('/');
+      const fd = getFileData(fp);
+      if (fd.isDir) {
+        const children = readDataFilesSync(fp);
+        return { ...fd, children };
+      } else {
+        const file = fd.path.split('/').pop();
+        let infoItem = fileValues.find(fi => fi.file === file);
+        if (!infoItem) {
+          infoItem = {
+            file,
+            info: '',
+            yearRange: [0, 0],
+          };
+        }
+        return { ...fd, ...infoItem };
       }
-      return { ...fd, ...infoItem };
-    }
-  });
+    });
 };
 
 /*
