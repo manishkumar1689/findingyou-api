@@ -143,9 +143,10 @@ export class AstrologicController {
     });
   }
 
-  @Get('swisseph/files')
-  async ephemerisFiles(@Res() res) {
-    const data = await readEpheFiles();
+  @Get('swisseph/files/:subDir?')
+  async ephemerisFiles(@Res() res, @Param('subDir') subDir) {
+    const subDirRef = notEmptyString(subDir, 2) ? subDir : '';
+    const data = await readEpheFiles(subDirRef);
     return res.status(HttpStatus.OK).json(data);
   }
 

@@ -3,6 +3,8 @@ import * as path from 'path';
 import * as lineByLine from 'n-readlines';
 import { ephemerisPath } from '../../.config';
 import fileValues from './settings/file-values';
+import { buildFullPath } from '../../lib/files';
+import { notEmptyString } from '../../lib/validators';
 /*
 @param fn:string
 @return Object
@@ -38,6 +40,16 @@ export const getFileData = fn => {
       copyLine,
     };
   }
+};
+
+export const deleteSwissEpheFile = (fn: string, subDir = '') => {
+  const fullPath = buildFullPath(fn, 'swisseph', subDir);
+  let isRemoved = false;
+  if (fs.existsSync(fullPath)) {
+    fs.unlinkSync(fullPath);
+    isRemoved = true;
+  }
+  return isRemoved;
 };
 
 /*
@@ -76,21 +88,25 @@ const fetchFirstLines = path => {
 @param directoryPath:string
 @return Array<Object>
 */
-const readDataFilesSync = directoryPath => {
+const readDataFilesSync = (directoryPath: string, subDir = '') => {
   let files = [];
-  if (fs.existsSync(directoryPath)) {
-    files = fs.readdirSync(directoryPath);
+  const fullPath = notEmptyString(subDir, 1)
+    ? path.resolve(directoryPath + '/' + subDir)
+    : directoryPath;
+  if (fs.existsSync(fullPath)) {
+    files = fs.readdirSync(fullPath);
   }
   return files
     .filter(fn => !fn.startsWith('.'))
     .map(fn => {
-      const fp = [directoryPath, fn].join('/');
+      const fp = [fullPath, fn].join('/');
       const fd = getFileData(fp);
+      const file = fd.path.split('/').pop();
       if (fd.isDir) {
-        const children = readDataFilesSync(fp);
-        return { ...fd, children };
+        const children = readDataFilesSync(fp, subDir);
+        fd.size = children.map(cf => cf.size).reduce((a, b) => a + b, 0);
+        return { ...fd, file, children };
       } else {
-        const file = fd.path.split('/').pop();
         let infoItem = fileValues.find(fi => fi.file === file);
         if (!infoItem) {
           infoItem = {
@@ -108,13 +124,13 @@ const readDataFilesSync = directoryPath => {
 @param directoryPath:string
 @return Promise<Array<Object>>
 */
-export const readDataFiles = async directoryPath => {
-  return readDataFilesSync(directoryPath);
+export const readDataFiles = async (directoryPath: string, subDir = '') => {
+  return readDataFilesSync(directoryPath, subDir);
 };
 
 /*
  * return Promise<Array<Object>>
  */
-export const readEpheFiles = async () => {
-  return await readDataFiles(ephemerisPath);
+export const readEpheFiles = async (subDir = '') => {
+  return await readDataFiles(ephemerisPath, subDir);
 };

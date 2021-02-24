@@ -34,6 +34,7 @@ import defaultLanguageOptions from './sources/lang-options';
 import { AdminGuard } from '../auth/admin.guard';
 import { ProtocolDTO } from './dto/protocol.dto';
 import { parseAstroBankCSV } from '../lib/parse-astro-csv';
+import { deleteSwissEpheFile } from '../astrologic/lib/files';
 
 @Controller('setting')
 export class SettingController {
@@ -420,6 +421,21 @@ export class SettingController {
     }
     result.set('message', msg);
     return res.status(statusCode).json(Object.fromEntries(result));
+  }
+
+  @Delete('delete-swisseph-file/:userID/:fn/:subDir?')
+  async deleteFile(
+    @Res() res,
+    @Param('userID') userID,
+    @Param('fn') fn,
+    @Param('subDir') subDir,
+  ) {
+    const result = { valid: false, deleted: false, file: fn, subDir };
+    if (this.userService.isAdminUser(userID)) {
+      result.deleted = deleteSwissEpheFile(fn, subDir);
+      result.valid = true;
+    }
+    return res.json(result);
   }
 
   @Post('import/:mode/:key')

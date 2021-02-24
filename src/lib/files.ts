@@ -129,7 +129,7 @@ export const uploadSwissEphDataFile = (
   if (exists && mayOverwrite) {
     const fullPath = buildFullPath(targetName, 'swisseph');
     backupName = buildDateTimeSuffixedFileName(targetName);
-    const newFullPath = buildFullPath(backupName, 'swisseph');
+    const newFullPath = buildFullPath(backupName, 'swisseph', 'backups');
     const copyExists = fs.existsSync(newFullPath);
     if (!copyExists) {
       fs.copyFileSync(fullPath, newFullPath);
