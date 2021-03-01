@@ -4,7 +4,7 @@ import { AppService } from './app.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RedisModule } from 'nestjs-redis';
 import { HandlebarsAdapter, MailerModule } from '@nest-modules/mailer';
-import { mongo, redisOptions } from './.config';
+import { mongo, redisOptions, mailDetails } from './.config';
 import { AstrologicModule } from './astrologic/astrologic.module';
 import { GeoModule } from './geo/geo.module';
 import { UserModule } from './user/user.module';
@@ -12,11 +12,11 @@ import { DictionaryModule } from './dictionary/dictionary.module';
 import { SettingModule } from './setting/setting.module';
 import { MessageModule } from './message/message.module';
 import { SnippetModule } from './snippet/snippet.module';
-import { mailDetails } from './.config';
 import { UserService } from './user/user.service';
 import { UserSchema } from './user/schemas/user.schema';
 import { AppGateway } from './app.gateway';
 import { FeedbackModule } from './feedback/feedback.module';
+
 @Module({
   imports: [
     MongooseModule.forRoot(

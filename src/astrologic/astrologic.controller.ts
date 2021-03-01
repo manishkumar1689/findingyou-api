@@ -796,6 +796,13 @@ export class AstrologicController {
       [],
       query,
     );
+    Object.entries(process.env).forEach(entry => {
+      const [k, v] = entry;
+      if (typeof v === 'string' && /^dev/i.test(v)) {
+        console.log(k, v, 12);
+      }
+    });
+
     return res.json(steps);
   }
 

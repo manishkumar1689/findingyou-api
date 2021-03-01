@@ -27,6 +27,7 @@ import {
   extractJsonData,
   writeSettingFile,
   uploadSwissEphDataFile,
+  matchFullPath,
 } from '../lib/files';
 import moment = require('moment');
 import availableLanguages from './sources/languages';
@@ -343,6 +344,35 @@ export class SettingController {
       data.valid = notEmptyString(data.outfile);
     }
     return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('file-download/:userID/:fileName/:dir?')
+  async downloadResource(
+    @Res() res,
+    @Param('userID') userID,
+    @Param('fileName') fileName: string,
+    @Param('dir') dir,
+  ) {
+    const isAdmin = await this.userService.isAdminUser(userID);
+    if (isAdmin && notEmptyString(fileName)) {
+      const dirRef = notEmptyString(dir) ? dir : 'backups';
+      const fileRef = matchFullPath(fileName, dirRef);
+      if (fileRef.valid) {
+        res.header('Content-Transfer-Encoding', 'binary');
+        res.header('Expires', '0');
+        res.header(
+          'Cache-Control',
+          'must-revalidate, post-check=0, pre-check=0',
+        );
+        res.header('Pragma', 'public');
+        res.header('Content-Length', fileRef.size);
+        return res.download(fileRef.path);
+      } else {
+        return res.status(HttpStatus.NOT_FOUND).json({ valid: false });
+      }
+    } else {
+      return res.status(HttpStatus.NOT_ACCEPTABLE).json({ valid: false });
+    }
   }
 
   @Post('import-custom/:key')

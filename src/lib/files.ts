@@ -429,3 +429,16 @@ export const getFileData = (fn: string): FileData => {
     size: iSize,
   };
 };
+
+export const matchFullPath = (filename: string, dir = '', subDir = '') => {
+  const fullPath = buildFullPath(filename, dir, subDir);
+  const data = { valid: false, path: '', size: -1, mtime: null };
+  if (fs.existsSync(fullPath)) {
+    data.path = fullPath;
+    data.valid = true;
+    const { mtime, size } = fs.statSync(fullPath);
+    data.size = size;
+    data.mtime = mtime;
+  }
+  return data;
+};
