@@ -410,3 +410,28 @@ export const nakshatra28Progress = (lng: number) => {
       return nakashatra27Fraction(lng);
   }
 };
+
+export const shortenName = (str = '', maxLength = 20): string => {
+  let txt = '';
+  if (typeof str === 'string') {
+    const parts = str.split(' ');
+    const numParts = parts.length;
+    const outParts = [parts[0]];
+
+    if (numParts > 2 && parts[2].length < 5) {
+      outParts.push(parts[numParts - 2]);
+    }
+    if (numParts > 1) {
+      outParts.push(parts[numParts - 1]);
+    }
+    const totLen = outParts.join(' ').length;
+    if (totLen > maxLength * 0.75 && outParts.length > 1) {
+      outParts[0] = outParts[0].substring(0, 1).toUpperCase() + '.';
+    }
+    txt = outParts.join(' ');
+    if (txt.length > maxLength) {
+      txt = str.substring(0, maxLength);
+    }
+  }
+  return txt;
+};

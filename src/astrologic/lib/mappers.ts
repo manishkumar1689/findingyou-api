@@ -1,13 +1,8 @@
 /*
  * Methods to convert Maps to objects and to simplify complex objects
  */
-
-import { SSL_OP_PKCS1_CHECK_1 } from 'constants';
-import { Subject } from 'rxjs';
-import { NumValue } from '../interfaces/num-value';
-import { PairedChart } from '../interfaces/paired-chart.interface';
-import { PairedChartSchema } from '../schemas/paired-chart.schema';
 import { jdToDateParts } from './date-funcs';
+import { shortenName } from './helpers';
 import { KeyValueNum } from './models/chart';
 
 export const mapToObject = map => {
@@ -80,6 +75,7 @@ export const mapSubChartMeta = (chart: any) => {
       chartObj = {
         _id,
         ...subject,
+        name: shortenName(subject.name),
         year,
         jd,
         ...geo,

@@ -52,6 +52,7 @@ import { AspectSet } from './lib/calc-orbs';
 import { sanitize, smartCastInt } from 'src/lib/converters';
 import { KeyValue } from './interfaces/key-value';
 import { TagDTO } from './dto/tag.dto';
+import { shortenName } from './lib/helpers';
 
 @Injectable()
 export class AstrologicService {
@@ -1074,9 +1075,11 @@ export class AstrologicService {
       .filter(c => c instanceof Object)
       .map(c => {
         const year = julToISODateObj(c.jd, c.tzOffset).year();
+        const shortName = shortenName(c.subject.name);
         return {
           id: c._id,
-          name: `${c.subject.name} (${c.subject.gender}), ${year}`,
+          name: `${shortName} (${c.subject.gender})`,
+          year,
         };
       });
     // dedupe results
