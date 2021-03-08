@@ -905,11 +905,13 @@ export class AstrologicController {
         relType: inData.relType,
         tags,
       } as PairedChartDTO;
-
+      const { isNew } = inData;
+      const createNew = isNew === true;
       const setting = await this.settingService.getByKey('kuta_variants');
       const paired = await this.astrologicService.savePaired(
         pairedDTO,
         setting,
+        createNew,
       );
       return {
         valid: true,

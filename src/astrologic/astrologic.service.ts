@@ -269,10 +269,24 @@ export class AstrologicService {
     return items.length > 0 ? items[0] : null;
   }
 
+  /* 
+    c1: chart 1 id in dual mode, paired chart id in single mode
+    c2: chart 1 id in dual mode, 'single' flag in single mode
+    NB: related charts will not deleted in single mode
+  */
   async removePairedAndCharts(c1: string, c2: string, removeCharts = false) {
     const data = { paired: null, chart1: null, chart2: null };
-    data.paired = await this.pairedChartModel.findOneAndDelete({ c1, c2 });
-    if (removeCharts) {
+    const singleDeleteMode = c2 === 'single';
+    const filter: Map<string, string> = new Map();
+    if (singleDeleteMode) {
+      filter.set('_id', c1);
+    } else {
+      filter.set('c1', c1);
+      filter.set('c2', c2);
+    }
+    const criteria = Object.fromEntries(filter.entries());
+    data.paired = await this.pairedChartModel.findOneAndDelete(criteria);
+    if (removeCharts && !singleDeleteMode) {
       data.chart1 = await this.deleteChart(c1);
       data.chart2 = await this.deleteChart(c2);
     }
@@ -567,7 +581,7 @@ export class AstrologicService {
     };
   }
 
-  async savePaired(pairedDTO: PairedChartDTO, setting = null) {
+  async savePaired(pairedDTO: PairedChartDTO, setting = null, isNew = false) {
     const { c1, c2 } = pairedDTO;
     const numCharts = await this.chartModel
       .count({ _id: { $in: [c1, c2] } })
@@ -575,7 +589,7 @@ export class AstrologicService {
     let result: any = { valid: false };
 
     const nowDt = new Date();
-    const { aspects, kutas } = await this.saveExtraValues(c1, c2);
+    const { aspects, kutas } = await this.saveExtraValues(c1, c2, setting);
     pairedDTO = { ...pairedDTO, aspects, kutas, modifiedAt: nowDt };
     if (numCharts === 2) {
       const currPairedChart = await this.pairedChartModel
@@ -584,7 +598,7 @@ export class AstrologicService {
           c2,
         })
         .exec();
-      if (currPairedChart) {
+      if (currPairedChart && !isNew) {
         const { _id } = currPairedChart;
         result = await this.pairedChartModel.findByIdAndUpdate(_id, pairedDTO);
       } else {

@@ -34,4 +34,7 @@ export class PairedChartInputDTO {
 
   @ApiProperty()
   readonly mode: string;
+
+  @ApiProperty()
+  readonly isNew?: boolean;
 }
