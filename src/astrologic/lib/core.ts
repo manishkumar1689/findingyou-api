@@ -1208,16 +1208,18 @@ export const calcVargas = async (datetime, geo, system = 'W') => {
 
 const matchRashis = (houseData, bodyData: GrahaSet, corrected = false) => {
   return houseData.houses.map((deg, houseIndex) => {
-    const houseSignIndex = Math.floor((deg % 360) / 30);
+    const houseSignIndexFloor = Math.floor((deg % 360) / 30);
+    const houseSignIndex = houseSignIndexFloor < 0 ? 0 : houseSignIndexFloor >= 12? 11 : houseSignIndexFloor;
     const rashiRow = rashiValues[houseSignIndex];
-    const graha = bodyData.bodies.find(b => b.key === rashiRow.ruler);
-    const grLng = corrected ? graha.lng : graha.longitude;
+    // Ensure index is between 0 and 11
+    const graha = rashiRow instanceof Object? bodyData.bodies.find(b => b.key === rashiRow.ruler) : null;
     const houseNum = houseIndex + 1;
     const houseSignDiff = (houseSignIndex - houseIndex + 12) % 12;
     //const houseSignNum = houseSignIndex + 1;
     let lordInHouse = -1;
     let lordInSign = null;
-    if (graha) {
+    if (graha instanceof Object) {
+      const grLng = corrected ? graha.lng : graha.longitude;
       lordInHouse = graha.house;
       lordInSign = Math.floor(grLng / 30) + 1;
     }
