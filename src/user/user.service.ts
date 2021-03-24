@@ -115,6 +115,33 @@ export class UserService {
     return hashMapToObject(filter);
   };
 
+  buildMemberCriteria = (criteria: object): object => {
+    const filter = new Map<string, any>();
+    if (criteria instanceof Object) {
+      const keys = Object.keys(criteria);
+      for (const key of keys) {
+        const val = criteria[key];
+        switch (key) {
+          case 'roles':
+            if (val instanceof Array) {
+              filter.set(key, val);
+            }
+            break;
+          case 'fullName':
+          case 'nickName':
+            filter.set(key, new RegExp(val, 'i'));
+            break;
+          case 'usearch':
+            const rgx = new RegExp('\\b' + val, 'i');
+            filter.set('$or', [{ nickName: rgx }, { fullName: rgx }]);
+            break;
+        }
+      }
+      filter.set('active', true);
+    }
+    return hashMapToObject(filter);
+  };
+
   // Get a single User
   async getUser(userID: string): Promise<User> {
     const user = await this.userModel
@@ -506,18 +533,27 @@ export class UserService {
   }
 
   async members(start = 0, limit = 100, criteria = null) {
-    const filter = new Map<string, any>();
-    filter.set('active', true);
-    const latLngDist = { lat: 0, lng: 0 };
-    if (criteria instanceof Object) {
-      Object.entries(criteria).forEach(entry => {
-        const [key, value] = entry;
-        switch (key) {
+    const matchCriteria = this.buildMemberCriteria(criteria);
+    let nearStage = null;
+    if (Object.keys(criteria).includes('near')) {
+      const geoMatch = this.buildNearQuery(criteria.near);
+      if (geoMatch instanceof Object) {
+        const { $near } = geoMatch;
+        if ($near instanceof Object) {
+          const { $geometry, $minDistance, $maxDistance } = $near;
+          nearStage = {
+            $geoNear: {
+              near: $geometry,
+              minDistance: $minDistance,
+              maxDistance: $maxDistance,
+              spherical: true,
+              distanceField: 'distance',
+            },
+          };
         }
-      });
+      }
     }
-    const matchCriteria = Object.fromEntries(filter.entries());
-    const userCharts = await this.userModel.aggregate([
+    const steps = [
       { $match: matchCriteria },
       {
         $lookup: {
@@ -550,6 +586,7 @@ export class UserService {
           active: 1,
           placenames: 1,
           geo: 1,
+          distance: 1,
           profiles: 1,
           gender: 1,
           chart: {
@@ -567,7 +604,11 @@ export class UserService {
       {
         $skip: start,
       },
-    ]);
+    ];
+    if (nearStage instanceof Object) {
+      steps.unshift(nearStage);
+    }
+    const userCharts = await this.userModel.aggregate(steps);
     return userCharts.map(item => {
       let chart: any = {};
       let hasChart = false;
@@ -791,7 +832,7 @@ export class UserService {
   buildNearQuery(coordsStr = '') {
     if (
       notEmptyString(coordsStr) &&
-      /^-?\d+(\.\d+),-?\d+(\.\d+)(\,\d+(\.\d+))?$/.test(coordsStr)
+      /^-?\d+(\.\d+),-?\d+(\.\d+)(\,\d+(\.\d+)?)?$/.test(coordsStr)
     ) {
       const [lat, lng, km] = coordsStr
         .split(',')
