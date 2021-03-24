@@ -9,10 +9,8 @@ import * as bcrypt from 'bcrypt';
 import { hashSalt } from '../.config';
 import { generateHash } from '../lib/hash';
 import * as moment from 'moment-timezone';
-import { isNumber, isNumeric, notEmptyString } from 'src/lib/validators';
-import roleValues from './settings/roles';
+import { isNumeric, notEmptyString } from 'src/lib/validators';
 import { Role } from './interfaces/role.interface';
-import { Status } from './interfaces/status.interface';
 import { Payment } from './interfaces/payment.interface';
 import { PaymentOption } from './interfaces/payment-option.interface';
 import { PaymentDTO } from './dto/payment.dto';
@@ -134,6 +132,18 @@ export class UserService {
           case 'usearch':
             const rgx = new RegExp('\\b' + val, 'i');
             filter.set('$or', [{ nickName: rgx }, { fullName: rgx }]);
+            break;
+          case 'gender':
+            filter.set(
+              'gender',
+              val
+                .trim()
+                .toLowerCase()
+                .substring(0, 1),
+            );
+            break;
+          case 'age':
+            filter.set('dob', this.translateAgeRange(val));
             break;
         }
       }
@@ -584,10 +594,13 @@ export class UserService {
           fullName: 1,
           nickName: 1,
           active: 1,
+          dob: 1,
           placenames: 1,
           geo: 1,
           distance: 1,
           profiles: 1,
+          'preferences.key': 1,
+          'preferences.value': 1,
           gender: 1,
           chart: {
             $filter: {
@@ -849,5 +862,112 @@ export class UserService {
     } else {
       return {};
     }
+  }
+
+  translateAgeRange(strAges = '') {
+    let min = 18;
+    let max = 30;
+    if (/^\d+(,\d+)$/.test(strAges.trim())) {
+      const parts = strAges.split(',');
+      min = parseInt(parts.shift(), 10);
+      const targetMax =
+        parts.length > 0 ? parseInt(parts.shift(), 10) : min + 10;
+      if (targetMax > min) {
+        max = targetMax;
+      } else {
+        max = min + 10;
+      }
+    }
+    const startDate = moment()
+      .subtract(max, 'years')
+      .toISOString();
+    const endDate = moment()
+      .subtract(min, 'years')
+      .toISOString();
+    return {
+      $gte: new Date(startDate),
+      $lte: new Date(endDate),
+    };
+  }
+
+  mapPreferenceKey(key: string) {
+    switch (key) {
+      case 'sex':
+      case 'sexuality':
+        return 'gender';
+      default:
+        return key;
+    }
+  }
+
+  filterByPreferences(
+    items = [],
+    query = null,
+    prefOpts = [],
+    matchByDefault = true,
+  ) {
+    if (query instanceof Object) {
+      const excludeKeys = ['age', 'near', 'gender'];
+      const matchedOptions = Object.entries(query)
+        .filter(entry => excludeKeys.includes(entry[0]) == false)
+        .map(entry => {
+          const [key, value] = entry;
+          const row = prefOpts.find(
+            po => po.key === this.mapPreferenceKey(key),
+          );
+          return row instanceof Object ? { ...row, value } : null;
+        })
+        .filter(po => po instanceof Object);
+      if (matchedOptions.length > 0) {
+        return items.filter(item => {
+          let valid = true;
+          let hasMatchedPreferences = false;
+          const { preferences } = item;
+          if (preferences instanceof Array && preferences.length > 0) {
+            hasMatchedPreferences = true;
+            matchedOptions.forEach(mo => {
+              const matchedPref = preferences.find(p => p.key === mo.key);
+              if (matchedPref instanceof Object) {
+                const validOpt = this.validatePreference(mo, matchedPref);
+                if (!validOpt) {
+                  valid = false;
+                }
+              }
+            });
+          }
+          return matchByDefault || matchByDefault
+            ? valid
+            : hasMatchedPreferences && valid;
+        });
+      }
+    }
+    return items;
+  }
+
+  validatePreference(mo, matchedPref) {
+    let valid = false;
+    let { value } = mo;
+    const itemVal = matchedPref.value;
+    switch (mo.key) {
+      case 'gender':
+        value = value.split(',');
+        break;
+      case 'age_range':
+        value = parseInt(value);
+        break;
+    }
+    switch (mo.key) {
+      case 'gender':
+        if (itemVal instanceof Array) {
+          valid = itemVal.some(v => value.includes(v));
+        }
+        break;
+      case 'age_range':
+        if (itemVal instanceof Array && itemVal.length > 1) {
+          valid = value >= itemVal[0] && value <= itemVal[1];
+        }
+        break;
+    }
+    return valid;
   }
 }

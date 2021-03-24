@@ -85,6 +85,11 @@ export class SettingService {
     return { ...result, value: newValue };
   }
 
+  async getPreferences() {
+    const setting = await this.getByKey('preference_options');
+    return setting instanceof Object ? setting.value : [];
+  }
+
   async saveRelationshipType(newType: KeyName) {
     const setting = await this.getByKey('relationship_types');
     let types: KeyName[] = [];

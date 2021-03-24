@@ -209,7 +209,13 @@ export class UserController {
     const startInt = smartCastInt(start, 0);
     const limitInt = smartCastInt(limit, 100);
     const data = await this.userService.members(startInt, limitInt, query);
-    return res.json(data);
+    const prefOptions = await this.settingService.getPreferences();
+    const items = this.userService.filterByPreferences(
+      data,
+      query,
+      prefOptions,
+    );
+    return res.json(items);
   }
 
   // Fetch a particular user using ID
