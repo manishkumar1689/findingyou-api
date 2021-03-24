@@ -47,7 +47,7 @@ export class UserService {
     private readonly mailerService: MailerService,
   ) {}
   // fetch all Users
-  async getAllUser(
+  async list(
     start: number,
     limit: number,
     criteria: any = null,
@@ -102,6 +102,9 @@ export class UserService {
               { nickName: rgx },
               { fullName: rgx },
             ]);
+            break;
+          case 'near':
+            filter.set('coords', this.buildNearQuery(val));
             break;
         }
       }
@@ -783,5 +786,27 @@ export class UserService {
 
   async isBlocked(userID: string): Promise<boolean> {
     return await this.isValidRoleUser(userID, 'blocked');
+  }
+
+  buildNearQuery(coordsStr = '') {
+    if (
+      notEmptyString(coordsStr) &&
+      /^-?\d+(\.\d+),-?\d+(\.\d+)(\,\d+(\.\d+))?$/.test(coordsStr)
+    ) {
+      const [lat, lng, km] = coordsStr
+        .split(',')
+        .filter(isNumeric)
+        .map(str => parseFloat(str));
+      const distance = isNumeric(km) && km > 0 ? km * 1000 : 100000;
+      return {
+        $near: {
+          $geometry: { type: 'Point', coordinates: [lng, lat] },
+          $minDistance: 0,
+          $maxDistance: distance,
+        },
+      };
+    } else {
+      return {};
+    }
   }
 }

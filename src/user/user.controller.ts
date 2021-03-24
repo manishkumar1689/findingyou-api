@@ -182,7 +182,7 @@ export class UserController {
     if (criteria.admin) {
       activeOnly = false;
     }
-    const users = await this.userService.getAllUser(
+    const users = await this.userService.list(
       start,
       limit,
       criteria,

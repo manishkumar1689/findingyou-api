@@ -1,5 +1,5 @@
 import * as mongoose from 'mongoose';
-import * as validator from 'validator';
+/* import * as validator from 'validator'; */
 import { StatusSchema } from './status.schema';
 import { ProfileSchema } from './profile.schema';
 import { GeoSchema } from './geo.schema';
