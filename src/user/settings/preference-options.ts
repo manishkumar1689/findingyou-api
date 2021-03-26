@@ -454,4 +454,19 @@ const getDefaultPreferences = (key = 'preference_options') => {
   }
 };
 
+export interface PrefKeyValue {
+  key: string;
+  value: any;
+}
+
+
+export interface MatchedOption {
+  key: string;
+  prompt?: string;
+  type?: string;
+  rules: PrefKeyValue[];
+  options?: any[];
+  value: any;
+}
+
 export default getDefaultPreferences;

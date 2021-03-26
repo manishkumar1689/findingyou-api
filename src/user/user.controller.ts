@@ -53,11 +53,13 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import {
   generateFileName,
   generateImageStyle,
+  readRawFile,
   uploadMediaFile,
 } from 'src/lib/files';
 import { PreferenceDTO } from './dto/preference.dto';
 import { SampleDataDTO } from './dto/sample-data.dto';
 import { SampleRecordDTO } from './dto/sample-record.dto';
+import { mapKaranaTithiYoga } from 'src/astrologic/lib/mappers';
 
 @Controller('user')
 export class UserController {
@@ -738,6 +740,20 @@ export class UserController {
       }
     }
     return res.status(HttpStatus.OK).json(hashMapToObject(data));
+  }
+
+  @Get('bulk/test-import')
+  async bulkTestImport(@Res() res) {
+    const items = [];
+    const json = readRawFile('test-users.json', 'source');
+    const sourceData = JSON.parse(json);
+    if (sourceData instanceof Array) {
+      for (const row of sourceData) {
+        const result = await this.userService.create(row);
+        items.push(result);
+      }
+    }
+    return res.status(HttpStatus.OK).json(items);
   }
 
   async saveImportedUser(item: SampleRecordDTO) {

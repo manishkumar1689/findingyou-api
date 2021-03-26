@@ -442,3 +442,14 @@ export const matchFullPath = (filename: string, dir = '', subDir = '') => {
   }
   return data;
 };
+
+
+export const readRawFile = (filename: string, dir = '', subDir = '') => {
+  const fullPath = buildFullPath(filename, dir, subDir);
+  let out = '';
+  if (fs.existsSync(fullPath)) {
+    const buffer = fs.readFileSync(fullPath);
+    out = buffer.toString();
+  }
+  return out;
+}

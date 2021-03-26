@@ -1,9 +1,12 @@
 /*
  * Methods to convert Maps to objects and to simplify complex objects
  */
+import { notEmptyString } from 'src/lib/validators';
 import { jdToDateParts } from './date-funcs';
 import { shortenName } from './helpers';
 import { KeyValueNum } from './models/chart';
+import { LngLat, Toponym } from './interfaces';
+import { sanitize } from 'src/lib/converters';
 
 export const mapToObject = map => {
   if (map instanceof Map) {
@@ -188,3 +191,53 @@ export const mapNestedKaranaTithiYoga = (row = null) => {
   }
   return pairedKTY;
 };
+
+export const mapToponyms = (toponyms: Toponym[], geo: LngLat, locality = '') => {
+  const placenames = toponyms.map(tp => {
+    return {
+      name: tp.name,
+      fullName: tp.fullName,
+      type: tp.type,
+      geo: { lat: tp.lat, lng: tp.lng },
+    };
+  });
+
+  if (notEmptyString(locality)) {
+    const numToponyms = placenames.length;
+    const [place, country] = locality.split(',').map(s => s.trim());
+    if (numToponyms > 0) {
+      let locIndex = numToponyms - 1;
+      if (['PSCD', 'STRT'].includes(placenames[locIndex].type)) {
+        const li = placenames
+          .slice()
+          .reverse()
+          .findIndex(pl => pl.type.startsWith('PP'));
+        if (li >= 0) {
+          locIndex = numToponyms - 1 - li;
+        }
+      }
+      placenames[locIndex].name = place;
+      placenames[locIndex].fullName = place;
+      if (numToponyms < 2) {
+        placenames.unshift({
+          name: country,
+          fullName: country,
+          type: 'ADM1',
+          geo: { lat: geo.lat, lng: geo.lng },
+        });
+      }
+    }
+    const slugs = placenames.map((pl, index) => {
+      return { index, slug: sanitize(pl.name) };
+    });
+    slugs.forEach(item => {
+      const oi = slugs.find(
+        sl => sl.slug === item.slug && sl.index < item.index,
+      );
+      if (oi) {
+        placenames.splice(oi.index, 1);
+      }
+    });
+  }
+  return placenames;
+}

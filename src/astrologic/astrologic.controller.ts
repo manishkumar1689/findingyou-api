@@ -79,7 +79,7 @@ import {
   matchOrbFromGrid,
   Protocol,
 } from './lib/models/protocol-models';
-import { mapNestedKaranaTithiYoga } from './lib/mappers';
+import { mapNestedKaranaTithiYoga, mapToponyms } from './lib/mappers';
 import { CreateSettingDTO } from 'src/setting/dto/create-setting.dto';
 import typeTags from './lib/settings/relationship-types';
 import { KeyName } from './lib/interfaces';
@@ -418,54 +418,7 @@ export class AstrologicController {
           if (chartData instanceof Object) {
             data.shortTz = toShortTzAbbr(dtUtc, geoInfo.tz);
 
-            const placenames = geoInfo.toponyms.map(tp => {
-              return {
-                name: tp.name,
-                fullName: tp.fullName,
-                type: tp.type,
-                geo: { lat: tp.lat, lng: tp.lng },
-              };
-            });
-
-            if (notEmptyString(locality)) {
-              const numToponyms = placenames.length;
-              const [place, country] = locality.split(',').map(s => s.trim());
-              if (numToponyms > 0) {
-                let locIndex = numToponyms - 1;
-                if (['PSCD', 'STRT'].includes(placenames[locIndex].type)) {
-                  const li = placenames
-                    .slice()
-                    .reverse()
-                    .findIndex(pl => pl.type.startsWith('PP'));
-                  if (li >= 0) {
-                    locIndex = numToponyms - 1 - li;
-                  }
-                }
-                placenames[locIndex].name = place;
-                placenames[locIndex].fullName = place;
-                if (numToponyms < 2) {
-                  placenames.unshift({
-                    name: country,
-                    fullName: country,
-                    type: 'ADM1',
-                    geo: { lat: geo.lat, lng: geo.lng },
-                  });
-                }
-              }
-            }
-
-            let slugs = placenames.map((pl, index) => {
-              return { index, slug: sanitize(pl.name) };
-            });
-
-            slugs = slugs.forEach(item => {
-              const oi = slugs.find(
-                sl => sl.slug === item.slug && sl.index < item.index,
-              );
-              if (oi) {
-                placenames.splice(oi.index, 1);
-              }
-            });
+            const placenames = mapToponyms(geoInfo.toponyms, geo, locality);
 
             data.chart = {
               user,
@@ -1771,7 +1724,54 @@ export class AstrologicController {
     const startInt = smartCastInt(start, 0);
     const limitInt = smartCastInt(limit, 1000);
     const data = await this.astrologicService.migrateRodden(startInt, limitInt);
-
+    
     return res.json(data);
   }
+
+  @Get('build-charts/:start?/:limit?')
+  async bulkBuildCharts(@Res() res,
+  @Param('start') start,
+  @Param('limit') limit) {
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 10);
+    const users = await this.userService.findWithoutCharts(startInt, limitInt);
+    let delay = 500;
+    for (const user of users) {
+      setTimeout(async () => {
+        const { lat, lng, alt } = user.geo;
+          const tzInfo = await this.geoService.fetchTzData(
+            {lat, lng},
+            user.dob.toISOString(),
+            false,
+          );
+          const { tz, tzOffset, valid } = tzInfo;
+          if (valid) {
+            const inData = {
+                _id: '',
+                  user: user._id,
+                  datetime: user.dob.toISOString(),
+                  lat,
+                  lng,
+                  alt,
+                  isDefaultBirthChart: true,
+                  name: user.nickName,
+                  type: 'person',
+                  gender: user.gender,
+                  eventType: 'birth',
+                  roddenValue: 200,
+                  tzOffset,
+                  tz,
+                  placenames: user.placenames,
+              } as ChartInputDTO;
+              console.log(inData);
+            //const c = await this.saveChartData(inData);
+            
+          }
+      }, delay );
+      delay += 2000;
+    }
+
+    return res.json({users});
+  }
+
 }

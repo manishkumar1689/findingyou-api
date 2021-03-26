@@ -20,8 +20,9 @@ export interface KeyNumValue {
 }
 
 export interface LngLat {
-  readonly lat: number;
-  readonly lng: number;
+  lat: number;
+  lng: number;
+  alt?: number;
 }
 
 export interface SurfaceTSData {
@@ -43,3 +44,12 @@ export const DefaultAyanamshaItem: AyanamshaItem = {
   value: 23.3,
   name: 'True Citra',
 };
+
+
+export interface Toponym {
+  name: string;
+  fullName: string;
+  lat: number;
+  lng: number;
+  type: string;
+}

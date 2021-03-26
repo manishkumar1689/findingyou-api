@@ -39,7 +39,6 @@ import sphutaValues from './settings/sphuta-values';
 import induValues from './settings/indu-values';
 import greekLots from './settings/greek-lots';
 import { GrahaSet, Graha } from './models/graha-set';
-import { RashiSet, Rashi } from './models/rashi-set';
 import { HouseSet } from './models/house-set';
 import { ephemerisPath, ephemerisDefaults } from '../../.config';
 import {
@@ -628,7 +627,7 @@ export const expandWholeHouses = (startLng = 0) => {
 };
 
 export const getFirstHouseLng = (houseData: HouseSet) => {
-  return houseData.count() > 0 ? Math.floor(houseData.houses[0] / 30) * 30 : 0;
+  return houseData.count() > 0 && !isNaN(houseData.ascendant) ? Math.floor(houseData.houses[0] / 30) * 30 : 0;
 };
 
 export const calcCompactChartData = async (
@@ -658,7 +657,6 @@ export const calcCompactChartData = async (
   }
 
   const hdP = await fetchHouseData(datetime, geo, 'P');
-
   const upagrahas = await calcUpagrahas(datetime, geo, ayanamsha.value);
   const indianTimeData = await fetchIndianTimeData(datetime, geo, tzOffset);
   grahaSet.mergeSunTransitions(indianTimeData.sunData());
@@ -1184,7 +1182,6 @@ export const calcBodiesInHouses = async (
 
   const apValues = calcAprakasaValues(grahaSet.bodies);
   const upagrahas = await calcUpagrahas(datetime, geo);
-
   const rashis = matchRashis(houseData, grahaSet);
 
   return { ...grahaSet, ...houseData, aprakasa: apValues, upagrahas, rashis };
@@ -1242,7 +1239,7 @@ const matchRashis = (houseData, bodyData: GrahaSet, corrected = false) => {
       }
     }
     //const arudhaSignIndex = (lordInSign - 1 + (houseLordCount - 1)) % 12;
-    const arudhaSignIndex = (arudhaInHouse - 1 + houseSignDiff) % 12;
+    const arudhaSignIndex = (arudhaInHouse - 1 + houseSignDiff + 12) % 12;
     const arudhaInSign = arudhaSignIndex + 1;
     const arudhaLord = rashiValues[arudhaSignIndex].ruler;
     return {

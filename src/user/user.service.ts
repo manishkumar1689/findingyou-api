@@ -16,6 +16,7 @@ import { PaymentOption } from './interfaces/payment-option.interface';
 import { PaymentDTO } from './dto/payment.dto';
 import { ProfileDTO } from './dto/profile.dto';
 import { simplifyChart } from '../astrologic/lib/member-charts';
+import { MatchedOption, PrefKeyValue } from './settings/preference-options';
 const userSelectPaths = [
   '_id',
   'fullName',
@@ -842,6 +843,11 @@ export class UserService {
     return await this.isValidRoleUser(userID, 'blocked');
   }
 
+  async findWithoutCharts(start = 0, limit = 2000) {
+    const users = await this.userModel.find({ roles: { $in: ['active'] }, test: true }).select('_id geo nickName gender dob placenames preferences').skip(start).limit(limit);
+    return users;
+  }
+
   buildNearQuery(coordsStr = '') {
     if (
       notEmptyString(coordsStr) &&
@@ -891,12 +897,17 @@ export class UserService {
   }
 
   mapPreferenceKey(key: string) {
-    switch (key) {
+    const machineName = key.toLowerCase();
+    switch (machineName) {
       case 'sex':
       case 'sexuality':
         return 'gender';
+      case 's_age':
+      case 'sage':
+      case 'search_age':
+        return 'age_range';
       default:
-        return key;
+        return machineName;
     }
   }
 
@@ -908,7 +919,7 @@ export class UserService {
   ) {
     if (query instanceof Object) {
       const excludeKeys = ['age', 'near', 'gender'];
-      const matchedOptions = Object.entries(query)
+      const matchedOptions: MatchedOption[] = Object.entries(query)
         .filter(entry => excludeKeys.includes(entry[0]) == false)
         .map(entry => {
           const [key, value] = entry;
@@ -944,7 +955,8 @@ export class UserService {
     return items;
   }
 
-  validatePreference(mo, matchedPref) {
+  validatePreference(mo:MatchedOption, matchedPref: PrefKeyValue) {
+    console.log(mo, matchedPref)
     let valid = false;
     let { value } = mo;
     const itemVal = matchedPref.value;
