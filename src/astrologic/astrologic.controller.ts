@@ -409,6 +409,7 @@ export class AstrologicController {
             datetime,
           );
           const dtUtc = applyTzOffsetToDateString(datetime, geoInfo.offset);
+
           const chartData = await calcCompactChartData(
             dtUtc,
             geo,
@@ -1739,38 +1740,23 @@ export class AstrologicController {
     for (const user of users) {
       setTimeout(async () => {
         const { lat, lng, alt } = user.geo;
-          const tzInfo = await this.geoService.fetchTzData(
-            {lat, lng},
-            user.dob.toISOString(),
-            false,
-          );
-          const { tz, tzOffset, valid } = tzInfo;
-          if (valid) {
-            const inData = {
-                _id: '',
-                  user: user._id,
-                  datetime: user.dob.toISOString(),
-                  lat,
-                  lng,
-                  alt,
-                  isDefaultBirthChart: true,
-                  name: user.nickName,
-                  type: 'person',
-                  gender: user.gender,
-                  eventType: 'birth',
-                  roddenValue: 200,
-                  tzOffset,
-                  tz,
-                  placenames: user.placenames,
-              } as ChartInputDTO;
-              console.log(inData);
-            //const c = await this.saveChartData(inData);
-            
-          }
+        const inData = {
+              user: user._id,
+              datetime: user.dob.toISOString(),
+              lat,
+              lng,
+              alt,
+              isDefaultBirthChart: true,
+              name: user.nickName,
+              type: 'person',
+              gender: user.gender,
+              eventType: 'birth',
+              roddenValue: 200,
+          } as ChartInputDTO;
+        const c = await this.saveChartData(inData);
       }, delay );
       delay += 2000;
     }
-
     return res.json({users});
   }
 

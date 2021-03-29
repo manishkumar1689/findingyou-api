@@ -655,7 +655,6 @@ export const calcCompactChartData = async (
       ayanamsha.key = ayanamsaKey;
     }
   }
-
   const hdP = await fetchHouseData(datetime, geo, 'P');
   const upagrahas = await calcUpagrahas(datetime, geo, ayanamsha.value);
   const indianTimeData = await fetchIndianTimeData(datetime, geo, tzOffset);
@@ -873,7 +872,9 @@ const calcCompactVariantSet = (
     hdP.mc = subtractLng360(hdP.mc, ayanamsha.value);
 
     if (hdP.houses.length > 0) {
-      hdP.houses = hdP.houses.map(h => subtractLng360(h, ayanamsha.value));
+      hdP.houses = hdP.houses.map(h => {
+        return subtractLng360(h, ayanamsha.value);
+      });
     }
     sunAtSunRise.lng = subtractLng360(sunAtSunRise.lng, ayanamsha.value);
   }
