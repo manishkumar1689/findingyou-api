@@ -679,6 +679,19 @@ export class UserController {
     return res.json(data);
   }
 
+  @Get('fix-preferences/:start?/:limit?')
+  async fixPreferences(
+    @Res() res,
+    @Param('start') start,
+    @Param('limit') limit,
+  ) {
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 10);
+    const preferences = await this.settingService.getPreferences();
+    const data = await this.userService.fixPreferences(startInt, limitInt, preferences);
+    return res.json(data);
+  }
+
   @Post('profile-upload/:userID/:type/:name?/:title?')
   @UseInterceptors(FileInterceptor('file'))
   async upload(

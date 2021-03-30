@@ -955,6 +955,30 @@ export class UserService {
     return items;
   }
 
+  async fixPreferences(start = 0, limit = 1000, prefOpts: any[] = []) {
+    const users = await this.list(start, limit);
+    const updatedUsers = [];
+    for (const user of users) {
+      const { _id, preferences } = user.toObject();
+      if (preferences instanceof Array) {
+        for (let i = 0; i < preferences.length; i++) {
+          if (preferences[i] instanceof Object) {
+            const opt = prefOpts.find(po => po.key === preferences[i].key);
+            if (opt instanceof Object) {
+              preferences[i].type = opt.type;
+            }
+          }
+        }
+        const edited = { preferences } as CreateUserDTO;
+        const ud = await this.updateUser(_id, edited);
+        if (ud instanceof Object) {
+          updatedUsers.push(ud);
+        }
+      }
+    }
+    return {updated: updatedUsers.length};
+  }
+
   validatePreference(mo:MatchedOption, matchedPref: PrefKeyValue) {
     console.log(mo, matchedPref)
     let valid = false;
