@@ -288,8 +288,13 @@ export class UserController {
   async getSurveryMultiscales(@Res() res) {
     const key = 'survey_multiscales';
     const setting = await this.settingService.getByKey(key);
+    const hasValue =
+      setting instanceof Object &&
+      Object.keys(setting).includes('value') &&
+      setting.value instanceof Array &&
+      setting.value.length > 0;
     let data: Array<any> = [];
-    if (!setting) {
+    if (!hasValue) {
       data = multipleKeyScales;
     } else {
       if (setting.value instanceof Array) {
@@ -688,7 +693,11 @@ export class UserController {
     const startInt = smartCastInt(start, 0);
     const limitInt = smartCastInt(limit, 10);
     const preferences = await this.settingService.getPreferences();
-    const data = await this.userService.fixPreferences(startInt, limitInt, preferences);
+    const data = await this.userService.fixPreferences(
+      startInt,
+      limitInt,
+      preferences,
+    );
     return res.json(data);
   }
 
