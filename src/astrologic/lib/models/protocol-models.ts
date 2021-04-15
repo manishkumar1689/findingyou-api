@@ -2,7 +2,7 @@ import { KeyName, KeyNameMax } from '../interfaces';
 import { isNumeric, notEmptyString } from '../../../lib/validators';
 import { smartCastFloat } from 'src/lib/converters';
 import { contextTypes } from '../settings/compatibility-sets';
-import { calcOrb } from '../calc-orbs';
+import { calcOrb, calcAllAspectRanges } from '../calc-orbs';
 import { subtractLng360 } from '../helpers';
 import ayanamshaValues from '../settings/ayanamsha-values';
 import { SignHouse } from '../../interfaces/sign-house';
@@ -737,12 +737,20 @@ export class Protocol {
 
   matchRange(aspect: string, k1: string, k2: string) {
     const aspectData = calcOrb(aspect, k1, k2);
+    console.log(aspectData)
     const orb = this.matchOrb(aspect, k1, k2, aspectData);
     const range =
       orb !== aspectData.orb
         ? [subtractLng360(aspectData.deg, orb), (aspectData.deg + orb) % 360]
         : aspectData.range;
     return range;
+  }
+
+  matchRanges(aspect: string, k1: string, k2: string) {
+    const aspectData = calcOrb(aspect, k1, k2);
+    const orb = this.matchOrb(aspect, k1, k2, aspectData);
+    const ranges = orb !== aspectData.orb? calcAllAspectRanges(aspectData.row, orb, [subtractLng360(aspectData.deg, orb), (aspectData.deg + orb) % 360] ) : aspectData.range;
+    return ranges;
   }
 
   kutaMax(kutaType = '', variantKey = '') {
@@ -766,6 +774,7 @@ export class Protocol {
     }
     return maxVal;
   }
+
 
   get orbs() {
     const useCustom = this.setting('custom_orbs', false);
@@ -1092,14 +1101,27 @@ export const buildSignHouse = (firstHouseSign = 1): Array<SignHouse> => {
   return values;
 };
 
-export const assessChart = (protocol: Protocol, paired = null) => {
+const useCollection = (filterByRuleSet = false, collection: any, colRef = ""): boolean => {
+  return filterByRuleSet === false || collection.type === colRef;
+}
+
+const useRuleSet = (filterByRuleSet = false, ruleSetIndex = -1, filterIndex = -1): boolean => {
+  return filterByRuleSet === false || ruleSetIndex === filterIndex;
+}
+
+export const assessChart = (protocol: Protocol, paired = null, colRef = "", ruleSetIndex = -1) => {
   const pairedChart = new PairedChart(paired);
   const resultRows: Array<any> = [];
+  const filterByRuleSet = notEmptyString(colRef, 2) && ruleSetIndex >= 0;
   protocol.collections.forEach(collection => {
-    collection.rules.forEach(rs => {
-      const resultSet = pairedChart.matchRuleSet(rs, protocol);
-      resultRows.push({ resultSet, collection });
-    });
+    if (useCollection(filterByRuleSet, collection, colRef)) {
+      collection.rules.forEach((rs, ruleIndex) => {
+        if (useRuleSet(filterByRuleSet, ruleIndex, ruleSetIndex)) {
+          const resultSet = pairedChart.matchRuleSet(rs, protocol);
+          resultRows.push({ resultSet, collection });
+        }
+      });
+    }
   });
   const results = resultRows.map(row => {
     const { resultSet, collection } = row;
@@ -1197,3 +1219,15 @@ export const assessChart = (protocol: Protocol, paired = null) => {
     c2Id: pairedChart.c2._id,
   };
 };
+
+
+export const compatibilityResultSetHasScores = (row: any = null) => {
+  if (row instanceof Object && Object.keys(row).includes("totals")) {
+    if (row.totals instanceof Array) {
+      return row.totals.some(tr => {
+        return tr instanceof Object && tr.pair instanceof Array && tr.pair.length > 0 && tr.pair[0] > 0
+      });
+    }
+  }
+  return false;
+}

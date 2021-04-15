@@ -76,6 +76,7 @@ import { AspectSet, calcOrb } from './lib/calc-orbs';
 import { AspectSetDTO } from './dto/aspect-set.dto';
 import {
   assessChart,
+  compatibilityResultSetHasScores,
   matchOrbFromGrid,
   Protocol,
 } from './lib/models/protocol-models';
@@ -685,6 +686,37 @@ export class AstrologicController {
     return res.json(data);
   }
 
+  // merge with preferences / psychometric data
+  @Get('test-rule/:protocolID/:colRef/:ruleIndex/:start?/:limit?')
+  async testCompatibilityRule(
+    @Res() res,
+    @Param('protocolID') protocolID: string,
+    @Param('colRef') colRef: string,
+    @Param('ruleIndex') ruleIndex: string,
+    @Param('start') start: string,
+    @Param('limit') limit: string,
+    @Query() query,
+  ) {
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 1000);
+    const filterRuleIndex = smartCastInt(ruleIndex, -1);
+    const pairedcCharts = await this.astrologicService.getPairedCharts(
+      startInt,
+      limitInt,
+      [],
+      query,
+    );
+    const protocol = await this.buildProtocol(protocolID);
+    const data = { items: [] };
+    pairedcCharts.forEach(pc => {
+      const row = assessChart(protocol, pc, colRef, filterRuleIndex);
+      if (compatibilityResultSetHasScores(row)) {
+        data.items.push(row);
+      }
+    });
+    return res.json(data);
+  }
+
   @Get('test-protcols/:protocolID/:start?/:limit?')
   async testProtocols(
     @Res() res,
@@ -767,12 +799,12 @@ export class AstrologicController {
       [],
       query,
     );
-    Object.entries(process.env).forEach(entry => {
+    /* Object.entries(process.env).forEach(entry => {
       const [k, v] = entry;
       if (typeof v === 'string' && /^dev/i.test(v)) {
         console.log(k, v, 12);
       }
-    });
+    }); */
 
     return res.json(steps);
   }
@@ -794,6 +826,41 @@ export class AstrologicController {
     const data = await this.savePairedChartData(inData);
     const statusCode = data.valid ? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
     return res.status(statusCode).send(data);
+  }
+
+  @Get('recalc-paired-charts/:userID/:start?/:limit?')
+  async recalcPairedCharts(
+    @Res() res,
+    @Param('userID') userID,
+    @Param('start') start,
+    @Param('limit') limit,
+  ) {
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 0);
+    const pairedCharts = await this.astrologicService.getPairedCharts(
+      startInt,
+      limitInt,
+    );
+    const data = {
+      updated: 0
+    }
+    for (const pc of pairedCharts) {
+      const inData = {
+        user: userID,
+        c1: pc.c1._id,
+        c2: pc.c2._id,
+        relType: pc.relType,
+        span: pc.span,
+        startYear: pc.startYear,
+        endYear: pc.endYear,
+        tags: pc.tags,
+        notes: pc.notes,
+        isNew: false
+      } as PairedChartInputDTO;
+      await this.savePairedChartData(inData);
+      data.updated++;
+    }
+    return res.send(data);
   }
 
   async savePairedChartData(inData: PairedChartInputDTO) {

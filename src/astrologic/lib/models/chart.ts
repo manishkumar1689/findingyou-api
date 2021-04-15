@@ -1516,15 +1516,20 @@ export class PairedChart {
     const aspectMatches = condition.matchedAspects.map(aspectKey => {
       let aspected = false;
       if (aspectMatched) {
-        const [minVal, maxVal] = protocol.matchRange(aspectKey, k1, k2);
+        //const [minVal, maxVal] = protocol.matchRange(aspectKey, k1, k2);
+        const ranges = protocol.matchRanges(aspectKey, k1, k2);
+        
         const isApplying = condition.isNeutral
           ? true
           : calcAspectIsApplying(fromChart.graha(k1), fromChart.graha(k2));
         const applyModeMatched = condition.isSeparating
           ? !isApplying
           : isApplying;
-        aspected =
-          aspectValue >= minVal && aspectValue <= maxVal && applyModeMatched;
+        aspected = ranges.some(range => {
+          const [minVal, maxVal] = range;
+          return aspectValue >= minVal && aspectValue <= maxVal && applyModeMatched;
+        });
+          
       }
       return aspected;
     });
@@ -1788,6 +1793,8 @@ export class PairedChart {
   ) {
     let aspectValue = 0;
     let aspectMatched = false;
+
+    
     if (
       condition.usesMidChart ||
       !this.aspectIsInPaired(condition.object1, condition.object2, k1, k2)
