@@ -591,7 +591,6 @@ export class AstrologicService {
     const nowDt = new Date();
     const { aspects, kutas } = await this.saveExtraValues(c1, c2, setting);
     pairedDTO = { ...pairedDTO, aspects, kutas, modifiedAt: nowDt };
-    console.log(pairedDTO);
     if (numCharts === 2) {
       const currPairedChart = await this.pairedChartModel
         .findOne({

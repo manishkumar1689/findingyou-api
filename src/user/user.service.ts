@@ -992,7 +992,6 @@ export class UserService {
   }
 
   validatePreference(mo:MatchedOption, matchedPref: PrefKeyValue) {
-    console.log(mo, matchedPref)
     let valid = false;
     let { value } = mo;
     const itemVal = matchedPref.value;

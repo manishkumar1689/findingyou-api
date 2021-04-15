@@ -737,7 +737,6 @@ export class Protocol {
 
   matchRange(aspect: string, k1: string, k2: string) {
     const aspectData = calcOrb(aspect, k1, k2);
-    console.log(aspectData)
     const orb = this.matchOrb(aspect, k1, k2, aspectData);
     const range =
       orb !== aspectData.orb
