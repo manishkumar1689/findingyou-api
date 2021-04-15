@@ -668,6 +668,23 @@ export class AstrologicController {
     return res.json(data);
   }
 
+  // merge with preferences / psychometric data
+  @Get('compatibility/:protocolID/:c1/:c2')
+  async matchCompatibility(
+    @Res() res,
+    @Param('protocolID') protocolID: string,
+    @Param('c1') c1: string,
+    @Param('c2') c2: string,
+  ) {
+    const randomPairedChart = await this.astrologicService.getPairedByChartIDs(
+      c1,
+      c2,
+    );
+    const protocol = await this.buildProtocol(protocolID);
+    const data = assessChart(protocol, randomPairedChart);
+    return res.json(data);
+  }
+
   @Get('test-protcols/:protocolID/:start?/:limit?')
   async testProtocols(
     @Res() res,
@@ -1725,14 +1742,16 @@ export class AstrologicController {
     const startInt = smartCastInt(start, 0);
     const limitInt = smartCastInt(limit, 1000);
     const data = await this.astrologicService.migrateRodden(startInt, limitInt);
-    
+
     return res.json(data);
   }
 
   @Get('build-charts/:start?/:limit?')
-  async bulkBuildCharts(@Res() res,
-  @Param('start') start,
-  @Param('limit') limit) {
+  async bulkBuildCharts(
+    @Res() res,
+    @Param('start') start,
+    @Param('limit') limit,
+  ) {
     const startInt = smartCastInt(start, 0);
     const limitInt = smartCastInt(limit, 10);
     const users = await this.userService.findWithoutCharts(startInt, limitInt);
@@ -1741,23 +1760,22 @@ export class AstrologicController {
       setTimeout(async () => {
         const { lat, lng, alt } = user.geo;
         const inData = {
-              user: user._id,
-              datetime: user.dob.toISOString(),
-              lat,
-              lng,
-              alt,
-              isDefaultBirthChart: true,
-              name: user.nickName,
-              type: 'person',
-              gender: user.gender,
-              eventType: 'birth',
-              roddenValue: 200,
-          } as ChartInputDTO;
+          user: user._id,
+          datetime: user.dob.toISOString(),
+          lat,
+          lng,
+          alt,
+          isDefaultBirthChart: true,
+          name: user.nickName,
+          type: 'person',
+          gender: user.gender,
+          eventType: 'birth',
+          roddenValue: 200,
+        } as ChartInputDTO;
         const c = await this.saveChartData(inData);
-      }, delay );
+      }, delay);
       delay += 2000;
     }
-    return res.json({users});
+    return res.json({ users });
   }
-
 }
