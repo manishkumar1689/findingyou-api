@@ -11,6 +11,7 @@ import roddenScaleValues, {
 } from './lib/settings/rodden-scale-values';
 import {
   addOrbRangeMatchStep,
+  buildLngRanges,
   buildPairedChartLookupPath,
   buildPairedChartProjection,
   unwoundChartFields,
@@ -424,6 +425,7 @@ export class AstrologicService {
       $project: outFieldProject,
     };
     const comboSteps = [...steps, projectionStep, ...conditions];
+    const c = conditions.find(cond => Object.keys(cond).includes("$match"));
     return await this.pairedChartModel.aggregate(comboSteps);
   }
 
@@ -472,6 +474,35 @@ export class AstrologicService {
       comboSteps.push({ $limit: limit });
     }
     return await this.pairedChartModel.aggregate(comboSteps);
+  }
+
+
+
+  async findAspectMatch(k1: string, k2: string, sourceGrahaLng: number, aspect: string, orb = -1, ayanamshaKey = "true_citra", mode = "rows") {
+    const ranges = buildLngRanges(aspect, k1, k2, sourceGrahaLng, orb);
+    const $project = mode !== "count"? { cid: "$_id", uid: "$user", lng: 1, ayanamsha: "$ayanamshas.value" } : { _id: 1};
+    const steps = [ 
+      { $limit: 10000000 }, 
+      { $unwind: "$ayanamshas" },
+      { $match: { "ayanamshas.key": ayanamshaKey } }, 
+      { $unwind: "$grahas" }, 
+      { $match: { "grahas.key": k2 } }, 
+      { $addFields: { 
+        lng: { 
+          $mod: [ 
+            { $add: ["$grahas.lng", 360, { $subtract: [0, "$ayanamshas.value"] } ] },
+            360]
+          }
+        }
+      },
+      { $match: { $or: ranges }  },
+      { $project  }
+    ];
+    return this.chartModel.aggregate(steps);
+  }
+
+  async countByAspectMatch(k1: string, k2: string, sourceGrahaLng: number, aspect: string, orb = -1, ayanamshaKey = "true_citra", mode = "rows") {
+      return await this.findAspectMatch(k1, k2, sourceGrahaLng, aspect, orb, ayanamshaKey, "rows");
   }
 
   adjustDatetimeByServerTz(data: any = null) {

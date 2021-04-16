@@ -5,6 +5,7 @@ import { subtractLng360 } from '../astrologic/lib/math-funcs';
 import { ChartSchema } from '../astrologic/schemas/chart.schema';
 import { UserSchema } from '../user/schemas/user.schema';
 import { PairedChartSchema } from '../astrologic/schemas/paired-chart.schema';
+import { calcAllAspectRanges, aspects } from '../astrologic/lib/calc-orbs';
 
 interface schemaItem {
   key: string;
@@ -682,3 +683,16 @@ export const yearSpanAddFieldSteps = () => {
     },
   ];
 };
+
+
+export const buildLngRanges = (aspect: string, k1: string, k2: string, sourceLng = 0, orb = -1) => {
+  const aspectRow = aspects.find(asp => asp.key === aspect);
+  const aspectMatched = aspectRow instanceof Object;
+  const targetDeg = aspectMatched? aspectRow.deg : 0;
+  const range = [(targetDeg + 360 - orb) % 360, (targetDeg + orb) % 360];
+  const ranges = aspectMatched ? calcAllAspectRanges(aspectRow, orb, range) : null;
+  return ranges.map(pair => {
+    const [min, max] = pair;
+    return { lng: { $gte: min, $lte: max } };
+  });
+}

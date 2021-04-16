@@ -604,8 +604,39 @@ export class AstrologicController {
     });
   }
 
-  @Get('aspect-match/:aspect?/:k1?/:k2?/:orb?/:max?')
+  @Get('aspect-match/:aspect/:k1/:k2/:orb?/:max?')
   async getByAspectRange(
+    @Res() res,
+    @Param('aspect') aspect,
+    @Param('k1') k1,
+    @Param('k2') k2,
+    @Param('orb') orb,
+    @Param('max') max,
+  ) {
+    const maxInt = smartCastInt(max, 1000);
+    const orbDouble = await this.matchOrb(aspect, k1, k2, orb);
+    const data = await this.astrologicService.filterPairedByAspect(
+      aspect,
+      k1,
+      k2,
+      orbDouble,
+    );
+    const num = data instanceof Array ? data.length : 0;
+    const results = num > 0 ? await this.astrologicService.getPairedByIds(
+      data.map(row => row._id),
+      maxInt,
+    ) : [];
+    return res.status(200).send({
+      valid: results.length > 0,
+      orb: orbDouble,
+      num,
+      aspect,
+      results,
+    });
+  }
+
+  @Get('aspect-match-count/:aspect/:k1/:k2/:orb?/:max?')
+  async countByAspectRange(
     @Res() res,
     @Param('aspect') aspect,
     @Param('k1') k1,
@@ -621,15 +652,39 @@ export class AstrologicController {
       k2,
       orbDouble,
     );
-    const results = await this.astrologicService.getPairedByIds(
-      data.map(row => row._id),
-      maxInt,
-    );
     return res.status(200).send({
-      valid: results.length > 0,
+      valid: data.length > 0,
       orb: orbDouble,
       aspect,
-      results,
+      num: data.length,
+    });
+  }
+
+  @Get('discover-aspect-matches/:aspect/:k1/:k2/:sourceLng/:orb?/:ayanamshaKey?/:max?')
+  async discoverAspectMatches(
+    @Res() res,
+    @Param('aspect') aspect,
+    @Param('k1') k1,
+    @Param('k2') k2,
+    @Param('sourceLng') sourceLng,
+    @Param('orb') orb,
+    @Param('ayanamshaKey') ayanamshaKey,
+    @Param('max') max,
+  ) {
+    const maxInt = smartCastInt(max, 100);
+    const orbDouble = await this.matchOrb(aspect, k1, k2, orb);
+    const aKey = notEmptyString(ayanamshaKey, 3)? ayanamshaKey : "true_citra";
+    const items = await this.astrologicService.findAspectMatch(
+      k1,
+      k2,
+      sourceLng,
+      aspect,
+      orbDouble,
+      aKey
+    );
+    return res.status(200).send({
+      num: items.length,
+      items
     });
   }
 
@@ -707,13 +762,14 @@ export class AstrologicController {
       query,
     );
     const protocol = await this.buildProtocol(protocolID);
-    const data = { items: [] };
+    const data = { num: 0, items: [] };
     pairedcCharts.forEach(pc => {
       const row = assessChart(protocol, pc, colRef, filterRuleIndex);
       if (compatibilityResultSetHasScores(row)) {
         data.items.push(row);
       }
     });
+    data.num = data.items.length;
     return res.json(data);
   }
 

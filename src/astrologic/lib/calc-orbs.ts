@@ -51,8 +51,8 @@ export const aspects: Array<AspectRow> = [
   { key: 'quadnovile', deg: 160.0, weight: 10 },
   { key: 'triseptile', deg: (360.0 / 7.0) * 3.0, weight: 12 }, // 154.28571
   { key: 'inconjunction', deg: 150.0, weight: 2 },
-  { key: 'biquintile', deg: 135.0, weight: 8 },
-  { key: 'sesquisquare', deg: 144.0, weight: 6 },
+  { key: 'biquintile', deg: 144.0, weight: 8 },
+  { key: 'sesquisquare', deg: 135.0, weight: 6 },
   { key: 'trine', deg: 120.0, weight: 4 },
   { key: 'tridecile', deg: 108.0, weight: 9 },
   { key: 'biseptile', deg: 360.0 / 3.5, weight: 15 }, // 102.85714
@@ -96,23 +96,20 @@ export const calcAllAspectRanges = (aspectRow: AspectRow, orb = 0, range: number
   const overrideAspects = aspects.filter(asp => asp.weight < aspectRow.weight);
   const ranges = [range];
   if (aspectRow.deg < 180 && aspectRow.deg > 0) {
-    const maxVals = Math.floor(360/aspectRow.deg);
-    for (let n = 2; n <= maxVals; n++) {
-      const tDeg = aspectRow.deg * n;
-      const hasBetterMatch = overrideAspects.some(oa => {
-        const mx = oa.deg > 0? Math.floor(360 / oa.deg) : 1;
-        let nm = 0;
-        for (let n2 = 1; n2 <= mx; n2++) {
-          const tg = n2 * oa.deg;
-          if (tg === tDeg) {
-            nm++;
-          }
+    const tDeg = 360 - aspectRow.deg;
+    const hasBetterMatch = overrideAspects.some(oa => {
+      const mx = oa.deg > 0 && oa.deg < 180? 2 : 1;
+      let nm = 0;
+      for (let j = 0; j <= mx; j++) {
+        const tg = j === 0? oa.deg : 360 - oa.deg;
+        if (tg === tDeg) {
+          nm++;
         }
-        return nm > 0;
-      });
-      if (!hasBetterMatch) {
-        ranges.push([(tDeg + 360 - orb) % 360,(tDeg + 360 + orb) % 360]);
       }
+      return nm > 0;
+    });
+    if (!hasBetterMatch) {
+      ranges.push([(tDeg + 360 - orb) % 360,(tDeg + 360 + orb) % 360]);
     }
   }
   return ranges;
