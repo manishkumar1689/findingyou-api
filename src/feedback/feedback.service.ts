@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { extractDocId } from 'src/lib/entities';
-import { notEmptyString } from 'src/lib/validators';
+import { extractDocId } from '../lib/entities';
+import { notEmptyString } from '../lib/validators';
 import { CreateFlagDTO } from './dto/create-flag.dto';
 import { Feedback } from './interfaces/feedback.interface';
 import { Flag, SimpleFlag } from './interfaces/flag.interface';

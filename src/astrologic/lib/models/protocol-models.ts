@@ -1,6 +1,6 @@
 import { KeyName, KeyNameMax } from '../interfaces';
 import { isNumeric, notEmptyString } from '../../../lib/validators';
-import { smartCastFloat } from 'src/lib/converters';
+import { smartCastFloat } from '../../../lib/converters';
 import { contextTypes } from '../settings/compatibility-sets';
 import { calcOrb, calcAllAspectRanges } from '../calc-orbs';
 import { subtractLng360 } from '../helpers';
@@ -748,7 +748,13 @@ export class Protocol {
   matchRanges(aspect: string, k1: string, k2: string) {
     const aspectData = calcOrb(aspect, k1, k2);
     const orb = this.matchOrb(aspect, k1, k2, aspectData);
-    const ranges = orb !== aspectData.orb? calcAllAspectRanges(aspectData.row, orb, [subtractLng360(aspectData.deg, orb), (aspectData.deg + orb) % 360] ) : aspectData.range;
+    const ranges =
+      orb !== aspectData.orb
+        ? calcAllAspectRanges(aspectData.row, orb, [
+            subtractLng360(aspectData.deg, orb),
+            (aspectData.deg + orb) % 360,
+          ])
+        : aspectData.range;
     return ranges;
   }
 
@@ -773,7 +779,6 @@ export class Protocol {
     }
     return maxVal;
   }
-
 
   get orbs() {
     const useCustom = this.setting('custom_orbs', false);
@@ -1100,15 +1105,28 @@ export const buildSignHouse = (firstHouseSign = 1): Array<SignHouse> => {
   return values;
 };
 
-const useCollection = (filterByRuleSet = false, collection: any, colRef = ""): boolean => {
+const useCollection = (
+  filterByRuleSet = false,
+  collection: any,
+  colRef = '',
+): boolean => {
   return filterByRuleSet === false || collection.type === colRef;
-}
+};
 
-const useRuleSet = (filterByRuleSet = false, ruleSetIndex = -1, filterIndex = -1): boolean => {
+const useRuleSet = (
+  filterByRuleSet = false,
+  ruleSetIndex = -1,
+  filterIndex = -1,
+): boolean => {
   return filterByRuleSet === false || ruleSetIndex === filterIndex;
-}
+};
 
-export const assessChart = (protocol: Protocol, paired = null, colRef = "", ruleSetIndex = -1) => {
+export const assessChart = (
+  protocol: Protocol,
+  paired = null,
+  colRef = '',
+  ruleSetIndex = -1,
+) => {
   const pairedChart = new PairedChart(paired);
   const resultRows: Array<any> = [];
   const filterByRuleSet = notEmptyString(colRef, 2) && ruleSetIndex >= 0;
@@ -1148,17 +1166,19 @@ export const assessChart = (protocol: Protocol, paired = null, colRef = "", rule
   const subtotals: Array<SectionScore> = [];
 
   protocol.collections.forEach(col => {
-    const subResults = results.filter(rs => rs.type === col.type);
-    const secScore = new SectionScore({
-      type: col.type,
-      percent: col.percent,
-    });
-    if (subResults instanceof Array) {
-      subResults.forEach(rs => {
-        secScore.addScores(rs.scores);
+    if (useCollection(filterByRuleSet, col, colRef)) {
+      const subResults = results.filter(rs => rs.type === col.type);
+      const secScore = new SectionScore({
+        type: col.type,
+        percent: col.percent,
       });
+      if (subResults instanceof Array) {
+        subResults.forEach(rs => {
+          secScore.addScores(rs.scores);
+        });
+      }
+      subtotals.push(secScore);
     }
-    subtotals.push(secScore);
   });
   const totals = protocol.categories
     .map(ct => {
@@ -1219,14 +1239,18 @@ export const assessChart = (protocol: Protocol, paired = null, colRef = "", rule
   };
 };
 
-
 export const compatibilityResultSetHasScores = (row: any = null) => {
-  if (row instanceof Object && Object.keys(row).includes("totals")) {
+  if (row instanceof Object && Object.keys(row).includes('totals')) {
     if (row.totals instanceof Array) {
       return row.totals.some(tr => {
-        return tr instanceof Object && tr.pair instanceof Array && tr.pair.length > 0 && tr.pair[0] > 0
+        return (
+          tr instanceof Object &&
+          tr.pair instanceof Array &&
+          tr.pair.length > 0 &&
+          tr.pair[0] > 0
+        );
       });
     }
   }
   return false;
-}
+};

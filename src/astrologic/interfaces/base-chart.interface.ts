@@ -1,5 +1,5 @@
 import { Document } from 'mongoose';
-import { Geo } from 'src/user/interfaces/geo.interface';
+import { Geo } from '../../user/interfaces/geo.interface';
 import { BaseGraha } from './base-graha.interface';
 import { HouseSystem } from './house-system.interface';
 import { ITime } from './i-time.interface';

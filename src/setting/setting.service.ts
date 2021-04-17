@@ -7,11 +7,15 @@ import defaultFlags from './sources/flags';
 import { notEmptyString } from 'src/lib/validators';
 import { Protocol } from './interfaces/protocol.interface';
 import { ProtocolDTO } from './dto/protocol.dto';
-import { ProtocolSettings } from 'src/astrologic/lib/models/protocol-models';
+import {
+  ProtocolSettings,
+  RuleSet,
+} from 'src/astrologic/lib/models/protocol-models';
 import { mergeRoddenValues } from 'src/astrologic/lib/settings/rodden-scale-values';
 import { KeyName } from 'src/astrologic/lib/interfaces';
 import { extractDocId } from 'src/lib/entities';
 import { defaultPairedTagOptionSets } from 'src/astrologic/lib/settings/vocab-values';
+import { RuleSetDTO } from './dto/rule-set.dto';
 
 @Injectable()
 export class SettingService {
@@ -315,6 +319,30 @@ export class SettingService {
     } else {
       const protocol = new this.protocolModel(protocolDTO);
       result = await protocol.save();
+    }
+    return result;
+  }
+
+  async saveRuleSet(id = '', colRef = '', ruleIndex = 0, ruleSet: RuleSetDTO) {
+    const protocol = await this.protocolModel.findById(id);
+    const result: any = { valid: false, protocol: null, matches: [] };
+    if (protocol instanceof Object) {
+      const protocolObj = protocol.toObject();
+      const { collections } = protocolObj;
+      if (collections instanceof Array && collections.length > 0) {
+        const colIndex = collections.findIndex(col => col.type === colRef);
+        const collection = collections[colIndex];
+        if (collection instanceof Object) {
+          if (Object.keys(collection).includes('rules')) {
+            if (ruleIndex < collection.rules.length) {
+              collection.rules[ruleIndex] = ruleSet;
+            }
+          }
+        }
+      }
+      const saved = await this.protocolModel.findByIdAndUpdate(id, protocolObj);
+      result.item = ruleSet;
+      result.valid = saved instanceof Object;
     }
     return result;
   }

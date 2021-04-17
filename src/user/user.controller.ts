@@ -50,16 +50,10 @@ import { SurveyItem } from './interfaces/survey-item';
 import { SnippetService } from 'src/snippet/snippet.service';
 import { ProfileDTO } from './dto/profile.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import {
-  generateFileName,
-  generateImageStyle,
-  readRawFile,
-  uploadMediaFile,
-} from 'src/lib/files';
+import { generateFileName, readRawFile, uploadMediaFile } from 'src/lib/files';
 import { PreferenceDTO } from './dto/preference.dto';
 import { SampleDataDTO } from './dto/sample-data.dto';
 import { SampleRecordDTO } from './dto/sample-record.dto';
-import { mapKaranaTithiYoga } from 'src/astrologic/lib/mappers';
 
 @Controller('user')
 export class UserController {

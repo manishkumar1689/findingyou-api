@@ -1,8 +1,8 @@
 import * as moment from 'moment';
 import { BaseObject } from './base-object';
 import { JyotishDay } from './jyotish-day';
-import { hashMapToObject } from 'src/lib/entities';
-import { BodyTransition } from 'src/astrologic/interfaces/body-transition';
+import { hashMapToObject } from '../../../lib/entities';
+import { BodyTransition } from '../../interfaces/body-transition';
 
 export class IndianTime extends BaseObject {
   /*

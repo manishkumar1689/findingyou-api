@@ -1,5 +1,5 @@
-import { smartCastFloat, smartCastInt } from 'src/lib/converters';
-import { extractObject } from 'src/lib/entities';
+import { smartCastFloat } from '../../lib/converters';
+import { extractObject } from '../../lib/entities';
 import { subtractLng360 } from './helpers';
 
 const removeIds = item => {

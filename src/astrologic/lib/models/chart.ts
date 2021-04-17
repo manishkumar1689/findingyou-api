@@ -53,12 +53,12 @@ import {
   RuleSet,
 } from './protocol-models';
 import { calcInclusiveSignPositions } from '../math-funcs';
-import grahaValues, {
+import {
   buildFunctionalBMMap,
   naturalBenefics,
   naturalMalefics,
 } from '../settings/graha-values';
-import { BmMatchRow, SignHouse } from 'src/astrologic/interfaces/sign-house';
+import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
 
 export interface Subject {
   name: string;
@@ -1518,7 +1518,7 @@ export class PairedChart {
       if (aspectMatched) {
         //const [minVal, maxVal] = protocol.matchRange(aspectKey, k1, k2);
         const ranges = protocol.matchRanges(aspectKey, k1, k2);
-        
+
         const isApplying = condition.isNeutral
           ? true
           : calcAspectIsApplying(fromChart.graha(k1), fromChart.graha(k2));
@@ -1527,9 +1527,10 @@ export class PairedChart {
           : isApplying;
         aspected = ranges.some(range => {
           const [minVal, maxVal] = range;
-          return aspectValue >= minVal && aspectValue <= maxVal && applyModeMatched;
+          return (
+            aspectValue >= minVal && aspectValue <= maxVal && applyModeMatched
+          );
         });
-          
       }
       return aspected;
     });
@@ -1794,7 +1795,6 @@ export class PairedChart {
     let aspectValue = 0;
     let aspectMatched = false;
 
-    
     if (
       condition.usesMidChart ||
       !this.aspectIsInPaired(condition.object1, condition.object2, k1, k2)

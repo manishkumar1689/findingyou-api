@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { PlacenameDTO } from 'src/user/dto/placename.dto';
 
 /*
 Simple DTO for core input data required to construct a chart

@@ -1,4 +1,4 @@
-import { inRange, notEmptyString } from 'src/lib/validators';
+import { inRange, notEmptyString } from '../../lib/validators';
 import { calcInclusiveNakshatras, calcInclusiveTwelfths } from './math-funcs';
 import { Chart } from './models/chart';
 import { Graha } from './models/graha-set';

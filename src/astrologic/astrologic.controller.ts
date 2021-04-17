@@ -81,11 +81,12 @@ import {
   Protocol,
 } from './lib/models/protocol-models';
 import { mapNestedKaranaTithiYoga, mapToponyms } from './lib/mappers';
-import { CreateSettingDTO } from 'src/setting/dto/create-setting.dto';
+import { CreateSettingDTO } from '../setting/dto/create-setting.dto';
 import typeTags from './lib/settings/relationship-types';
 import { KeyName } from './lib/interfaces';
 import { TagReassignDTO } from './dto/tag-reassign.dto';
 import { TagDTO } from './dto/tag.dto';
+import { RuleSetDTO } from '../setting/dto/rule-set.dto';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -622,10 +623,13 @@ export class AstrologicController {
       orbDouble,
     );
     const num = data instanceof Array ? data.length : 0;
-    const results = num > 0 ? await this.astrologicService.getPairedByIds(
-      data.map(row => row._id),
-      maxInt,
-    ) : [];
+    const results =
+      num > 0
+        ? await this.astrologicService.getPairedByIds(
+            data.map(row => row._id),
+            maxInt,
+          )
+        : [];
     return res.status(200).send({
       valid: results.length > 0,
       orb: orbDouble,
@@ -660,7 +664,9 @@ export class AstrologicController {
     });
   }
 
-  @Get('discover-aspect-matches/:aspect/:k1/:k2/:sourceLng/:orb?/:ayanamshaKey?/:max?')
+  @Get(
+    'discover-aspect-matches/:aspect/:k1/:k2/:sourceLng/:orb?/:ayanamshaKey?/:max?',
+  )
   async discoverAspectMatches(
     @Res() res,
     @Param('aspect') aspect,
@@ -673,18 +679,18 @@ export class AstrologicController {
   ) {
     const maxInt = smartCastInt(max, 100);
     const orbDouble = await this.matchOrb(aspect, k1, k2, orb);
-    const aKey = notEmptyString(ayanamshaKey, 3)? ayanamshaKey : "true_citra";
+    const aKey = notEmptyString(ayanamshaKey, 3) ? ayanamshaKey : 'true_citra';
     const items = await this.astrologicService.findAspectMatch(
       k1,
       k2,
       sourceLng,
       aspect,
       orbDouble,
-      aKey
+      aKey,
     );
     return res.status(200).send({
       num: items.length,
-      items
+      items,
     });
   }
 
@@ -755,9 +761,28 @@ export class AstrologicController {
     const startInt = smartCastInt(start, 0);
     const limitInt = smartCastInt(limit, 1000);
     const filterRuleIndex = smartCastInt(ruleIndex, -1);
-    const pairedcCharts = await this.astrologicService.getPairedCharts(
+    const data = await this.matchByProtocol(
+      protocolID,
+      query,
       startInt,
       limitInt,
+      colRef,
+      filterRuleIndex,
+    );
+    return res.json(data);
+  }
+
+  async matchByProtocol(
+    protocolID = '',
+    query = null,
+    start = 0,
+    limit = 1000,
+    colRef = '',
+    filterRuleIndex = -1,
+  ) {
+    const pairedcCharts = await this.astrologicService.getPairedCharts(
+      start,
+      limit,
       [],
       query,
     );
@@ -770,7 +795,7 @@ export class AstrologicController {
       }
     });
     data.num = data.items.length;
-    return res.json(data);
+    return data;
   }
 
   @Get('test-protcols/:protocolID/:start?/:limit?')
@@ -796,6 +821,44 @@ export class AstrologicController {
       data.items.push(row);
     });
     return res.json(data);
+  }
+
+  /*
+  Save new protocol with nested rules-collections
+  */
+  @Put('protocol/rule/:itemID/:colRef/:ruleIndex')
+  async saveProtcolRule(
+    @Res() res,
+    @Body() ruleSet: RuleSetDTO,
+    @Param('itemID') itemID,
+    @Param('colRef') colRef,
+    @Param('ruleIndex') ruleIndex,
+  ) {
+    const index = smartCastInt(ruleIndex, 0);
+    const saved = await this.settingService.saveRuleSet(
+      itemID,
+      colRef,
+      index,
+      ruleSet,
+    );
+    const result = { valid: false, item: null, matches: [], num: -1 };
+    if (saved.valid) {
+      result.valid = true;
+      result.item = saved.item;
+      const matchData = await this.matchByProtocol(
+        itemID,
+        {},
+        0,
+        1000,
+        colRef,
+        index,
+      );
+      if (matchData.num > 0) {
+        result.matches = matchData.items;
+        result.num = matchData.num;
+      }
+    }
+    return res.status(HttpStatus.OK).send(result);
   }
 
   async buildProtocol(protocolID: string): Promise<Protocol> {
@@ -892,8 +955,8 @@ export class AstrologicController {
       limitInt,
     );
     const data = {
-      updated: 0
-    }
+      updated: 0,
+    };
     for (const pc of pairedCharts) {
       const inData = {
         user: userID,
@@ -905,7 +968,7 @@ export class AstrologicController {
         endYear: pc.endYear,
         tags: pc.tags,
         notes: pc.notes,
-        isNew: false
+        isNew: false,
       } as PairedChartInputDTO;
       await this.savePairedChartData(inData);
       data.updated++;

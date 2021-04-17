@@ -6,7 +6,7 @@ import { jdToDateParts } from './date-funcs';
 import { shortenName } from './helpers';
 import { KeyValueNum } from './models/chart';
 import { LngLat, Toponym } from './interfaces';
-import { sanitize } from 'src/lib/converters';
+import { sanitize } from '../../lib/converters';
 
 export const mapToObject = map => {
   if (map instanceof Map) {
@@ -192,7 +192,11 @@ export const mapNestedKaranaTithiYoga = (row = null) => {
   return pairedKTY;
 };
 
-export const mapToponyms = (toponyms: Toponym[], geo: LngLat, locality = '') => {
+export const mapToponyms = (
+  toponyms: Toponym[],
+  geo: LngLat,
+  locality = '',
+) => {
   const placenames = toponyms.map(tp => {
     return {
       name: tp.name,
@@ -240,4 +244,4 @@ export const mapToponyms = (toponyms: Toponym[], geo: LngLat, locality = '') => 
     });
   }
   return placenames;
-}
+};

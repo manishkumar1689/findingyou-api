@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { SubjectDTO } from './subject.dto';
-import { PlacenameDTO } from 'src/user/dto/placename.dto';
-import { GeoDTO } from 'src/user/dto/geo.dto';
+import { PlacenameDTO } from '../../user/dto/placename.dto';
+import { GeoDTO } from '../../user/dto/geo.dto';
 import { BaseGrahaDTO } from './base-graha.dto';
 import { HouseSystemDTO } from './house-system.dto';
 import { ITimeDTO } from './i-time.dto';

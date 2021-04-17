@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { MailerService, mail } from '@nest-modules/mailer';
+import { MailerService } from '@nest-modules/mailer';
 import { User } from './interfaces/user.interface';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { hashMapToObject, extractObject } from '../lib/entities';
@@ -9,7 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { hashSalt } from '../.config';
 import { generateHash } from '../lib/hash';
 import * as moment from 'moment-timezone';
-import { isNumeric, notEmptyString } from 'src/lib/validators';
+import { isNumeric, notEmptyString } from '../lib/validators';
 import { Role } from './interfaces/role.interface';
 import { Payment } from './interfaces/payment.interface';
 import { PaymentOption } from './interfaces/payment-option.interface';
@@ -844,7 +844,11 @@ export class UserService {
   }
 
   async findWithoutCharts(start = 0, limit = 2000) {
-    const users = await this.userModel.find({ roles: { $in: ['active'] }, test: true }).select('_id geo nickName gender dob placenames preferences').skip(start).limit(limit);
+    const users = await this.userModel
+      .find({ roles: { $in: ['active'] }, test: true })
+      .select('_id geo nickName gender dob placenames preferences')
+      .skip(start)
+      .limit(limit);
     return users;
   }
 
@@ -967,12 +971,15 @@ export class UserService {
             if (opt instanceof Object) {
               preferences[i].type = opt.type;
               if (preferences[i].key === 'gender' && test) {
-                const isHo = Math.random() < 1/30;
-                const isBi = Math.random() < 1/30;
-                const first = (gender === 'm' && !isHo) || (gender === 'f' && isHo)? 'f' : 'm';
+                const isHo = Math.random() < 1 / 30;
+                const isBi = Math.random() < 1 / 30;
+                const first =
+                  (gender === 'm' && !isHo) || (gender === 'f' && isHo)
+                    ? 'f'
+                    : 'm';
                 const opts = [first];
                 if (isBi) {
-                  const sec = first === 'f'? 'm' : 'f';
+                  const sec = first === 'f' ? 'm' : 'f';
                   opts.push(sec);
                 }
                 preferences[i].value = opts;
@@ -988,10 +995,10 @@ export class UserService {
         //updatedUsers.push(test,gender, preferences.find(po => po.key === 'gender'));
       }
     }
-    return {updated: updatedUsers.length};
+    return { updated: updatedUsers.length };
   }
 
-  validatePreference(mo:MatchedOption, matchedPref: PrefKeyValue) {
+  validatePreference(mo: MatchedOption, matchedPref: PrefKeyValue) {
     let valid = false;
     let { value } = mo;
     const itemVal = matchedPref.value;
