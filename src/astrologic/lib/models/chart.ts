@@ -243,7 +243,7 @@ export class Chart {
           case 'tz':
             if (typeof v === 'string') {
               this[k] = v;
-            } else {
+            } else if (v !== null) {
               this[k] = v.toString();
             }
             break;
