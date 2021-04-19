@@ -74,12 +74,13 @@ const matchAspectKey = (key: string) => {
     .replace(/_+/g, '-')
     .replace(/^bi-/i, 'bi');
   switch (matchedKey) {
-    case 'inconjunct':
+    case 'quinquix':
     case 'quincunx':
-      matchedKey = 'inconjunction';
-      break;
+    case 'inconjunct':
+      return 'inconjunction';
+    default:
+      return matchedKey;
   }
-  return matchedKey;
 };
 
 const matchGrahaGroupIndex = (grahaKey: string): number => {
