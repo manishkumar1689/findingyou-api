@@ -95,21 +95,23 @@ const matchAspectGroupIndex = (aspectKey: string): number => {
 export const calcAllAspectRanges = (aspectRow: AspectRow, orb = 0, range: number[]) => {
   const overrideAspects = aspects.filter(asp => asp.weight < aspectRow.weight);
   const ranges = [range];
-  if (aspectRow.deg < 180 && aspectRow.deg > 0) {
-    const tDeg = 360 - aspectRow.deg;
-    const hasBetterMatch = overrideAspects.some(oa => {
-      const mx = oa.deg > 0 && oa.deg < 180? 2 : 1;
-      let nm = 0;
-      for (let j = 0; j <= mx; j++) {
-        const tg = j === 0? oa.deg : 360 - oa.deg;
-        if (tg === tDeg) {
-          nm++;
+  if (aspectRow instanceof Object && overrideAspects.length > 0) {
+    if (aspectRow.deg < 180 && aspectRow.deg > 0) {
+      const tDeg = 360 - aspectRow.deg;
+      const hasBetterMatch = overrideAspects.some(oa => {
+        const mx = oa.deg > 0 && oa.deg < 180? 2 : 1;
+        let nm = 0;
+        for (let j = 0; j <= mx; j++) {
+          const tg = j === 0? oa.deg : 360 - oa.deg;
+          if (tg === tDeg) {
+            nm++;
+          }
         }
+        return nm > 0;
+      });
+      if (!hasBetterMatch) {
+        ranges.push([(tDeg + 360 - orb) % 360,(tDeg + 360 + orb) % 360]);
       }
-      return nm > 0;
-    });
-    if (!hasBetterMatch) {
-      ranges.push([(tDeg + 360 - orb) % 360,(tDeg + 360 + orb) % 360]);
     }
   }
   return ranges;
