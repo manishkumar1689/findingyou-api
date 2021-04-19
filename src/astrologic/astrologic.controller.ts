@@ -1958,4 +1958,25 @@ export class AstrologicController {
     }
     return res.json({ users });
   }
+
+  @Get('paired-duplicates/:start?/:limit?')
+  async listPairedDuplicates(@Res() res,
+    @Param('start') start,
+    @Param('limit') limit,) {
+      const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 10);
+    const keys: string[] = [];
+    const items = await this.astrologicService.pairedDuplicates(startInt, limitInt);
+    const rows = items.map(row => {
+      const hasDobs = row.d1 instanceof Date && row.d2 instanceof Date;
+      const dtStr = hasDobs? [row.d1.toISOString().split('T').shift(), row.d2.toISOString().split('T').shift()].join('--') : "dt";
+      const refKey = [sanitize(row.s1,'-'), sanitize(row.s2,'-'), dtStr].join('__');
+      const index = keys.indexOf(refKey);
+      keys.push(refKey);
+      return {...row, refKey, hasDobs, duplicate: index >= 0 };
+    });
+    const numDupplicates = items.filter(item => item.ocurrance > 1).length;
+    return res.json({ num: items.length, numDupplicates, items: rows });;
+  }
+
 }

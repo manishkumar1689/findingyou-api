@@ -1555,4 +1555,51 @@ export class AstrologicService {
     results.sort((a, b) => a.jd - b.jd);
     return results;
   }
+
+
+  async pairedDuplicates(start = 0, limit = 20000) {
+    const steps = [
+      {
+          $skip: start
+      },
+      {
+          $limit: limit
+      },
+      {
+          $lookup: {
+        from: 'charts',
+        localField: 'c1',
+        foreignField: '_id',
+        as: 'chart1',
+      }
+      },
+      {
+       $lookup: {
+        from: 'charts',
+        localField: 'c2',
+        foreignField: '_id',
+        as: 'chart2',
+       }
+      },
+      {
+        $unwind: "$chart1"
+      },
+      {
+        $unwind: "$chart2"
+      },
+      {
+          $project: {
+              c1: "$chart1._id", 
+              s1: "$chart1.subject.name",
+              d1: "$chart1.datetime",
+              c2: "$chart2._id",
+              s2: "$chart2.subject.name",
+              d2: "$chart2.datetime",
+              relTYpe: 1
+          }
+      }
+    ];
+    return await this.pairedChartModel.aggregate(steps);
+  }
+  
 }
