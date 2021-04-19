@@ -1959,12 +1959,14 @@ export class AstrologicController {
     return res.json({ users });
   }
 
-  @Get('paired-duplicates/:start?/:limit?')
+  @Get('paired-duplicates/:start?/:limit?/:remove?')
   async listPairedDuplicates(@Res() res,
     @Param('start') start,
-    @Param('limit') limit,) {
+    @Param('limit') limit,
+    @Param('remove') remove,) {
       const startInt = smartCastInt(start, 0);
     const limitInt = smartCastInt(limit, 10);
+    const removeItems = remove === 'remove';
     const keys: string[] = [];
     const items = await this.astrologicService.pairedDuplicates(startInt, limitInt);
     const rows = items.map(row => {
@@ -1972,11 +1974,29 @@ export class AstrologicController {
       const dtStr = hasDobs? [row.d1.toISOString().split('T').shift(), row.d2.toISOString().split('T').shift()].join('--') : "dt";
       const refKey = [sanitize(row.s1,'-'), sanitize(row.s2,'-'), dtStr].join('__');
       const index = keys.indexOf(refKey);
-      keys.push(refKey);
-      return {...row, refKey, hasDobs, duplicate: index >= 0 };
+      const duplicate = index >= 0;
+      if (!duplicate) {
+        keys.push(refKey);
+      }
+      return {...row, refKey, hasDobs, duplicate };
     });
-    const numDupplicates = items.filter(item => item.ocurrance > 1).length;
-    return res.json({ num: items.length, numDupplicates, items: rows });;
+    if (removeItems) {
+      for (const row of rows) {
+        if (row.duplicate) {
+          await this.astrologicService.deletePaired(row._id);
+          const otherHasC1 = rows.filter(r => r.duplicate === false && r.c1 === row.c1).length > 0;
+          if (!otherHasC1) {
+            await this.astrologicService.deleteChart(row.c1);
+          }
+          const otherHasC2 = rows.filter(r => r.duplicate === false && r.c2 === row.c2).length > 0;
+          if (!otherHasC2) {
+            await this.astrologicService.deleteChart(row.c2);
+          }
+        }
+      }
+    }
+    const numDuplicates = rows.filter(item => item.duplicate).length;
+    return res.json({ num: items.length, numDuplicates, items: rows });;
   }
 
 }
