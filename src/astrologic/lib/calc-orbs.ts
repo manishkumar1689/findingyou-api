@@ -93,9 +93,9 @@ const matchAspectGroupIndex = (aspectKey: string): number => {
 };
 
 export const calcAllAspectRanges = (aspectRow: AspectRow, orb = 0, range: number[]) => {
-  const overrideAspects = aspects.filter(asp => asp.weight < aspectRow.weight);
   const ranges = [range];
-  if (aspectRow instanceof Object && overrideAspects.length > 0) {
+  if (aspectRow instanceof Object) {
+    const overrideAspects = aspects.filter(asp => asp.weight < aspectRow.weight);
     if (aspectRow.deg < 180 && aspectRow.deg > 0) {
       const tDeg = 360 - aspectRow.deg;
       const hasBetterMatch = overrideAspects.some(oa => {
