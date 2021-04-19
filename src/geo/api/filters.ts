@@ -1,5 +1,5 @@
 import { Toponym } from '../interfaces/toponym.interface';
-import { notEmptyString } from 'src/lib/validators';
+import { notEmptyString } from '../../lib/validators';
 
 export const filterDefaultName = (
   name: string,

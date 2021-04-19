@@ -14,7 +14,7 @@ import {
 import { SnippetService } from './snippet.service';
 import { CreateSnippetDTO } from './dto/create-snippet.dto';
 import { BulkSnippetDTO } from './dto/bulk-snippet.dto';
-import { smartCastBool, smartCastString } from 'src/lib/converters';
+import { smartCastBool, smartCastString } from '../lib/converters';
 
 /*
 Provide alternative versions of snippets if not available

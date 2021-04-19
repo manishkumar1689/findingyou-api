@@ -1,7 +1,7 @@
 /*
  * Methods to convert Maps to objects and to simplify complex objects
  */
-import { notEmptyString } from 'src/lib/validators';
+import { notEmptyString } from '../../lib/validators';
 import { jdToDateParts } from './date-funcs';
 import { shortenName } from './helpers';
 import { KeyValueNum } from './models/chart';

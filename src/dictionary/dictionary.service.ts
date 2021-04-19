@@ -5,7 +5,7 @@ import { Lexeme } from './interfaces/lexeme.interface';
 import { CreateLexemeDTO } from './dto/create-lexeme.dto';
 import { TranslationDTO } from './dto/translation.dto';
 import { CategoryKeys } from './interfaces/category-keys';
-import { hashMapToObject } from 'src/lib/entities';
+import { hashMapToObject } from '../lib/entities';
 
 @Injectable()
 export class DictionaryService {

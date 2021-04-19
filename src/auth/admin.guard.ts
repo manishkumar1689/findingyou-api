@@ -2,12 +2,10 @@ import {
   Injectable,
   CanActivate,
   ExecutionContext,
-  Inject,
 } from '@nestjs/common';
 import { extractFromHeaderToken, maySkipValidation } from './auth.utils';
-import { authMode, ipWhitelist } from '../.config';
 import { Request } from 'express';
-import { UserService } from 'src/user/user.service';
+import { UserService } from '../user/user.service';
 import { IncomingHttpHeaders } from 'http';
 
 @Injectable()

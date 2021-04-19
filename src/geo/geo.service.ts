@@ -1,6 +1,6 @@
 import { Injectable, HttpService } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { geonames, timezonedb, googleGeo } from '../.config';
 import { geonamesApiBase, timezonedbApiBase } from './api';
 import { objectToQueryString, mapToQueryString } from '../lib/converters';
@@ -12,7 +12,7 @@ import {
   filterToponyms,
   correctOceanTz,
 } from './api/filters';
-import { GeoPos } from 'src/astrologic/interfaces/geo-pos';
+import { GeoPos } from '../astrologic/interfaces/geo-pos';
 import {
   extractFromRedisClient,
   extractFromRedisMap,

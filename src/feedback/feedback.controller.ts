@@ -12,8 +12,8 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { FeedbackService } from './feedback.service';
-import { UserService } from 'src/user/user.service';
-import { SettingService } from 'src/setting/setting.service';
+import { UserService } from '../user/user.service';
+import { SettingService } from '../setting/setting.service';
 import { CreateFlagDTO } from './dto/create-flag.dto';
 
 @Controller('feedback')

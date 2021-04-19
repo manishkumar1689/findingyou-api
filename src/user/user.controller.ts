@@ -24,14 +24,14 @@ import { validEmail, notEmptyString } from '../lib/validators';
 import { smartCastInt } from '../lib/converters';
 import { Request } from 'express';
 import { fromBase64, toBase64 } from '../lib/hash';
-import { maxResetMinutes, imageSizes } from '../.config';
+import { maxResetMinutes } from '../.config';
 import * as bcrypt from 'bcrypt';
 import {
   extractDocId,
   extractSimplified,
   extractObjectAndMerge,
   hashMapToObject,
-} from 'src/lib/entities';
+} from '../lib/entities';
 import roleValues from './settings/roles';
 import paymentValues from './settings/payments-options';
 import countryValues from './settings/countries';
@@ -45,12 +45,12 @@ import { PaymentOption } from './interfaces/payment-option.interface';
 import { RemoveStatusDTO } from './dto/remove-status.dto';
 import { CountryOption } from './interfaces/country-option.interface';
 import { PreferenceOption } from './interfaces/preference-option.interface';
-import { AstrologicService } from 'src/astrologic/astrologic.service';
+import { AstrologicService } from '../astrologic/astrologic.service';
 import { SurveyItem } from './interfaces/survey-item';
-import { SnippetService } from 'src/snippet/snippet.service';
+import { SnippetService } from '../snippet/snippet.service';
 import { ProfileDTO } from './dto/profile.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { generateFileName, readRawFile, uploadMediaFile } from 'src/lib/files';
+import { generateFileName, readRawFile, uploadMediaFile } from '../lib/files';
 import { PreferenceDTO } from './dto/preference.dto';
 import { SampleDataDTO } from './dto/sample-data.dto';
 import { SampleRecordDTO } from './dto/sample-record.dto';

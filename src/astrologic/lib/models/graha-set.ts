@@ -19,7 +19,7 @@ import { Nakshatra } from './nakshatra';
 import { Relationship } from './relationship';
 import maitriData from '../settings/maitri-data';
 import { GeoPos } from '../../interfaces/geo-pos';
-import { BodyTransition } from 'src/astrologic/interfaces/body-transition';
+import { BodyTransition } from '../../interfaces/body-transition';
 import { HouseSet } from './house-set';
 import { nakshatra27, nakshatra28, subtractLng360 } from '../helpers';
 import { AyanamshaItem, DefaultAyanamshaItem } from '../interfaces';

@@ -1,7 +1,7 @@
 import * as mongoose from 'mongoose';
 import { SubjectSchema } from './subject.schema';
-import { GeoSchema } from 'src/user/schemas/geo.schema';
-import { PlacenameSchema } from 'src/user/schemas/placename.schema';
+import { GeoSchema } from '../../user/schemas/geo.schema';
+import { PlacenameSchema } from '../../user/schemas/placename.schema';
 import { BaseGrahaSchema } from './base-graha.schema';
 import { HouseSystemSchema } from './house-system.schema';
 import { ITimeSchema } from './i-time.schema';

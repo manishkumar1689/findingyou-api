@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { GeoService } from './geo.service';
 import { isNumeric, validISODateString } from '../lib/validators';
-import { locStringToGeo } from 'src/astrologic/lib/converters';
+import { locStringToGeo } from '../astrologic/lib/converters';
 
 @Controller('geo')
 export class GeoController {

@@ -32,7 +32,7 @@ Pluto	9	247.94 years
   bhuta: bhuta
 */
 
-import { SignHouse } from 'src/astrologic/interfaces/sign-house';
+import { SignHouse } from '../../interfaces/sign-house';
 
 const grahaValues = [
   {

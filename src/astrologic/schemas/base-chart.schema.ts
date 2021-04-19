@@ -1,5 +1,5 @@
 import * as mongoose from 'mongoose';
-import { GeoSchema } from 'src/user/schemas/geo.schema';
+import { GeoSchema } from '../../user/schemas/geo.schema';
 import { BaseGrahaSchema } from './base-graha.schema';
 import { HouseSystemSchema } from './house-system.schema';
 import { ITimeSchema } from './i-time.schema';

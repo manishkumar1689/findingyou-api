@@ -47,7 +47,7 @@ import {
   validISODateString,
   inRange,
 } from '../../lib/validators';
-import { hashMapToObject } from 'src/lib/entities';
+import { hashMapToObject } from '../../lib/entities';
 import { KeyValue } from '../interfaces/key-value';
 import { GeoPos } from '../interfaces/geo-pos';
 import { IndianTime } from './models/indian-time';

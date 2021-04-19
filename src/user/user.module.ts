@@ -1,8 +1,8 @@
 import { Module, HttpModule, Global } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { MessageService } from '../message/message.service';
-import { MongooseModule } from '@nestjs/mongoose';
 import { UserSchema } from './schemas/user.schema';
 import { MessageSchema } from '../message/schemas/message.schema';
 import { GeoService } from './../geo/geo.service';
@@ -15,7 +15,7 @@ import { PairedChartSchema } from '../astrologic/schemas/paired-chart.schema';
 import { SnippetSchema } from '../snippet/schemas/snippet.schema';
 import { SnippetService } from '../snippet/snippet.service';
 import { ProtocolSchema } from '../setting/schemas/protocol.schema';
-import { GeoNameSchema } from 'src/geo/schemas/geo-name.schema';
+import { GeoNameSchema } from '../geo/schemas/geo-name.schema';
 
 @Global()
 @Module({

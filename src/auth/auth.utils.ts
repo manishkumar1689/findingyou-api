@@ -1,7 +1,7 @@
 import { Request } from 'express';
 import { fromBase64 } from '../lib/hash';
 import { globalApikey, suffixSplitChars } from '../.config';
-import { notEmptyString } from 'src/lib/validators';
+import { notEmptyString } from '../lib/validators';
 import { authMode, ipWhitelist, pathWhitelist } from '../.config';
 
 interface ValidAuthToken {

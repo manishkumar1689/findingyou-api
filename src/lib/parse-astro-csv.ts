@@ -8,9 +8,8 @@ import { emptyString, notEmptyString, validISODateString } from './validators';
 import {
   ChartInputDTO,
   SimplePlacename,
-  SimpleGeo,
 } from '../astrologic/dto/chart-input.dto';
-import { PairedChartInputDTO } from 'src/astrologic/dto/paired-chart-input.dto';
+import { PairedChartInputDTO } from '../astrologic/dto/paired-chart-input.dto';
 import { sanitize } from './converters';
 import { GeoDTO } from '../user/dto/geo.dto';
 

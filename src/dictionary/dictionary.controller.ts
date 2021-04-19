@@ -14,7 +14,7 @@ import { DictionaryService } from './dictionary.service';
 import { CreateLexemeDTO } from './dto/create-lexeme.dto';
 import { Lexeme } from './interfaces/lexeme.interface';
 import { Translation } from './interfaces/translation.interface';
-import { notEmptyString } from 'src/lib/validators';
+import { notEmptyString } from '../lib/validators';
 import { TranslationDTO } from './dto/translation.dto';
 
 const mapTranslation = (item: Translation): any => {

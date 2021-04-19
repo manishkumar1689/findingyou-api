@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { extractFromHeaderToken, maySkipValidation } from './auth.utils';
 import { Request } from 'express';
-import { UserService } from 'src/user/user.service';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class UserGuard implements CanActivate {

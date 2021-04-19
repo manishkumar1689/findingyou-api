@@ -1,8 +1,7 @@
 import * as mongoose from 'mongoose';
 import { BaseChartSchema } from './base-chart.schema';
 import { TagSchema } from './tag.schema';
-import { GeoSchema } from 'src/user/schemas/geo.schema';
-import { KeyNumValueSchema } from './key-num-value.schema';
+import { GeoSchema } from '../../user/schemas/geo.schema';
 import { KutaSetSchema } from './kuta-set.schema';
 import { KeyPairValueSchema } from './key-pair-value.schema';
 

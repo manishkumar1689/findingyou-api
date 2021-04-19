@@ -4,17 +4,13 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Setting } from './interfaces/setting.interface';
 import { CreateSettingDTO } from './dto/create-setting.dto';
 import defaultFlags from './sources/flags';
-import { notEmptyString } from 'src/lib/validators';
+import { notEmptyString } from '../lib/validators';
 import { Protocol } from './interfaces/protocol.interface';
 import { ProtocolDTO } from './dto/protocol.dto';
-import {
-  ProtocolSettings,
-  RuleSet,
-} from 'src/astrologic/lib/models/protocol-models';
-import { mergeRoddenValues } from 'src/astrologic/lib/settings/rodden-scale-values';
-import { KeyName } from 'src/astrologic/lib/interfaces';
-import { extractDocId } from 'src/lib/entities';
-import { defaultPairedTagOptionSets } from 'src/astrologic/lib/settings/vocab-values';
+import { mergeRoddenValues } from '../astrologic/lib/settings/rodden-scale-values';
+import { KeyName } from '../astrologic/lib/interfaces';
+import { extractDocId } from '../lib/entities';
+import { defaultPairedTagOptionSets } from '../astrologic/lib/settings/vocab-values';
 import { RuleSetDTO } from './dto/rule-set.dto';
 
 @Injectable()
