@@ -787,13 +787,23 @@ export class AstrologicController {
       query,
     );
     const protocol = await this.buildProtocol(protocolID);
-    const data = { num: 0, items: [] };
+    const data = { num: 0, items: [], rule: null };
     pairedcCharts.forEach(pc => {
       const row = assessChart(protocol, pc, colRef, filterRuleIndex);
       if (compatibilityResultSetHasScores(row)) {
         data.items.push(row);
       }
     });
+    if (notEmptyString(colRef) && filterRuleIndex >= 0) {
+      const col = protocol.collections.find(cl => cl.type === colRef);
+      if (col instanceof Object) {
+        if (col.rules instanceof Array) {
+          if (filterRuleIndex < col.rules.length) {
+            data.rule = col.rules[filterRuleIndex];
+          }
+        }
+      }
+    }
     data.num = data.items.length;
     return data;
   }
@@ -826,25 +836,33 @@ export class AstrologicController {
   /*
   Save new protocol with nested rules-collections
   */
-  @Put('protocol/rule/:itemID/:colRef/:ruleIndex')
+  @Put('protocol/rule/:itemID/:colRef/:ruleIndex/:saveFlag?')
   async saveProtcolRule(
     @Res() res,
     @Body() ruleSet: RuleSetDTO,
     @Param('itemID') itemID,
     @Param('colRef') colRef,
     @Param('ruleIndex') ruleIndex,
+    @Param('saveFlag') saveFlag,
   ) {
     const index = smartCastInt(ruleIndex, 0);
-    const saved = await this.settingService.saveRuleSet(
-      itemID,
-      colRef,
-      index,
-      ruleSet,
-    );
+    const saveRuleInProtocol = smartCastInt(saveFlag, 0) > 0;
     const result = { valid: false, item: null, matches: [], num: -1 };
-    if (saved.valid) {
-      result.valid = true;
+    let hasValidRule = false;
+    if (saveRuleInProtocol) {
+      const saved = await this.settingService.saveRuleSet(
+        itemID,
+        colRef,
+        index,
+        ruleSet,
+      );
+      hasValidRule = saved.valid;
       result.item = saved.item;
+    } else {
+      hasValidRule = true;
+    }
+    if (hasValidRule) {
+      result.valid = true;
       const matchData = await this.matchByProtocol(
         itemID,
         {},
@@ -853,6 +871,9 @@ export class AstrologicController {
         colRef,
         index,
       );
+      if (!saveRuleInProtocol) {
+        result.item = matchData.rule;
+      }
       if (matchData.num > 0) {
         result.matches = matchData.items;
         result.num = matchData.num;
