@@ -250,7 +250,7 @@ export class Condition {
   get matchedAspects() {
     switch (this.context) {
       case 'soft_aspect':
-        return ['trine', 'sextile', 'inconjunction'];
+        return ['trine', 'sextile', 'quincunx'];
       case 'hard_aspect':
         return ['opposition', 'square', 'conjunction'];
       case 'any_aspect':
@@ -260,8 +260,7 @@ export class Condition {
           'trine',
           'sextile',
           'conjunction',
-          'quinquix',
-          'inconjunction',
+          'quincunx',
         ];
       default:
         return this.contextType.isAspect ? [this.context] : [];

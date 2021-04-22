@@ -86,8 +86,8 @@ export const contextTypes = [
     isKuta: false,
   },
   {
-    key: 'inconjunction',
-    name: 'in Inconjunction',
+    key: 'quincunx',
+    name: 'in Quincunx',
     isAspect: true,
     c2groups: ['graha', 'lordship', 'cara_karakas', 'bm', 'special'],
     isKuta: false,

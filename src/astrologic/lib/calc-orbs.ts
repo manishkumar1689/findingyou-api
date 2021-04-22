@@ -42,7 +42,7 @@ export const aspectGroups: Array<Array<string>> = [
   ['conjunction', 'opposition', 'trine', 'square'],
   ['sextile'],
   ['semisextile'],
-  ['sesquisquare', 'inconjunction', 'semisquare'],
+  ['sesquisquare', 'quincunx', 'semisquare'],
   ['quintile', 'biquintile'],
 ];
 
@@ -50,7 +50,7 @@ export const aspects: Array<AspectRow> = [
   { key: 'opposition', deg: 180.0, weight: 1 },
   { key: 'quadnovile', deg: 160.0, weight: 10 },
   { key: 'triseptile', deg: (360.0 / 7.0) * 3.0, weight: 12 }, // 154.28571
-  { key: 'inconjunction', deg: 150.0, weight: 2 },
+  { key: 'quincunx', deg: 150.0, weight: 2 },
   { key: 'biquintile', deg: 144.0, weight: 8 },
   { key: 'sesquisquare', deg: 135.0, weight: 6 },
   { key: 'trine', deg: 120.0, weight: 4 },
@@ -77,7 +77,7 @@ const matchAspectKey = (key: string) => {
     case 'quinquix':
     case 'quincunx':
     case 'inconjunct':
-      return 'inconjunction';
+      return 'quincunx';
     default:
       return matchedKey;
   }
@@ -93,17 +93,23 @@ const matchAspectGroupIndex = (aspectKey: string): number => {
   return index < 0 ? 5 : index;
 };
 
-export const calcAllAspectRanges = (aspectRow: AspectRow, orb = 0, range: number[]) => {
+export const calcAllAspectRanges = (
+  aspectRow: AspectRow,
+  orb = 0,
+  range: number[],
+) => {
   const ranges = [range];
   if (aspectRow instanceof Object) {
-    const overrideAspects = aspects.filter(asp => asp.weight < aspectRow.weight);
+    const overrideAspects = aspects.filter(
+      asp => asp.weight < aspectRow.weight,
+    );
     if (aspectRow.deg < 180 && aspectRow.deg > 0) {
       const tDeg = 360 - aspectRow.deg;
       const hasBetterMatch = overrideAspects.some(oa => {
-        const mx = oa.deg > 0 && oa.deg < 180? 2 : 1;
+        const mx = oa.deg > 0 && oa.deg < 180 ? 2 : 1;
         let nm = 0;
         for (let j = 0; j <= mx; j++) {
-          const tg = j === 0? oa.deg : 360 - oa.deg;
+          const tg = j === 0 ? oa.deg : 360 - oa.deg;
           if (tg === tDeg) {
             nm++;
           }
@@ -111,12 +117,12 @@ export const calcAllAspectRanges = (aspectRow: AspectRow, orb = 0, range: number
         return nm > 0;
       });
       if (!hasBetterMatch) {
-        ranges.push([(tDeg + 360 - orb) % 360,(tDeg + 360 + orb) % 360]);
+        ranges.push([(tDeg + 360 - orb) % 360, (tDeg + 360 + orb) % 360]);
       }
     }
   }
   return ranges;
-}
+};
 
 export const calcOrb = (aspectKey: string, k1: string, k2: string) => {
   const matchedKey = matchAspectKey(aspectKey);
@@ -130,7 +136,9 @@ export const calcOrb = (aspectKey: string, k1: string, k2: string) => {
   const hasMatch = aspectRow instanceof Object;
   const targetDeg = hasMatch ? aspectRow.deg : 0;
   const range = [(targetDeg + 360 - orb) % 360, (targetDeg + orb) % 360];
-  const ranges = hasMatch? calcAllAspectRanges(aspectRow, orb, range) : [range];
+  const ranges = hasMatch
+    ? calcAllAspectRanges(aspectRow, orb, range)
+    : [range];
   return {
     key: matchedKey,
     g1: k1,
@@ -139,7 +147,7 @@ export const calcOrb = (aspectKey: string, k1: string, k2: string) => {
     orb,
     deg: targetDeg,
     ranges,
-    row: aspectRow
+    row: aspectRow,
   };
 };
 
