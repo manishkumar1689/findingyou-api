@@ -1527,9 +1527,11 @@ export class PairedChart {
           : isApplying;
         aspected = ranges.some(range => {
           const [minVal, maxVal] = range;
-          return (
-            aspectValue >= minVal && aspectValue <= maxVal && applyModeMatched
-          );
+          const spansZero = minVal > 270 && minVal > maxVal && maxVal < 90;
+          const inRange = spansZero
+            ? aspectValue >= minVal || aspectValue <= maxVal
+            : aspectValue >= minVal && aspectValue <= maxVal;
+          return inRange && applyModeMatched;
         });
       }
       return aspected;

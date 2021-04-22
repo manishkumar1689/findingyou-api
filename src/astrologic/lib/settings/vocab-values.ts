@@ -10,10 +10,6 @@ export interface SlugNameVocab extends SlugName {
   vocab?: string;
 }
 
-export interface SlugNameVocabStat extends SlugNameVocab {
-  num: number;
-}
-
 interface RelOptSet {
   key: string;
   name: string;
