@@ -27,3 +27,40 @@ export class UpagrahaValue {
     }
   }
 }
+
+export const matchUpapadaKey = (refKey = '') => {
+  switch (refKey) {
+    case 'second':
+      return {
+        key: 'upapadaSecond',
+        type: 'sign',
+        isDegree: false,
+      };
+    case 'lagna':
+      return {
+        key: 'upapadaLagna',
+        type: '',
+        isDegree: false,
+      };
+    case 'arudha_lagna':
+      return {
+        key: 'upapadaArudhaLagna',
+        type: '',
+        isDegree: false,
+      };
+    case 'arudha_lord':
+      return {
+        key: 'upapadaLord',
+        type: 'sphutas',
+        isDegree: true,
+      };
+    default:
+      return {
+        key: '',
+        type: '',
+        isDegree: false,
+      };
+  }
+};
+
+const matchAspectType = () => {};

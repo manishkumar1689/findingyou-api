@@ -11,7 +11,7 @@ import {
   toCamelCase,
   capitalize,
 } from '../helpers';
-import { calcJdPeriodRange, coreGrahaKeys, relativeAngle } from './../core';
+import { calcJdPeriodRange, relativeAngle } from './../core';
 import {
   julToISODate,
   weekDayNum,
@@ -33,7 +33,7 @@ import { KaranaSet } from './karana-set';
 import { MuhurtaSet, MuhurtaItem } from './muhurta-set';
 import { inRange, isNumeric, notEmptyString } from './../../../lib/validators';
 import { TransitionSet } from './transition-set';
-import { UpagrahaValue } from './upagraha-value';
+import { UpagrahaValue, matchUpapadaKey } from './upagraha-value';
 import {
   matchReference,
   Graha,
@@ -344,6 +344,8 @@ export class Chart {
     switch (objType.type) {
       case 'graha':
         return this.graha(refKey).longitude;
+      case 'upapada':
+        return this.matchUpapada(refKey);
       case 'special':
       case 'lots':
         switch (refKey) {
@@ -360,6 +362,16 @@ export class Chart {
 
       default:
         return null;
+    }
+  }
+
+  matchUpapada(refKey = '') {
+    const { key, type, isDegree } = matchUpapadaKey(refKey);
+    switch (type) {
+      case 'sphutas':
+        return this.matchSpecial(key);
+      default:
+        return 0;
     }
   }
 
@@ -1525,7 +1537,6 @@ export class PairedChart {
         const applyModeMatched = condition.isSeparating
           ? !isApplying
           : isApplying;
-        console.log(ranges);
         aspected = ranges.some(range => {
           const [minVal, maxVal] = range;
           const spansZero = minVal > 270 && minVal > maxVal && maxVal < 90;
