@@ -753,7 +753,7 @@ export class Protocol {
             subtractLng360(aspectData.deg, orb),
             (aspectData.deg + orb) % 360,
           ])
-        : aspectData.range;
+        : [aspectData.range];
     return ranges;
   }
 

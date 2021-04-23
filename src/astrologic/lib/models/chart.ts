@@ -1525,6 +1525,7 @@ export class PairedChart {
         const applyModeMatched = condition.isSeparating
           ? !isApplying
           : isApplying;
+        console.log(ranges);
         aspected = ranges.some(range => {
           const [minVal, maxVal] = range;
           const spansZero = minVal > 270 && minVal > maxVal && maxVal < 90;

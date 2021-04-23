@@ -836,7 +836,7 @@ export class AstrologicController {
   /*
   Save new protocol with nested rules-collections
   */
-  @Put('protocol/rule/:itemID/:colRef/:ruleIndex/:saveFlag?')
+  @Put('protocol/rule/:itemID/:colRef/:ruleIndex/:saveFlag?/:max?')
   async saveProtcolRule(
     @Res() res,
     @Body() ruleSet: RuleSetDTO,
@@ -844,10 +844,19 @@ export class AstrologicController {
     @Param('colRef') colRef,
     @Param('ruleIndex') ruleIndex,
     @Param('saveFlag') saveFlag,
+    @Param('max') max,
   ) {
     const index = smartCastInt(ruleIndex, 0);
     const saveRuleInProtocol = smartCastInt(saveFlag, 0) > 0;
-    const result = { valid: false, item: null, matches: [], num: -1 };
+    const limitInt = smartCastInt(max, 1000);
+    const limit = limitInt > 100 && limitInt < 1000000 ? limitInt : 1000;
+    const result = {
+      valid: false,
+      item: null,
+      matches: [],
+      num: -1,
+      limit,
+    };
     let hasValidRule = false;
     if (saveRuleInProtocol) {
       const saved = await this.settingService.saveRuleSet(
@@ -867,7 +876,7 @@ export class AstrologicController {
         itemID,
         {},
         0,
-        1000,
+        limit,
         colRef,
         index,
       );
@@ -1981,35 +1990,57 @@ export class AstrologicController {
   }
 
   @Get('paired-duplicates/:start?/:limit?/:remove?')
-  async listPairedDuplicates(@Res() res,
+  async listPairedDuplicates(
+    @Res() res,
     @Param('start') start,
     @Param('limit') limit,
-    @Param('remove') remove,) {
-      const startInt = smartCastInt(start, 0);
+    @Param('remove') remove,
+  ) {
+    const startInt = smartCastInt(start, 0);
     const limitInt = smartCastInt(limit, 10);
     const removeItems = remove === 'remove';
     const keys: string[] = [];
-    const items = await this.astrologicService.pairedDuplicates(startInt, limitInt);
+    const items = await this.astrologicService.pairedDuplicates(
+      startInt,
+      limitInt,
+    );
     const rows = items.map(row => {
       const hasDobs = row.d1 instanceof Date && row.d2 instanceof Date;
-      const dtStr = hasDobs? [row.d1.toISOString().split('T').shift(), row.d2.toISOString().split('T').shift()].join('--') : "dt";
-      const refKey = [sanitize(row.s1,'-'), sanitize(row.s2,'-'), dtStr].join('__');
+      const dtStr = hasDobs
+        ? [
+            row.d1
+              .toISOString()
+              .split('T')
+              .shift(),
+            row.d2
+              .toISOString()
+              .split('T')
+              .shift(),
+          ].join('--')
+        : 'dt';
+      const refKey = [sanitize(row.s1, '-'), sanitize(row.s2, '-'), dtStr].join(
+        '__',
+      );
       const index = keys.indexOf(refKey);
       const duplicate = index >= 0;
       if (!duplicate) {
         keys.push(refKey);
       }
-      return {...row, refKey, hasDobs, duplicate };
+      return { ...row, refKey, hasDobs, duplicate };
     });
     if (removeItems) {
       for (const row of rows) {
         if (row.duplicate) {
           await this.astrologicService.deletePaired(row._id);
-          const otherHasC1 = rows.filter(r => r.duplicate === false && r.c1 === row.c1).length > 0;
+          const otherHasC1 =
+            rows.filter(r => r.duplicate === false && r.c1 === row.c1).length >
+            0;
           if (!otherHasC1) {
             await this.astrologicService.deleteChart(row.c1);
           }
-          const otherHasC2 = rows.filter(r => r.duplicate === false && r.c2 === row.c2).length > 0;
+          const otherHasC2 =
+            rows.filter(r => r.duplicate === false && r.c2 === row.c2).length >
+            0;
           if (!otherHasC2) {
             await this.astrologicService.deleteChart(row.c2);
           }
@@ -2017,7 +2048,6 @@ export class AstrologicController {
       }
     }
     const numDuplicates = rows.filter(item => item.duplicate).length;
-    return res.json({ num: items.length, numDuplicates, items: rows });;
+    return res.json({ num: items.length, numDuplicates, items: rows });
   }
-
 }
