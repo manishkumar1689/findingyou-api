@@ -62,5 +62,3 @@ export const matchUpapadaKey = (refKey = '') => {
       };
   }
 };
-
-const matchAspectType = () => {};
