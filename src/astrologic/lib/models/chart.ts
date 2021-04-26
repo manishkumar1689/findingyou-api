@@ -1720,7 +1720,6 @@ export class PairedChart {
   }
 
   matchYogaKartariCondition(
-    protocol: Protocol,
     condition: Condition,
     fromChart: Chart,
     toChart: Chart,
@@ -1839,7 +1838,6 @@ export class PairedChart {
     toChart.setAyanamshaItemByNum(ayanamshaNum);
     const obj1 = condition.object1;
     const obj2 = condition.object2;
-    const { context } = condition;
     const k1 = this.matchGrahaEquivalent(obj1, fromChart);
     const k2 = this.matchGrahaEquivalent(obj2, toChart);
     if (condition.isLongAspect) {
@@ -1873,6 +1871,8 @@ export class PairedChart {
           matched = c1ToC2Matches.some(num => num > 0);
         }
       }
+    } else if (condition.isDignityBala) {
+      matched = this.matchDignityBala(condition, fromChart, k1);
     } else if (condition.isDeclination) {
       matched = this.matchDeclinationCondition(
         protocol,
@@ -1895,7 +1895,15 @@ export class PairedChart {
         k2,
       );
     } else if (condition.isYuti) {
-      this.matchYutiCondition(condition, fromChart, toChart);
+      matched = this.matchYutiCondition(condition, fromChart, toChart);
+    } else if (condition.isKartariYoga) {
+      matched = this.matchYogaKartariCondition(
+        condition,
+        fromChart,
+        toChart,
+        k1,
+        k2,
+      );
     } else if (condition.isDrishtiAspect) {
       this.matchDrishtiCondition(
         protocol,
@@ -1993,6 +2001,45 @@ export class PairedChart {
       incontraParallel,
       distance,
     };
+  }
+
+  matchDignityBala(condition: Condition, fromChart: Chart, k1: string) {
+    const fromObj = fromChart.graha(k1);
+    const filterKey = condition.object2.key;
+    return this.matchDignityKey(fromObj, filterKey);
+  }
+
+  matchDignityKey(fromObj: Graha, filterKey: string) {
+    switch (filterKey) {
+      case 'exalted_sign':
+        return fromObj.isExalted;
+      case 'mula_trikona':
+        return fromObj.isMulaTrikon;
+      case 'own_sign':
+        return fromObj.isOwnSign;
+      case 'greatfriend_sign':
+        return (
+          fromObj.relationship.natural == 'friend' &&
+          fromObj.relationship.temporary == 'friend'
+        );
+      case 'friend_sign':
+        return fromObj.relationship.natural == 'friend';
+      case 'neutral_sign':
+        return fromObj.relationship.natural == 'neutral';
+      case 'enemy_sign':
+        return fromObj.relationship.natural == 'enemy';
+      case 'archenemy_sign':
+        return (
+          fromObj.relationship.natural == 'enemy' &&
+          fromObj.relationship.temporary == 'enemy'
+        );
+      case 'directional_strength':
+        return false;
+      case 'retrograde':
+        return fromObj.lngSpeed < 0;
+      case 'vargottama':
+        return fromObj.vargottama;
+    }
   }
 
   matchChart(key = 'female') {

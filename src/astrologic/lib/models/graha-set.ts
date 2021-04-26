@@ -21,7 +21,12 @@ import maitriData from '../settings/maitri-data';
 import { GeoPos } from '../../interfaces/geo-pos';
 import { BodyTransition } from '../../interfaces/body-transition';
 import { HouseSet } from './house-set';
-import { nakshatra27, nakshatra28, subtractLng360 } from '../helpers';
+import {
+  degToSign,
+  nakshatra27,
+  nakshatra28,
+  subtractLng360,
+} from '../helpers';
 import { AyanamshaItem, DefaultAyanamshaItem } from '../interfaces';
 
 interface VariantGroup {
@@ -183,6 +188,17 @@ export class Graha extends BaseObject {
       subtractLng360(this.lng, this.ayanamshaValue),
       this.vargaNum,
     );
+  }
+
+  get vargottama(): boolean {
+    const adjustedLng = subtractLng360(this.lng, this.ayanamshaValue);
+    const lngD1 = calcVargaValue(adjustedLng, 1);
+    const lngD9 = calcVargaValue(adjustedLng, 9);
+    return degToSign(lngD1) === degToSign(lngD9);
+  }
+
+  get retrodgrade(): boolean {
+    return this.lngSpeed < 0;
   }
 
   get latitude() {

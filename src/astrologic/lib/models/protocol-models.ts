@@ -127,6 +127,14 @@ export class Condition {
     }
   }
 
+  get stateCompare() {
+    return this.contextType.stateCompare;
+  }
+
+  get isDignityBala() {
+    return this.contextType.isDignityBala;
+  }
+
   get bothSingleGrahaMatch() {
     return !this.matchesMultiple1 && !this.matchesMultiple2;
   }
@@ -966,6 +974,14 @@ export class ContextType {
       default:
         return false;
     }
+  }
+
+  get stateCompare() {
+    return this.key === 'state_compare';
+  }
+
+  get isDignityBala() {
+    return this.key === 'has_dignity_bala_type';
   }
 
   get isDeclination() {
