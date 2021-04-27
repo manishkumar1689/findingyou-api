@@ -59,6 +59,8 @@ import {
   naturalMalefics,
 } from '../settings/graha-values';
 import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
+import { mapRelationships } from '../map-relationships';
+import grahaValues from '../settings/graha-values';
 
 export interface Subject {
   name: string;
@@ -757,13 +759,22 @@ export class Chart {
         graha = this.icGraha;
         break;
       default:
-        graha = new Graha(this.grahaRow(key));
+        graha = this.matchBodyAsGraha(key);
         break;
     }
 
     graha.setAyanamshaItem(this.ayanamshaItem);
     graha.setVarga(this.vargaNum);
     return graha;
+  }
+
+  matchBodyAsGraha(key = '') {
+    const gr = this.bodies.find(b => b.key === key);
+    if (gr instanceof Object) {
+      return gr;
+    } else {
+      return new Graha(this.grahaRow(key));
+    }
   }
 
   get sunRow() {
@@ -2010,6 +2021,7 @@ export class PairedChart {
   }
 
   matchDignityKey(fromObj: Graha, filterKey: string) {
+    const { relationship } = fromObj.variant;
     switch (filterKey) {
       case 'exalted_sign':
         return fromObj.isExalted;
@@ -2018,23 +2030,17 @@ export class PairedChart {
       case 'own_sign':
         return fromObj.isOwnSign;
       case 'greatfriend_sign':
-        return (
-          fromObj.relationship.natural == 'friend' &&
-          fromObj.relationship.temporary == 'friend'
-        );
+        return relationship === 'bestFriend';
       case 'friend_sign':
-        return fromObj.relationship.natural == 'friend';
+        return relationship === 'friend';
       case 'neutral_sign':
-        return fromObj.relationship.natural == 'neutral';
+        return relationship === 'neutral';
       case 'enemy_sign':
-        return fromObj.relationship.natural == 'enemy';
+        return relationship == 'enemy';
       case 'archenemy_sign':
-        return (
-          fromObj.relationship.natural == 'enemy' &&
-          fromObj.relationship.temporary == 'enemy'
-        );
+        return relationship === 'archEnemy';
       case 'directional_strength':
-        return false;
+        return fromObj.hasDirectionalStrength;
       case 'retrograde':
         return fromObj.lngSpeed < 0;
       case 'vargottama':

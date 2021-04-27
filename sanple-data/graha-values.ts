@@ -357,7 +357,7 @@ export const aspectGroups = [
   [{ key: 'sextile', div: 6, fac: 1, cg: 'green' }],
   [
     { key: 'sesqui-square', div: 3, fac: 3, cg: 'red' },
-    { key: 'inconjunction', div: 12, fac: 5, cg: 'black' },
+    { key: 'quincunx', div: 12, fac: 5, cg: 'black' },
     { key: 'semi-square', div: 8, fac: 1, cg: 'red' },
   ],
   [

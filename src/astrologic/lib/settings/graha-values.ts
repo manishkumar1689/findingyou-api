@@ -362,6 +362,23 @@ export const aspectGroups = [
   ],
 ];
 
+/**
+ * Dik Bala
+ * It Sun & Mars get directional strength in  the 10th House
+Jupiter & Mercury get directional strength in  the 1st house
+Saturn gets directional strength in the 7th House
+Venus & Moon get directional strength in 4th House
+ */
+export const directionalStrengthMap = {
+  su: 10,
+  mo: 4,
+  ma: 10,
+  me: 1,
+  ju: 1,
+  ve: 4,
+  sa: 7,
+};
+
 export const orbGrahaMatches = [
   { group: 1, orbs: [12, 5, 3, 1, 0.5], keys: ['su', 'mo'] },
   { group: 2, orbs: [7, 5, 2, 1, 0.5], keys: ['me', 've', 'ma'] },

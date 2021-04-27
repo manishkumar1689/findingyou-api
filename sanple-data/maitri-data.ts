@@ -1,6 +1,3 @@
-import { Graha } from 'src/astrologic/lib/models/graha-set';
-import rashiValues from './rashi-values';
-
 /*
    Pañcaka-maitri (5 fold Planetary Relationships)
 

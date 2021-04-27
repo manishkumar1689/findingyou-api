@@ -13,11 +13,10 @@ import { matchNakshatra } from '../core';
 import { TransitionData } from '../transitions';
 import nakshatraValues from '../settings/nakshatra-values';
 import charakarakaValues from '../settings/charakaraka-values';
-import grahaValues from '../settings/graha-values';
+import grahaValues, { directionalStrengthMap } from '../settings/graha-values';
 import refValues from '../settings/ref-values';
 import { Nakshatra } from './nakshatra';
 import { Relationship } from './relationship';
-import maitriData from '../settings/maitri-data';
 import { GeoPos } from '../../interfaces/geo-pos';
 import { BodyTransition } from '../../interfaces/body-transition';
 import { HouseSet } from './house-set';
@@ -28,6 +27,7 @@ import {
   subtractLng360,
 } from '../helpers';
 import { AyanamshaItem, DefaultAyanamshaItem } from '../interfaces';
+import { mapRelationships } from '../map-relationships';
 
 interface VariantGroup {
   num: number;
@@ -199,6 +199,14 @@ export class Graha extends BaseObject {
 
   get retrodgrade(): boolean {
     return this.lngSpeed < 0;
+  }
+
+  get hasDirectionalStrength(): boolean {
+    if (Object.keys(directionalStrengthMap).includes(this.key)) {
+      return directionalStrengthMap[this.key] === this.house;
+    } else {
+      return false;
+    }
   }
 
   get latitude() {
@@ -487,37 +495,12 @@ export class GrahaSet {
 
   matchRelationships() {
     this.bodies = this.bodies.map(b => {
-      const rulerSign = this.get(b.ruler).sign;
-
-      const numSteps = calcInclusiveTwelfths(b.sign, rulerSign);
-      const isTempFriend = maitriData.temporary.friend.includes(numSteps);
-      const isTempEnemy = maitriData.temporary.enemy.includes(numSteps);
-      b.relationship.natural = b.natural;
-      b.relationship.temporary = isTempFriend
-        ? 'friend'
-        : isTempEnemy
-        ? 'enemy'
-        : 'neutral';
-      const { natural, temporary } = b.relationship;
-      const compoundMatches = Object.entries(maitriData.compound).map(entry => {
-        const [key, vals] = entry;
-        return {
-          key,
-          values: vals.map(
-            cv => cv.natural === natural && cv.temporary === temporary,
-          ),
-        };
-      });
-
-      const compoundKeys = compoundMatches
-        .filter(cm => cm.values.some(v => v))
-        .map(cm => cm.key);
-      b.relationship.compound =
-        compoundKeys.length > 0
-          ? compoundKeys[0]
-          : b.isOwnSign
-          ? 'ownSign'
-          : '';
+      b.relationship = mapRelationships(
+        b.sign,
+        this.get(b.ruler).sign,
+        b.isOwnSign,
+        b.natural,
+      );
       return b;
     });
   }
