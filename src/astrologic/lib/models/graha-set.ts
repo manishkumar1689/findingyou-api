@@ -203,7 +203,7 @@ export class Graha extends BaseObject {
 
   get hasDirectionalStrength(): boolean {
     if (Object.keys(directionalStrengthMap).includes(this.key)) {
-      return directionalStrengthMap[this.key] === this.house;
+      return directionalStrengthMap[this.key] === this.variant.house;
     } else {
       return false;
     }
