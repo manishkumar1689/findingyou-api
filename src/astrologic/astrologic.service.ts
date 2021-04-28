@@ -425,7 +425,7 @@ export class AstrologicService {
       $project: outFieldProject,
     };
     const comboSteps = [...steps, projectionStep, ...conditions];
-    const c = conditions.find(cond => Object.keys(cond).includes('$match'));
+    //const c = conditions.find(cond => Object.keys(cond).includes('$match'));
     return await this.pairedChartModel.aggregate(comboSteps);
   }
 
@@ -1556,50 +1556,48 @@ export class AstrologicService {
     return results;
   }
 
-
   async pairedDuplicates(start = 0, limit = 20000) {
     const steps = [
       {
-          $skip: start
+        $skip: start,
       },
       {
-          $limit: limit
+        $limit: limit,
       },
       {
-          $lookup: {
-        from: 'charts',
-        localField: 'c1',
-        foreignField: '_id',
-        as: 'chart1',
-      }
+        $lookup: {
+          from: 'charts',
+          localField: 'c1',
+          foreignField: '_id',
+          as: 'chart1',
+        },
       },
       {
-       $lookup: {
-        from: 'charts',
-        localField: 'c2',
-        foreignField: '_id',
-        as: 'chart2',
-       }
+        $lookup: {
+          from: 'charts',
+          localField: 'c2',
+          foreignField: '_id',
+          as: 'chart2',
+        },
       },
       {
-        $unwind: "$chart1"
+        $unwind: '$chart1',
       },
       {
-        $unwind: "$chart2"
+        $unwind: '$chart2',
       },
       {
-          $project: {
-              c1: "$chart1._id", 
-              s1: "$chart1.subject.name",
-              d1: "$chart1.datetime",
-              c2: "$chart2._id",
-              s2: "$chart2.subject.name",
-              d2: "$chart2.datetime",
-              relTYpe: 1
-          }
-      }
+        $project: {
+          c1: '$chart1._id',
+          s1: '$chart1.subject.name',
+          d1: '$chart1.datetime',
+          c2: '$chart2._id',
+          s2: '$chart2.subject.name',
+          d2: '$chart2.datetime',
+          relTYpe: 1,
+        },
+      },
     ];
     return await this.pairedChartModel.aggregate(steps);
   }
-  
 }

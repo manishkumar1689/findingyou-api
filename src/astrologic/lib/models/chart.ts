@@ -1829,7 +1829,8 @@ export class PairedChart {
       aspectMatched = true;
     } else {
       if (condition.compareGrahas) {
-        aspectValue = this.matchAspects(k1, k2);
+        const reverse = fromChart._id !== this.c1._id;
+        aspectValue = this.matchAspects(k1, k2, reverse);
         aspectMatched = true;
       }
     }
@@ -1989,7 +1990,8 @@ export class PairedChart {
     return matchedKey;
   }
 
-  matchAspects(k1: string, k2: string) {
+  matchAspects(ref1: string, ref2: string, reverse = false) {
+    const [k1, k2] = reverse ? [ref2, ref1] : [ref1, ref2];
     const asp = this.aspects.find(asp => asp.k1 === k1 && asp.k2 === k2);
     return asp instanceof Object ? asp.value : 0;
   }

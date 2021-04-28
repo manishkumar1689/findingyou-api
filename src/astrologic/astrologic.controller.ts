@@ -635,6 +635,7 @@ export class AstrologicController {
       orb: orbDouble,
       num,
       aspect,
+      numResults: results.length,
       results,
     });
   }
@@ -691,6 +692,44 @@ export class AstrologicController {
     return res.status(200).send({
       num: items.length,
       items,
+    });
+  }
+
+  @Get('condition-match/:type/:subtype/:k1/:k2/:opts?/:max?')
+  async listByCondtion(
+    @Res() res,
+    @Param('type') type,
+    @Param('subtype') subtype,
+    @Param('k1') k1,
+    @Param('k2') k2,
+    @Param('opts') opts,
+    @Param('max') max,
+  ) {
+    const maxInt = smartCastInt(max, 1000);
+    let num = 0;
+    let ids: string[] = [];
+    if (type === 'aspect') {
+      const orb = isNumeric(opts) ? smartCastInt(opts, 1) : 1;
+      const orbDouble = await this.matchOrb(subtype, k1, k2, orb);
+      const data = await this.astrologicService.filterPairedByAspect(
+        subtype,
+        k1,
+        k2,
+        orbDouble,
+      );
+      num = data instanceof Array ? data.length : 0;
+      ids = data.map(row => row._id);
+    }
+    const results =
+      num > 0 ? await this.astrologicService.getPairedByIds(ids, maxInt) : [];
+    return res.status(200).send({
+      valid: results.length > 0,
+      opts,
+      num,
+      type,
+      subtype,
+      numResults: results.length,
+      results,
     });
   }
 
