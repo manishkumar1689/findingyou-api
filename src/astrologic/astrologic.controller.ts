@@ -695,6 +695,39 @@ export class AstrologicController {
     });
   }
 
+  @Get('kuta-match/:subtype/:k1/:k2/:minMax?')
+  async listPairedByKutas(
+    @Res() res,
+    @Param('subtype') subtype,
+    @Param('k1') k1,
+    @Param('k2') k2,
+    @Param('minMax') minMax,
+    @Param('limit') limit,
+  ) {
+    const kutaMap = await this.settingService.getKutaSettings();
+    const pcRange = minMax
+      .split(',')
+      .filter(isNumeric)
+      .map(parseFloat);
+    const limitInt = smartCastInt(limit, 1000);
+    const range = pcRange.length > 1 ? pcRange : [0, 0];
+    const result = await this.astrologicService.filterPairedByKutas(
+      kutaMap,
+      subtype,
+      k1,
+      k2,
+      range,
+    );
+    const ids = result.items.map(item => item._id);
+    const items = await this.astrologicService.getPairedByIds(ids, limitInt);
+    return res.status(200).send({
+      num: result.items.length,
+      max: result.max,
+      numItems: items.length,
+      items,
+    });
+  }
+
   @Get('condition-match/:type/:subtype/:k1/:k2/:opts?/:max?')
   async listByCondtion(
     @Res() res,

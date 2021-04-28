@@ -1591,8 +1591,9 @@ export class PairedChart {
     condition: Condition,
     k1: string,
     k2: string,
+    reverse = false,
   ) {
-    const kutaVal = this.matchKuta(condition, k1, k2);
+    const kutaVal = this.matchKuta(condition, k1, k2, reverse);
     const max = protocol.kutaMax(condition.contextType.kutaKey);
     const percent = max > 0 ? (kutaVal / max) * 100 : 0;
     return inRange(percent, condition.kutaRange);
@@ -1895,7 +1896,8 @@ export class PairedChart {
         k2,
       );
     } else if (condition.contextType.isKuta) {
-      matched = this.matchKutaCondition(protocol, condition, k1, k2);
+      const reverse = fromChart._id !== this.c1._id;
+      matched = this.matchKutaCondition(protocol, condition, k1, k2, reverse);
     } else if (condition.contextType.isDivisional) {
       matched = this.matchDivisionalCondition(condition, fromChart, k1);
     } else if (condition.sameSign) {
@@ -1930,7 +1932,8 @@ export class PairedChart {
     return matched === condition.isTrue;
   }
 
-  matchKuta(condition: Condition, k1: string, k2: string) {
+  matchKuta(condition: Condition, ref1: string, ref2: string, reverse = false) {
+    const [k1, k2] = reverse ? [ref2, ref1] : [ref1, ref2];
     const matchedKutaKey = condition.contextType.kutaKey;
     const matchedKutaRow = this.kutas.find(ks => ks.k1 === k1 && ks.k2 === k2);
     let val = 0;

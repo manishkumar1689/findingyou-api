@@ -24,6 +24,7 @@ import {
 } from './lib/date-funcs';
 import {
   emptyString,
+  isNumber,
   isNumeric,
   notEmptyString,
   validISODateString,
@@ -427,6 +428,84 @@ export class AstrologicService {
     const comboSteps = [...steps, projectionStep, ...conditions];
     //const c = conditions.find(cond => Object.keys(cond).includes('$match'));
     return await this.pairedChartModel.aggregate(comboSteps);
+  }
+
+  async filterPairedByKutas(
+    settingsMap: Map<string, any>,
+    kutaKey: string,
+    k1: string,
+    k2: string,
+    range = [0, 0],
+  ) {
+    const matchMax = (refKey: string) => {
+      const row = settingsMap.get(refKey);
+      let maxInt = 5;
+      if (row instanceof Object) {
+        const { max } = row;
+        if (isNumber(max)) {
+          maxInt = max;
+        }
+      }
+      return maxInt;
+    };
+    const max = matchMax(kutaKey);
+    const percRange =
+      range instanceof Array && range.length > 1 ? range : [0, 0];
+    const kutaRange = percRange.map(n => (n / 100) * max);
+    const steps = this.buildKutaSteps(k1, k2, kutaKey, kutaRange);
+    const items = await this.pairedChartModel.aggregate(steps);
+    return { items, range, max };
+  }
+
+  buildKutaSteps(k1: string, k2: string, kutaKey = '', range = [0, 5]) {
+    const [min, max] =
+      range instanceof Array && range.length > 1 ? range : [0, 5];
+    return [
+      {
+        $addFields: {
+          row: {
+            $filter: {
+              input: '$kutas',
+              as: 'krow',
+              cond: {
+                $and: [{ $eq: ['$$krow.k1', k1] }, { $eq: ['$$krow.k2', k2] }],
+              },
+            },
+          },
+        },
+      },
+      {
+        $unwind: '$row',
+      },
+      {
+        $addFields: {
+          kv: {
+            $filter: {
+              input: '$row.values',
+              as: 'vrow',
+              cond: { $eq: ['$$vrow.key', kutaKey] },
+            },
+          },
+        },
+      },
+      {
+        $unwind: '$kv',
+      },
+      {
+        $project: {
+          key: '$kv.key',
+          value: '$kv.value',
+        },
+      },
+      {
+        $match: {
+          value: { $gte: min, $lte: max },
+        },
+      },
+      {
+        $limit: 1000000,
+      },
+    ];
   }
 
   async filterPairedByAspectSets(

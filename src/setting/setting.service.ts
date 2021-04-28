@@ -85,6 +85,18 @@ export class SettingService {
     return { ...result, value: newValue };
   }
 
+  // get a single setting by key
+  async getKutaSettings(): Promise<Map<string, any>> {
+    const data = await this.getByKey('kuta_variants');
+    const itemObj =
+      data instanceof Object &&
+      Object.keys(data).includes('value') &&
+      data.value instanceof Object
+        ? data.value
+        : {};
+    return new Map(Object.entries(itemObj));
+  }
+
   async getPreferences() {
     const setting = await this.getByKey('preference_options');
     return setting instanceof Object ? setting.value : [];
