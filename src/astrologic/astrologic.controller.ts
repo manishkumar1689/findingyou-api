@@ -695,7 +695,7 @@ export class AstrologicController {
     });
   }
 
-  @Get('kuta-match/:subtype/:k1/:k2/:minMax?')
+  @Get('kuta-match/:subtype/:k1/:k2/:minMax?/:limit?')
   async listPairedByKutas(
     @Res() res,
     @Param('subtype') subtype,
