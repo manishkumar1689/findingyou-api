@@ -1422,19 +1422,23 @@ export class AstrologicController {
     return res.json(Object.fromEntries(result));
   }
 
-  @Get('recalc-paired/:start/:limit')
+  @Get('recalc-paired/:startRef/:limit?')
   async recalcPaired(
     @Res() res,
-    @Param('start') start: string,
+    @Param('startRef') startRef: string,
     @Param('limit') limit: string,
   ) {
-    const startInt = smartCastInt(start, 0);
-    const limitInt = smartCastInt(limit, 0);
+    const startFromInt = /^\d+$/.test(startRef);
+    const startInt = startFromInt ? smartCastInt(startRef, 0) : 0;
+    const limitInt = smartCastInt(limit, 10);
+    const hasIdStr = !startFromInt && notEmptyString(startRef, 16);
+    const idStr = hasIdStr ? startRef : '';
     const setting = await this.settingService.getByKey('kuta_variants');
     const data = await this.astrologicService.bulkUpdatePaired(
       startInt,
       limitInt,
       setting,
+      idStr,
     );
     return res.json(data);
   }

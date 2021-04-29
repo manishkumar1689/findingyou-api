@@ -691,9 +691,10 @@ export class AstrologicService {
     return chart;
   }
 
-  async bulkUpdatePaired(start = 0, limit = 100, setting = null) {
+  async bulkUpdatePaired(start = 0, limit = 100, setting = null, idStr = '') {
+    const filter: any = notEmptyString(idStr, 16) ? { _id: idStr } : {};
     const records = await this.pairedChartModel
-      .find({})
+      .find(filter)
       .skip(start)
       .limit(limit);
     let updated = 0;
@@ -705,13 +706,15 @@ export class AstrologicService {
         setting,
       );
       if (aspects.length > 0) {
-        await this.pairedChartModel.findByIdAndUpdate(
+        const saved = await this.pairedChartModel.findByIdAndUpdate(
           record._id,
           { aspects, kutas },
           {
             new: false,
           },
         );
+
+        console.log(3, saved._id, idStr, filter);
         ids.push(record._id);
         updated++;
       }
