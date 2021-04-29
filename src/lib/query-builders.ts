@@ -145,14 +145,8 @@ export const addOrbRangeMatchStep = (
 ) => {
   const aspectAngle = matchAspectAngle(aspectKey);
   const aspectAngles = [aspectAngle];
-  if (aspectAngle < 180) {
-    const maxSteps = aspectAngle > 0 ? Math.floor(360 / aspectAngle) : 1;
-    for (let i = 2; i <= maxSteps; i++) {
-      const targetAngle = i * aspectAngle;
-      if (targetAngle < 360) {
-        aspectAngles.push(targetAngle);
-      }
-    }
+  if (aspectAngle < 180 && aspectAngle > 0) {
+    aspectAngles.push(360 - aspectAngle);
   }
   const baseFields = ['_id', 'aspects'];
   const steps: Array<any> = [];

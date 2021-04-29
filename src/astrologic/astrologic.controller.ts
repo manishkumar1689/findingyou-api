@@ -624,8 +624,6 @@ export class AstrologicController {
       orbDouble,
     );
     const num = data instanceof Array ? data.length : 0;
-
-    console.log(num, 88);
     const results =
       num > 0
         ? await this.astrologicService.getPairedByIds(

@@ -1260,6 +1260,7 @@ export const compatibilityResultSetHasScores = (row: any = null) => {
   if (row instanceof Object && Object.keys(row).includes('totals')) {
     if (row.totals instanceof Array) {
       return row.totals.some(tr => {
+        console.log(tr.pair[0] > 0);
         return (
           tr instanceof Object &&
           tr.pair instanceof Array &&

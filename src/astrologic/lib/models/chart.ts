@@ -1548,6 +1548,7 @@ export class PairedChart {
         const applyModeMatched = condition.isSeparating
           ? !isApplying
           : isApplying;
+
         aspected = ranges.some(range => {
           const [minVal, maxVal] = range;
           const spansZero = minVal > 270 && minVal > maxVal && maxVal < 90;
@@ -1929,6 +1930,8 @@ export class PairedChart {
       );
     }
     // If isTrue is false, matched state is inverted
+
+    console.log(matched);
     return matched === condition.isTrue;
   }
 
