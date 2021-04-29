@@ -200,7 +200,7 @@ export const contextTypes = [
     isKuta: true,
   },
   {
-    key: 'rna_kuta',
+    key: 'varna_kuta',
     name: 'Varṇa Kūṭa',
     isAspect: false,
     c2groups: ['all'],
@@ -221,7 +221,7 @@ export const contextTypes = [
     isKuta: true,
   },
   {
-    key: 'rashi_ruta',
+    key: 'rashi_kuta',
     name: 'Rāśi Kūṭa',
     isAspect: false,
     c2groups: ['all'],

@@ -956,7 +956,8 @@ export class ContextType {
     return this.key
       .toLowerCase()
       .replace(/_kuta$/, '')
-      .replace(/^dina_/, '');
+      .replace(/^dina_/, '')
+      .replace(/_/, '');
   }
 
   get isDivisional() {
@@ -1145,6 +1146,7 @@ export const assessChart = (
   const pairedChart = new PairedChart(paired);
   const resultRows: Array<any> = [];
   const filterByRuleSet = notEmptyString(colRef, 2) && ruleSetIndex >= 0;
+
   protocol.collections.forEach(collection => {
     if (useCollection(filterByRuleSet, collection, colRef)) {
       collection.rules.forEach((rs, ruleIndex) => {

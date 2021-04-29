@@ -344,6 +344,8 @@ export class SettingService {
           if (Object.keys(collection).includes('rules')) {
             if (ruleIndex < collection.rules.length) {
               collection.rules[ruleIndex] = ruleSet;
+            } else if (ruleIndex === 0) {
+              collection.rules.push(ruleSet);
             }
           }
         }

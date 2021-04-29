@@ -1934,13 +1934,11 @@ export class PairedChart {
 
   matchKuta(condition: Condition, ref1: string, ref2: string, reverse = false) {
     const [k1, k2] = reverse ? [ref2, ref1] : [ref1, ref2];
-    const matchedKutaKey = condition.contextType.kutaKey;
+    const { kutaKey } = condition.contextType;
     const matchedKutaRow = this.kutas.find(ks => ks.k1 === k1 && ks.k2 === k2);
     let val = 0;
     if (matchedKutaRow instanceof Object) {
-      const kutaValRow = matchedKutaRow.values.find(
-        kv => kv.key === matchedKutaKey,
-      );
+      const kutaValRow = matchedKutaRow.values.find(kv => kv.key === kutaKey);
       if (kutaValRow instanceof Object) {
         val = kutaValRow.value;
       }
