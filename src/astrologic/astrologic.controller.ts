@@ -616,6 +616,7 @@ export class AstrologicController {
   ) {
     const maxInt = smartCastInt(max, 1000);
     const orbDouble = await this.matchOrb(aspect, k1, k2, orb);
+
     const data = await this.astrologicService.filterPairedByAspect(
       aspect,
       k1,
@@ -623,6 +624,8 @@ export class AstrologicController {
       orbDouble,
     );
     const num = data instanceof Array ? data.length : 0;
+
+    console.log(num, 88);
     const results =
       num > 0
         ? await this.astrologicService.getPairedByIds(

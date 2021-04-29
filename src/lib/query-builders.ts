@@ -146,7 +146,7 @@ export const addOrbRangeMatchStep = (
   const aspectAngle = matchAspectAngle(aspectKey);
   const aspectAngles = [aspectAngle];
   if (aspectAngle < 180) {
-    const maxSteps = Math.floor(360 / aspectAngle);
+    const maxSteps = aspectAngle > 0 ? Math.floor(360 / aspectAngle) : 1;
     for (let i = 2; i <= maxSteps; i++) {
       const targetAngle = i * aspectAngle;
       if (targetAngle < 360) {
@@ -154,7 +154,6 @@ export const addOrbRangeMatchStep = (
       }
     }
   }
-
   const baseFields = ['_id', 'aspects'];
   const steps: Array<any> = [];
   if (index < 1) {
@@ -182,13 +181,14 @@ export const addOrbRangeMatchStep = (
   steps.push({
     $unwind: '$' + angleRowName,
   });
+  const modAngle = aspectAngle === 0 ? 360 : aspectAngle;
   const outFieldProject = {
     _id: 1,
     [angleFieldName]: '$' + angleRowName + '.value',
     [diffFieldName]: {
       $mod: [
         { $subtract: ['$' + angleRowName + '.value', aspectAngle] },
-        aspectAngle,
+        modAngle,
       ],
     },
   };
@@ -684,15 +684,22 @@ export const yearSpanAddFieldSteps = () => {
   ];
 };
 
-
-export const buildLngRanges = (aspect: string, k1: string, k2: string, sourceLng = 0, orb = -1) => {
+export const buildLngRanges = (
+  aspect: string,
+  k1: string,
+  k2: string,
+  sourceLng = 0,
+  orb = -1,
+) => {
   const aspectRow = aspects.find(asp => asp.key === aspect);
   const aspectMatched = aspectRow instanceof Object;
-  const targetDeg = aspectMatched? aspectRow.deg : 0;
+  const targetDeg = aspectMatched ? aspectRow.deg : 0;
   const range = [(targetDeg + 360 - orb) % 360, (targetDeg + orb) % 360];
-  const ranges = aspectMatched ? calcAllAspectRanges(aspectRow, orb, range) : null;
+  const ranges = aspectMatched
+    ? calcAllAspectRanges(aspectRow, orb, range)
+    : null;
   return ranges.map(pair => {
     const [min, max] = pair;
     return { lng: { $gte: min, $lte: max } };
   });
-}
+};
