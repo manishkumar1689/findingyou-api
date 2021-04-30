@@ -2128,6 +2128,7 @@ export const combineCharts = (c1: Chart, c2: Chart, ayanamshaNum = 27) => {
         if (sp2) {
           sp.value = midLng(sp1.value, sp2.value);
         }
+        return sp;
       });
     }
     return ss;
