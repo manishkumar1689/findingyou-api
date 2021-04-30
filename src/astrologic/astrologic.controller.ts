@@ -881,7 +881,7 @@ export class AstrologicController {
     return data;
   }
 
-  @Get('test-protcols/:protocolID/:start?/:limit?')
+  @Get('test-protocols/:protocolID/:start?/:limit?')
   async testProtocols(
     @Res() res,
     @Param('protocolID') protocolID: string,
@@ -904,6 +904,13 @@ export class AstrologicController {
       data.items.push(row);
     });
     return res.json(data);
+  }
+
+  @Get('num-paired-charts')
+  async numPairedCharts(@Res() res) {
+    const criteria = res.query instanceof Object ? res.query : {};
+    const num = await this.astrologicService.numPairedCharts(criteria);
+    return res.json({ num });
   }
 
   /*

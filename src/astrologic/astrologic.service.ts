@@ -233,6 +233,11 @@ export class AstrologicService {
     return await this.pairedChartModel.aggregate(steps);
   }
 
+  async numPairedCharts(criteria = null) {
+    const params = criteria instanceof Object ? criteria : {};
+    return this.pairedChartModel.count(params);
+  }
+
   async getPairedByIds(ids: Array<string> = [], max = 1000) {
     const lookupSteps = buildPairedChartLookupPath();
     const projectionStep = buildPairedChartProjection();
