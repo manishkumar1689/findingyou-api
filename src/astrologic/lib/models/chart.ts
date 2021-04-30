@@ -1634,7 +1634,7 @@ export class PairedChart {
       const g2 = toChart.graha(k2);
       return g1.signNum === g2.signNum;
     });
-    const numMatches = matches.map(m => m).length;
+    const numMatches = matches.filter(m => m).length;
     return condition.matchesMultiple1
       ? numMatches >= condition.c2Num
       : numMatches > 0;
@@ -1930,8 +1930,6 @@ export class PairedChart {
       );
     }
     // If isTrue is false, matched state is inverted
-
-    console.log(matched);
     return matched === condition.isTrue;
   }
 

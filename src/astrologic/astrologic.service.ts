@@ -713,8 +713,6 @@ export class AstrologicService {
             new: false,
           },
         );
-
-        console.log(3, saved._id, idStr, filter);
         ids.push(record._id);
         updated++;
       }
@@ -767,14 +765,16 @@ export class AstrologicService {
     if (setting instanceof Object) {
       const c1C = await this.chartModel.findById(c1);
       const c2C = await this.chartModel.findById(c2);
-      const chart1 = new ChartClass(c1C.toObject());
-      const chart2 = new ChartClass(c2C.toObject());
-      chart1.setAyanamshaItemByNum(27);
-      chart2.setAyanamshaItemByNum(27);
-      const kutaBuilder = new Kuta(chart1, chart2);
-      kutaBuilder.loadCompatibility(setting.value);
-      kutas = kutaBuilder.calcAllSingleKutas();
-      aspects = calcAllAspects(chart1, chart2);
+      if (c1C instanceof Object && c2C instanceof Object) {
+        const chart1 = new ChartClass(c1C.toObject());
+        const chart2 = new ChartClass(c2C.toObject());
+        chart1.setAyanamshaItemByNum(27);
+        chart2.setAyanamshaItemByNum(27);
+        const kutaBuilder = new Kuta(chart1, chart2);
+        kutaBuilder.loadCompatibility(setting.value);
+        kutas = kutaBuilder.calcAllSingleKutas();
+        aspects = calcAllAspects(chart1, chart2);
+      }
     }
     return { aspects, kutas };
   }
