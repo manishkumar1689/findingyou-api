@@ -672,9 +672,10 @@ export class AstrologicService {
 
   // update existing with unique chartID
   async updateChart(chartID: string, data: CreateChartDTO) {
-    const chart = await this.chartModel.findById(chartID).exec();
+    const chart = await this.chartModel.findById(chartID);
     if (chart instanceof Object) {
       const adjustedDate = this.adjustDatetimeByServerTz(data);
+
       await this.chartModel
         .findByIdAndUpdate(
           chartID,

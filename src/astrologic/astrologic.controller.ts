@@ -135,10 +135,27 @@ export class AstrologicController {
   async updateChart(
     @Res() res,
     @Param('chartID') chartID,
-    @Body() chartDTO: CreateChartDTO,
+    @Body() chartDTO: ChartInputDTO,
   ) {
-    const chart = await this.astrologicService.updateChart(chartID, chartDTO);
-    const valid = chart instanceof Object;
+    const currChart = await this.astrologicService.getChart(chartID);
+    let valid = false;
+    let chart: any = null;
+    if (currChart instanceof Object) {
+      const currData = currChart.toObject();
+      const currInputData = {
+        datetime: currData.datetime,
+        jd: currData.jd,
+        ...currData.geo,
+        ...currData.subject,
+      };
+      const inData = {
+        ...currInputData,
+        ...chartDTO,
+      } as ChartInputDTO;
+      const saveData = await this.saveChartData(inData, true, chartID);
+      valid = saveData.valid;
+      chart = saveData.chart;
+    }
     res.send({
       valid,
       chart,
@@ -360,7 +377,7 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  async saveChartData(inData: ChartInputDTO, save = true) {
+  async saveChartData(inData: ChartInputDTO, save = true, chartID = '') {
     let data: any = { valid: false, message: '', chart: null };
     const {
       user,
@@ -434,9 +451,14 @@ export class AstrologicController {
             };
             let saved = null;
             if (save) {
-              if (notEmptyString(inData._id, 8)) {
+              const chartRef = notEmptyString(chartID, 12)
+                ? chartID
+                : inData._id !== null
+                ? inData._id.toString()
+                : '';
+              if (notEmptyString(chartID, 8)) {
                 saved = await this.astrologicService.updateChart(
-                  inData._id,
+                  chartID,
                   data.chart,
                 );
               } else {
