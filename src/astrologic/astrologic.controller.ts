@@ -920,11 +920,12 @@ export class AstrologicController {
       query,
     );
     const protocol = await this.buildProtocol(protocolID);
-    const data = { items: [] };
+    const data = { items: [], total: 0 };
     pairedcCharts.forEach(pc => {
       const row = assessChart(protocol, pc);
       data.items.push(row);
     });
+    data.total = await this.astrologicService.numPairedCharts(query);
     return res.json(data);
   }
 

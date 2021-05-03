@@ -139,19 +139,18 @@ export class AstrologicService {
     max = 1000,
     fieldFilters: Array<string> = [],
     criteria = null,
+    countMode = false,
   ) {
     const hasCriteria =
       criteria instanceof Object && Object.keys(criteria).length > 0;
     const lookupSteps = buildPairedChartLookupPath();
     const addSteps = yearSpanAddFieldSteps();
-    const projectionStep = buildPairedChartProjection(fieldFilters, true);
-    const steps = [
-      ...lookupSteps,
-      ...addSteps,
-      {
-        $project: projectionStep,
-      },
-    ];
+    const projectionStep = countMode
+      ? { $count: 'total' }
+      : {
+          $project: buildPairedChartProjection(fieldFilters, true),
+        };
+    const steps = [...lookupSteps, ...addSteps, projectionStep];
     if (hasCriteria) {
       const cm: Map<string, any> = new Map();
       let qualityTags = [];
@@ -233,9 +232,15 @@ export class AstrologicService {
     return await this.pairedChartModel.aggregate(steps);
   }
 
-  async numPairedCharts(criteria = null) {
-    const params = criteria instanceof Object ? criteria : {};
-    return this.pairedChartModel.count(params);
+  async numPairedCharts(criteria = null, max = 10000000) {
+    const rows = await this.getPairedCharts(0, max, [], criteria, true);
+    if (rows instanceof Array && rows.length > 0) {
+      const first = rows.shift();
+      if (first instanceof Object) {
+        return first.total;
+      }
+    }
+    return 0;
   }
 
   async getPairedByIds(ids: Array<string> = [], max = 1000) {
