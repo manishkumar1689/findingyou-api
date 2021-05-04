@@ -54,7 +54,7 @@ import { AspectSet } from './lib/calc-orbs';
 import { sanitize, smartCastInt } from '../lib/converters';
 import { KeyValue } from './interfaces/key-value';
 import { TagDTO } from './dto/tag.dto';
-import { shortenName } from './lib/helpers';
+import { shortenName, generateNameSearchRegex } from './lib/helpers';
 
 @Injectable()
 export class AstrologicService {
@@ -197,7 +197,7 @@ export class AstrologicService {
               break;
             case 'search':
               const pattern = new RegExp(
-                '\\b' + v.trim().replace(/[^a-z0-9]/gi, '.*?'),
+                '\\b' + generateNameSearchRegex(v),
                 'i',
               );
               cm.set('$or', [

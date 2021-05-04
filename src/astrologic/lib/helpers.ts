@@ -435,3 +435,27 @@ export const shortenName = (str = '', maxLength = 20): string => {
   }
   return txt;
 };
+
+export const generateNameSearchRegex = (str: string): string => {
+  const replMap = [
+    ['a', 'å', 'á', 'à', 'ä', 'ã', 'â'],
+    ['e', 'é', 'è', 'ë', 'ê'],
+    ['i', 'í', 'ì', 'ï', 'î'],
+    ['o', 'ó', 'ò', 'ö', 'ô'],
+    ['u', 'ú', 'ù', 'ü'],
+    ['n', 'ñ'],
+  ];
+  const letters = replMap.reduce((a, b) => a.concat(b.slice(1)), []);
+  const allLetters = new RegExp('[^a-z0-9' + letters.join('') + ']', 'i');
+  str = str.trim().replace(allLetters, '.*?');
+  replMap.forEach(row => {
+    const expandedSet = ['[', ...row, ']'].join('');
+    const expandedStart = expandedSet.substring(0, 2);
+    row.forEach(letter => {
+      if (str.includes(letter) && !str.includes(expandedStart)) {
+        str = str.replace(new RegExp(letter, 'i'), expandedSet);
+      }
+    });
+  });
+  return str;
+};
