@@ -145,12 +145,12 @@ export class AstrologicService {
       criteria instanceof Object && Object.keys(criteria).length > 0;
     const lookupSteps = buildPairedChartLookupPath();
     const addSteps = yearSpanAddFieldSteps();
-    const projectionStep = countMode
-      ? { $count: 'total' }
-      : {
-          $project: buildPairedChartProjection(fieldFilters, true),
-        };
-    const steps = [...lookupSteps, ...addSteps, projectionStep];
+    const steps = [...lookupSteps, ...addSteps];
+    if (!countMode) {
+      steps.push({
+        $project: buildPairedChartProjection(fieldFilters, true),
+      });
+    }
     if (hasCriteria) {
       const cm: Map<string, any> = new Map();
       let qualityTags = [];
@@ -227,12 +227,15 @@ export class AstrologicService {
         $match: Object.fromEntries(cm.entries()),
       });
     }
+    if (countMode) {
+      steps.push({ $count: 'total' });
+    }
     steps.push({ $skip: start });
     steps.push({ $limit: max });
     return await this.pairedChartModel.aggregate(steps);
   }
 
-  async numPairedCharts(criteria = null, max = 10000000) {
+  async numPairedCharts(criteria = null, max = 1) {
     const rows = await this.getPairedCharts(0, max, [], criteria, true);
     if (rows instanceof Array && rows.length > 0) {
       const first = rows.shift();
