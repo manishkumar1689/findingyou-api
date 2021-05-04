@@ -126,12 +126,12 @@ export class Kuta {
   switching = false;
   c1: Chart;
   c2: Chart;
-  private g1: Map<string, Graha> = new Map();
+  /* private g1: Map<string, Graha> = new Map();
   private g2: Map<string, Graha> = new Map();
 
   private c2Key = 'mo';
 
-  private c1Key = 'mo';
+  private c1Key = 'mo'; */
 
   private kutaType = 'all';
 
@@ -215,8 +215,8 @@ export class Kuta {
     return [...this.coreBodies, ...this.extraObjects];
   }
 
-  loadCompatibility(value) {
-    this.compatabilitySet = new Map(Object.entries(value));
+  loadCompatibility(kutaSet: Map<string, any> = new Map()) {
+    this.compatabilitySet = kutaSet;
     this.itemVariants
       .filter(iv => iv.keys.length > 0)
       .forEach(iv => {
@@ -416,6 +416,17 @@ export class Kuta {
       }
     }
     return this.buildSingleValues();
+  }
+
+  calcSingleKuta(key = '', gr1: Graha, gr2: Graha) {
+    let result: any = null;
+    if (gr1 instanceof Graha && gr2 instanceof Graha && notEmptyString(key)) {
+      const { s1, s2, valid } = this.buildSubjects(gr1, gr2);
+      if (valid) {
+        result = this.calcItem(key, [s1, s2]);
+      }
+    }
+    return result;
   }
 
   buildSubjects(gr1: Graha, gr2: Graha) {

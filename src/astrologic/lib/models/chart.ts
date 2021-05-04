@@ -61,6 +61,7 @@ import {
 import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
 import { mapRelationships } from '../map-relationships';
 import grahaValues from '../settings/graha-values';
+import { Kuta } from '../kuta';
 
 export interface Subject {
   name: string;
@@ -1501,6 +1502,32 @@ export class PairedChart {
     return protoRs;
   }
 
+  get hasFemale() {
+    return this.c1.subject.gender === 'f' || this.c2.subject.gender === 'f';
+  }
+
+  get hasMale() {
+    return this.c1.subject.gender === 'm' || this.c2.subject.gender === 'm';
+  }
+
+  mayApplyCondition(condition: Condition) {
+    switch (condition.fromMode) {
+      case 'single':
+        switch (condition.toMode) {
+          case 'female':
+            return this.hasFemale;
+          case 'male':
+            return this.hasMale;
+          default:
+            return true;
+        }
+      case 'female':
+        return this.hasFemale;
+      case 'male':
+        return this.hasMale;
+    }
+  }
+
   matchConditionSet(
     conditionSet: ConditionSet,
     protocol: Protocol,
@@ -1510,8 +1537,10 @@ export class PairedChart {
     const bs = new BooleanSet(conditionSet.operator, conditionSet.min);
     conditionSet.conditionRefs.forEach(cond => {
       if (!cond.isSet && cond instanceof Condition) {
-        const matched = this.matchCondition(cond, protocol);
-        bs.addMatch(cond, matched);
+        if (this.mayApplyCondition(cond)) {
+          const matched = this.matchCondition(cond, protocol);
+          bs.addMatch(cond, matched);
+        }
       } else if (cond instanceof ConditionSet) {
         const matched = this.matchConditionSet(cond, protocol, rs);
         bs.addMatch(cond, matched);
@@ -1938,10 +1967,22 @@ export class PairedChart {
     const { kutaKey } = condition.contextType;
     const matchedKutaRow = this.kutas.find(ks => ks.k1 === k1 && ks.k2 === k2);
     let val = 0;
-    if (matchedKutaRow instanceof Object) {
-      const kutaValRow = matchedKutaRow.values.find(kv => kv.key === kutaKey);
-      if (kutaValRow instanceof Object) {
-        val = kutaValRow.value;
+    if (condition.usesMidChart) {
+      const fromChart = this.matchChart(condition.fromMode);
+      const toChart = this.matchChart(condition.toMode);
+      const kutaBuilder = new Kuta(fromChart, toChart);
+      const kutaResult = kutaBuilder.calcSingleKuta(
+        condition.contextType.kutaKey,
+        fromChart.graha(k1),
+        toChart.graha(k2),
+      );
+      val = kutaResult.score;
+    } else {
+      if (matchedKutaRow instanceof Object) {
+        const kutaValRow = matchedKutaRow.values.find(kv => kv.key === kutaKey);
+        if (kutaValRow instanceof Object) {
+          val = kutaValRow.value;
+        }
       }
     }
     return val;
@@ -2064,7 +2105,6 @@ export class PairedChart {
       case 'male':
       case 'm':
         return this.maleChart;
-      case 'female':
       case 'midpoint':
         return this.midpoint;
       case 'timespace':

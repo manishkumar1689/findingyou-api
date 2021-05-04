@@ -751,6 +751,32 @@ export class AstrologicController {
     });
   }
 
+  @Get('test-kuta/:subtype/:c1/:c2/:k1/:k2')
+  async calcSingleKuta(
+    @Res() res,
+    @Param('subtype') subtype,
+    @Param('c1') c1,
+    @Param('c2') c2,
+    @Param('k1') k1,
+    @Param('k2') k2,
+  ) {
+    const kutaSet = await this.settingService.getKutaSettings();
+
+    const co1 = await this.astrologicService.getChart(c1);
+    const co2 = await this.astrologicService.getChart(c2);
+    let result: any = {};
+    if (co1 instanceof Object && co2 instanceof Object) {
+      const chart1 = new Chart(co1);
+      const chart2 = new Chart(co2);
+      const kutaBuilder = new Kuta(chart1, chart2);
+      kutaBuilder.loadCompatibility(kutaSet);
+      const g1 = chart1.graha(k1);
+      const g2 = chart2.graha(k2);
+      result = kutaBuilder.calcSingleKuta(subtype, g1, g2);
+    }
+    return res.status(200).send(result);
+  }
+
   @Get('condition-match/:type/:subtype/:k1/:k2/:opts?/:max?')
   async listByCondtion(
     @Res() res,
@@ -1438,10 +1464,8 @@ export class AstrologicController {
         return matchNaturalGrahaMaitri(gr1, gr2);
       }); */
       const kutaBuilder = new Kuta(c1, c2);
-      const setting = await this.settingService.getByKey('kuta_variants');
-      if (setting) {
-        kutaBuilder.loadCompatibility(setting.value);
-      }
+      const kutaSet = await this.settingService.getKutas();
+      kutaBuilder.loadCompatibility(kutaSet);
       const kutas = kutaBuilder.calcAllSingleKutas();
       result.set('kutas', kutas);
       const simpleC1 = simplifyChart(paired.c1, 'true_citra');
@@ -1463,11 +1487,11 @@ export class AstrologicController {
     const limitInt = smartCastInt(limit, 10);
     const hasIdStr = !startFromInt && notEmptyString(startRef, 16);
     const idStr = hasIdStr ? startRef : '';
-    const setting = await this.settingService.getByKey('kuta_variants');
+    const kutaSet = await this.settingService.getKutas();
     const data = await this.astrologicService.bulkUpdatePaired(
       startInt,
       limitInt,
-      setting,
+      kutaSet,
       idStr,
     );
     return res.json(data);
@@ -1490,10 +1514,8 @@ export class AstrologicController {
         return matchNaturalGrahaMaitri(gr1, gr2);
       }); */
       const kutaBuilder = new Kuta(c1, c2);
-      const setting = await this.settingService.getByKey('kuta_variants');
-      if (setting) {
-        kutaBuilder.loadCompatibility(setting.value);
-      }
+      const kutaSet = await this.settingService.getKutas();
+      kutaBuilder.loadCompatibility(kutaSet);
       const aspects = calcAllAspects(c1, c2);
       result.set('aspects', aspects);
       const simpleC1 = simplifyChart(paired.c1, 'true_citra');

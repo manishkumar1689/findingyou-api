@@ -702,7 +702,7 @@ export class AstrologicService {
     return chart;
   }
 
-  async bulkUpdatePaired(start = 0, limit = 100, setting = null, idStr = '') {
+  async bulkUpdatePaired(start = 0, limit = 100, kutaSet = null, idStr = '') {
     const filter: any = notEmptyString(idStr, 16) ? { _id: idStr } : {};
     const records = await this.pairedChartModel
       .find(filter)
@@ -714,7 +714,7 @@ export class AstrologicService {
       const { aspects, kutas } = await this.saveExtraValues(
         record.c1,
         record.c2,
-        setting,
+        kutaSet,
       );
       if (aspects.length > 0) {
         const saved = await this.pairedChartModel.findByIdAndUpdate(
@@ -770,10 +770,10 @@ export class AstrologicService {
     return result;
   }
 
-  async saveExtraValues(c1: string, c2: string, setting = null) {
+  async saveExtraValues(c1: string, c2: string, kutaSet = null) {
     let kutas = [];
     let aspects = [];
-    if (setting instanceof Object) {
+    if (kutaSet instanceof Map) {
       const c1C = await this.chartModel.findById(c1);
       const c2C = await this.chartModel.findById(c2);
       if (c1C instanceof Object && c2C instanceof Object) {
@@ -782,7 +782,7 @@ export class AstrologicService {
         chart1.setAyanamshaItemByNum(27);
         chart2.setAyanamshaItemByNum(27);
         const kutaBuilder = new Kuta(chart1, chart2);
-        kutaBuilder.loadCompatibility(setting.value);
+        kutaBuilder.loadCompatibility(kutaSet);
         kutas = kutaBuilder.calcAllSingleKutas();
         aspects = calcAllAspects(chart1, chart2);
       }
