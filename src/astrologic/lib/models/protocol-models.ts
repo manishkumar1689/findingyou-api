@@ -1140,18 +1140,18 @@ const useRuleSet = (
 export const assessChart = (
   protocol: Protocol,
   paired = null,
+  kutaSet: Map<string, any> = new Map(),
   colRef = '',
   ruleSetIndex = -1,
 ) => {
   const pairedChart = new PairedChart(paired);
   const resultRows: Array<any> = [];
   const filterByRuleSet = notEmptyString(colRef, 2) && ruleSetIndex >= 0;
-
   protocol.collections.forEach(collection => {
     if (useCollection(filterByRuleSet, collection, colRef)) {
       collection.rules.forEach((rs, ruleIndex) => {
         if (useRuleSet(filterByRuleSet, ruleIndex, ruleSetIndex)) {
-          const resultSet = pairedChart.matchRuleSet(rs, protocol);
+          const resultSet = pairedChart.matchRuleSet(rs, protocol, kutaSet);
           resultRows.push({ resultSet, collection });
         }
       });

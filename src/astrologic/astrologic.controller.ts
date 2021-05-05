@@ -847,7 +847,8 @@ export class AstrologicController {
   ) {
     const randomPairedChart = await this.astrologicService.getPairedRandom();
     const protocol = await this.buildProtocol(protocolID);
-    const data = assessChart(protocol, randomPairedChart);
+    const kutaSet = await this.settingService.getKutaSettings();
+    const data = assessChart(protocol, randomPairedChart, kutaSet);
     return res.json(data);
   }
 
@@ -864,7 +865,8 @@ export class AstrologicController {
       c2,
     );
     const protocol = await this.buildProtocol(protocolID);
-    const data = assessChart(protocol, randomPairedChart);
+    const kutaSet = await this.settingService.getKutaSettings();
+    const data = assessChart(protocol, randomPairedChart, kutaSet);
     return res.json(data);
   }
 
@@ -909,8 +911,9 @@ export class AstrologicController {
     );
     const protocol = await this.buildProtocol(protocolID);
     const data = { num: 0, items: [], rule: null };
+    const kutaSet = await this.settingService.getKutaSettings();
     pairedcCharts.forEach(pc => {
-      const row = assessChart(protocol, pc, colRef, filterRuleIndex);
+      const row = assessChart(protocol, pc, kutaSet, colRef, filterRuleIndex);
       if (compatibilityResultSetHasScores(row)) {
         data.items.push(row);
       }
@@ -946,9 +949,10 @@ export class AstrologicController {
       query,
     );
     const protocol = await this.buildProtocol(protocolID);
+    const kutaSet = await this.settingService.getKutaSettings();
     const data = { items: [], total: 0 };
     pairedcCharts.forEach(pc => {
-      const row = assessChart(protocol, pc);
+      const row = assessChart(protocol, pc, kutaSet);
       data.items.push(row);
     });
     data.total = await this.astrologicService.numPairedCharts(query);

@@ -1367,6 +1367,7 @@ export class PairedChart {
   createdAt: Date;
   modifiedAt: Date;
   ayanamshaNum = 27;
+  private kutaSet: Map<string, any> = new Map();
 
   constructor(inData = null) {
     if (inData instanceof Object) {
@@ -1491,13 +1492,20 @@ export class PairedChart {
     this.ayanamshaNum = num;
   }
 
-  matchRuleSet(rs: RuleSet, protocol: Protocol) {
+  matchRuleSet(
+    rs: RuleSet,
+    protocol: Protocol,
+    kutaSet: Map<string, any> = new Map(),
+  ) {
     const protoRs = new ProtocolResultSet(
       rs.name,
       rs.scores,
       rs.conditionSet.operator,
       rs.conditionSet.min,
     );
+    if (kutaSet instanceof Map && kutaSet.size > 0) {
+      this.kutaSet = kutaSet;
+    }
     this.matchConditionSet(rs.conditionSet, protocol, protoRs, true);
     return protoRs;
   }
@@ -1525,6 +1533,8 @@ export class PairedChart {
         return this.hasFemale;
       case 'male':
         return this.hasMale;
+      default:
+        return true;
     }
   }
 
@@ -1542,7 +1552,7 @@ export class PairedChart {
           bs.addMatch(cond, matched);
         }
       } else if (cond instanceof ConditionSet) {
-        const matched = this.matchConditionSet(cond, protocol, rs);
+        const matched = this.matchConditionSet(cond, protocol, rs, false);
         bs.addMatch(cond, matched);
       }
     });
@@ -1971,6 +1981,7 @@ export class PairedChart {
       const fromChart = this.matchChart(condition.fromMode);
       const toChart = this.matchChart(condition.toMode);
       const kutaBuilder = new Kuta(fromChart, toChart);
+      kutaBuilder.loadCompatibility(this.kutaSet);
       const kutaResult = kutaBuilder.calcSingleKuta(
         condition.contextType.kutaKey,
         fromChart.graha(k1),
