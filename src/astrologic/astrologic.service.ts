@@ -362,8 +362,14 @@ export class AstrologicService {
     const criteria = Object.fromEntries(filter.entries());
     data.paired = await this.pairedChartModel.findOneAndDelete(criteria);
     if (removeCharts && !singleDeleteMode) {
-      data.chart1 = await this.deleteChart(c1);
-      data.chart2 = await this.deleteChart(c2);
+      const pairedRefs1 = await this.matchPairedIdsByChartId(c1);
+      if (pairedRefs1.length < 1) {
+        data.chart1 = await this.deleteChart(c1);
+      }
+      const pairedRefs2 = await this.matchPairedIdsByChartId(c2);
+      if (pairedRefs2.length < 1) {
+        data.chart2 = await this.deleteChart(c2);
+      }
     }
     return data;
   }
