@@ -87,6 +87,7 @@ import { KeyName } from './lib/interfaces';
 import { TagReassignDTO } from './dto/tag-reassign.dto';
 import { TagDTO } from './dto/tag.dto';
 import { RuleSetDTO } from '../setting/dto/rule-set.dto';
+import { SingleCore } from './interfaces/single-core';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -2182,5 +2183,124 @@ export class AstrologicController {
     }
     const numDuplicates = rows.filter(item => item.duplicate).length;
     return res.json({ num: items.length, numDuplicates, items: rows });
+  }
+
+  @Get('single-duplicates/:start?/:limit?/:remove?')
+  async listSingleDuplicates(
+    @Res() res,
+    @Param('start') start,
+    @Param('limit') limit,
+    @Param('remove') remove,
+  ) {
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 10);
+    const removeItems = remove === 'remove';
+    const keys: string[] = [];
+    const items = await this.astrologicService.singleDuplicates(
+      startInt,
+      limitInt,
+    );
+    const drows: SingleCore[] = items.map(row => {
+      const hasDobs = row.dt instanceof Date;
+      const dtStr = hasDobs
+        ? row.dt
+            .toISOString()
+            .split('T')
+            .shift()
+        : 'dt';
+      const refKey = [sanitize(row.name, '-'), dtStr].join('__');
+      const index = keys.indexOf(refKey);
+      const duplicate = index >= 0;
+      if (!duplicate) {
+        keys.push(refKey);
+      }
+      return { ...row, refKey, duplicate };
+    });
+
+    const rows: SingleCore[] = [];
+    for (const row of drows) {
+      const refRow = row.duplicate
+        ? drows.find(r => r.refKey === row.refKey && !r.duplicate)
+        : null;
+      const mainId =
+        row.duplicate && refRow instanceof Object ? refRow._id : '';
+      const paired = await this.astrologicService.matchPairedIdsByChartId(
+        row._id,
+      );
+      rows.push({ ...row, mainId, paired });
+    }
+
+    if (removeItems) {
+      /* for (const row of rows) {
+        if (row.duplicate) {
+          await this.astrologicService.deletePaired(row._id);
+          const otherHasC1 =
+            rows.filter(r => r.duplicate === false && r.c1 === row.c1).length >
+            0;
+          if (!otherHasC1) {
+            await this.astrologicService.deleteChart(row.c1);
+          }
+          const otherHasC2 =
+            rows.filter(r => r.duplicate === false && r.c2 === row.c2).length >
+            0;
+          if (!otherHasC2) {
+            await this.astrologicService.deleteChart(row.c2);
+          }
+        }
+      } */
+    }
+    const numDuplicates = rows.filter(item => item.duplicate).length;
+    return res.json({ num: items.length, numDuplicates, items: rows });
+  }
+
+  @Get('paired-flat/:start?/:limit?')
+  async pairedFlatList(
+    @Res() res,
+    @Param('start') start,
+    @Param('limit') limit,
+  ) {
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 1000);
+    const items = await this.astrologicService.getCorePairedFields(
+      startInt,
+      limitInt,
+    );
+    const simplifyCoreFields = row => {
+      if (row instanceof Object) {
+        const {
+          _id,
+          c1,
+          p1,
+          p1Dob,
+          p1Lat,
+          p1Lng,
+          c2,
+          p2,
+          p2Dob,
+          p2Lat,
+          p2Lng,
+          relType,
+          tags,
+        } = row;
+        return {
+          _id,
+          c1,
+          p1,
+          p1Dob,
+          p1Lat,
+          p1Lng,
+          c2,
+          p2,
+          p2Dob,
+          p2Lat,
+          p2Lng,
+          relType,
+          tags: tags.join(', '),
+        };
+      } else {
+        return {};
+      }
+    };
+    return res.json(items.map(simplifyCoreFields));
   }
 }

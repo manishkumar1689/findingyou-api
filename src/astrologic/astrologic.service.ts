@@ -235,6 +235,15 @@ export class AstrologicService {
     return await this.pairedChartModel.aggregate(steps);
   }
 
+  async matchPairedIdsByChartId(chartID: string) {
+    const ids = await this.pairedChartModel
+      .find({
+        $or: [{ c1: chartID }, { c2: chartID }],
+      })
+      .select({ _id: 1 });
+    return ids.map(row => row._id);
+  }
+
   async numPairedCharts(criteria = null, max = 1) {
     const rows = await this.getPairedCharts(0, max, [], criteria, true);
     if (rows instanceof Array && rows.length > 0) {
@@ -244,6 +253,52 @@ export class AstrologicService {
       }
     }
     return 0;
+  }
+
+  async getCorePairedFields(start = 0, limit = 1000) {
+    const steps = [
+      {
+        $skip: start,
+      },
+      {
+        $limit: limit,
+      },
+      {
+        $lookup: {
+          from: 'charts',
+          localField: 'c1',
+          foreignField: '_id',
+          as: 'c1',
+        },
+      },
+      {
+        $lookup: {
+          from: 'charts',
+          localField: 'c2',
+          foreignField: '_id',
+          as: 'c2',
+        },
+      },
+      { $unwind: '$c1' },
+      { $unwind: '$c2' },
+      {
+        $project: {
+          c1: '$c1._id',
+          p1: '$c2.subject.name',
+          p1Dob: '$c1.datetime',
+          p1Lat: '$c1.geo.lat',
+          p1Lng: '$c1.geo.lng',
+          c2: '$c2._id',
+          p2: '$c1.subject.name',
+          p2Dob: '$c2.datetime',
+          p2Lat: '$c2.geo.lat',
+          p2Lng: '$c2.geo.lng',
+          relType: 1,
+          tags: '$tags.slug',
+        },
+      },
+    ];
+    return this.pairedChartModel.aggregate(steps);
   }
 
   async getPairedByIds(ids: Array<string> = [], max = 1000) {
@@ -1695,5 +1750,25 @@ export class AstrologicService {
       },
     ];
     return await this.pairedChartModel.aggregate(steps);
+  }
+
+  async singleDuplicates(start = 0, limit = 20000) {
+    const steps = [
+      {
+        $skip: start,
+      },
+      {
+        $limit: limit,
+      },
+      {
+        $project: {
+          id: '$chart1._id',
+          name: '$subject.name',
+          geo: '$geo',
+          dt: '$datetime',
+        },
+      },
+    ];
+    return await this.chartModel.aggregate(steps);
   }
 }
