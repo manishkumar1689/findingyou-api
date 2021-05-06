@@ -2231,26 +2231,31 @@ export class AstrologicController {
     }
 
     if (removeItems) {
-      /* for (const row of rows) {
+      for (const row of rows) {
         if (row.duplicate) {
-          await this.astrologicService.deletePaired(row._id);
-          const otherHasC1 =
-            rows.filter(r => r.duplicate === false && r.c1 === row.c1).length >
-            0;
-          if (!otherHasC1) {
-            await this.astrologicService.deleteChart(row.c1);
+          if (row.paired.length > 0) {
+            for (const pc of row.paired) {
+              await this.astrologicService.updatePairedChartIds(
+                pc.id,
+                row.mainId,
+                pc.refNum,
+              );
+            }
           }
-          const otherHasC2 =
-            rows.filter(r => r.duplicate === false && r.c2 === row.c2).length >
-            0;
-          if (!otherHasC2) {
-            await this.astrologicService.deleteChart(row.c2);
-          }
+          await this.astrologicService.deleteChart(row._id);
         }
-      } */
+      }
     }
-    const numDuplicates = rows.filter(item => item.duplicate).length;
-    return res.json({ num: items.length, numDuplicates, items: rows });
+    const filteredRows = rows.filter(item => item.duplicate);
+    const numDuplicates = filteredRows.length;
+    const numWithPaired = filteredRows.filter(row => row.paired.length > 0)
+      .length;
+    return res.json({
+      num: items.length,
+      numDuplicates,
+      numWithPaired,
+      items: filteredRows,
+    });
   }
 
   @Get('paired-flat/:start?/:limit?')

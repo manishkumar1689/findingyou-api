@@ -240,8 +240,14 @@ export class AstrologicService {
       .find({
         $or: [{ c1: chartID }, { c2: chartID }],
       })
-      .select({ _id: 1 });
-    return ids.map(row => row._id);
+      .select({ _id: 1, c1: 1, c2: 1 });
+    const cID = chartID.toString();
+    return ids.map(row => {
+      console.log(row, chartID);
+      const refNum =
+        row.c1.toString() === cID ? 1 : row.c2.toString() === cID ? 2 : 0;
+      return { id: row._id, refNum };
+    });
   }
 
   async numPairedCharts(criteria = null, max = 1) {
@@ -828,6 +834,11 @@ export class AstrologicService {
     return result;
   }
 
+  async updatePairedChartIds(pairedID = '', chartID = '', refNum = 0) {
+    const params = refNum === 1 ? { c1: chartID } : { c2: chartID };
+    return await this.pairedChartModel.findById(pairedID, params);
+  }
+
   async saveExtraValues(c1: string, c2: string, kutaSet = null) {
     let kutas = [];
     let aspects = [];
@@ -1377,7 +1388,8 @@ export class AstrologicService {
   }
 
   async deleteChart(chartID: string) {
-    return await this.chartModel.deleteOne({ _id: chartID });
+    console.log(chartID);
+    return await this.chartModel.deleteOne({ _id: chartID }).exec();
   }
 
   async sanitizePairedCharts(start = 0, limit = 1000) {
@@ -1764,7 +1776,8 @@ export class AstrologicService {
         $project: {
           id: '$chart1._id',
           name: '$subject.name',
-          geo: '$geo',
+          lat: '$geo.lat',
+          lng: '$geo.lng',
           dt: '$datetime',
         },
       },
