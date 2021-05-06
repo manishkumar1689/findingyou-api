@@ -243,7 +243,6 @@ export class AstrologicService {
       .select({ _id: 1, c1: 1, c2: 1 });
     const cID = chartID.toString();
     return ids.map(row => {
-      console.log(row, chartID);
       const refNum =
         row.c1.toString() === cID ? 1 : row.c2.toString() === cID ? 2 : 0;
       return { id: row._id, refNum };
@@ -1388,7 +1387,6 @@ export class AstrologicService {
   }
 
   async deleteChart(chartID: string) {
-    console.log(chartID);
     return await this.chartModel.deleteOne({ _id: chartID }).exec();
   }
 
