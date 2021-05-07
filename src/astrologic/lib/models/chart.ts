@@ -1872,8 +1872,10 @@ export class PairedChart {
     } else {
       if (condition.compareGrahas) {
         const reverse = fromChart._id !== this.c1._id;
-        aspectValue = this.matchAspects(k1, k2, reverse);
-        aspectMatched = true;
+        aspectMatched = this.aspects.length > 0;
+        if (aspectMatched) {
+          aspectValue = this.matchAspects(k1, k2, reverse);
+        }
       }
     }
     return { aspectValue, aspectMatched };
