@@ -1464,6 +1464,7 @@ export class PairedChart {
   get info() {
     return {
       jds: [this.c1.jd, this.c2.jd],
+      tzOffsets: [this.c1.tzOffset, this.c2.tzOffset],
       midJd: this.midJd,
       locations: this.locations,
       midGeo: this.midGeo,
