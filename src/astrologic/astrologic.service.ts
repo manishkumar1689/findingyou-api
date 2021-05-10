@@ -235,18 +235,44 @@ export class AstrologicService {
     return await this.pairedChartModel.aggregate(steps);
   }
 
-  async matchPairedIdsByChartId(chartID: string) {
+  async matchPairedIdsByChartId(chartID: string, fetchNames = false) {
     const ids = await this.pairedChartModel
       .find({
         $or: [{ c1: chartID }, { c2: chartID }],
       })
       .select({ _id: 1, c1: 1, c2: 1 });
+
     const cID = chartID.toString();
-    return ids.map(row => {
+    const rows = ids.map(row => {
       const refNum =
         row.c1.toString() === cID ? 1 : row.c2.toString() === cID ? 2 : 0;
-      return { id: row._id, refNum };
+
+      const chartId = refNum === 2 ? row.c1.toString() : row.c2.toString();
+      return { id: row._id, chartId, refNum };
     });
+    if (fetchNames) {
+      const items = [];
+      const defaultRow = {
+        datetime: '',
+        tzOffset: 0,
+        subject: { name: '', gender: '' },
+      };
+      for (const row of rows) {
+        const cRow = await this.chartModel
+          .findById(row.chartId)
+          .select('-_id datetime tzOffset subject.name subject.gender');
+        const info = cRow instanceof Object ? cRow.toObject() : defaultRow;
+        const { datetime, tzOffset, subject } = info;
+        const { name, gender } = subject;
+
+        if (notEmptyString(name)) {
+          items.push({ ...row, name, gender, datetime, tzOffset });
+        }
+      }
+      return items;
+    } else {
+      return rows;
+    }
   }
 
   async numPairedCharts(criteria = null, max = 1) {
@@ -1296,26 +1322,42 @@ export class AstrologicService {
     return charts;
   }
 
-  async getChartNamesByUserAndName(userID: string, search: string, limit = 20) {
+  async getCoreChartDataByUser(
+    userID: string,
+    search: string,
+    start = 0,
+    limit = 20,
+  ) {
     const condMap = new Map<string, any>();
-    condMap.set('subject.name', RegExp('\\b' + search, 'i'));
+    if (notEmptyString(search)) {
+      condMap.set(
+        'subject.name',
+        RegExp('\\b' + generateNameSearchRegex(search), 'i'),
+      );
+    }
     condMap.set('user', userID);
-    const charts = await this.chartModel
+    return await this.chartModel
       .find(Object.fromEntries(condMap))
       .select({
         _id: 1,
         'subject.name': 1,
         'subject.gender': 1,
+        'subject.roddenValue': 1,
         datetime: 1,
         jd: 1,
         tzOffset: 1,
-        geo: 1,
+        'geo.lat': 1,
+        'geo.lng': 1,
+        'geo.alt': 1,
         isDefaultBirthChart: 1,
       })
       .sort({ 'subject.name': 1 })
-      .skip(0)
-      .limit(limit)
-      .exec();
+      .skip(start)
+      .limit(limit);
+  }
+
+  async getChartNamesByUserAndName(userID: string, search: string, limit = 20) {
+    const charts = await this.getCoreChartDataByUser(userID, search, 0, limit);
     const matchedItems = charts
       .filter(c => c instanceof Object)
       .map(c => {
@@ -1338,6 +1380,15 @@ export class AstrologicService {
       }
     });
     return items;
+  }
+
+  async countCoreChartDataByUser(userID: string, search = '') {
+    const condMap = new Map<string, any>();
+    if (notEmptyString(search)) {
+      condMap.set('subject.name', RegExp('\\b' + search, 'i'));
+    }
+    condMap.set('user', userID);
+    return await this.chartModel.count(Object.fromEntries(condMap));
   }
 
   // save a single body speed record

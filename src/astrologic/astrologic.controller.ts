@@ -19,7 +19,6 @@ import {
   isNumeric,
   validISODateString,
   notEmptyString,
-  emptyString,
   isNumber,
 } from '../lib/validators';
 import { locStringToGeo } from './lib/converters';
@@ -60,6 +59,7 @@ import {
   sanitize,
   smartCastFloat,
   smartCastBool,
+  roundNumber,
 } from '../lib/converters';
 import { PairedChartInputDTO } from './dto/paired-chart-input.dto';
 import { midPointSurface, medianLatlng } from './lib/math-funcs';
@@ -434,6 +434,7 @@ export class AstrologicController {
             dtUtc,
             geo,
             'top',
+            [],
             geoInfo.offset,
           );
           if (chartData instanceof Object) {
@@ -452,11 +453,6 @@ export class AstrologicController {
             };
             let saved = null;
             if (save) {
-              const chartRef = notEmptyString(chartID, 12)
-                ? chartID
-                : inData._id !== null
-                ? inData._id.toString()
-                : '';
               if (notEmptyString(chartID, 8)) {
                 saved = await this.astrologicService.updateChart(
                   chartID,
@@ -485,6 +481,109 @@ export class AstrologicController {
       }
     } else {
       data.message = 'User account cannot be verified';
+    }
+    return data;
+  }
+
+  async quickSaveChart(inData: ChartInputDTO, chart = null) {
+    let data: any = { valid: false, recalculated: false, chart: null };
+    const {
+      user,
+      datetime,
+      lat,
+      lng,
+      alt,
+      isDefaultBirthChart,
+      notes,
+      tzOffset,
+      name,
+      type,
+      gender,
+      eventType,
+      roddenValue,
+    } = inData;
+    if (
+      validISODateString(datetime) &&
+      isNumeric(lat) &&
+      isNumeric(lng) &&
+      chart instanceof Object
+    ) {
+      const geo = { lat, lng, alt };
+      const dt =
+        chart.datetime instanceof Date ? chart.datetime.toISOString() : '';
+      const dtLocStrSource = [
+        dt.split('.').shift(),
+        roundNumber(chart.geo.lat, 8),
+        roundNumber(chart.geo.lng, 8),
+      ].join('_');
+      /* const geoInfo = await this.geoService.fetchGeoAndTimezone(
+        geo.lat,
+        geo.lng,
+        datetime,
+      ); */
+      const dtUtc = applyTzOffsetToDateString(datetime, tzOffset);
+      const dtLocStrNew = [
+        dtUtc.split(' ').join('T'),
+        roundNumber(lat, 8),
+        roundNumber(lng, 8),
+      ].join('_');
+      const recalcChart = dtLocStrSource !== dtLocStrNew;
+      const subject = {
+        name,
+        type,
+        gender,
+        eventType,
+        roddenValue,
+        notes,
+      };
+      if (recalcChart) {
+        const chartData = await calcCompactChartData(
+          dtUtc,
+          geo,
+          'top',
+          [],
+          tzOffset,
+        );
+        if (chartData instanceof Object) {
+          data.recalculated = true;
+          const placenames = chart.placenames;
+          data.chart = {
+            user,
+            isDefaultBirthChart,
+            subject,
+            tz: chart.tz,
+            tzOffset,
+            placenames,
+            ...chartData,
+          };
+        }
+        data.chart = {
+          user,
+          isDefaultBirthChart,
+          subject,
+          tz: chart.tz,
+          tzOffset,
+          placenames: chart.placenames,
+          ...chartData,
+        };
+      } else {
+        data.chart = { ...chart, subject };
+      }
+
+      if (data.chart instanceof Object) {
+        const saved = await this.astrologicService.updateChart(
+          chart._id,
+          data.chart,
+        );
+        if (saved instanceof Object) {
+          const { _id } = saved;
+          const strId = _id instanceof Object ? _id.toString() : _id;
+          if (notEmptyString(strId, 8)) {
+            data.chart = { _id: strId, ...data.chart };
+            data.valid = true;
+          }
+        }
+      }
     }
     return data;
   }
@@ -1481,6 +1580,45 @@ export class AstrologicController {
     return res.json(Object.fromEntries(result));
   }
 
+  @Post('save-charts')
+  async bulkSaveCoreCharts(@Res() res, @Body('items') items: ChartInputDTO[]) {
+    const data = { valid: false, itemIds: [], recalculatedIds: [] };
+    if (items instanceof Array) {
+      for (const item of items) {
+        const chart = await this.astrologicService.getChart(item._id);
+        if (chart instanceof Object) {
+          const obj = chart.toObject();
+          const { subject, geo } = obj;
+          const inData = {
+            _id: item._id,
+            isDefaultBirthChart: item.isDefaultBirthChart,
+            user: chart.user,
+            name: item.name,
+            gender: item.gender,
+            datetime: item.datetime,
+            eventType: subject.eventType,
+            type: subject.type,
+            roddenValue: item.roddenValue,
+            notes: item.notes,
+            lat: item.lat,
+            lng: item.lng,
+            alt: chart.geo.alt,
+            tz: chart.tz,
+            tzOffset: item.tzOffset,
+          } as ChartInputDTO;
+          const chartItem = await this.quickSaveChart(inData, obj);
+          if (chartItem.valid) {
+            data.itemIds.push(item._id);
+            if (chartItem.recalculated) {
+              data.recalculatedIds.push(item._id);
+            }
+          }
+        }
+      }
+    }
+    return res.json(data);
+  }
+
   @Get('recalc-paired/:startRef/:limit?')
   async recalcPaired(
     @Res() res,
@@ -1653,6 +1791,68 @@ export class AstrologicController {
     result.set('items', charts);
     const data = Object.fromEntries(result);
     return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('chart-core-by-user/:userID/:start?/:limit?')
+  async fetchChartsCoreData(
+    @Res() res,
+    @Param('userID') userID: string,
+    @Param('start') start,
+    @Param('limit') limit,
+    @Query() query,
+  ) {
+    const result: Map<string, any> = new Map();
+    const limitInt = smartCastInt(limit, 100);
+    const startInt = smartCastInt(start, 0);
+    const criteria = query instanceof Object ? query : {};
+    const criteriaKeys = Object.keys(criteria);
+    const search = criteriaKeys.includes('name') ? criteria.name : '';
+    const charts = await this.astrologicService.getCoreChartDataByUser(
+      userID,
+      search,
+      startInt,
+      limitInt,
+    );
+    const items = [];
+    for (const row of charts) {
+      const item = row.toObject();
+      const {
+        _id,
+        isDefaultBirthChart,
+        datetime,
+        jd,
+        tzOffset,
+        geo,
+        subject,
+      } = item;
+      const { name, gender, roddenValue } = subject;
+      const { lat, lng, alt } = geo;
+      const paired = await this.astrologicService.matchPairedIdsByChartId(
+        item._id,
+        true,
+      );
+      items.push({
+        _id,
+        isDefaultBirthChart,
+        datetime,
+        jd,
+        tzOffset,
+        lat,
+        lng,
+        alt,
+        name,
+        gender,
+        roddenValue,
+        paired,
+      });
+    }
+    result.set('items', items);
+    const total = await this.astrologicService.countCoreChartDataByUser(
+      userID,
+      search,
+    );
+    const data = Object.fromEntries(result);
+    return res.status(HttpStatus.OK).json({ ...data, total });
   }
 
   @Delete('delete-chart/:userID/:chartID')

@@ -112,3 +112,14 @@ export const zeroPad = (inval: number | string, places = 2) => {
   strs.push(num.toString());
   return strs.join('');
 };
+
+export const roundNumber = (num: number, places = 6) => {
+  if (typeof num === 'number') {
+    const multiplier = Math.pow(10, places);
+    const bigNum =
+      places > 7 ? Math.floor(multiplier * num) : Math.round(multiplier * num);
+    return bigNum / multiplier;
+  } else {
+    return 0;
+  }
+};
