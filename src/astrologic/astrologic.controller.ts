@@ -1861,7 +1861,7 @@ export class AstrologicController {
     @Param('userID') userID: string,
     @Param('chartID') chartID: string,
   ) {
-    const data: any = { valid: false, message: 'invalid user ID' };
+    const data: any = { valid: false, message: 'invalid user ID', id: '' };
     const user = await this.userService.getUser(userID);
     if (user instanceof Object) {
       if (user.active) {
@@ -1873,6 +1873,7 @@ export class AstrologicController {
           ) {
             this.astrologicService.deleteChart(chartID);
             data.valid = true;
+            data.id = chartID;
             data.message = 'Chart deleted';
           } else {
             data.message = 'Permission denied';

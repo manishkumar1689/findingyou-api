@@ -72,4 +72,10 @@ export class ChartInputDTO {
 
   @ApiProperty()
   readonly placenames?: SimplePlacename;
+
+  @ApiProperty()
+  readonly altNames?: string[];
+
+  @ApiProperty()
+  readonly sources?: string[];
 }

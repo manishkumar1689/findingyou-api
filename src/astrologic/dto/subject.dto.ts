@@ -21,4 +21,10 @@ export class SubjectDTO {
 
   @ApiProperty()
   readonly roddenScale?: string;
+
+  @ApiProperty()
+  readonly sources?: string[];
+
+  @ApiProperty()
+  readonly altNames?: string[];
 }

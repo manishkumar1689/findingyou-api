@@ -8,4 +8,6 @@ export interface Subject extends Document {
   readonly eventType: string;
   readonly roddenValue?: number;
   readonly roddenScale?: string;
+  readonly altNames?: string[];
+  readonly sources?: string[];
 }

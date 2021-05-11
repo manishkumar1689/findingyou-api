@@ -33,4 +33,12 @@ export const SubjectSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  altNames: {
+    type: [String],
+    required: false,
+  },
+  sources: {
+    type: [String],
+    required: false,
+  },
 });
