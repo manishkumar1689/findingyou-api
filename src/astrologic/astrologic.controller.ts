@@ -88,6 +88,7 @@ import { TagReassignDTO } from './dto/tag-reassign.dto';
 import { TagDTO } from './dto/tag.dto';
 import { RuleSetDTO } from '../setting/dto/rule-set.dto';
 import { SingleCore } from './interfaces/single-core';
+import { AssignPairedDTO } from './dto/assign-paired.dto';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -610,6 +611,57 @@ export class AstrologicController {
       valid: items.length > 0,
       items,
     });
+  }
+
+  @Post('bulk-assign-paired')
+  async assignPaired(@Res() res, @Body() items: AssignPairedDTO[]) {
+    let deleted = 0;
+    let added = 0;
+    const matchedItems: any[] = [];
+    if (items instanceof Array) {
+      for (const item of items) {
+        const pairedItems = await this.astrologicService.matchPairedIdsByChartId(
+          item.id,
+          true,
+        );
+        const itemsToBeDeleted = pairedItems.filter(
+          pi => item.paired.includes(pi.chartId) === false,
+        );
+        const itemsToKeep = pairedItems.filter(pi =>
+          item.paired.includes(pi.chartId),
+        );
+        const toBeAdded = item.paired.filter(chId => {
+          return itemsToKeep.map(it => it.chartId).includes(chId) === false;
+        });
+        matchedItems.push({
+          ...item,
+          itemsToBeDeleted,
+          itemsToKeep,
+          toBeAdded,
+        });
+      }
+    }
+    return res.send({
+      valid: items.length > 0,
+      matchedItems,
+    });
+  }
+
+  @Get('bulk-delete-paired/:before/:max?')
+  async bulkDeletePaired(
+    @Res() res,
+    @Param('before') before,
+    @Param('max') max,
+  ) {
+    const data = { valid: false, result: null };
+    const maxInt = smartCastInt(max, 1000000);
+    if (validISODateString(before)) {
+      data.result = await this.astrologicService.bulkDeletePaired(
+        before,
+        maxInt,
+      );
+    }
+    return res.status(HttpStatus.OK).json(data);
   }
 
   async recalcChart(chart) {

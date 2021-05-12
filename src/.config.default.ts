@@ -100,3 +100,6 @@ export const logsDirectory = '../logs';
 export const validMediaFileExtensions = ['jpg', 'jpeg', 'png', 'svg', 'mp3'];
 
 export const validImageExtensions = ['jpg', 'jpeg', 'png'];
+
+/* Min. remainaing charts after bulk deletion. Increase in production to 1000,0000 */
+export const minRemainingPaired = 1000;

@@ -55,6 +55,7 @@ import { sanitize, smartCastInt } from '../lib/converters';
 import { KeyValue } from './interfaces/key-value';
 import { TagDTO } from './dto/tag.dto';
 import { shortenName, generateNameSearchRegex } from './lib/helpers';
+import { minRemainingPaired } from 'src/.config';
 
 @Injectable()
 export class AstrologicService {
@@ -1838,5 +1839,27 @@ export class AstrologicService {
       },
     ];
     return await this.chartModel.aggregate(steps);
+  }
+
+  async bulkDeletePaired(before: string, max = 1000000) {
+    //const result = await this.pairedChartModel.deleteMany({ createdAt: {} }).exec();
+    const dt = new Date(before);
+    const totalAfter = await this.pairedChartModel.count({
+      createdAt: { $gte: dt },
+    });
+    const total = await this.pairedChartModel.count({});
+    let deleted = false;
+    if (totalAfter > minRemainingPaired) {
+      await this.pairedChartModel
+        .deleteMany({
+          createdAt: {
+            $lt: dt,
+          },
+        })
+        .exec();
+      deleted = true;
+    }
+    const totalBefore = total - totalAfter;
+    return { total, before: totalBefore, after: totalAfter, deleted };
   }
 }
