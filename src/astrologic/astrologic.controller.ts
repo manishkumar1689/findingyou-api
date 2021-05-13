@@ -613,37 +613,70 @@ export class AstrologicController {
     });
   }
 
-  @Post('bulk-assign-paired')
-  async assignPaired(@Res() res, @Body() items: AssignPairedDTO[]) {
+  /**
+   * Bulk assigments of pairs
+   */
+  @Post('bulk-assign-paired/:userID/:commit')
+  async assignPaired(
+    @Res() res,
+    @Param('userID') userID,
+    @Param('commit') commit,
+    @Body() items: AssignPairedDTO[],
+  ) {
     let deleted = 0;
     let added = 0;
     const matchedItems: any[] = [];
-    if (items instanceof Array) {
+    const commitToDB = commit === 'commit';
+    if (items instanceof Array && this.userService.isAdminUser(userID)) {
       for (const item of items) {
+        const keys = Object.keys(item);
         const pairedItems = await this.astrologicService.matchPairedIdsByChartId(
           item.id,
           true,
         );
-        const itemsToBeDeleted = pairedItems.filter(
+
+        const toBeRemoved = pairedItems.filter(
           pi => item.paired.includes(pi.chartId) === false,
         );
-        const itemsToKeep = pairedItems.filter(pi =>
+        const toKeep = pairedItems.filter(pi =>
           item.paired.includes(pi.chartId),
         );
         const toBeAdded = item.paired.filter(chId => {
-          return itemsToKeep.map(it => it.chartId).includes(chId) === false;
+          return toKeep.map(it => it.chartId).includes(chId) === false;
         });
         matchedItems.push({
           ...item,
-          itemsToBeDeleted,
-          itemsToKeep,
+          toBeRemoved,
+          toKeep,
           toBeAdded,
         });
+        if (commitToDB) {
+          for (const otherId of toBeAdded) {
+            const relType = keys.includes('relType') ? item.relType : 'spouse';
+            const pairedDTO = {
+              c1: item.id,
+              c2: otherId,
+              relType,
+              tags: [],
+              startYear: 0,
+              endYear: 0,
+              span: 0,
+            } as PairedChartDTO;
+            await this.astrologicService.savePaired(pairedDTO);
+            added++;
+          }
+          for (const pItem of toBeRemoved) {
+            await this.astrologicService.deletePaired(pItem.id);
+            deleted++;
+          }
+        }
       }
     }
     return res.send({
       valid: items.length > 0,
       matchedItems,
+      deleted,
+      added,
     });
   }
 

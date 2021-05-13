@@ -1331,10 +1331,11 @@ export class AstrologicService {
   ) {
     const condMap = new Map<string, any>();
     if (notEmptyString(search)) {
-      condMap.set(
-        'subject.name',
-        RegExp('\\b' + generateNameSearchRegex(search), 'i'),
-      );
+      const nameRgx = RegExp('\\b' + generateNameSearchRegex(search), 'i');
+      condMap.set('$or', [
+        { 'subject.name': nameRgx },
+        { 'subject.altNames': nameRgx },
+      ]);
     }
     condMap.set('user', userID);
     return await this.chartModel
