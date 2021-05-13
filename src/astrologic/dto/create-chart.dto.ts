@@ -21,6 +21,9 @@ export class CreateChartDTO {
   readonly subject: SubjectDTO;
 
   @ApiProperty()
+  readonly status?: string;
+
+  @ApiProperty()
   readonly parent?: string;
 
   @ApiProperty()

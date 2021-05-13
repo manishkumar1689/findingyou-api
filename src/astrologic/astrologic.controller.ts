@@ -616,7 +616,7 @@ export class AstrologicController {
   /**
    * Bulk assigments of pairs
    */
-  @Post('bulk-assign-paired/:userID/:commit')
+  @Post('bulk-assign-paired/:userID/:commit?')
   async assignPaired(
     @Res() res,
     @Param('userID') userID,

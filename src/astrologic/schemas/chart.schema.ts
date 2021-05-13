@@ -26,6 +26,11 @@ export const ChartSchema = new mongoose.Schema({
     type: SubjectSchema,
     required: true,
   },
+  status: {
+    type: String,
+    enum: ['user', 'reference', 'keep'],
+    required: false,
+  },
   // versioning, e.g. variant birth details
   parent: {
     type: ObjectId,
