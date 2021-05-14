@@ -12,18 +12,19 @@ export class SnippetService {
     @InjectModel('Snippet') private readonly snippetModel: Model<Snippet>,
   ) {}
   // fetch all Snippets
-  async list(publishedOnly = true): Promise<Snippet[]> {
+  async list(publishedOnly = true, modFields = false): Promise<Snippet[]> {
     const filter = publishedOnly
       ? { values: { $exists: true, $ne: [] }, published: true }
       : {};
-    const fields = publishedOnly
-      ? {
-          _id: 0,
-          key: 1,
-          format: 1,
-          values: 1,
-        }
-      : {};
+    const fields =
+      publishedOnly && !modFields
+        ? {
+            _id: 0,
+            key: 1,
+            format: 1,
+            values: 1,
+          }
+        : {};
     const Snippets = await this.snippetModel
       .find(filter)
       .select(fields)
@@ -142,10 +143,14 @@ export class SnippetService {
           const versionRow = snippetObj.values.find(v2 => v2.lang === vl.lang);
           if (versionRow) {
             isNew = false;
-            isEdited = versionRow.text === vl.text;
+            isEdited = versionRow.text !== vl.text;
             createdAt = versionRow.createdAt;
+            if (!isNew && !isEdited) {
+              vl = versionRow;
+            }
           }
         }
+        console.log(isEdited, isNew, vl);
         if (isNew) {
           return { ...vl, modifiedAt: dt, createdAt: dt };
         } else if (isEdited) {
@@ -176,6 +181,44 @@ export class SnippetService {
       });
       return newSnippet.save();
     }
+  }
+
+  async lastModified(lang = 'en') {
+    const snippets = await this.list(true, true);
+    const mods: number[] = [];
+    const langMods: Map<string, number[]> = new Map();
+    snippets.forEach(snippet => {
+      mods.push(new Date(snippet.modifiedAt).getTime());
+      snippet.values.forEach(vl => {
+        const langModItems = langMods.has(vl.lang) ? langMods.get(vl.lang) : [];
+        langModItems.push(new Date(vl.modifiedAt).getTime());
+        langMods.set(vl.lang, langModItems);
+      });
+    });
+    const enMods = langMods.has('en') ? langMods.get('en') : [];
+    if (langMods.has('en-GB')) {
+      const extraMods = langMods.get('en-GB');
+      extraMods.forEach(md => {
+        enMods.push(md);
+      });
+    }
+    let localeMods = [];
+    if (lang !== 'en' && lang !== 'en-GB') {
+      if (langMods.has(lang)) {
+        localeMods = langMods.get(lang);
+      }
+    }
+    const ts = new Date().getTime();
+    const maxGeneral = Math.max(...mods);
+    const maxEn = Math.max(...enMods);
+    const maxLocale = localeMods.length > 0 ? Math.max(...localeMods) : 0;
+    const secsAgo = (modTs: number) => Math.ceil((ts - modTs) / 1000);
+    return {
+      general: secsAgo(maxGeneral),
+      en: secsAgo(maxEn),
+      locale: secsAgo(maxLocale),
+      lang,
+    };
   }
 
   async deleteByKey(key: string) {

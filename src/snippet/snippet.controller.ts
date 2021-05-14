@@ -120,6 +120,13 @@ export class SnippetController {
     });
   }
 
+  // Retrieve snippets list
+  @Get('last-modified/:langCode?')
+  async lastModified(@Res() res, @Param('langCode') langCode) {
+    const result = await this.snippetService.lastModified(langCode);
+    return res.status(HttpStatus.OK).json(result);
+  }
+
   // Fetch a particular snippet using ID
   @Get('item/:snippetID')
   async getSnippet(@Res() res, @Param('snippetID') snippetID) {
