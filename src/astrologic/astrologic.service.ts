@@ -56,6 +56,7 @@ import { KeyValue } from './interfaces/key-value';
 import { TagDTO } from './dto/tag.dto';
 import { shortenName, generateNameSearchRegex } from './lib/helpers';
 import { minRemainingPaired } from 'src/.config';
+import { match } from 'assert';
 
 @Injectable()
 export class AstrologicService {
@@ -1359,18 +1360,56 @@ export class AstrologicService {
   }
 
   async getChartNamesByUserAndName(userID: string, search: string, limit = 20) {
-    const charts = await this.getCoreChartDataByUser(userID, search, 0, limit);
+    const searchLen = notEmptyString(search) ? search.length : 0;
+    const multiplier =
+      searchLen < 3 ? 4 : searchLen < 5 ? 3 : searchLen < 7 ? 2 : 1.5;
+    const searchLimit = limit * multiplier;
+    const charts = await this.getCoreChartDataByUser(
+      userID,
+      search,
+      0,
+      searchLimit,
+    );
+    const rgx = new RegExp('^' + generateNameSearchRegex(search));
+    const fuzzRgx = new RegExp('\\b' + generateNameSearchRegex(search));
     const matchedItems = charts
       .filter(c => c instanceof Object)
-      .map(c => {
+      .map((c, ci) => {
         const year = julToISODateObj(c.jd, c.tzOffset).year();
         const shortName = shortenName(c.subject.name);
+        const names = c.subject.name.split(' ');
+        const numNames = names.length;
+        const lastNameIndex = numNames - 1;
+        const matchesFirst = rgx.test(names[0]);
+        const fuzzyMatchesFirst = matchesFirst ? false : fuzzRgx.test(names[0]);
+        const matchesLast =
+          numNames > 1 ? rgx.test(names[lastNameIndex]) : false;
+        const fuzzyMatchesLast = matchesLast
+          ? false
+          : fuzzRgx.test(names[lastNameIndex]);
+        const matchWeight = matchesFirst
+          ? searchLimit * 150
+          : fuzzyMatchesFirst
+          ? searchLimit * 100
+          : matchesLast
+          ? searchLimit * 175
+          : fuzzyMatchesLast
+          ? searchLimit * 150
+          : 0;
+        const indexWeight = (searchLimit - ci) * 99;
+        const weight = indexWeight + matchWeight;
         return {
           id: c._id,
           name: `${shortName} (${c.subject.gender})`,
           year,
+          weight,
         };
       });
+    matchedItems.sort((a, b) => b.weight - a.weight);
+    const numExtra = matchedItems.length - limit;
+    if (numExtra > 0) {
+      matchedItems.splice(limit, numExtra);
+    }
     // dedupe results
     const items = [];
     const strings: string[] = [];

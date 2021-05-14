@@ -411,7 +411,7 @@ export const nakshatra28Progress = (lng: number) => {
   }
 };
 
-export const shortenName = (str = '', maxLength = 20): string => {
+export const shortenName = (str = '', maxLength = 25): string => {
   let txt = '';
   if (typeof str === 'string') {
     const parts = str.split(' ');
@@ -425,7 +425,7 @@ export const shortenName = (str = '', maxLength = 20): string => {
       outParts.push(parts[numParts - 1]);
     }
     const totLen = outParts.join(' ').length;
-    if (totLen > maxLength * 0.75 && outParts.length > 1) {
+    if (totLen > maxLength * 0.9 && outParts.length > 1) {
       outParts[0] = outParts[0].substring(0, 1).toUpperCase() + '.';
     }
     txt = outParts.join(' ');
