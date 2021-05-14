@@ -1862,16 +1862,20 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('chart-names-by-user/:userID/:search')
+  @Get('chart-names-by-user/:userID/:search/:nameMode?')
   async fetchChartsByName(
     @Res() res,
     @Param('userID') userID: string,
     @Param('search') search: string,
+    @Param('nameMode') nameMode: string,
   ) {
     const result: Map<string, any> = new Map();
+    const longNameMode = nameMode === 'long';
     const charts = await this.astrologicService.getChartNamesByUserAndName(
       userID,
       search,
+      20,
+      longNameMode,
     );
     result.set('items', charts);
     const data = Object.fromEntries(result);

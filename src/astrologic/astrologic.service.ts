@@ -1359,7 +1359,12 @@ export class AstrologicService {
       .limit(limit);
   }
 
-  async getChartNamesByUserAndName(userID: string, search: string, limit = 20) {
+  async getChartNamesByUserAndName(
+    userID: string,
+    search: string,
+    limit = 20,
+    longNames = false,
+  ) {
     const searchLen = notEmptyString(search) ? search.length : 0;
     const multiplier =
       searchLen < 3 ? 4 : searchLen < 5 ? 3 : searchLen < 7 ? 2 : 1.5;
@@ -1376,7 +1381,6 @@ export class AstrologicService {
       .filter(c => c instanceof Object)
       .map((c, ci) => {
         const year = julToISODateObj(c.jd, c.tzOffset).year();
-        const shortName = shortenName(c.subject.name);
         const names = c.subject.name.split(' ');
         const numNames = names.length;
         const lastNameIndex = numNames - 1;
@@ -1398,9 +1402,12 @@ export class AstrologicService {
           : 0;
         const indexWeight = (searchLimit - ci) * 99;
         const weight = indexWeight + matchWeight;
+        const name = longNames
+          ? `${c.subject.name} (${c.subject.gender})`
+          : `${shortenName(c.subject.name)} (${c.subject.gender})`;
         return {
           id: c._id,
-          name: `${shortName} (${c.subject.gender})`,
+          name,
           year,
           weight,
         };
