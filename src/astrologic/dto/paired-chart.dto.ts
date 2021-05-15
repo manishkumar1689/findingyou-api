@@ -13,6 +13,8 @@ export class PairedChartDTO {
   @ApiProperty()
   readonly c2: string;
   @ApiProperty()
+  readonly status?: string;
+  @ApiProperty()
   readonly timespace: BaseChartDTO;
   @ApiProperty()
   readonly surfaceGeo: GeoDTO;

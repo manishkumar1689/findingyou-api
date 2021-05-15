@@ -23,6 +23,12 @@ export const PairedChartSchema = new mongoose.Schema({
     required: true,
     ref: 'Chart',
   },
+  status: {
+    type: String,
+    enum: ['user', 'suggested', 'reference', 'keep'],
+    required: false,
+    default: 'suggested',
+  },
   timespace: {
     type: BaseChartSchema,
     required: false,

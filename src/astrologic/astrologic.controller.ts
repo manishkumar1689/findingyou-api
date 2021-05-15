@@ -1896,9 +1896,13 @@ export class AstrologicController {
     const criteria = query instanceof Object ? query : {};
     const criteriaKeys = Object.keys(criteria);
     const search = criteriaKeys.includes('name') ? criteria.name : '';
+    const statusRef = criteriaKeys.includes('status')
+      ? criteria.status.toLowerCase()
+      : '';
     const charts = await this.astrologicService.getCoreChartDataByUser(
       userID,
       search,
+      statusRef,
       startInt,
       limitInt,
     );
@@ -1939,6 +1943,7 @@ export class AstrologicController {
     const total = await this.astrologicService.countCoreChartDataByUser(
       userID,
       search,
+      statusRef,
     );
     const data = Object.fromEntries(result);
     return res.status(HttpStatus.OK).json({ ...data, total });

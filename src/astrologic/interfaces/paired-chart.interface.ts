@@ -9,6 +9,7 @@ export interface PairedChart extends Document {
   readonly user: string;
   readonly c1: string;
   readonly c2: string;
+  readonly status?: string;
   readonly timespace: BaseChart;
   readonly surfaceGeo: Geo;
   readonly surfaceAscendant: number;

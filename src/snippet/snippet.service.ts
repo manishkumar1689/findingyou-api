@@ -150,7 +150,6 @@ export class SnippetService {
             }
           }
         }
-        console.log(isEdited, isNew, vl);
         if (isNew) {
           return { ...vl, modifiedAt: dt, createdAt: dt };
         } else if (isEdited) {

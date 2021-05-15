@@ -1326,7 +1326,8 @@ export class AstrologicService {
 
   async getCoreChartDataByUser(
     userID: string,
-    search: string,
+    search = '',
+    status = '',
     start = 0,
     limit = 20,
   ) {
@@ -1338,6 +1339,9 @@ export class AstrologicService {
         { 'subject.altNames': nameRgx },
       ]);
     }
+    if (notEmptyString(status, 2) && status !== 'all') {
+      condMap.set('status', status);
+    }
     condMap.set('user', userID);
     return await this.chartModel
       .find(Object.fromEntries(condMap))
@@ -1346,6 +1350,7 @@ export class AstrologicService {
         'subject.name': 1,
         'subject.gender': 1,
         'subject.roddenValue': 1,
+        status: 1,
         datetime: 1,
         jd: 1,
         tzOffset: 1,
@@ -1372,6 +1377,7 @@ export class AstrologicService {
     const charts = await this.getCoreChartDataByUser(
       userID,
       search,
+      '',
       0,
       searchLimit,
     );
@@ -1430,10 +1436,17 @@ export class AstrologicService {
     return items;
   }
 
-  async countCoreChartDataByUser(userID: string, search = '') {
+  async countCoreChartDataByUser(userID: string, search = '', status = '') {
     const condMap = new Map<string, any>();
     if (notEmptyString(search)) {
-      condMap.set('subject.name', RegExp('\\b' + search, 'i'));
+      const nameRgx = RegExp('\\b' + generateNameSearchRegex(search), 'i');
+      condMap.set('$or', [
+        { 'subject.name': nameRgx },
+        { 'subject.altNames': nameRgx },
+      ]);
+    }
+    if (notEmptyString(status, 2)) {
+      condMap.set('status', status);
     }
     condMap.set('user', userID);
     return await this.chartModel.count(Object.fromEntries(condMap));
