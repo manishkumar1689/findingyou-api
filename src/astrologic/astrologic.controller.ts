@@ -1895,7 +1895,12 @@ export class AstrologicController {
     const startInt = smartCastInt(start, 0);
     const criteria = query instanceof Object ? query : {};
     const criteriaKeys = Object.keys(criteria);
-    const search = criteriaKeys.includes('name') ? criteria.name : '';
+    const name = criteriaKeys.includes('name') ? criteria.name : '';
+    const search = notEmptyString(name)
+      ? name
+      : criteriaKeys.includes('search')
+      ? criteria.search
+      : '';
     const statusRef = criteriaKeys.includes('status')
       ? criteria.status.toLowerCase()
       : '';
