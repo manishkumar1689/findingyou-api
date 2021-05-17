@@ -38,7 +38,7 @@ export class SnippetController {
   constructor(private snippetService: SnippetService) {}
 
   // add a snippet
-  @Post('/bulk-save')
+  @Post('bulk-save')
   async bulkSave(@Res() res, @Body() bulkSnippetDTO: BulkSnippetDTO) {
     const result = await this.snippetService.bulkUpdate(bulkSnippetDTO);
     return res.status(HttpStatus.OK).json({
@@ -47,7 +47,7 @@ export class SnippetController {
     });
   }
 
-  @Post('/save')
+  @Post('save')
   async save(@Res() res, @Body() createSnippetDTO: CreateSnippetDTO) {
     const snippet = await this.snippetService.save(createSnippetDTO);
     return res.status(HttpStatus.OK).json({
