@@ -176,6 +176,9 @@ export class AstrologicService {
             case 'type':
               cm.set('relType', v);
               break;
+            case 'status':
+              cm.set('status', v);
+              break;
             case 'tagsOp':
               tagsOp = v;
               break;

@@ -1056,14 +1056,14 @@ export class AstrologicController {
   }
 
   // merge with preferences / psychometric data
-  @Get('test-rule/:protocolID/:colRef/:ruleIndex/:start?/:limit?')
+  @Get('test-rule/:protocolID/:colRef/:ruleIndex/:start?/:limit')
   async testCompatibilityRule(
     @Res() res,
     @Param('protocolID') protocolID: string,
     @Param('colRef') colRef: string,
-    @Param('ruleIndex') ruleIndex: string,
-    @Param('start') start: string,
-    @Param('limit') limit: string,
+    @Param('ruleIndex') ruleIndex,
+    @Param('start') start,
+    @Param('limit') limit,
     @Query() query,
   ) {
     const startInt = smartCastInt(start, 0);
@@ -1117,12 +1117,13 @@ export class AstrologicController {
     return data;
   }
 
-  @Get('test-protocols/:protocolID/:start?/:limit?')
+  @Get('test-protocols/:protocolID/:start?/:limit?/:status?')
   async testProtocols(
     @Res() res,
     @Param('protocolID') protocolID: string,
-    @Param('start') start: string,
-    @Param('limit') limit: string,
+    @Param('start') start,
+    @Param('limit') limit,
+    @Param('status') status: string,
     @Query() query,
   ) {
     const startInt = smartCastInt(start, 0);
@@ -1163,6 +1164,7 @@ export class AstrologicController {
     @Param('ruleIndex') ruleIndex,
     @Param('saveFlag') saveFlag,
     @Param('max') max,
+    @Query() query,
   ) {
     const index = smartCastInt(ruleIndex, 0);
     const saveRuleInProtocol = smartCastInt(saveFlag, 0) > 0;
@@ -1192,7 +1194,7 @@ export class AstrologicController {
       result.valid = true;
       const matchData = await this.matchByProtocol(
         itemID,
-        {},
+        query,
         0,
         limit,
         colRef,
