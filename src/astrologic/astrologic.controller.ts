@@ -343,7 +343,9 @@ export class AstrologicController {
 
   @Post('save-user-chart')
   async saveUserChart(@Res() res, @Body() inData: ChartInputDTO) {
-    const data = await this.saveChartData(inData);
+    const { _id } = inData;
+    const chartID = notEmptyString(_id, 12) ? _id : '';
+    const data = await this.saveChartData(inData, true, chartID);
     return res.status(HttpStatus.OK).json(data);
   }
 
