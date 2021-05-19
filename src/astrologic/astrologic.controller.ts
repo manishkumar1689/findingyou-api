@@ -1958,6 +1958,15 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json({ ...data, total });
   }
 
+  @Get('get-paired-items/:chartID')
+  async getPairedItemsByChartId(@Res() res, @Param('chartID') chartID: string) {
+    const data = await this.astrologicService.matchPairedIdsByChartId(
+      chartID,
+      true,
+    );
+    return res.status(HttpStatus.OK).json(data);
+  }
+
   @Delete('delete-chart/:userID/:chartID')
   async deleteChart(
     @Res() res,

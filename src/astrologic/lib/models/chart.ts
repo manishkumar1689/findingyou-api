@@ -1894,6 +1894,7 @@ export class PairedChart {
     toChart.setAyanamshaItemByNum(ayanamshaNum);
     const obj1 = condition.object1;
     const obj2 = condition.object2;
+    // handle lordRev here using obj1.isLordship and condition.lordDev
     const k1 = this.matchGrahaEquivalent(obj1, fromChart);
     const k2 = this.matchGrahaEquivalent(obj2, toChart);
     if (condition.isLongAspect) {

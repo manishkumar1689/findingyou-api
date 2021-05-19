@@ -924,6 +924,10 @@ export class ObjectType {
         return true;
     }
   }
+
+  get isLordship() {
+    return this.type.startsWith('lord');
+  }
 }
 
 export class ContextType {

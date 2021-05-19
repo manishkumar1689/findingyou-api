@@ -245,15 +245,14 @@ export class AstrologicService {
       .find({
         $or: [{ c1: chartID }, { c2: chartID }],
       })
-      .select({ _id: 1, c1: 1, c2: 1 });
+      .select({ _id: 1, c1: 1, c2: 1, relType: 1 });
 
     const cID = chartID.toString();
     const rows = ids.map(row => {
       const refNum =
         row.c1.toString() === cID ? 1 : row.c2.toString() === cID ? 2 : 0;
-
       const chartId = refNum === 2 ? row.c1.toString() : row.c2.toString();
-      return { id: row._id, chartId, refNum };
+      return { id: row._id, chartId, refNum, relType: row.relType };
     });
     if (fetchNames) {
       const items = [];
