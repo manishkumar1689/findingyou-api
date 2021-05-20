@@ -1896,7 +1896,8 @@ export class PairedChart {
     const obj2 = condition.object2;
     // handle lordRev here using obj1.isLordship and condition.lordDev
     const k1 = this.matchGrahaEquivalent(obj1, fromChart);
-    const k2 = this.matchGrahaEquivalent(obj2, toChart);
+    const baseChart2 = condition.fromFirstHouseStructure ? fromChart : toChart;
+    const k2 = this.matchGrahaEquivalent(obj2, baseChart2);
     if (condition.isLongAspect) {
       const keys1 = condition.matchesMultiple1 ? coreIndianGrahaKeys : [k1];
       const keys2 = condition.matchesMultiple2 ? coreIndianGrahaKeys : [k2];

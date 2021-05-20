@@ -127,6 +127,10 @@ export class Condition {
     }
   }
 
+  get fromFirstHouseStructure() {
+    return this.object2.isLordship && !this.lordRev;
+  }
+
   get stateCompare() {
     return this.contextType.stateCompare;
   }
