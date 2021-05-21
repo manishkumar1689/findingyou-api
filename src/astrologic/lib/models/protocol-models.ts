@@ -1,5 +1,5 @@
-import { KeyName, KeyNameMax } from '../interfaces';
-import { isNumeric, notEmptyString } from '../../../lib/validators';
+import { KeyNameMax } from '../interfaces';
+import { inRange, isNumeric, notEmptyString } from '../../../lib/validators';
 import { smartCastFloat } from '../../../lib/converters';
 import { contextTypes } from '../settings/compatibility-sets';
 import { calcOrb, calcAllAspectRanges } from '../calc-orbs';
@@ -931,6 +931,62 @@ export class ObjectType {
 
   get isLordship() {
     return this.type.startsWith('lord');
+  }
+
+  get isPanchanga() {
+    return this.type.startsWith('p_');
+  }
+
+  get panchangaType() {
+    return this.isPanchanga ? this.type.split('_').pop() : '';
+  }
+
+  get endVal() {
+    return this.key.indexOf('_') ? this.key.split('_').pop() : '';
+  }
+
+  get isNumeric() {
+    return isNumeric(this.endVal);
+  }
+
+  get numValue(): number {
+    return this.isNumeric ? parseInt(this.endVal) : -1;
+  }
+
+  // match tithi value (not number)
+  get tithiRange() {
+    switch (this.key) {
+      case 'q_1':
+        return [0, 7.5];
+      case 'q_2':
+        return [7.5, 15];
+      case 'q_3':
+        return [15, 22.5];
+      case 'q_4':
+        return [22.5, 30];
+      case 'h_1':
+        return [0, 15];
+      case 'h_2':
+        return [15, 30];
+      case 'gt_hm':
+        return [7.5, 22.5];
+      case 'lt_hm':
+        return [0, 7.5, 22.5, 30];
+      default:
+        return [this.numValue - 1, this.numValue];
+    }
+  }
+
+  matchTithiRange(value: number) {
+    const numRanges = this.tithiRange.length / 2;
+    if (numRanges < 2) {
+      return inRange(value, this.tithiRange);
+    } else {
+      return (
+        inRange(value, this.tithiRange.slice(0, 2)) ||
+        inRange(value, this.tithiRange.slice(2, 4))
+      );
+    }
   }
 }
 

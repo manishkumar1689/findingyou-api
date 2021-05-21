@@ -1772,6 +1772,24 @@ export class PairedChart {
     return matched;
   }
 
+  matchPanchangaCondition(
+    protocol: Protocol,
+    condition: Condition,
+    fromChart: Chart,
+    toChart: Chart,
+    k1 = '',
+    k2 = '',
+  ) {
+    let matched = false;
+    switch (condition.object1.panchangaType) {
+      case 'tithi':
+        matched = condition.object1.matchTithiRange(fromChart.tithi.value);
+        break;
+    }
+
+    return matched;
+  }
+
   matchYogaKartariCondition(
     condition: Condition,
     fromChart: Chart,
@@ -1898,6 +1916,7 @@ export class PairedChart {
     const k1 = this.matchGrahaEquivalent(obj1, fromChart);
     const baseChart2 = condition.fromFirstHouseStructure ? fromChart : toChart;
     const k2 = this.matchGrahaEquivalent(obj2, baseChart2);
+
     if (condition.isLongAspect) {
       const keys1 = condition.matchesMultiple1 ? coreIndianGrahaKeys : [k1];
       const keys2 = condition.matchesMultiple2 ? coreIndianGrahaKeys : [k2];
@@ -1964,7 +1983,16 @@ export class PairedChart {
         k2,
       );
     } else if (condition.isDrishtiAspect) {
-      this.matchDrishtiCondition(
+      matched = this.matchDrishtiCondition(
+        protocol,
+        condition,
+        fromChart,
+        toChart,
+        k1,
+        k2,
+      );
+    } else if (condition.object1.isPanchanga) {
+      matched = this.matchPanchangaCondition(
         protocol,
         condition,
         fromChart,
