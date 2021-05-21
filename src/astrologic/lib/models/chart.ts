@@ -1773,7 +1773,6 @@ export class PairedChart {
   }
 
   matchPanchangaCondition(
-    protocol: Protocol,
     condition: Condition,
     fromChart: Chart,
     toChart: Chart,
@@ -1785,8 +1784,16 @@ export class PairedChart {
       case 'tithi':
         matched = condition.object1.matchTithiRange(fromChart.tithi.value);
         break;
+      case 'yoga':
+        matched = fromChart.yoga.num === condition.object1.numValue;
+        break;
+      case 'vara':
+        matched = fromChart.vara.num === condition.object1.numValue;
+        break;
+      case 'karana':
+        matched = fromChart.karana.num === condition.object1.numValue;
+        break;
     }
-
     return matched;
   }
 
@@ -1993,7 +2000,6 @@ export class PairedChart {
       );
     } else if (condition.object1.isPanchanga) {
       matched = this.matchPanchangaCondition(
-        protocol,
         condition,
         fromChart,
         toChart,
