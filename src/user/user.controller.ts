@@ -349,16 +349,19 @@ export class UserController {
     if (showAll) {
       const keys = await this.settingService.getPreferenceKeys();
       const surveys: Map<string, any> = new Map();
+      const keyNums: Map<string, number> = new Map();
       for (const sk of keys) {
-        const sdItems = await this.getPreferenceOptions(sk);
-        if (sdItems instanceof Array && sdItems.length > 0) {
-          surveys.set(sk, sdItems);
+        const sd = await this.getPreferencesByKey(sk, sk);
+        if (sd.valid) {
+          surveys.set(sk, sd.items);
+          keyNums.set(sk, sd.items.length);
         }
       }
       data.surveys = Object.fromEntries(surveys.entries());
       data.valid = surveys.size > 0;
+      data.keyNums = Object.fromEntries(keyNums.entries());
     } else {
-      data.items = await this.getPreferencesByKey(surveyKey, key);
+      data = await this.getPreferencesByKey(surveyKey, key);
     }
     return res.status(HttpStatus.OK).json(data);
   }
