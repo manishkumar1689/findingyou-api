@@ -298,10 +298,7 @@ export class UserController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  // Fetch preference options
-  @Get('preferences/:key?')
-  async listPreferenceOptions(@Res() res, @Param('key') key) {
-    const surveyKey = notEmptyString(key, 4) ? key : 'preference_options';
+  async getPreferencesByKey(surveyKey = '', key = '') {
     const prefOpts = await this.getPreferenceOptions(surveyKey);
     const data = { valid: false, num: 0, items: [] };
     const mapLocalised = v => {
@@ -339,6 +336,29 @@ export class UserController {
           versions,
         });
       }
+    }
+    return data;
+  }
+
+  // Fetch preference options
+  @Get('preferences/:key?')
+  async listPreferenceOptions(@Res() res, @Param('key') key) {
+    const showAll = key === 'all';
+    const surveyKey = notEmptyString(key, 4) ? key : 'preference_options';
+    let data: any = { valid: false };
+    if (showAll) {
+      const keys = await this.settingService.getPreferenceKeys();
+      const surveys: Map<string, any> = new Map();
+      for (const sk of keys) {
+        const sdItems = await this.getPreferenceOptions(sk);
+        if (sdItems instanceof Array && sdItems.length > 0) {
+          surveys.set(sk, sdItems);
+        }
+      }
+      data.surveys = Object.fromEntries(surveys.entries());
+      data.valid = surveys.size > 0;
+    } else {
+      data.items = await this.getPreferencesByKey(surveyKey, key);
     }
     return res.status(HttpStatus.OK).json(data);
   }

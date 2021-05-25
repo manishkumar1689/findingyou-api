@@ -102,6 +102,18 @@ export class SettingService {
     return setting instanceof Object ? setting.value : [];
   }
 
+  async getPreferenceKeys() {
+    const items = await this.settingModel
+      .find({ type: 'preferences' })
+      .select({ _id: 0, key: 1 });
+    return items instanceof Array
+      ? items
+          .map(item => item.key)
+          .filter(key => key !== '_new')
+          .filter((x, i, a) => a.indexOf(x) === i)
+      : [];
+  }
+
   async saveRelationshipType(newType: KeyName) {
     const setting = await this.getByKey('relationship_types');
     let types: KeyName[] = [];
