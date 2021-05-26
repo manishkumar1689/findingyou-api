@@ -36,7 +36,7 @@ export const contextTypes = [
     isKuta: false,
   },
   {
-    key: 'and_state_compare',
+    key: 'state_compare',
     name: 'state compare',
     isAspect: false,
     c2groups: ['signs'],
