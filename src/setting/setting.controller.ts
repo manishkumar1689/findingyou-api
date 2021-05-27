@@ -28,6 +28,7 @@ import {
   writeSettingFile,
   uploadSwissEphDataFile,
   matchFullPath,
+  writeSourceFile,
 } from '../lib/files';
 import moment = require('moment');
 import availableLanguages from './sources/languages';
@@ -36,6 +37,8 @@ import { AdminGuard } from '../auth/admin.guard';
 import { ProtocolDTO } from './dto/protocol.dto';
 import { parseAstroBankCSV } from '../lib/parse-astro-csv';
 import { deleteSwissEpheFile } from '../astrologic/lib/files';
+import { ipWhitelistFileData } from 'src/auth/auth.utils';
+import { StringsDTO } from './dto/strings.dto';
 
 @Controller('setting')
 export class SettingController {
@@ -111,6 +114,28 @@ export class SettingController {
   async getAllSetting(@Res() res) {
     const settings = await this.settingService.getAllSetting();
     return res.status(HttpStatus.OK).json(settings);
+  }
+
+  @Get('ip-whitelist/list/:userID')
+  getIpWhitelist(@Res() res, @Param('userID') userID) {
+    let ips = [];
+    if (this.userService.isAdminUser(userID)) {
+      ips = ipWhitelistFileData();
+    }
+    return res.status(HttpStatus.OK).json(ips);
+  }
+
+  @Put('ip-whitelist/save/:userID')
+  saveIpWhitelist(@Res() res, @Param('userID') userID, @Body() ipData: StringsDTO) {
+    const data = {valid: false, ips: [], result: null};
+    if (this.userService.isAdminUser(userID) && ipData.strings instanceof Array) {
+      const ipRgx = /^\d+\.\d+\.\d+\.\d+$/;
+      const ips = ipData.strings.map(line => line.trim()).filter(line => ipRgx.test(line));
+      data.result = writeSourceFile('ip-whitelist.txt', ips.join("\n"));
+      data.ips = ips;
+      data.valid = true;
+    }
+    return res.status(HttpStatus.OK).json(data);
   }
 
   // Retrieve settings list

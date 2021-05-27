@@ -85,13 +85,18 @@ export const fromDynamicKey = (
   return { valid, uid };
 };
 
-export const fetchIpWhitelist = () => {
-  const ipWhitelistFileData = readRawFile('ip-whitelist.txt', 'sources');
+export const ipWhitelistFileData = () => {
+  const ipWhitelistFileContent = readRawFile('ip-whitelist.txt', 'sources');
   let extraIps: string[] = [];
-  if (notEmptyString(ipWhitelistFileData)) {
+  if (notEmptyString(ipWhitelistFileContent)) {
     const ipRgx = /^\d+\.\d+\.\d+\.\d+$/;
-    extraIps = ipWhitelistFileData.split("\n").map(line => line.trim()).filter(line => ipRgx.test(line) && ipWhitelist.includes(line) === false);
+    extraIps = ipWhitelistFileContent.split("\n").map(line => line.trim()).filter(line => ipRgx.test(line) && ipWhitelist.includes(line) === false);
   }
+  return extraIps;
+}
+
+export const fetchIpWhitelist = () => {
+  const extraIps = ipWhitelistFileData();
   return [...ipWhitelist, ...extraIps];
 }
 

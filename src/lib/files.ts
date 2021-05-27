@@ -221,6 +221,10 @@ export const writeExportFile = (filename: string, data, folder = 'exports') => {
   return fs.writeFileSync(fp, data);
 };
 
+export const writeSourceFile = (filename: string, data) => {
+  return writeExportFile(filename, data, 'sources');
+};
+
 export const validFileName = (name: string) => {
   return /^[a-z0-9._-]+\.\w+$/.test(name);
 };
