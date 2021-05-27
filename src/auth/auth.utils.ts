@@ -3,6 +3,7 @@ import { fromBase64 } from '../lib/hash';
 import { globalApikey, suffixSplitChars } from '../.config';
 import { notEmptyString } from '../lib/validators';
 import { authMode, ipWhitelist, pathWhitelist } from '../.config';
+import { readRawFile } from '../lib/files';
 
 interface ValidAuthToken {
   valid: boolean;
@@ -84,6 +85,16 @@ export const fromDynamicKey = (
   return { valid, uid };
 };
 
+export const fetchIpWhitelist = () => {
+  const ipWhitelistFileData = readRawFile('ip-whitelist.txt', 'sources');
+  let extraIps: string[] = [];
+  if (notEmptyString(ipWhitelistFileData)) {
+    const ipRgx = /^\d+\.\d+\.\d+\.\d+$/;
+    extraIps = ipWhitelistFileData.split("\n").map(line => line.trim()).filter(line => ipRgx.test(line) && ipWhitelist.includes(line) === false);
+  }
+  return [...ipWhitelist, ...extraIps];
+}
+
 export const maySkipValidation = (request: Request): boolean => {
   let valid = false;
   const { headers } = request;
@@ -91,8 +102,9 @@ export const maySkipValidation = (request: Request): boolean => {
     ? headers['x-real-ip'].toString()
     : '0.0.0.0';
   const { path } = request.route;
+  const ipOverrides = fetchIpWhitelist();
   const mode =
-    ipWhitelist.includes(ip) || pathWhitelist.includes(path)
+  ipOverrides.includes(ip) || pathWhitelist.includes(path)
       ? 'skip'
       : authMode.toString();
   switch (mode) {

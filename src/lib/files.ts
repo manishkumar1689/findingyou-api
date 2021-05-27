@@ -448,8 +448,11 @@ export const readRawFile = (filename: string, dir = '', subDir = '') => {
   const fullPath = buildFullPath(filename, dir, subDir);
   let out = '';
   if (fs.existsSync(fullPath)) {
-    const buffer = fs.readFileSync(fullPath);
-    out = buffer.toString();
+    if (fs.lstatSync(fullPath).isDirectory() === false) {
+      const buffer = fs.readFileSync(fullPath);
+      out = buffer.toString();
+    }
+    
   }
   return out;
 }
