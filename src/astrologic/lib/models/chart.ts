@@ -59,9 +59,8 @@ import {
   naturalMalefics,
 } from '../settings/graha-values';
 import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
-import { mapRelationships } from '../map-relationships';
-import grahaValues from '../settings/graha-values';
 import { Kuta } from '../kuta';
+
 
 export interface Subject {
   name: string;
@@ -1772,27 +1771,27 @@ export class PairedChart {
     return matched;
   }
 
+  matchPanangaType(chart: Chart, objType: ObjectType) {
+    switch (objType.panchangaType) {
+      case 'tithi':
+        return objType.matchTithiRange(chart.tithi.value);
+      case 'yoga':
+        return chart.yoga.num === objType.numValue;
+      case 'vara':
+        return chart.vara.num === objType.numValue;
+      case 'karana':
+        return chart.karana.num === objType.numValue;
+    }
+  }
+
   matchPanchangaCondition(
     condition: Condition,
     fromChart: Chart,
-    toChart: Chart,
-    k1 = '',
-    k2 = '',
+    toChart: Chart
   ) {
-    let matched = false;
-    switch (condition.object1.panchangaType) {
-      case 'tithi':
-        matched = condition.object1.matchTithiRange(fromChart.tithi.value);
-        break;
-      case 'yoga':
-        matched = fromChart.yoga.num === condition.object1.numValue;
-        break;
-      case 'vara':
-        matched = fromChart.vara.num === condition.object1.numValue;
-        break;
-      case 'karana':
-        matched = fromChart.karana.num === condition.object1.numValue;
-        break;
+    let matched = this.matchPanangaType(fromChart, condition.object1);
+    if (!condition.singleMode && matched) {
+      matched = this.matchPanangaType(toChart, condition.object2);
     }
     return matched;
   }
@@ -2003,8 +2002,6 @@ export class PairedChart {
         condition,
         fromChart,
         toChart,
-        k1,
-        k2,
       );
     }
     // If isTrue is false, matched state is inverted
