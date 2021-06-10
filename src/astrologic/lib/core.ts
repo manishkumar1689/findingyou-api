@@ -575,7 +575,7 @@ export const calcAllBodies = async (
   return data;
 };
 
-const calcBodyJd = async (jd: number, key: string, sideralMode = true) => {
+export const calcBodyJd = async (jd: number, key: string, sideralMode = true) => {
   let data: any = {};
   const body = grahaValues.find(b => b.key === key);
   if (body) {
@@ -597,7 +597,7 @@ const calcBodyJd = async (jd: number, key: string, sideralMode = true) => {
   }
   return new Graha(data);
 };
-const jdOffset = 0;
+
 const calcSunJd = async (jd: number, sideralMode = true) =>
   calcBodyJd(jd, 'su', sideralMode);
 

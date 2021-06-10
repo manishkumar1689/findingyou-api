@@ -37,6 +37,7 @@ import {
   fetchAllSettings,
   calcCompactChartData,
   calcAllAspects,
+  calcBodyJd,
 } from './lib/core';
 import {
   calcJulianDate,
@@ -611,6 +612,30 @@ export class AstrologicController {
     }
     return res.status(statusCode).send({
       valid: items.length > 0,
+      items,
+    });
+  }
+
+  @Get('life-events/:chartID/:start?/:limit?')
+  async getRelated(@Res() res, @Param('chartID') chartID, @Param('start') start, @Param('limit') limit) {
+    const criteria: Map<string, any> = new Map();
+    criteria.set('$or', [
+      { _id: chartID },
+      { parent: chartID },
+    ]);
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 200);
+    const items = await this.astrologicService.list(
+      criteria,
+      startInt,
+      limitInt,
+      false,
+    );
+    const num = items.length;
+    items.sort((a, b) => a.jd - b.jd);
+    return res.json({
+      valid: num > 0,
+      num,
       items,
     });
   }
@@ -2175,6 +2200,14 @@ export class AstrologicController {
       );
     }
     return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('calc-body/:key/:dt')
+  async calcBodyPosition(@Res() res, @Param('key') key: string, @Param('dt') dt: string) {
+    const isJd = /^\d+(\.\d+)?$/.test(dt);
+    const jd = isJd? smartCastInt(dt) : calcJulDate(dt);
+    const data = await calcBodyJd(jd, key, true);
+    return res.json(data);
   }
 
   @Get('planet-station-test/:planet/:startDt/:station')

@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { KeyNumValueDTO } from './key-num-value.dto';
-import { RashiDTO } from './rashi.dto';
 
 export class KutaSetDTO {
   @ApiProperty()

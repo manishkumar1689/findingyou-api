@@ -6,12 +6,14 @@ import { SettingSchema } from './schemas/setting.schema';
 import { UserService } from './../user/user.service';
 import { UserSchema } from '../user/schemas/user.schema';
 import { ProtocolSchema } from './schemas/protocol.schema';
+import { PredictiveRuleSetSchema } from './schemas/predictive-rule-set.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: 'Setting', schema: SettingSchema },
       { name: 'Protocol', schema: ProtocolSchema },
+      { name: 'PredictiveRuleSet', schema: PredictiveRuleSetSchema },
       { name: 'User', schema: UserSchema },
     ]),
   ],

@@ -2,7 +2,7 @@ import * as mongoose from 'mongoose';
 import { CategorySchema } from './category.schema';
 import { RulesCollectionSchema } from './rules-collection.schema';
 import { ConfigOptionSchema } from './config-option.schema';
-const { Mixed, ObjectId } = mongoose.Schema.Types;
+const { ObjectId } = mongoose.Schema.Types;
 
 export const ProtocolSchema = new mongoose.Schema({
   user: {
@@ -15,7 +15,7 @@ export const ProtocolSchema = new mongoose.Schema({
     required: true,
   },
   notes: {
-    type: Mixed,
+    type: String,
     required: false,
   },
   collections: {

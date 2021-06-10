@@ -20,4 +20,6 @@ export const RuleSetSchema = new mongoose.Schema({
     type: [ScoreSchema],
     required: false,
   },
+  createdAt: { type: Date, default: Date.now },
+  modifiedAt: { type: Date, default: Date.now },
 });
