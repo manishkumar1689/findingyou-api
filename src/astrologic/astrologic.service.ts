@@ -1500,7 +1500,12 @@ export class AstrologicService {
             jd: 1,
             tzOffset: 1,
             geo: 1,
-            subject: 1,
+            name: "$subject.name",
+            notes: "$subject.notes",
+            gender: "$subject.gender",
+            type: "$subject.type",
+            eventType: "$subject.eventType",
+            roddenValue: "$subject.roddenValue",
           }
         });
       }
