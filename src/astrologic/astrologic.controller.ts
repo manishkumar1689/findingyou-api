@@ -396,6 +396,7 @@ export class AstrologicController {
       tz,
       tzOffset,
       placenames,
+      parent
     } = inData;
     let { name, type, gender, eventType, roddenValue } = inData;
     const userRecord = await this.userService.getUser(user);
@@ -455,6 +456,9 @@ export class AstrologicController {
               placenames,
               ...chartData,
             };
+            if (notEmptyString(parent, 16)) {
+              data.chart.parent = parent;
+            }
             let saved = null;
             if (save) {
               if (notEmptyString(chartID, 8)) {
@@ -616,23 +620,15 @@ export class AstrologicController {
     });
   }
 
-  @Get('life-events/:chartID/:start?/:limit?')
+  @Get('life-events/:chartID')
   async getRelated(@Res() res, @Param('chartID') chartID, @Param('start') start, @Param('limit') limit) {
     const criteria: Map<string, any> = new Map();
     criteria.set('$or', [
       { _id: chartID },
       { parent: chartID },
     ]);
-    const startInt = smartCastInt(start, 0);
-    const limitInt = smartCastInt(limit, 200);
-    const items = await this.astrologicService.list(
-      criteria,
-      startInt,
-      limitInt,
-      false,
-    );
+    const items = await this.astrologicService.relatedChartSubjects(chartID);
     const num = items.length;
-    items.sort((a, b) => a.jd - b.jd);
     return res.json({
       valid: num > 0,
       num,

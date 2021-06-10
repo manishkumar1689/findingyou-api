@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { BodySpeed } from './interfaces/body-speed.interface';
 import { Chart } from './interfaces/chart.interface';
 import { BodySpeedDTO } from './dto/body-speed.dto';
@@ -56,7 +56,7 @@ import { KeyValue } from './interfaces/key-value';
 import { TagDTO } from './dto/tag.dto';
 import { shortenName, generateNameSearchRegex } from './lib/helpers';
 import { minRemainingPaired } from 'src/.config';
-import { match } from 'assert';
+const { ObjectId } = Types;
 
 @Injectable()
 export class AstrologicService {
@@ -1483,17 +1483,29 @@ export class AstrologicService {
     start = 0,
     limit = 100,
     useAggregation = false,
+    synopsis = false,
   ) {
     const filter = Object.fromEntries(criteria);
     const sort = { isDefaultBirthChart: -1 };
     if (useAggregation) {
+      const steps: any = [
+        { $match: filter },
+        { $skip: start },
+        { $limit: limit },
+        { $sort: sort },
+      ];
+      if (synopsis) {
+        steps.push({
+          $project: {
+            jd: 1,
+            tzOffset: 1,
+            geo: 1,
+            subject: 1,
+          }
+        });
+      }
       return await this.chartModel
-        .aggregate([
-          { $match: filter },
-          { $skip: start },
-          { $limit: limit },
-          { $sort: sort },
-        ])
+        .aggregate(steps)
         .allowDiskUse(true)
         .exec();
     } else {
@@ -1504,6 +1516,22 @@ export class AstrologicService {
         .sort(sort)
         .exec();
     }
+  }
+
+  async relatedChartSubjects(chartID: string) {
+    const criteria = new Map();
+    criteria.set('$or', [
+      { _id: ObjectId(chartID) },
+      { parent: ObjectId(chartID) },
+    ]);
+    const items = await this.list(
+      criteria,
+      0,
+      500,
+      true,
+      true
+    );
+    return items.sort((a, b) => a.jd - b.jd);
   }
 
   async deleteChart(chartID: string) {
