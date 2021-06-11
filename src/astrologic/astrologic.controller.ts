@@ -1863,7 +1863,7 @@ export class AstrologicController {
     const data: any = { valid: false, items: [], message: 'invalid user ID' };
     const user = await this.userService.getUser(userID);
     const isDefaultBirthChart = smartCastInt(defaultOnly) > 0;
-
+    const isAdmin = this.userService.hasAdminRole(user);
     if (user instanceof Object) {
       if (user.active) {
         const startVal = smartCastInt(start, 0);
@@ -1874,6 +1874,7 @@ export class AstrologicController {
           limitVal,
           isDefaultBirthChart,
           query,
+          isAdmin
         );
         if (charts instanceof Array) {
           data.items = charts;

@@ -1278,6 +1278,7 @@ export class AstrologicService {
     limit = 20,
     defaultOnly = false,
     queryParams = null,
+    isAdmin = false
   ) {
     const condMap = new Map<string, any>();
     let showUserFirst = start < 1;
@@ -1304,7 +1305,10 @@ export class AstrologicService {
         .exec();
     }
 
-    condMap.set('user', userID);
+    if (!condMap.has('_id') || !isAdmin) {
+      condMap.set('user', userID);
+    }
+    
     if (defaultOnly) {
       condMap.set('isDefaultBirthChart', true);
     }
