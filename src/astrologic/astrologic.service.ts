@@ -1345,6 +1345,7 @@ export class AstrologicService {
       condMap.set('status', status);
     }
     condMap.set('user', userID);
+    condMap.set('subject.eventType', 'birth');
     return await this.chartModel
       .find(Object.fromEntries(condMap))
       .select({
