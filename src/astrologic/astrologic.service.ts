@@ -1498,8 +1498,12 @@ export class AstrologicService {
         steps.push({
           $project: {
             jd: 1,
+            datetime: 1,
             tzOffset: 1,
-            geo: 1,
+            tz: 1,
+            lat: "$geo.lat",
+            alt: "$geo.alt",
+            lng: "$geo.lng",
             name: "$subject.name",
             notes: "$subject.notes",
             gender: "$subject.gender",
