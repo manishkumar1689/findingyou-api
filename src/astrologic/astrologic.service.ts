@@ -1498,6 +1498,9 @@ export class AstrologicService {
         steps.push({
           $project: {
             jd: 1,
+            user: 1,
+            parent: 1,
+            isDefaultBirthChart: 1,
             datetime: 1,
             tzOffset: 1,
             tz: 1,
