@@ -12,6 +12,8 @@ import { KeyName } from '../astrologic/lib/interfaces';
 import { extractDocId } from '../lib/entities';
 import { defaultPairedTagOptionSets } from '../astrologic/lib/settings/vocab-values';
 import { RuleSetDTO } from './dto/rule-set.dto';
+import { PredictiveRuleSet } from './interfaces/predictive-rule-set.interface';
+import { PredictiveRuleSetDTO } from './dto/predictive-rule-set.dto';
 
 @Injectable()
 export class SettingService {
@@ -19,6 +21,7 @@ export class SettingService {
     @InjectModel('Setting') private readonly settingModel: Model<Setting>,
     @InjectModel('Protocol')
     private readonly protocolModel: Model<Protocol>,
+    @InjectModel('PredictiveRuleSet') private readonly predictiveRuleSetModel: Model<PredictiveRuleSet>,
   ) {}
   // fetch all Settings
   async getAllSetting(): Promise<Setting[]> {
@@ -367,6 +370,26 @@ export class SettingService {
       result.valid = saved instanceof Object;
     }
     return result;
+  }
+
+  async savePredictiveRuleSet(ruleSetDTO: PredictiveRuleSetDTO, id = '') {
+    let result: any = null;
+    if (notEmptyString(id, 8)) {
+      const updated = { ...ruleSetDTO, modifiedAt: new Date() };
+      await this.protocolModel.findByIdAndUpdate(id, updated);
+      result = await this.protocolModel.findById(id);
+    } else {
+      const predictiveRuleSet = new this.predictiveRuleSetModel(ruleSetDTO);
+      result = await predictiveRuleSet.save();
+    }
+    return result;
+  }
+
+  async getRuleSets(userID = "") {
+    const byUser = notEmptyString(userID, 16);
+    const criteria = byUser? { user: userID } : {};
+    const items = await this.predictiveRuleSetModel.find(criteria)
+    return items;
   }
 
   async deleteProtocol(id = '') {

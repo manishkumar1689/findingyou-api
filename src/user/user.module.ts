@@ -16,6 +16,7 @@ import { SnippetSchema } from '../snippet/schemas/snippet.schema';
 import { SnippetService } from '../snippet/snippet.service';
 import { ProtocolSchema } from '../setting/schemas/protocol.schema';
 import { GeoNameSchema } from '../geo/schemas/geo-name.schema';
+import { PredictiveRuleSetSchema } from '../setting/schemas/predictive-rule-set.schema';
 
 @Global()
 @Module({
@@ -25,12 +26,13 @@ import { GeoNameSchema } from '../geo/schemas/geo-name.schema';
       { name: 'User', schema: UserSchema },
       { name: 'Message', schema: MessageSchema },
       { name: 'Setting', schema: SettingSchema },
+      { name: 'GeoName', schema: GeoNameSchema },
       { name: 'Snippet', schema: SnippetSchema },
       { name: 'Chart', schema: ChartSchema },
       { name: 'BodySpeed', schema: BodySpeedSchema },
       { name: 'PairedChart', schema: PairedChartSchema },
       { name: 'Protocol', schema: ProtocolSchema },
-      { name: 'GeoName', schema: GeoNameSchema },
+      { name: 'PredictiveRuleSet', schema: PredictiveRuleSetSchema },
     ]),
   ],
   providers: [

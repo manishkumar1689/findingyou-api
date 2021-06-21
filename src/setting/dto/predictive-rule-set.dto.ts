@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ScoreDTO } from './score.dto';
+import { PredictiveScoreDTO } from './predictive-score.dto';
 
 export class PredictiveRuleSetDTO {
 
@@ -19,7 +19,7 @@ export class PredictiveRuleSetDTO {
   readonly conditionSet: any;
 
   @ApiProperty()
-  readonly scores: ScoreDTO[];
+  readonly scores: PredictiveScoreDTO[];
 
   @ApiProperty()
   readonly createdAt: Date;

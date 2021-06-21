@@ -1,5 +1,5 @@
 import { Document } from 'mongoose';
-import { Score } from './score.interface';
+import { PredictiveScore } from './predictive-score.interface';
 
 export interface PredictiveRuleSet extends Document {
   readonly user: string;
@@ -7,7 +7,7 @@ export interface PredictiveRuleSet extends Document {
   readonly text: string;
   readonly notes?: string;
   readonly conditionSet: any;
-  readonly scores: Score[];
+  readonly scores: PredictiveScore[];
   readonly createdAt: Date;
   readonly modifiedAt: Date;
 }

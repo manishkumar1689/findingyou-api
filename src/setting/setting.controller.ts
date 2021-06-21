@@ -39,6 +39,7 @@ import { parseAstroBankCSV } from '../lib/parse-astro-csv';
 import { deleteSwissEpheFile } from '../astrologic/lib/files';
 import { ipWhitelistFileData } from 'src/auth/auth.utils';
 import { StringsDTO } from './dto/strings.dto';
+import { PredictiveRuleSetDTO } from './dto/predictive-rule-set.dto';
 
 @Controller('setting')
 export class SettingController {
@@ -314,6 +315,24 @@ export class SettingController {
       }
     }
     return res.send(result);
+  }
+
+  @Post('predictive/save')
+  async savePredictiveRule(@Res() res, @Body() ruleSetDTO: PredictiveRuleSetDTO) {
+    const data = await this.settingService.savePredictiveRuleSet(ruleSetDTO);
+    return res.status(HttpStatus.CREATED).send(data);
+  }
+
+  @Put('predictive/edit/:ruleID')
+  async editPredictiveRule(@Res() res, @Param('ruleID') ruleID, @Body() ruleSetDTO: PredictiveRuleSetDTO) {
+    const data = await this.settingService.savePredictiveRuleSet(ruleSetDTO, ruleID);
+    return res.status(HttpStatus.CREATED).send(data);
+  }
+
+  @Get('predictive/list/:userID?')
+  async listPredictiveRules(@Res() res, @Param('userID') userID) {
+    const data = await this.settingService.getRuleSets(userID);
+    return res.status(HttpStatus.CREATED).send(data);
   }
 
   // Fetch a particular setting using ID

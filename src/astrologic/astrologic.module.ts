@@ -14,6 +14,7 @@ import { GeoNameSchema } from '../geo/schemas/geo-name.schema';
 import { SettingSchema } from '../setting/schemas/setting.schema';
 import { SettingService } from '../setting/setting.service';
 import { ProtocolSchema } from '../setting/schemas/protocol.schema';
+import { PredictiveRuleSetSchema } from '../setting/schemas/predictive-rule-set.schema';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { ProtocolSchema } from '../setting/schemas/protocol.schema';
       { name: 'GeoName', schema: GeoNameSchema },
       { name: 'Setting', schema: SettingSchema },
       { name: 'Protocol', schema: ProtocolSchema },
+      { name: 'PredictiveRuleSet', schema: PredictiveRuleSetSchema },
     ]),
   ],
   controllers: [AstrologicController],

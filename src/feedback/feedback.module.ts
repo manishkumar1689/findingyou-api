@@ -9,6 +9,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { SettingSchema } from '../setting/schemas/setting.schema';
 import { SettingService } from '../setting/setting.service';
 import { ProtocolSchema } from '../setting/schemas/protocol.schema';
+import { PredictiveRuleSetSchema } from '../setting/schemas/predictive-rule-set.schema';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ProtocolSchema } from '../setting/schemas/protocol.schema';
       { name: 'User', schema: UserSchema },
       { name: 'Setting', schema: SettingSchema },
       { name: 'Protocol', schema: ProtocolSchema },
+      { name: 'PredictiveRuleSet', schema: PredictiveRuleSetSchema },
     ]),
   ],
   providers: [FeedbackService, UserService, SettingService],

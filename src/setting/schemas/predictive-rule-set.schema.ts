@@ -1,5 +1,5 @@
 import * as mongoose from 'mongoose';
-import { ScoreSchema } from './score.schema';
+import { PredictiveScoreSchema } from './predictive-score.schema';
 const { Mixed } = mongoose.Schema.Types;
 const { ObjectId } = mongoose.Schema.Types;
 
@@ -27,7 +27,7 @@ export const PredictiveRuleSetSchema = new mongoose.Schema({
     required: false,
   },
   scores: {
-    type: [ScoreSchema],
+    type: [PredictiveScoreSchema],
     required: false,
   },
 });
