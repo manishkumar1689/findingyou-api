@@ -957,6 +957,23 @@ const calcAyanamshas = async (jd: number): Promise<Array<KeyValue>> => {
   });
 };
 
+export const calcAyanamsha = async (jd: number, key = "true_citra"): Promise<number> => {
+  const iflag = swisseph.SEFLG_SIDEREAL;
+  const row = ayanamshaValues.find(r => r.key === key);
+  if (row instanceof Object) {
+    const { key, value } = row;
+    swisseph.swe_set_sid_mode(value, 0, 0);
+    const result = getAyanamsa(jd, iflag);
+    if (result instanceof Object) {
+      const { ayanamsa } = result;
+      if (isNumeric(ayanamsa)) {
+        return ayanamsa;
+      }
+    }
+  }
+  return 0;
+};
+
 const matchInduVal = (houseNum: number) => {
   const matchedGraha = rashiValues.find(r => r.num === houseNum);
   let indu = {

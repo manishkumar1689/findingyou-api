@@ -4,7 +4,7 @@ import { calcJulDate, jdToDateTime } from './date-funcs';
 import { withinTolerance } from '../../lib/validators';
 import grahaValues from './settings/graha-values';
 
-const calcBodySpeed = async (jd, num, callback) => {
+export const calcBodySpeed = async (jd, num, callback) => {
   const flag =
     swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SIDEREAL + swisseph.SEFLG_SPEED;
   await calcUtAsync(jd, num, flag).catch(async result => {
@@ -216,3 +216,22 @@ export const calcRetroGrade = async (datetime, num) => {
     // end
   };
 };
+
+
+export const matchProgressionJdStep = (key = "su") => {
+  switch (key) {
+    case "mo":
+      return 0.25;
+    case "ma":
+      return 1;
+    case "ju":
+    case "sa":
+      return 2;
+    case "ur":
+    case "ne":
+    case "pl":
+      return 7;
+    default:
+      return 0.5;
+  }
+}

@@ -38,6 +38,7 @@ import {
   calcCompactChartData,
   calcAllAspects,
   calcBodyJd,
+  calcAyanamsha,
 } from './lib/core';
 import {
   calcJulianDate,
@@ -51,7 +52,7 @@ import {
 } from './lib/date-funcs';
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
-import { calcRetroGrade, calcStation } from './lib/astro-motion';
+import { calcAcceleration, calcBodySpeed, calcRetroGrade, calcStation, matchProgressionJdStep } from './lib/astro-motion';
 import { toIndianTime, calcTransition } from './lib/transitions';
 import { readEpheFiles } from './lib/files';
 import { ChartInputDTO } from './dto/chart-input.dto';
@@ -90,6 +91,8 @@ import { TagDTO } from './dto/tag.dto';
 import { RuleSetDTO } from '../setting/dto/rule-set.dto';
 import { SingleCore } from './interfaces/single-core';
 import { AssignPairedDTO } from './dto/assign-paired.dto';
+import { matchPlanetNum } from './lib/settings/graha-values';
+import { subtractLng360 } from './lib/helpers';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -2166,6 +2169,42 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  @Get('predictive/:key/:lng/:jd?/:ayanamsha?')
+  async predictiveGrahaLng(@Res() res, @Param('key') key, @Param('lng') lng, @Param('jd') jd, @Param('ayanamsha') ayanamsha) {
+    const jdInt = isNumeric(jd) ? parseInt(jd) : calcJulDate(new Date().toISOString().split(".").shift());
+    const lngInt = isNumeric(lng)? parseInt(lng) : 0;
+    const num = matchPlanetNum(key);
+    const ayaKey = notEmptyString(ayanamsha)? ayanamsha : "true_citra";
+    const applyAyanamsha = ayaKey !== "tropical";
+    const spds = [];
+    const aya = applyAyanamsha? await calcAyanamsha(jdInt, ayaKey) : 0;
+    
+    await calcBodySpeed(jdInt, num, (speed, lngTrop) => {
+      const lng = subtractLng360(lngTrop, aya);
+      spds.push({ speed, lng, jd: jdInt });
+    });
+    let refJd = jdInt;
+    let i = 0;
+    let matched = false;
+    const step = matchProgressionJdStep(key);
+    while (!matched) {
+      refJd += step;
+      await calcBodySpeed(refJd, num, (speed, lngTrop) => {
+        const lng = subtractLng360(lngTrop, aya);
+        spds.push({ speed, lng, jd: refJd });
+      });
+      const lastItem = spds[(spds.length -1)];
+      if (Math.abs(lastItem.lng - lngInt) < Math.abs(lastItem.speed * step)) {
+        matched = true;
+        break;
+      } else if (i > 1000) {
+        break;
+      }
+      i++;
+    }
+    return res.status(HttpStatus.OK).json({spds, jdInt, num, aya});
+  }
+
   @Get('speed-patterns/:planet')
   async motionPatternsByPlanet(@Res() res, @Param('planet') planet) {
     let data: any = { valid: false, values: [] };
@@ -2184,8 +2223,8 @@ export class AstrologicController {
     @Param('endYear') endYear,
   ) {
     let data: any = { valid: false, values: [] };
-    if (isNumeric(planet)) {
-      const num = parseInt(planet);
+    const num = isNumeric(planet)? parseInt(planet) : matchPlanetNum(planet);
+    if (num >= 0) {
       const startYearInt = isNumeric(startYear)
         ? parseInt(startYear, 10)
         : 2000;
@@ -2196,7 +2235,7 @@ export class AstrologicController {
         endYearInt,
       );
     }
-    return res.status(HttpStatus.OK).json(data);
+    return res.status(HttpStatus.OK).json({...data, planet, num});
   }
 
   @Get('calc-body/:key/:dt')

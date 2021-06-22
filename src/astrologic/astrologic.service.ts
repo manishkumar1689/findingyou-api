@@ -1622,13 +1622,14 @@ export class AstrologicService {
       const { start, end } = data;
 
       if (i > 0) {
+        const prevSpeedDiv = isNumber(prevSpeed) && prevSpeed !== 0? start.speed / prevSpeed : 0;
         const sd1: BodySpeedDTO = {
           num,
           speed: start.spd,
           lng: start.lng,
           jd: start.jd,
           datetime: start.datetime,
-          acceleration: start.speed / prevSpeed,
+          acceleration: prevSpeedDiv,
           station: 'sample',
         };
         await this.saveBodySpeed(sd1);
@@ -1713,7 +1714,8 @@ export class AstrologicService {
     const startJd = calcJulDateFromParts({ year: startYear, ...otherParams });
     const endJd = calcJulDateFromParts({ year: endYear, ...otherParams });
     const jd = { $gte: startJd, $lte: endJd };
-    const criteria = num > 0 ? { num, station, jd } : { station, jd };
+    const criteria = num >= 0 ? { num, station, jd } : { station, jd };
+    console.log(criteria)
     const data = await this.bodySpeedModel
       .find(criteria)
       .sort({ jd: 1 })

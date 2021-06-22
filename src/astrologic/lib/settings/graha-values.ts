@@ -451,3 +451,8 @@ export const buildFunctionalBMMap = (
   });
   return mp;
 };
+
+export const matchPlanetNum = (key: string): number => {
+  const row = grahaValues.find(gr => gr.key === key);
+  return row instanceof Object ? row.num : -1;
+}
