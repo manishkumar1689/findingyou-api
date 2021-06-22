@@ -376,8 +376,8 @@ export class SettingService {
     let result: any = null;
     if (notEmptyString(id, 8)) {
       const updated = { ...ruleSetDTO, modifiedAt: new Date() };
-      await this.protocolModel.findByIdAndUpdate(id, updated);
-      result = await this.protocolModel.findById(id);
+      await this.predictiveRuleSetModel.findByIdAndUpdate(id, updated);
+      result = await this.predictiveRuleSetModel.findById(id);
     } else {
       const predictiveRuleSet = new this.predictiveRuleSetModel(ruleSetDTO);
       result = await predictiveRuleSet.save();

@@ -326,7 +326,7 @@ export class SettingController {
   @Put('predictive/edit/:ruleID')
   async editPredictiveRule(@Res() res, @Param('ruleID') ruleID, @Body() ruleSetDTO: PredictiveRuleSetDTO) {
     const data = await this.settingService.savePredictiveRuleSet(ruleSetDTO, ruleID);
-    return res.status(HttpStatus.CREATED).send(data);
+    return res.status(HttpStatus.OK).send(data);
   }
 
   @Get('predictive/list/:userID?')
