@@ -38,7 +38,6 @@ import {
   calcCompactChartData,
   calcAllAspects,
   calcBodyJd,
-  calcAyanamsha,
 } from './lib/core';
 import {
   calcJulianDate,
@@ -52,7 +51,7 @@ import {
 } from './lib/date-funcs';
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
-import { calcAcceleration, calcBodySpeed, calcRetroGrade, calcStation, matchProgressionJdStep } from './lib/astro-motion';
+import { calcRetroGrade, calcStation, matchNextTransitAtLng } from './lib/astro-motion';
 import { toIndianTime, calcTransition } from './lib/transitions';
 import { readEpheFiles } from './lib/files';
 import { ChartInputDTO } from './dto/chart-input.dto';
@@ -92,7 +91,6 @@ import { RuleSetDTO } from '../setting/dto/rule-set.dto';
 import { SingleCore } from './interfaces/single-core';
 import { AssignPairedDTO } from './dto/assign-paired.dto';
 import { matchPlanetNum } from './lib/settings/graha-values';
-import { subtractLng360 } from './lib/helpers';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -922,6 +920,65 @@ export class AstrologicController {
       aspect,
       orbDouble,
       aKey,
+    );
+    return res.status(200).send({
+      num: items.length,
+      items,
+    });
+  }
+
+  @Get(
+    'discover-degree-range-matches/:key/:lng/:orb?/:ayanamshaKey?/:max?',
+  )
+  async discoverDegreeRangeMatches(
+    @Res() res,
+    @Param('key') key,
+    @Param('lng') lng,
+    @Param('orb') orb,
+    @Param('ayanamshaKey') ayanamshaKey,
+    @Param('max') max,
+  ) {
+    const maxInt = smartCastInt(max, 100);
+    const lngs = notEmptyString(lng)? lng.split(',').filter(lng => isNumeric(lng)).map(parseFloat) : [];
+    const aKey = notEmptyString(ayanamshaKey, 3) ? ayanamshaKey : 'true_citra';
+    const orbDouble = isNumeric(orb)? parseFloat(orb) : 1;
+    const items = await this.astrologicService.findPredictiveRangeMatch(
+      key,
+      lngs,
+      orbDouble,
+      aKey,
+    );
+    return res.status(200).send({
+      num: items.length,
+      items,
+    });
+  }
+
+  @Get(
+    'discover-ascendant-matches/:dt?/:lng?/:orb?/:ayanamshaKey?/:max?',
+  )
+  async discoverAscendantMatches(
+    @Res() res,
+    @Param('dt') dt,
+    @Param('lng') lng,
+    @Param('orb') orb,
+    @Param('ayanamshaKey') ayanamshaKey,
+    @Param('max') max,
+  ) {
+    const maxInt = smartCastInt(max, 100);
+    
+    const orbDouble = isNumeric(orb)? parseFloat(orb) : 1;
+
+    const lngs = notEmptyString(lng)? lng.split(',').filter(lng => isNumeric(lng)).map(parseFloat) : [];
+    
+    const aKey = notEmptyString(ayanamshaKey, 3) ? ayanamshaKey : 'true_citra';
+    
+    const items = await this.astrologicService.matchAscendantsbyDate(
+      dt,
+      lngs,
+      orbDouble,
+      aKey,
+      maxInt,
     );
     return res.status(200).send({
       num: items.length,
@@ -2171,38 +2228,13 @@ export class AstrologicController {
 
   @Get('predictive/:key/:lng/:jd?/:ayanamsha?')
   async predictiveGrahaLng(@Res() res, @Param('key') key, @Param('lng') lng, @Param('jd') jd, @Param('ayanamsha') ayanamsha) {
-    const jdInt = isNumeric(jd) ? parseInt(jd) : calcJulDate(new Date().toISOString().split(".").shift());
-    const lngInt = isNumeric(lng)? parseInt(lng) : 0;
-    const num = matchPlanetNum(key);
-    const ayaKey = notEmptyString(ayanamsha)? ayanamsha : "true_citra";
-    const applyAyanamsha = ayaKey !== "tropical";
-    const spds = [];
-    const aya = applyAyanamsha? await calcAyanamsha(jdInt, ayaKey) : 0;
-    
-    await calcBodySpeed(jdInt, num, (speed, lngTrop) => {
-      const lng = subtractLng360(lngTrop, aya);
-      spds.push({ speed, lng, jd: jdInt });
-    });
-    let refJd = jdInt;
-    let i = 0;
-    let matched = false;
-    const step = matchProgressionJdStep(key);
-    while (!matched) {
-      refJd += step;
-      await calcBodySpeed(refJd, num, (speed, lngTrop) => {
-        const lng = subtractLng360(lngTrop, aya);
-        spds.push({ speed, lng, jd: refJd });
-      });
-      const lastItem = spds[(spds.length -1)];
-      if (Math.abs(lastItem.lng - lngInt) < Math.abs(lastItem.speed * step)) {
-        matched = true;
-        break;
-      } else if (i > 1000) {
-        break;
-      }
-      i++;
-    }
-    return res.status(HttpStatus.OK).json({spds, jdInt, num, aya});
+    const useJd = isNumeric(jd) && jd > 0;
+    const dtVal = !useJd ? validISODateString(jd)? jd : new Date().toISOString() : "";
+    const jdFl = useJd ? parseInt(jd) : calcJulDate( dtVal.split(".").shift());
+    const lngFl = isNumeric(lng)? parseInt(lng) : 0;
+    const data = await matchNextTransitAtLng(key, lngFl, jdFl, ayanamsha);
+    const targetDt = julToISODate(data.targetJd);
+    return res.status(HttpStatus.OK).json({...data, targetDt});
   }
 
   @Get('speed-patterns/:planet')

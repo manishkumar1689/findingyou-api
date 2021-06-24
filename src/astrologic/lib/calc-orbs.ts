@@ -1,3 +1,5 @@
+import { mapLngRange } from "src/lib/query-builders";
+
 export interface AspectRow {
   key: string;
   deg: number;
@@ -93,6 +95,14 @@ const matchAspectGroupIndex = (aspectKey: string): number => {
   return index < 0 ? 5 : index;
 };
 
+export const buildDegreeRange = (degree: number, orb = 0) => {
+  return [(degree + 360 - orb) % 360, (degree + 360 + orb) % 360];
+}
+
+export const buildLngRange = (degree: number, orb = 0) => {
+  return mapLngRange(buildDegreeRange(degree, orb));
+}
+
 export const calcAllAspectRanges = (
   aspectRow: AspectRow,
   orb = 0,
@@ -117,7 +127,7 @@ export const calcAllAspectRanges = (
         return nm > 0;
       });
       if (!hasBetterMatch) {
-        ranges.push([(tDeg + 360 - orb) % 360, (tDeg + 360 + orb) % 360]);
+        ranges.push(buildDegreeRange(tDeg, orb));
       }
     }
   }

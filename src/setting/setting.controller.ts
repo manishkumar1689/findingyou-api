@@ -335,6 +335,13 @@ export class SettingController {
     return res.status(HttpStatus.CREATED).send(data);
   }
 
+  @Delete('predictive/delete/:userID/:itemID')
+  async deletePredictiveRule(@Res() res, @Param('userID') userID, @Param('itemID') itemID) {
+    const isAdmin = await this.userService.isAdminUser(userID);
+    const data = await this.settingService.deletePredictiveRuleSet(itemID, userID, isAdmin);
+    return res.status(HttpStatus.CREATED).send(data);
+  }
+
   // Fetch a particular setting using ID
   @Delete('delete/:settingID/:userID')
   async delete(

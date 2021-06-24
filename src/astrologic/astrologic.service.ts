@@ -5,6 +5,7 @@ import { BodySpeed } from './interfaces/body-speed.interface';
 import { Chart } from './interfaces/chart.interface';
 import { BodySpeedDTO } from './dto/body-speed.dto';
 import { calcAcceleration, calcStation } from './lib/astro-motion';
+import { subtractLng360 } from './lib/math-funcs';
 import grahaValues from './lib/settings/graha-values';
 import roddenScaleValues, {
   matchRoddenKeyValue,
@@ -24,6 +25,7 @@ import {
 } from './lib/date-funcs';
 import {
   emptyString,
+  inRange,
   isNumber,
   isNumeric,
   notEmptyString,
@@ -47,15 +49,16 @@ import {
   SlugNameVocab,
   matchVocabKey,
 } from './lib/settings/vocab-values';
-import { calcAllAspects } from './lib/core';
+import { calcAllAspects, calcAyanamsha } from './lib/core';
 import { Chart as ChartClass } from './lib/models/chart';
 import { Kuta } from './lib/kuta';
-import { AspectSet } from './lib/calc-orbs';
+import { AspectSet, buildDegreeRange, buildLngRange } from './lib/calc-orbs';
 import { sanitize, smartCastInt } from '../lib/converters';
 import { KeyValue } from './interfaces/key-value';
 import { TagDTO } from './dto/tag.dto';
 import { shortenName, generateNameSearchRegex } from './lib/helpers';
 import { minRemainingPaired } from 'src/.config';
+import { calcTropicalAscendantDt } from './lib/calc-ascendant';
 const { ObjectId } = Types;
 
 @Injectable()
@@ -724,6 +727,78 @@ export class AstrologicService {
       ayanamshaKey,
       'rows',
     );
+  }
+  
+  async findPredictiveRangeMatch(
+    key: string,
+    lngs: number[],
+    orb = 0,
+    ayanamshaKey = 'true_citra',
+    mode = 'rows',
+  ) {
+    const ranges = lngs.map(lng => buildLngRange(lng, orb));
+    const $project =
+      mode !== 'count'
+        ? { cid: '$_id', uid: '$user', lng: 1, ayanamsha: '$ayanamshas.value' }
+        : { _id: 1 };
+    const steps = [
+      { $limit: 10000000 },
+      { $unwind: '$ayanamshas' },
+      { $match: { 'ayanamshas.key': ayanamshaKey } },
+      { $unwind: '$grahas' },
+      { $match: { 'grahas.key': key } },
+      {
+        $addFields: {
+          lng: {
+            $mod: [
+              {
+                $add: [
+                  '$grahas.lng',
+                  360,
+                  { $subtract: [0, '$ayanamshas.value'] },
+                ],
+              },
+              360,
+            ],
+          },
+        },
+      },
+      { $match: { $or: ranges } },
+      { $project },
+    ];
+    return this.chartModel.aggregate(steps);
+  }
+
+  async matchAscendantsbyDate(
+    dateStr: string,
+    lngs: number[],
+    orb = 1,
+    ayanamshaKey = 'true_citra',
+    max = 100,
+    mode = 'rows',
+  ) {
+    const $project =
+      mode !== 'count'
+        ? { cid: '$_id', "geo.lat": 1, "geo.lng": 1, "ascendant": 1, uid: '$user', lng: 1, ayanamsha: '$ayanamshas.value' }
+        : { _id: 1 };
+    const steps = [
+      { $limit: max },
+      { $unwind: '$ayanamshas' },
+      { $match: { 'ayanamshas.key': ayanamshaKey } },
+      { $project },
+    ];
+    const jd = calcJulDate(dateStr);
+    const matchedAyanamsha = await calcAyanamsha(jd, ayanamshaKey);
+    const items = await this.chartModel.aggregate(steps);
+    const ranges = lngs.map(lng => buildDegreeRange(lng, orb));
+    return items.map(item => {
+      const {lat, lng} = item.geo;
+      const matchedTropicalAscendant = calcTropicalAscendantDt(lat, lng, dateStr);
+      const ascendantLng = subtractLng360(item.ascendant, item.ayanamsha);
+      const matchedAscendant = subtractLng360(matchedTropicalAscendant, matchedAyanamsha);
+      const aspect = subtractLng360(ascendantLng, matchedAscendant);
+      return {...item, ascendantLng, matchedTropicalAscendant, matchedAscendant, aspect };
+    }).filter(item => ranges.some(range => inRange(item.matchedAscendant, range)));
   }
 
   adjustDatetimeByServerTz(data: any = null) {

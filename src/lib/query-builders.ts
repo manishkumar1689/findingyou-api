@@ -678,6 +678,11 @@ export const yearSpanAddFieldSteps = () => {
   ];
 };
 
+export const mapLngRange = (pair: number[]) => {
+  const [min, max] = pair;
+  return { lng: { $gte: min, $lte: max } };
+}
+
 export const buildLngRanges = (
   aspect: string,
   k1: string,
@@ -692,8 +697,5 @@ export const buildLngRanges = (
   const ranges = aspectMatched
     ? calcAllAspectRanges(aspectRow, orb, range)
     : null;
-  return ranges.map(pair => {
-    const [min, max] = pair;
-    return { lng: { $gte: min, $lte: max } };
-  });
+  return ranges.map(mapLngRange);
 };

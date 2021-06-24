@@ -3,6 +3,7 @@ import { PredictiveScore } from './predictive-score.interface';
 
 export interface PredictiveRuleSet extends Document {
   readonly user: string;
+  readonly type: string;
   readonly name: string;
   readonly text: string;
   readonly notes?: string;

@@ -9,6 +9,11 @@ export const PredictiveRuleSetSchema = new mongoose.Schema({
     required: true,
     ref: 'User',
   },
+  type: {
+    type: String,
+    default: 'transit',
+    required: true, // text sent when condition is met
+  },
   name: {
     type: String,
     required: true,

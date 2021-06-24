@@ -385,6 +385,24 @@ export class SettingService {
     return result;
   }
 
+  async deletePredictiveRuleSet(id = '', userID = '', isAdmin = false) {
+    const result: any = { valid: false, deleted: false, item: null };
+    if (notEmptyString(id, 16)) {
+      const rule = await this.predictiveRuleSetModel.findById(id);
+      if (rule instanceof Object) {
+        result.item = rule;
+        result.valid = true;
+        if (isAdmin || rule.user === userID) {
+          const deleted = await this.predictiveRuleSetModel.deleteOne({_id: id})
+          if (deleted.ok) {
+            result.deleted = true;
+          }
+        }
+      }
+    }
+    return result;
+  }
+
   async getRuleSets(userID = "") {
     const byUser = notEmptyString(userID, 16);
     const criteria = byUser? { user: userID } : {};

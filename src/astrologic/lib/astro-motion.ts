@@ -1,8 +1,11 @@
 import * as swisseph from 'swisseph';
 import { calcUtAsync } from './sweph-async';
 import { calcJulDate, jdToDateTime } from './date-funcs';
-import { withinTolerance } from '../../lib/validators';
+import { isNumeric, notEmptyString, withinTolerance } from '../../lib/validators';
 import grahaValues from './settings/graha-values';
+import { matchPlanetNum } from './settings/graha-values';
+import { calcAyanamsha, fetchHouseDataJd } from './core';
+import { subtractLng360 } from './math-funcs';
 
 export const calcBodySpeed = async (jd, num, callback) => {
   const flag =
@@ -234,4 +237,67 @@ export const matchProgressionJdStep = (key = "su") => {
     default:
       return 0.5;
   }
+}
+
+export const fetchAscendant = async (key = "as", jd = 0, geo = null) => {
+  const data = await fetchHouseDataJd(jd, geo, 'W');
+  switch (key) {
+    case "as":
+      return data.ascendant;
+    case "mc":
+      return data.mc;
+      case "vt":
+        return data.vertex;
+  }
+}
+
+export const matchNextTransitAtLng = async (key = "su", lngFl = 0, jdFl = 0, ayanamsha = "true_citra") => {
+  const num = isNumeric(key)? parseInt(key) : matchPlanetNum(key);
+  const ayaKey = notEmptyString(ayanamsha)? ayanamsha : "true_citra";
+  const applyAyanamsha = ayaKey !== "tropical";
+  const spds = [];
+  const aya = applyAyanamsha? await calcAyanamsha(jdFl, ayaKey) : 0;
+    await calcBodySpeed(jdFl, num, (speed, lngTrop) => {
+      const lng = subtractLng360(lngTrop, aya);
+      spds.push({ speed, lng, jd: jdFl });
+    });
+    let refJd = jdFl;
+    let i = 0;
+    const step = matchProgressionJdStep(key);
+    let stopIndex = 1000;
+    while (i < stopIndex) {
+      refJd += step;
+      await calcBodySpeed(refJd, num, (speed, lng) => {
+        //const lng = subtractLng360(lngTrop, aya);
+        spds.push({ speed, lng, jd: refJd });
+      });
+      const lastItem = spds[(spds.length -1)];
+      if (Math.abs(lastItem.lng - lngFl) < Math.abs(lastItem.speed * step)) {
+        stopIndex = i + 2;
+      }
+      i++;
+    }
+    if (spds.length > 3) {
+      spds.splice(0, spds.length - 3);
+    }
+    let ranges = [];
+    const numSpds = spds.length;
+    for (let i = 1; i < numSpds; i++) {
+      const prevLng = spds[(i-1)].lng;
+      const prevSpd = spds[(i-1)].speed * step;
+      const currLng = spds[i].lng;
+      if ((currLng >= lngFl || (currLng + prevSpd) >= lngFl) && (prevLng <= lngFl || (prevLng - 360) <= lngFl)) {
+        ranges.push(spds[(i-1)]);
+      }
+    }
+    if (ranges.length < 2) {
+      ranges = spds.slice(spds.length -2, spds.length);
+    }
+    const [start, end ] = ranges;
+    const distance = subtractLng360(end.lng, start.lng);
+    const progressDeg = (lngFl - start.lng + 360) % 360;
+    const progress = progressDeg > 0 ? progressDeg / distance : 0;
+    const progressJd = progress * step;
+    const targetJd = start.jd + progressJd;
+    return { start, end, targetJd, num, ayanamsha: aya };
 }
