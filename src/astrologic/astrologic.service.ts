@@ -1347,6 +1347,11 @@ export class AstrologicService {
     return pairedID;
   }
 
+  async getUserBirthChart(userID = "") {
+    return await this.chartModel
+    .findOne({ user: userID, isDefaultBirthChart: true }).exec();
+  }
+
   async getChartsByUser(
     userID: string,
     start = 0,

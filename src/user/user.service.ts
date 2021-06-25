@@ -157,8 +157,9 @@ export class UserService {
             break;
         }
       }
-      filter.set('active', true);
     }
+    filter.set('active', true);
+    filter.set('roles', { $nin: ['superadmin', 'admin', 'blocked', 'editor']});
     return hashMapToObject(filter);
   };
 

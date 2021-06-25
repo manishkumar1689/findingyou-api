@@ -214,9 +214,9 @@ export class UserController {
     );
     const items = [];
     for (const user of users) {
-      const charts = await this.astrologicService.getChartsByUser(user._id, 0, 1,true);
-      const hasChart = charts.length > 0;
-      const chart = hasChart? simplifyChart(charts[0]) : {};
+      const chartObj = await this.astrologicService.getUserBirthChart(user._id);
+      const hasChart = chartObj instanceof Object;
+      const chart = hasChart ? simplifyChart(chartObj) : {};
       items.push({...user, chart, hasChart});
     }
     return res.json(items);
