@@ -17,6 +17,7 @@ import { PaymentDTO } from './dto/payment.dto';
 import { ProfileDTO } from './dto/profile.dto';
 import { simplifyChart } from '../astrologic/lib/member-charts';
 import { MatchedOption, PrefKeyValue } from './settings/preference-options';
+import { smartCastBool } from '../lib/converters';
 const userSelectPaths = [
   '_id',
   'fullName',
@@ -104,6 +105,9 @@ export class UserService {
             break;
           case 'near':
             filter.set('coords', this.buildNearQuery(val));
+            break;
+          case 'test':
+            filter.set('test', smartCastBool(val));
             break;
         }
       }
@@ -543,7 +547,7 @@ export class UserService {
     return false;
   }
 
-  async members(start = 0, limit = 100, criteria = null) {
+  /* async members(start = 0, limit = 100, criteria = null) {
     const matchCriteria = this.buildMemberCriteria(criteria);
     let nearStage = null;
     if (Object.keys(criteria).includes('near')) {
@@ -569,8 +573,6 @@ export class UserService {
       {
         $lookup: {
           from: 'charts',
-          /*  localField: '_id',
-          foreignField: 'user', */
           as: 'chart',
           let: { userId: '$_id' },
           pipeline: [
@@ -622,6 +624,7 @@ export class UserService {
     if (nearStage instanceof Object) {
       steps.unshift(nearStage);
     }
+    console.log(JSON.stringify(steps))
     const userCharts = await this.userModel.aggregate(steps);
     return userCharts.map(item => {
       let chart: any = {};
@@ -640,6 +643,63 @@ export class UserService {
       }
       return { ...item, chart, hasChart };
     });
+  } */
+
+  async members(start = 0, limit = 100, criteria = null) {
+    const matchCriteria = this.buildMemberCriteria(criteria);
+    let nearStage = null;
+    if (Object.keys(criteria).includes('near')) {
+      const geoMatch = this.buildNearQuery(criteria.near);
+      if (geoMatch instanceof Object) {
+        const { $near } = geoMatch;
+        if ($near instanceof Object) {
+          const { $geometry, $minDistance, $maxDistance } = $near;
+          nearStage = {
+            $geoNear: {
+              near: $geometry,
+              minDistance: $minDistance,
+              maxDistance: $maxDistance,
+              spherical: true,
+              distanceField: 'distance',
+            },
+          };
+        }
+      }
+    }
+    const steps = [
+      { $match: matchCriteria },
+      {
+        $project: {
+          _id: 0,
+          roles: 1,
+          preview: 1,
+          fullName: 1,
+          nickName: 1,
+          active: 1,
+          dob: 1,
+          placenames: 1,
+          'geo.lat': 1,
+          'geo.lng': 1,
+          'geo.alt': 1,
+          distance: 1,
+          profiles: 1,
+          'preferences.key': 1,
+          'preferences.value': 1,
+          gender: 1
+        },
+      },
+      {
+        $limit: limit,
+      },
+      {
+        $skip: start,
+      },
+    ];
+    if (nearStage instanceof Object) {
+      steps.unshift(nearStage);
+    }
+    const users = await this.userModel.aggregate(steps);
+    return users;
   }
 
   hasRole(user: User, role: string): boolean {

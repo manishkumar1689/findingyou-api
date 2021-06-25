@@ -378,9 +378,37 @@ export class AstrologicController {
         eventType: 'birth',
         roddenValue: 100,
       } as ChartInputDTO;
-      const data = await this.saveChartData(inData);
+      data = await this.saveChartData(inData);
     }
     return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('save-test-users-birth-chart/:start?/:limit?')
+  async saveTestUsersBirthChart(@Res() res, @Param('start') start, @Param('limit') limit) {
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 100);
+    const users = await this.userService.list(startInt, limitInt, {test: true});
+    for (const user of users) {
+      if (user instanceof Object) {
+        const geo = user.geo;
+        const inData = {
+          user: user._id,
+          name: user.nickName,
+          datetime: user.dob.toISOString().split('.').shift(),
+          lat: geo.lat,
+          lng: geo.lng,
+          alt: geo.alt,
+          notes: '',
+          type: 'person',
+          isDefaultBirthChart: true,
+          gender: user.gender,
+          eventType: 'birth',
+          roddenValue: 100,
+        } as ChartInputDTO;
+        await this.saveChartData(inData);
+      }
+    }
+    return res.json(users);
   }
 
   async saveChartData(inData: ChartInputDTO, save = true, chartID = '') {

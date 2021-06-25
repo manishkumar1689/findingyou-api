@@ -143,7 +143,7 @@ export class SnippetService {
           const versionRow = snippetObj.values.find(v2 => v2.lang === vl.lang);
           if (versionRow) {
             isNew = false;
-            isEdited = versionRow.text !== vl.text;
+            isEdited = versionRow.text !== vl.text || versionRow.active !== vl.active || versionRow.approved !== vl.approved;
             createdAt = versionRow.createdAt;
             if (!isNew && !isEdited) {
               vl = versionRow;

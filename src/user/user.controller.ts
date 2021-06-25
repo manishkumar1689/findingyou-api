@@ -54,6 +54,7 @@ import { generateFileName, readRawFile, uploadMediaFile } from '../lib/files';
 import { PreferenceDTO } from './dto/preference.dto';
 import { SampleDataDTO } from './dto/sample-data.dto';
 import { SampleRecordDTO } from './dto/sample-record.dto';
+import { simplifyChart } from 'src/astrologic/lib/member-charts';
 
 @Controller('user')
 export class UserController {
@@ -206,11 +207,18 @@ export class UserController {
     const limitInt = smartCastInt(limit, 100);
     const data = await this.userService.members(startInt, limitInt, query);
     const prefOptions = await this.settingService.getPreferences();
-    const items = this.userService.filterByPreferences(
+    const users = this.userService.filterByPreferences(
       data,
       query,
       prefOptions,
     );
+    const items = [];
+    for (const user of users) {
+      const charts = await this.astrologicService.getChartsByUser(user._id, 0, 1,true);
+      const hasChart = charts.length > 0;
+      const chart = hasChart? simplifyChart(charts[0]) : {};
+      items.push({...user, chart, hasChart});
+    }
     return res.json(items);
   }
 
