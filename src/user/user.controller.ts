@@ -213,10 +213,8 @@ export class UserController {
       prefOptions,
     );
     const items = [];
-    console.log(users.length)
     for (const user of users) {
       const charts = await this.astrologicService.getChartsByUser(user._id, 0, 1,true);
-      console.log(charts, user.fullName);
       const hasChart = charts.length > 0;
       const chart = hasChart? simplifyChart(charts[0]) : {};
       items.push({...user, chart, hasChart});
