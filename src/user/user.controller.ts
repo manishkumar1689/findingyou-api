@@ -195,6 +195,21 @@ export class UserController {
     });
   }
 
+  /**
+   * Optional query string parameters include:
+   * roles: comma-separated list of role keys
+    fullName: fuzzy match full name from beginning
+    nickName: fuzzy match display name from beginning
+    usearch: fuzzy match on fullName, nickName or email
+    gender: f/m
+    age: comma-separated age range, e.g. 20,30
+    near: [lat],[lng],[km] e.g. 77,28,5 => within a 5km radius of 77º E 28º N
+   * @param res 
+   * @param start 
+   * @param limit 
+   * @param request 
+   * @returns 
+   */
   @Get('members/:start?/:limit?')
   async listMembers(
     @Res() res,
@@ -219,6 +234,7 @@ export class UserController {
       const chart = hasChart ? simplifyChart(chartObj) : {};
       items.push({...user, chart, hasChart});
     }
+    items.sort((a,b) => b.hasChart ? 1 : -1);
     return res.json(items);
   }
 
