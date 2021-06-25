@@ -28,7 +28,7 @@ export const ChartSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['user', 'reference', 'keep'],
+    enum: ['user', 'reference', 'keep', 'test'],
     required: false,
   },
   // versioning, e.g. variant birth details
