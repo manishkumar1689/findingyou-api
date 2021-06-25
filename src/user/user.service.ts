@@ -674,14 +674,15 @@ export class UserService {
       { $match: matchCriteria },
       {
         $project: {
-          _id: 0,
           roles: 1,
           preview: 1,
           fullName: 1,
           nickName: 1,
           active: 1,
           dob: 1,
-          placenames: 1,
+          'placenames.fullname': 1,
+          'placenames.type': 1,
+          'placenames.name': 1,
           'geo.lat': 1,
           'geo.lng': 1,
           'geo.alt': 1,
@@ -693,10 +694,10 @@ export class UserService {
         },
       },
       {
-        $limit: limit,
+        $skip: start,
       },
       {
-        $skip: start,
+        $limit: limit,
       },
     ];
     if (nearStage instanceof Object) {

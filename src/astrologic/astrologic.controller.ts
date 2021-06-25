@@ -387,7 +387,7 @@ export class AstrologicController {
   async saveTestUsersBirthChart(@Res() res, @Param('start') start, @Param('limit') limit) {
     const startInt = smartCastInt(start, 0);
     const limitInt = smartCastInt(limit, 100);
-    const users = await this.userService.list(startInt, limitInt, {test: true});
+    const users = await this.userService.list(startInt, limitInt, {test: true}, true);
     const chartIds = [];
     const numUsers = users.length;
     const valid = numUsers > 0;
@@ -412,7 +412,11 @@ export class AstrologicController {
           } as ChartInputDTO;
           const saved = await this.saveChartData(inData);
           if (saved.valid) {
-            chartIds.push(saved.chart._id);
+            chartIds.push({
+              _id: saved.chart._id,
+              uid: user._id,
+              name: user.nickName
+            });
           }
         }
          
