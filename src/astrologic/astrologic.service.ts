@@ -1790,7 +1790,6 @@ export class AstrologicService {
     const endJd = calcJulDateFromParts({ year: endYear, ...otherParams });
     const jd = { $gte: startJd, $lte: endJd };
     const criteria = num >= 0 ? { num, station, jd } : { station, jd };
-    console.log(criteria)
     const data = await this.bodySpeedModel
       .find(criteria)
       .sort({ jd: 1 })

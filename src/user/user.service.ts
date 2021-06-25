@@ -624,7 +624,6 @@ export class UserService {
     if (nearStage instanceof Object) {
       steps.unshift(nearStage);
     }
-    console.log(JSON.stringify(steps))
     const userCharts = await this.userModel.aggregate(steps);
     return userCharts.map(item => {
       let chart: any = {};
