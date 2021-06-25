@@ -388,27 +388,38 @@ export class AstrologicController {
     const startInt = smartCastInt(start, 0);
     const limitInt = smartCastInt(limit, 100);
     const users = await this.userService.list(startInt, limitInt, {test: true});
+    const chartIds = [];
+    const numUsers = users.length;
+    const valid = numUsers > 0;
     for (const user of users) {
       if (user instanceof Object) {
         const geo = user.geo;
-        const inData = {
-          user: user._id,
-          name: user.nickName,
-          datetime: user.dob.toISOString().split('.').shift(),
-          lat: geo.lat,
-          lng: geo.lng,
-          alt: geo.alt,
-          notes: '',
-          type: 'person',
-          isDefaultBirthChart: true,
-          gender: user.gender,
-          eventType: 'birth',
-          roddenValue: 100,
-        } as ChartInputDTO;
-        await this.saveChartData(inData);
+        if (user.dob) {
+          const inData = {
+            user: user._id,
+            name: user.nickName,
+            datetime: user.dob.toISOString().split('.').shift(),
+            lat: geo.lat,
+            lng: geo.lng,
+            alt: geo.alt,
+            notes: '',
+            type: 'person',
+            status: 'test',
+            isDefaultBirthChart: true,
+            gender: user.gender,
+            eventType: 'birth',
+            roddenValue: 100,
+          } as ChartInputDTO;
+          const saved = await this.saveChartData(inData);
+          if (saved.valid) {
+            chartIds.push(saved.chart._id);
+          }
+        }
+         
       }
     }
-    return res.json(users);
+    const num = chartIds.length;
+    return res.json({ chartIds, num, valid});
   }
 
   async saveChartData(inData: ChartInputDTO, save = true, chartID = '') {
@@ -425,7 +436,8 @@ export class AstrologicController {
       tz,
       tzOffset,
       placenames,
-      parent
+      parent,
+      status,
     } = inData;
     let { name, type, gender, eventType, roddenValue } = inData;
     const userRecord = await this.userService.getUser(user);
@@ -483,6 +495,7 @@ export class AstrologicController {
               tz: geoInfo.tz,
               tzOffset: geoInfo.offset,
               placenames,
+              status,
               ...chartData,
             };
             if (notEmptyString(parent, 16)) {

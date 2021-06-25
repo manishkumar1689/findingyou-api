@@ -67,7 +67,7 @@ export const smartCastFloat = (item: string | number, defVal = 0) => {
   return smartCastNumber(item, defVal, false);
 };
 
-export const smartCastBool = (item: string | number, defVal = false) => {
+export const smartCastBool = (item: string | number | boolean, defVal = false) => {
   let intVal = defVal ? 1 : 0;
   if (typeof item === 'string') {
     if (item.length > 0) {
@@ -77,6 +77,8 @@ export const smartCastBool = (item: string | number, defVal = false) => {
     }
   } else if (typeof item === 'number') {
     intVal = item;
+  } else if (typeof item === 'boolean') {
+    intVal = item ? 1 : 0;
   }
   return intVal > 0;
 };

@@ -27,6 +27,7 @@ const userSelectPaths = [
   'mode',
   'gender',
   'active',
+  'dob',
   'test',
   'geo',
   'placenames',
@@ -54,16 +55,15 @@ export class UserService {
     activeOnly: boolean = true,
   ): Promise<User[]> {
     const filterCriteria = this.buildCriteria(criteria, activeOnly);
-    const Users = await this.userModel
+    return await this.userModel
       .find(filterCriteria)
       .select(userSelectPaths.join(' '))
       .skip(start)
       .limit(limit)
-      .sort({ createdAt: -1 })
-      .exec();
-    return Users;
+      .sort({ createdAt: -1 });
   }
   // count users by criteria
+  
   async count(
     criteria: any = null,
     activeOnly: boolean = true,
@@ -107,7 +107,12 @@ export class UserService {
             filter.set('coords', this.buildNearQuery(val));
             break;
           case 'test':
-            filter.set('test', smartCastBool(val));
+            const boolVal = smartCastBool(val)
+            filter.set('test', boolVal);
+            if (boolVal) {
+              filter.set('test', boolVal);
+              filter.set('dob', { $exists: true });
+            }
             break;
         }
       }

@@ -53,6 +53,9 @@ export class ChartInputDTO {
   readonly type?: string;
 
   @ApiProperty()
+  readonly status?: string;
+
+  @ApiProperty()
   readonly gender?: string;
 
   @ApiProperty()
