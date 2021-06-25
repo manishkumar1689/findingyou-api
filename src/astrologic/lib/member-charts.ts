@@ -42,7 +42,9 @@ export const simplifyGraha = (gr, ayanamshaVal = 0, ayanamshaIndex = 0) => {
   };
 };
 
-export const simplifyChart = (chart = null, ayanamshaKey = 'true_citra') => {
+export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra') => {
+  const isModel = chartRef instanceof Object && chartRef.constructor.name === 'model';
+  const chart = isModel? chartRef.toObject() : chartRef;
   let ayanamshaVal = 0;
   let ayanamshaIndex = 0;
   const { grahas, ayanamshas } = chart;
@@ -56,7 +58,7 @@ export const simplifyChart = (chart = null, ayanamshaKey = 'true_citra') => {
   }
 
   chart.grahas = grahas.map(gr =>
-    simplifyGraha(gr, ayanamshaVal, ayanamshaIndex),
+    simplifyGraha(gr, ayanamshaVal, ayanamshaIndex)
   );
   chart.placenames = chart.placenames.map(pl => {
     delete pl._id;
@@ -64,6 +66,7 @@ export const simplifyChart = (chart = null, ayanamshaKey = 'true_citra') => {
     return pl;
   });
   chart.subject = removeIds(chart.subject);
+  console.log(removeIds(chart.subject));
   chart.geo = removeIds(chart.geo);
 
   chart.ascendant = subtractLng360(
@@ -75,6 +78,7 @@ export const simplifyChart = (chart = null, ayanamshaKey = 'true_citra') => {
   delete chart._id;
   chart.ayanamshas = chart.ayanamshas.map(removeIds);
   chart.upagrahas = chart.upagrahas.map(removeIds);
+  
   if (chart.sphutas instanceof Array && ayanamshaIndex < chart.sphutas.length) {
     chart.sphutas = chart.sphutas[ayanamshaIndex].items.map(removeIds);
   }
