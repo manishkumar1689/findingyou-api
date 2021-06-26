@@ -66,7 +66,6 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra') => {
     return pl;
   });
   chart.subject = removeIds(chart.subject);
-  console.log(removeIds(chart.subject));
   chart.geo = removeIds(chart.geo);
 
   chart.ascendant = subtractLng360(
