@@ -100,3 +100,35 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra') => {
   delete chart.__v;
   return chart;
 };
+
+
+export const simplifyAstroChart = (data: any = null) => {
+  if (data instanceof Object) {
+    const keys = Object.keys(data);
+    if (keys.includes("grahas") && data.grahas instanceof Array) {
+      data.grahas = data.grahas.map(row => {
+        const {
+          num,
+          key,
+          lng,
+          lat,
+          lngSpeed,
+          topo,
+          declination,
+          transitions,
+          variants
+        } = row;
+
+        return {key, num, lng, lat, lngSpeed, transitions, ...variants[0]};
+      });
+    }
+    if (keys.includes("rashis") && data.rashis instanceof Array) {
+      data.rashis = data.rashis[0].items;
+    }
+    if (keys.includes("objects") && data.objects instanceof Array) {
+      data.objects = data.objects[0].items;
+    }
+    
+  }
+  return data;
+}

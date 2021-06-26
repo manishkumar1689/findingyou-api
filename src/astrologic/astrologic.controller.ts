@@ -22,7 +22,7 @@ import {
   isNumber,
 } from '../lib/validators';
 import { locStringToGeo } from './lib/converters';
-import { simplifyChart } from './lib/member-charts';
+import { simplifyAstroChart, simplifyChart } from './lib/member-charts';
 import {
   calcAllTransitions,
   fetchHouseData,
@@ -48,6 +48,7 @@ import {
   utcDate,
   julToDateFormat,
   julToISODate,
+  currentISODate,
 } from './lib/date-funcs';
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
@@ -91,6 +92,7 @@ import { RuleSetDTO } from '../setting/dto/rule-set.dto';
 import { SingleCore } from './interfaces/single-core';
 import { AssignPairedDTO } from './dto/assign-paired.dto';
 import { matchPlanetNum } from './lib/settings/graha-values';
+import { CreateUserDTO } from '../user/dto/create-user.dto';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -310,6 +312,11 @@ export class AstrologicController {
     @Param('ayanamshaMode') ayanamshaMode,
     @Param('topList') topList,
   ) {
+    const data = await this.fetchCompactChart(loc, dt, ayanamshaMode, topList);
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  async fetchCompactChart(loc: string, dt: string, ayanamshaMode = "true_citra", topList = "") {
     let data: any = { valid: false };
     if (validISODateString(dt) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
@@ -340,7 +347,15 @@ export class AstrologicController {
         ...data,
       };
     }
-    return res.status(HttpStatus.OK).json(data);
+    return data;
+  }
+
+  @Get('current-chart/:loc/:dt?')
+  async fetchCurrent(@Res() res, @Param('loc') loc, @Param('dt') dt) {
+    const dtUtc = validISODateString(dt)? dt : currentISODate();
+    const data = await this.fetchCompactChart(loc, dtUtc, "true_citra");
+    const chart = simplifyAstroChart(data);
+    return res.json(data);
   }
 
   @Post('save-user-chart')
@@ -479,7 +494,7 @@ export class AstrologicController {
             datetime,
           );
           const dtUtc = applyTzOffsetToDateString(datetime, geoInfo.offset);
-
+          
           const chartData = await calcCompactChartData(
             dtUtc,
             geo,
@@ -489,7 +504,12 @@ export class AstrologicController {
           );
           if (chartData instanceof Object) {
             data.shortTz = toShortTzAbbr(dtUtc, geoInfo.tz);
-
+            // Update DOB field in the user table
+            const userData = {
+              dob: dtUtc,
+            } as CreateUserDTO;
+            
+            this.userService.updateUser(user, userData);
             const placenames = mapToponyms(geoInfo.toponyms, geo, locality);
 
             data.chart = {

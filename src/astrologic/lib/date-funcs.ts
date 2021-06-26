@@ -266,3 +266,8 @@ export const decimalYear = (strDate = '') => {
   const yearProgress = mom.dayOfYear() / numDaysInYear;
   return years + yearProgress;
 };
+
+
+export const currentISODate = () => {
+  return moment.utc().format();
+}

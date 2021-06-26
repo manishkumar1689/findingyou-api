@@ -683,13 +683,7 @@ export const calcCompactChartData = async (
   const variants: Array<Map<string, any>> = grahaSet.bodies.map(gr =>
     mapToVariantMap(gr, 0),
   );
-  const objItems: Array<ObjectMatch> = [];
-  const objectSets: Array<ObjectMatchSet> = [
-    {
-      num: 0,
-      items: objItems,
-    },
-  ];
+  const objectSets: Array<ObjectMatchSet> = [];
   let sphutaSet = [];
   const coreAyanamshas =
     topKeys.length > 0 ? topKeys : ['true_citra', 'lahiri', 'krishnamurti'];
@@ -727,6 +721,8 @@ export const calcCompactChartData = async (
     });
   } else {
     sphutaSet = sphutas;
+    rashiSets.push({ num: ayanamsha.value, items: rashis });
+    objectSets.push({ num: ayanamsha.value, items: objects });
   }
   const chartData = {
     jd,
