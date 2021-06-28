@@ -48,7 +48,6 @@ const matchAyanamshaDataSet = (chart: any = null, key = "", num = 27) => {
     const keys = Object.keys(chart);
     if (keys.includes(key) && chart[key] instanceof Array) {
       const ayaSet = chart[key].find(r => r.num === num);
-      console.log(ayaSet, num);
       if (ayaSet instanceof Object) {
         if (ayaSet.items instanceof Array) {
           return ayaSet.items.map(removeIds);
