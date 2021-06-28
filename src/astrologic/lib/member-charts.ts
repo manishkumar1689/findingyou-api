@@ -1,6 +1,7 @@
 import { smartCastFloat } from '../../lib/converters';
 import { extractObject } from '../../lib/entities';
 import { subtractLng360 } from './helpers';
+import { matchAyanamshaNum } from './settings/ayanamsha-values';
 
 const removeIds = item => {
   if (item instanceof Object) {
@@ -42,6 +43,22 @@ export const simplifyGraha = (gr, ayanamshaVal = 0, ayanamshaIndex = 0) => {
   };
 };
 
+const matchAyanamshaDataSet = (chart: any = null, key = "", num = 27) => {
+  if (chart instanceof Object) {
+    const keys = Object.keys(chart);
+    if (keys.includes(key) && chart[key] instanceof Array) {
+      const ayaSet = chart[key].find(r => r.num === num);
+      console.log(ayaSet, num);
+      if (ayaSet instanceof Object) {
+        if (ayaSet.items instanceof Array) {
+          return ayaSet.items.map(removeIds);
+        }
+      }
+    }
+  }
+  return [];
+}
+
 export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra') => {
   const isModel = chartRef instanceof Object && chartRef.constructor.name === 'model';
   const chart = isModel? chartRef.toObject() : chartRef;
@@ -56,7 +73,7 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra') => {
       ayanamshaIndex = ayaIndex + 1;
     }
   }
-
+  const ayanamshaNum = matchAyanamshaNum(ayanamshaKey);
   chart.grahas = grahas.map(gr =>
     simplifyGraha(gr, ayanamshaVal, ayanamshaIndex)
   );
@@ -77,25 +94,14 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra') => {
   delete chart._id;
   chart.ayanamshas = chart.ayanamshas.map(removeIds);
   chart.upagrahas = chart.upagrahas.map(removeIds);
-  
-  if (chart.sphutas instanceof Array && ayanamshaIndex < chart.sphutas.length) {
+  /* if (chart.sphutas instanceof Array && ayanamshaIndex < chart.sphutas.length) {
     chart.sphutas = chart.sphutas[ayanamshaIndex].items.map(removeIds);
-  }
-  if (chart.objects instanceof Array && ayanamshaIndex < chart.objects.length) {
-    chart.objects = chart.objects[ayanamshaIndex].items.map(removeIds);
-  }
-  if (
-    chart.numValues instanceof Array &&
-    ayanamshaIndex < chart.numValues.length &&
-    ayanamshaIndex >= 0
-  ) {
-    if (chart.numValues[ayanamshaIndex] instanceof Object) {
-      const { items } = (chart.numValues = chart.numValues[ayanamshaIndex]);
-      if (items instanceof Array) {
-        chart.numValues = items.map(removeIds);
-      }
-    }
-  }
+  } */
+  chart.sphutas = matchAyanamshaDataSet(chart, 'sphutas', ayanamshaNum);
+  chart.objects = matchAyanamshaDataSet(chart, 'objects', ayanamshaNum);
+  chart.numValues = chart.numValues.map(removeIds);
+  chart.stringValues = chart.stringValues.map(removeIds);
+  chart.rashis = matchAyanamshaDataSet(chart, 'rashis', ayanamshaNum);
   delete chart.__v;
   return chart;
 };

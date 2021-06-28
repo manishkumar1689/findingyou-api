@@ -366,6 +366,16 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  @Post('save-member-chart')
+  async saveUserChartSimple(@Res() res, @Body() inData: ChartInputDTO) {
+    const { _id } = inData;
+    const chartID = notEmptyString(_id, 12) ? _id : '';
+    const data = await this.saveChartData(inData, true, chartID, 'true_citra');
+    const {valid, shortTz } = data;
+    const chart = valid ? simplifyChart(data.chart) : {};
+    return res.status(HttpStatus.OK).json({valid, shortTz, chart});
+  }
+
   @Get('save-user-birth-chart/:userID/:loc/:dt/:g')
   async saveUserBirthChart(
     @Res() res,
@@ -441,7 +451,7 @@ export class AstrologicController {
     return res.json({ chartIds, num, valid});
   }
 
-  async saveChartData(inData: ChartInputDTO, save = true, chartID = '') {
+  async saveChartData(inData: ChartInputDTO, save = true, chartID = '', ayanamsha = 'top') {
     let data: any = { valid: false, message: '', chart: null };
     const {
       user,
