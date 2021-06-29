@@ -125,7 +125,7 @@ export class UserController {
         true,
       );
       if (charts.length > 0) {
-        ud.set('chart', charts[0]);
+        ud.set('chart', simplifyChart(charts[0]));
       }
       userData = hashMapToObject(ud);
     }
@@ -393,9 +393,24 @@ export class UserController {
   // Fetch a particular user using ID
   @Post('login')
   async login(@Res() res, @Body() loginDTO: LoginDTO) {
+    const data = await this.processLogin(loginDTO);
+    const status = data.valid? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
+    return res.status(status).json(data);
+  }
+
+  @Post('member-login')
+  async memberLogin(@Res() res, @Body() loginDTO: LoginDTO) {
+    const data = await this.processLogin(loginDTO, 'member');
+    const status = data.valid? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
+    return res.status(status).json(data);
+  }
+
+  async processLogin(loginDTO: LoginDTO, mode = 'editor') {
     const user = await this.userService.findOneByEmail(loginDTO.email, false);
     const userData = new Map<string, any>();
     let valid = false;
+    const isMemberLogin = mode === 'member';
+    const maxCharts = isMemberLogin? 10 : 100;
     if (!user) {
       userData.set('msg', 'User not found');
       userData.set('key', 'not-found');
@@ -423,19 +438,15 @@ export class UserController {
         const loginDt = await this.userService.registerLogin(userID);
         userData.set('login', loginDt);
 
-        const charts = await this.astrologicService.getChartsByUser(
-          userID,
-          0,
-          100,
-          true,
-        );
-        if (charts.length > 0) {
-          userData.set('chart', charts[0]);
+        const chart = await this.astrologicService.getUserBirthChart(userID);
+        if (chart instanceof Object) {
+          const chartObj = isMemberLogin? simplifyChart(chart) : chart;
+          userData.set('chart', chartObj);
         }
       }
     }
     userData.set('valid', valid);
-    return res.status(HttpStatus.OK).json(hashMapToObject(userData));
+    return hashMapToObject(userData);
   }
 
   // Fetch a particular user using ID

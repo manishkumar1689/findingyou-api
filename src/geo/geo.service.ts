@@ -6,7 +6,7 @@ import { geonamesApiBase, timezonedbApiBase } from './api';
 import { objectToQueryString, mapToQueryString } from '../lib/converters';
 import { AxiosResponse } from 'axios';
 import * as moment from 'moment-timezone';
-import { notEmptyString, isNumeric } from '../lib/validators';
+import { notEmptyString, isNumeric, validISODateString } from '../lib/validators';
 import {
   filterDefaultName,
   filterToponyms,
@@ -159,6 +159,23 @@ export class GeoService {
     return data;
   }
 
+  matchStandardTzOffset(tz, year = 2000) {
+    const defVal = -86400;
+    switch (tz) { 
+      case 'Asia/Kolkata':
+        return year >= 1946? 19800 : defVal;
+      case 'Asia/Shanghai':
+      case 'Asia/Beijing':
+      case 'Asia/Hong_Kong':
+      case 'Asia/Macau':
+        return year >= 1949? 28800 : defVal;
+      case 'Asia/Tokyo':
+        return year >= 1952? 32400 : defVal;
+      default:
+        return defVal;
+    }
+  }
+
   async fetchGeoAndTimezone(lat: number, lng: number, datetime: string) {
     const data = await this.fetchGeoData(lat, lng);
     const offset = this.checkGmtOffset(data.tz, datetime);
@@ -263,12 +280,18 @@ export class GeoService {
   checkGmtOffset(zoneName: string, datetime: any): number {
     let gmtOffset = 0;
     if (notEmptyString(zoneName, 4)) {
-      const mom = moment.utc(datetime).tz(zoneName);
-      const parts = mom.format('Z').split(':');
-      if (parts.length > 1) {
-        const hrs = parseInt(parts[0].replace('+', '')) * 3600;
-        const mins = parseInt(parts[1]) * 60;
-        gmtOffset = hrs + mins;
+      const year = validISODateString(datetime)? parseInt(datetime.split('-').shift()) : 2000;
+      const standardHGmtOffset = this.matchStandardTzOffset(zoneName, year);
+      if (standardHGmtOffset > -86400) {
+        gmtOffset = standardHGmtOffset;
+      } else {
+        const mom = moment.utc(datetime).tz(zoneName);
+        const parts = mom.format('Z').split(':');
+        if (parts.length > 1) {
+          const hrs = parseInt(parts[0].replace('+', '')) * 3600;
+          const mins = parseInt(parts[1]) * 60;
+          gmtOffset = hrs + mins;
+        }
       }
     }
     return gmtOffset;
