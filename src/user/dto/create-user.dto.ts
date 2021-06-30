@@ -56,6 +56,9 @@ export class CreateUserDTO {
   readonly preview: string;
 
   @ApiProperty()
+  readonly publicProfileText?: string;
+
+  @ApiProperty()
   readonly dob?: Date;
 
   @ApiProperty()

@@ -1,11 +1,9 @@
 import { isNumeric, notEmptyString } from '../../lib/validators';
 import vargaValues from './settings/varga-values';
 import { zeroPad } from '../../lib/converters';
-import { SignValue, SignHouse } from '../interfaces/sign-house';
+import { SignValue } from '../interfaces/sign-house';
 import { NakshatraItem } from '../interfaces/nakshatra-item';
-import grahaValues, {
-  functionalHouseNatures,
-  rulerSignsMap,
+import {
   aspectGroups,
 } from './settings/graha-values';
 import { Graha } from './models/graha-set';

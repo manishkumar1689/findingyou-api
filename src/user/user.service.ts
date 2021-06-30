@@ -362,8 +362,13 @@ export class UserService {
   }
 
   // Edit User details
-  async updateUser(userID, createUserDTO: CreateUserDTO): Promise<User> {
+  async updateUser(userID: string, createUserDTO: CreateUserDTO): Promise<User> {
     const userObj = this.transformUserDTO(createUserDTO);
+    const hasProfileText = Object.keys(createUserDTO).includes("publicProfileText") && notEmptyString(createUserDTO.publicProfileText, 2);
+    if (hasProfileText) {
+      const profile = { type: 'public', text: createUserDTO.publicProfileText} as ProfileDTO;
+      await this.saveProfile(userID, profile);
+    }
     const updatedUser = await this.userModel.findByIdAndUpdate(
       userID,
       userObj,
@@ -762,20 +767,21 @@ export class UserService {
     };
     if (user instanceof Object) {
       const userData = user.toObject();
+      const dt = new Date();
       if (user.profiles instanceof Array) {
         const profileIndex = await user.profiles.findIndex(
           up => up.type === profile.type,
         );
         if (profileIndex >= 0) {
           const { createdAt } = userData.profiles[profileIndex];
-          userData.profiles[profileIndex] = { ...profile, createdAt };
+          const editedProfile = this.updateProfile(profile, userData.profiles[profileIndex], dt);
+          userData.profiles[profileIndex] = { ...editedProfile };
         } else {
           userData.profiles.push(profile);
         }
       } else {
         userData.profiles = [profile];
       }
-      const dt = new Date();
       data.user = await this.userModel.findByIdAndUpdate(
         userID,
         { profiles: userData.profiles, modifiedAt: dt },
@@ -786,6 +792,27 @@ export class UserService {
       data.valid = true;
     }
     return data;
+  }
+
+  updateProfile(profile: ProfileDTO, currentProfile: any = null, modifiedAt = null) {
+    const hasCurrent = currentProfile instanceof Object;
+    if (hasCurrent) {
+      const edited = Object.assign({}, currentProfile);
+      Object.entries(profile).forEach( entry => {
+        const [key, value] = entry;
+        switch (key) {
+          case 'text':
+            edited.text = value;
+            break;
+        }
+      })
+      if (modifiedAt) {
+        edited.modifiedAt = modifiedAt;
+      }
+      return edited;
+    } else {
+      return profile;
+    }
   }
 
   async saveProfileImage(userID: string, type: string, fileRef = null) {
