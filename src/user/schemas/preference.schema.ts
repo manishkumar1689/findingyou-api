@@ -13,6 +13,8 @@ export const PreferenceSchema = new mongoose.Schema({
   type: {
     type: String,
     enum: [
+      'text', // plain text without options
+      'uri', // plain text, but validated as a URI (not necessarily http, may be other schemas)
       'string', // key string stored, e.g. f/m for gender
       'integer', // number stored as integer
       'scale', // integer interpreted on a scale e.g. -2 to 2 for degree of agreement (with 0 being neutral)
@@ -22,6 +24,8 @@ export const PreferenceSchema = new mongoose.Schema({
       'currency', // double rounded to exactly 2 dec places
       'boolean', // true/false, yes/no
       'array_string', // any number of string options
+      'array_text', // any number of plain text items without options
+      'array_uris', // any number of uris
       'array_integer', // any number of integer options
       'range_number', // numeric range e.g 18-40 stored as [18,40]
       'array_float',
