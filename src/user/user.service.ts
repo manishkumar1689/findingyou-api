@@ -18,6 +18,8 @@ import { ProfileDTO } from './dto/profile.dto';
 import { simplifyChart } from '../astrologic/lib/member-charts';
 import { MatchedOption, PrefKeyValue } from './settings/preference-options';
 import { smartCastBool } from '../lib/converters';
+import { MediaItemDTO } from './dto/media-item.dto';
+import { profile } from 'console';
 const userSelectPaths = [
   '_id',
   'fullName',
@@ -915,6 +917,141 @@ export class UserService {
       userData.profiles = [profile];
     }
     return userData;
+  }
+
+  async deleteMediaItemByRef(userID: string, mediaRef = "") {
+    const user = await this.getUser(userID);
+    const data = { 
+      item: null,
+      user: null,
+      valid: user instanceof Object,
+      deleted: false
+    };
+    if (data.valid) {
+      const userObj = user.toObject();
+      const { profiles } = userObj;
+      if (profiles instanceof Array) {
+        profiles.forEach((profile, index) => {
+          const {mediaItems} = profile;
+          if (mediaItems instanceof Array && mediaItems.length > 0) {
+            const mediaIndex = mediaItems.findIndex(mi => mi.filename === mediaRef);
+            if (mediaIndex >= 0) {
+              data.item = Object.assign({}, mediaItems[mediaIndex]);
+              userObj.profiles[index].mediaItems.splice(mediaIndex, 1);
+              this.userModel.findByIdAndUpdate(userID, {
+                profiles: userObj.profiles,
+              }).exec();
+              data.deleted = true;
+            }
+          }
+        })
+        data.user = userObj;
+      }
+    }
+    return data;
+  }
+
+  async editMediaItemByRef(userID: string, mediaRef = "", item: MediaItemDTO, profileType = '') {
+    const user = await this.getUser(userID);
+    const data = { 
+      item: null,
+      user: null,
+      valid: user instanceof Object,
+      new: false,
+      edited: false
+    };
+    if (data.valid && item instanceof Object) {
+      const userObj = user.toObject();
+      const { profiles } = userObj;
+      const hasProfile = notEmptyString(profileType, 2);
+      let matched = false;
+      if (profiles instanceof Array) {
+        profiles.forEach((profile, index) => {
+          const {mediaItems} = profile;
+          if (mediaItems instanceof Array && mediaItems.length > 0) {
+            const mediaIndex = mediaItems.findIndex(mi => mi.filename === mediaRef || mi._id.toString() === mediaRef);
+            if (mediaIndex >= 0) {
+              matched = true;
+              userObj.profiles[index].mediaItems[mediaIndex] = this.assignMediaItem(item, mediaItems[mediaIndex]);
+            }
+          }
+        });
+        if (!matched && hasProfile) {
+          const profileIndex = profiles.findIndex(pr => pr.type === profileType);
+          const newMediaItem = this.assignMediaItem(item);
+          const itemKeys = Object.keys(newMediaItem);
+          const valid = itemKeys.includes('filename') && itemKeys.includes('mime');
+          if (valid) {
+            if (profileIndex >= 0) {
+              userObj.profiles[profileIndex].mediaItems.push(newMediaItem);
+            } else {
+              const newProfile = {
+                type: profileType,
+                text: '',
+                mediaItems: [newMediaItem]
+              }
+              userObj.profiles.push(newProfile);
+            }
+            matched = true;
+          }
+        }
+        if (matched) {
+          this.userModel.findByIdAndUpdate(userID, {
+            profiles: userObj.profiles,
+          }).exec();
+          data.edited = true;
+        }
+        data.new = !matched;
+        data.user = userObj;
+      }
+    }
+    return data;
+  }
+
+  assignMediaItem(item: MediaItemDTO, current: any = null) {
+    const fields = ['filename',
+    'mime',
+    'source',
+    'size',
+    'attributes',
+    'type',
+    'title'];
+    const hasCurrent = current instanceof Object && current !== null;
+    const currentKeys = hasCurrent ? Object.keys(current) : [];
+    const newKeys = Object.keys(item);
+    const mp: Map<string, any> = new Map();
+    fields.forEach(key => {
+      if (newKeys.includes(key)) {
+        mp.set(key, item[key]);
+      } else if (currentKeys.includes(key)) {
+        mp.set(key, current[key]);
+      }
+    });
+    const filename = mp.has('filename')? mp.get('filename') : '';
+    const mime = mp.has('mime')? mp.get('mime') : ''
+    const valid = notEmptyString(filename, 5) && notEmptyString(mime, 3);
+    const matchedSource = valid ? /^\w+:\/\/?/.test(filename)? 'remote' : 'local' : '';
+    if (valid) {
+      fields.forEach(field => {
+        if (!mp.has(field)) {
+          switch (field) {
+            case 'attributes':
+              mp.set(field, {});
+              break;
+            case 'size':
+              mp.set(field, 0);
+              break;
+            case 'source':
+              mp.set(field, matchedSource);
+              break;
+            case 'type':
+              mp.set(field, mime.split('/').shift());
+              break;
+          }
+        }
+      });
+    }
+    return Object.fromEntries(mp.entries());
   }
 
   hasAdminRole(user: User): boolean {

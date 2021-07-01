@@ -55,6 +55,7 @@ import { PreferenceDTO } from './dto/preference.dto';
 import { SampleDataDTO } from './dto/sample-data.dto';
 import { SampleRecordDTO } from './dto/sample-record.dto';
 import { simplifyChart } from 'src/astrologic/lib/member-charts';
+import { MediaItemDTO } from './dto/media-item.dto';
 
 @Controller('user')
 export class UserController {
@@ -385,7 +386,69 @@ export class UserController {
       data.valid = surveys.size > 0;
       data.keyNums = Object.fromEntries(keyNums.entries());
     } else {
-      data = await this.getPreferencesByKey(surveyKey, key);
+      const isSimple = key === 'simple';
+      const refKey = isSimple ? '' : key;
+      const refSurveyKey = isSimple ? 'preference_options' : surveyKey;
+      data = await this.getPreferencesByKey(refSurveyKey, refKey);
+      if (isSimple) {
+        data.items = data.items.map(item => {
+          const {key, type} = item;
+          let value: any = 'plain text';
+          switch (type) {
+            case 'range_number':
+              value = [18, 30];
+              break;
+            case 'uri':
+              value = 'https://resource.com/03736335/video/393737';
+              break;
+            case 'string':
+              value = 'word_of_mouth';
+              break;
+            case 'array_string':
+              value = ['no_beef', 'no_pork'];
+              break;
+            case 'integer':
+              value = 15;
+              break;
+            case 'float':
+              value = 2.5;
+              break;
+            case 'key_scale':
+              value = { never: 0};
+              break;
+            case 'scale':
+              value = 2;
+              break;
+            case 'array_key_scale':
+              value = { cricket: 5, football: 3, tennis: 1 };
+              break;
+            case 'boolean':
+              value = true;
+              break;
+            case 'multiple_key_scales':
+              value = { 
+                key: 'optimistic',
+                values: {
+                  happiness: 4,
+                  success: 2,
+                  reliability: 1,
+                  aspiration: 2
+                }
+              };
+              break;
+            case 'array_float':
+              value = [2.8, 11.9];
+              break;
+            case 'array_integer':
+              value = [30, 40, 12];
+              break;
+            case 'text':
+              value = "Cambridge University";
+              break;
+          }
+          return { key, type, value };
+        })
+      }
     }
     return res.status(HttpStatus.OK).json(data);
   }
@@ -798,11 +861,38 @@ export class UserController {
           type,
           fileData,
         );
-        data.user = savedSub;
+        if (savedSub.valid) {
+          data.user = savedSub.user;
+        }
         data.valid = true;
       }
     }
     return res.json(data);
+  }
+
+  @Delete('media-item/delete/:userID/:mediaRef')
+  async deleteMediaItem(
+    @Res() res,
+    @Param('userID') userID,
+    @Param('mediaRef') mediaRef,
+  ) {
+    let data: any = { valid: false, fileData: null };
+    const item = await this.userService.deleteMediaItemByRef(userID, mediaRef);
+    return res.json(item);
+  }
+
+  @Put('media-item/edit/:userID/:mediaRef?/:type?')
+  async editMediaItem(
+    @Res() res,
+    @Param('userID') userID,
+    @Param('mediaRef') mediaRef,
+    @Param('type') type,
+    @Body() mediaItem: MediaItemDTO,
+  ) {
+    const profileType = notEmptyString(type, 2)? type : 'public';
+    const mediaRefName = notEmptyString(mediaRef, 5)? mediaRef : '';
+    const result = await this.userService.editMediaItemByRef(userID, mediaRefName, mediaItem, profileType);
+    return res.json(result);
   }
 
   @Post('bulk/sample-import')
