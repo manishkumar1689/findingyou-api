@@ -8,6 +8,7 @@ import {
   imageSizes,
   sourcesDirectory,
   ephemerisPath,
+  mediaDirectory,
 } from '../.config';
 import { hashMapToObject } from './entities';
 import { imageSize } from 'image-size';
@@ -305,6 +306,9 @@ export const mediaPath = (type = 'media', subDir = '') => {
       break;
     case 'swisseph':
       relPath = ephemerisPath;
+      break;
+    case 'media':
+      relPath = mediaDirectory;
       break;
   }
   if (notEmptyString(subDir)) {

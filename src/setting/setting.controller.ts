@@ -37,7 +37,7 @@ import { AdminGuard } from '../auth/admin.guard';
 import { ProtocolDTO } from './dto/protocol.dto';
 import { parseAstroBankCSV } from '../lib/parse-astro-csv';
 import { deleteSwissEpheFile } from '../astrologic/lib/files';
-import { ipWhitelistFileData } from 'src/auth/auth.utils';
+import { ipWhitelistFileData } from '../auth/auth.utils';
 import { StringsDTO } from './dto/strings.dto';
 import { PredictiveRuleSetDTO } from './dto/predictive-rule-set.dto';
 

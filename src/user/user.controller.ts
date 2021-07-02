@@ -50,11 +50,11 @@ import { SurveyItem } from './interfaces/survey-item';
 import { SnippetService } from '../snippet/snippet.service';
 import { ProfileDTO } from './dto/profile.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { generateFileName, readRawFile, uploadMediaFile } from '../lib/files';
+import { generateFileName, mediaPath, readRawFile, uploadMediaFile } from '../lib/files';
 import { PreferenceDTO } from './dto/preference.dto';
 import { SampleDataDTO } from './dto/sample-data.dto';
 import { SampleRecordDTO } from './dto/sample-record.dto';
-import { simplifyChart } from 'src/astrologic/lib/member-charts';
+import { simplifyChart } from '../astrologic/lib/member-charts';
 import { MediaItemDTO } from './dto/media-item.dto';
 
 @Controller('user')
@@ -836,8 +836,11 @@ export class UserController {
       const fileData = {
         filename: fn,
         mime: mimetype,
+        source: 'local',
         size,
         title,
+        attributes:{},
+        variants: []
       };
       data = { valid: false, fileData };
       const intSize = parseInt(size, 10);
@@ -848,14 +851,11 @@ export class UserController {
         'image',
       );
       if (filename.length > 5) {
-        const fileData = {
-          filename,
-          mime: mimetype,
-          size: intSize,
-          source: 'local',
-          attributes,
-          variants,
-        };
+        fileData.filename = filename;
+        fileData.mime = mimetype;
+        fileData.size = intSize;
+        fileData.attributes = attributes;
+        fileData.variants = variants;
         const savedSub = await this.userService.saveProfileImage(
           userID,
           type,
@@ -879,6 +879,12 @@ export class UserController {
     let data: any = { valid: false, fileData: null };
     const item = await this.userService.deleteMediaItemByRef(userID, mediaRef);
     return res.json(item);
+  }
+
+  @Get('media-path/:type')
+  async mediaPathInfo(@Res() res, @Param('type') type) {
+    const path = mediaPath(type);
+    return res.json({path});
   }
 
   @Put('media-item/edit/:userID/:mediaRef?/:type?')

@@ -4,7 +4,7 @@ import {
   mongo,
   backupPath,
   exportDirectory,
-  mediaPath,
+  mediaDirectory,
   filesDirectory,
 } from '../.config';
 import { buildFullPath } from './files';
@@ -62,7 +62,7 @@ export const exportCollection = (
 export const matchPath = (type: string) => {
   switch (type) {
     case 'media':
-      return mediaPath;
+      return mediaDirectory;
     case 'files':
       return filesDirectory;
     case 'exports':

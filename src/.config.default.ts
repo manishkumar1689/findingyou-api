@@ -86,7 +86,7 @@ export const webBaseUrl = 'https://www.findingyou.co';
 
 export const backupPath = '/var/www/findingyou.co/backups';
 
-export const mediaPath = '/var/www/findingyou.co/media';
+export const mediaDirectory = '/Users/neil/apps/findingyou/backend/media';
 
 export const filesDirectory = '../files';
 

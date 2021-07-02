@@ -57,7 +57,7 @@ import { sanitize, smartCastInt } from '../lib/converters';
 import { KeyValue } from './interfaces/key-value';
 import { TagDTO } from './dto/tag.dto';
 import { shortenName, generateNameSearchRegex } from './lib/helpers';
-import { minRemainingPaired } from 'src/.config';
+import { minRemainingPaired } from '../.config';
 import { calcTropicalAscendantDt } from './lib/calc-ascendant';
 const { ObjectId } = Types;
 
