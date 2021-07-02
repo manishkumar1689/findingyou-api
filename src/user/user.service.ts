@@ -15,11 +15,10 @@ import { Payment } from './interfaces/payment.interface';
 import { PaymentOption } from './interfaces/payment-option.interface';
 import { PaymentDTO } from './dto/payment.dto';
 import { ProfileDTO } from './dto/profile.dto';
-import { simplifyChart } from '../astrologic/lib/member-charts';
 import { MatchedOption, PrefKeyValue } from './settings/preference-options';
 import { smartCastBool } from '../lib/converters';
 import { MediaItemDTO } from './dto/media-item.dto';
-import { profile } from 'console';
+import { PreferenceDTO } from './dto/preference.dto';
 const userSelectPaths = [
   '_id',
   'fullName',
@@ -626,40 +625,59 @@ export class UserService {
     return valid;
   }
 
-  async savePreference(userID: string, preference = null) {
+  async savePreference(userID: string, preference: PreferenceDTO) {
+    const data = {
+      user: null,
+      valid: false,
+    };
+    if (notEmptyString(userID, 16) && preference instanceof Object) {
+      const sd = await this.savePreferences(userID, [preference]);
+      if (sd.valid) {
+        data.user = sd.user;
+        data.valid = true;
+      }
+    }
+    return data;
+  }
+
+  async savePreferences(userID: string, prefItems:PreferenceDTO[] = []) {
     const user = await this.userModel.findById(userID);
     const data = {
       user: null,
       valid: false,
     };
-    if (user instanceof Object && preference instanceof Object) {
-      const pKeys = Object.keys(preference);
-      if (
-        pKeys.includes('key') &&
-        pKeys.includes('value') &&
-        pKeys.includes('type')
-      ) {
-        const userData = user.toObject();
-        const { preferences } = userData;
-        const prefs = preferences instanceof Array ? preferences : [];
-        const currPreferenceIndex = preferences.findIndex(
-          pr => pr.key === preference.key,
-        );
-        if (currPreferenceIndex >= 0) {
-          prefs[currPreferenceIndex].value = preference.value;
-        } else {
-          prefs.push(preference);
+    if (user instanceof Object && prefItems instanceof Array) {
+      const userData = user.toObject();
+      const { preferences } = userData;
+      const prefs = preferences instanceof Array ? preferences : [];
+      for (const prefItem of prefItems) {
+        const pKeys = Object.keys(prefItem);
+        if (
+            pKeys.includes('key') &&
+            pKeys.includes('value') &&
+            pKeys.includes('type')
+          ) {
+          const key = prefItem.key.split('__').pop();
+          const edited = { ...prefItem, key};
+          const currPreferenceIndex = preferences.findIndex(
+            pr => pr.key === key,
+          );
+          if (currPreferenceIndex >= 0) {
+            prefs[currPreferenceIndex].value = prefItem.value;
+          } else {
+            prefs.push(edited);
+          }
         }
-        const dt = new Date();
-        data.user = await this.userModel.findByIdAndUpdate(
-          userID,
-          { preferences: prefs, modifiedAt: dt },
-          {
-            new: true,
-          },
-        );
-        data.valid = true;
       }
+      const dt = new Date();
+      data.user = await this.userModel.findByIdAndUpdate(
+        userID,
+        { preferences: prefs, modifiedAt: dt },
+        {
+          new: true,
+        },
+      );
+      data.valid = true;
     }
     return data;
   }

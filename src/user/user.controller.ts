@@ -799,6 +799,16 @@ export class UserController {
     return res.json(data);
   }
 
+  @Put('preferences/save/:userID')
+  async savePreferences(
+    @Res() res,
+    @Param('userID') userID,
+    @Body() preferences: PreferenceDTO[],
+  ) {
+    const data = await this.userService.savePreferences(userID, preferences);
+    return res.json(data);
+  }
+
   @Get('fix-preferences/:start?/:limit?')
   async fixPreferences(
     @Res() res,
