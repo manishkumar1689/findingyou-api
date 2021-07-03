@@ -30,7 +30,7 @@ import horaValues from './settings/hora-values';
 import ghatiValues from './settings/ghati-values';
 import caughadiaData from './settings/caughadia-data';
 import muhurtaValues from './settings/muhurta-values';
-import ayanamshaValues from './settings/ayanamsha-values';
+import ayanamshaValues, { matchAyanamshaNum } from './settings/ayanamsha-values';
 import kalamData from './settings/kalam-data';
 import mrityubhagaData from './settings/mrityubhaga-data';
 import rashiValues from './settings/rashi-values';
@@ -268,10 +268,13 @@ export const calcAllTransitionsJd = async (
   jd: number,
   geo,
   jdOffset = 0,
+  fullSet = false
 ): Promise<Array<TransitionData>> => {
-  const bodyKeys = [
+  const baseKeys = [
     'SE_SUN',
     'SE_MOON',
+  ];
+  const extraKeys = [
     'SE_MERCURY',
     'SE_VENUS',
     'SE_MARS',
@@ -281,6 +284,7 @@ export const calcAllTransitionsJd = async (
     'SE_NEPTUNE',
     'SE_PLUTO',
   ];
+  const bodyKeys = fullSet? [...baseKeys, ...extraKeys] : baseKeys;
   const bodies: Array<TransitionData> = [];
   for (const body of bodyKeys) {
     const num = swisseph[body];
@@ -630,31 +634,117 @@ export const getFirstHouseLng = (houseData: HouseSet) => {
   return houseData.count() > 0 && !isNaN(houseData.ascendant) ? Math.floor(houseData.houses[0] / 30) * 30 : 0;
 };
 
+const matchDefaultAyanamshaItem = (ayanamshas: KeyValue[], key = "") => {
+  const ayanamsha = {
+    value: 0,
+    key: '',
+  };
+  if (notEmptyString(key, 3) && key !== 'top') {
+    const aRow = ayanamshas.find(a => a.key === key);
+    if (aRow) {
+      ayanamsha.value = aRow.value;
+      ayanamsha.key = key;
+    }
+  }
+  return ayanamsha;
+}
+
+const addIndianNumericAndStringValues = (chartData, chart: Chart) => {
+  chartData.numValues.push({
+    key: 'sunMoonAngle',
+    value: chart.sunMoonAngle,
+  });
+  chartData.numValues.push({
+    key: 'tithi',
+    value: chart.tithi.num,
+  });
+  chartData.numValues.push({
+    key: 'karana',
+    value: chart.karana.num,
+  });
+  chartData.numValues.push({
+    key: 'yoga',
+    value: chart.yoga.num,
+  });
+  chartData.stringValues.push({
+    key: 'tithiLord',
+    value: chart.tithi.lord,
+  });
+  chartData.stringValues.push({
+    key: 'karanaLord',
+    value: chart.karana.ruler,
+  });
+  chartData.stringValues.push({
+    key: 'yogaLord',
+    value: chart.yoga.ruler,
+  });
+  return chartData;
+}
+
+const mergeExtraDataSetsByAyanamsha = (key: string, chart: Chart, objectSets: ObjectMatchSet[], ayanamshas: KeyValue[], grahaSet: GrahaSet, sphutaSet: NumValueSet[], rashiSets: RashiItemSet[]) => {
+  const ar = ayanamshas.find(a => a.key === key);
+  if (ar) {
+    const aya = ayanamshaValues.find(av => av.key === ar.key);
+    const ayaItem = {
+      ...ar,
+      num: aya.value,
+      name: aya.name,
+    };
+    chart.setAyanamshaItem(ayaItem);
+    chart.bodies.forEach(gr => {
+      gr.setAyanamshaItem(ayaItem);
+    });
+    const sps = sphutaSet.find(sp => sp.num === ayaItem.num);
+    greekLots.forEach(lot => {
+      const getMethod = 'lotOf' + capitalize(lot.key);
+      if (sps instanceof Object) {
+        const spItem = {
+          key: getMethod,
+          value: chart[getMethod],
+        };
+        sps.items.push(spItem);
+      }
+    });
+    addUpapadaSecondAndLord(rashiSets, grahaSet, sps, ayaItem.num);
+    const objSet = objectSets.find(os => os.num === ayaItem.num);
+    if (objSet) {
+      const extraObjects = chart.matchLords();
+
+      Object.keys(houseTypeData).forEach(houseType => {
+        const getMethod = houseType.replace(/s$/, 'Rulers');
+        extraObjects.push({
+          key: [houseType, 'ruler'].join('_'),
+          type: 'graha',
+          value: chart[getMethod],
+        });
+      });
+      extraObjects.push({
+        key: 'yogaKaraka',
+        type: 'graha',
+        value: chart.yogaKaraka,
+      });
+      objSet.items = objSet.items.concat(extraObjects);
+    }
+  }
+}
+
 export const calcCompactChartData = async (
   datetime: string,
   geo: GeoPos,
   ayanamsaKey = '',
   topKeys = [],
   tzOffset = 0,
+  fetchFull = true
 ) => {
-  const grahaSet = await calcGrahaSet(datetime, geo, true);
+  const grahaSet = await calcGrahaSet(datetime, geo, fetchFull);
   const { jd } = grahaSet;
   const dayFracOffset = tzOffset / 86400;
   const dayStartJd = Math.floor(jd + 0.5) - 0.5 - dayFracOffset;
   const transitions = await calcAllTransitionsJd(dayStartJd, geo, 0);
   grahaSet.mergeTransitions(transitions);
-  const ayanamshas = await calcAyanamshas(jd);
-  const ayanamsha = {
-    value: 0,
-    key: '',
-  };
-  if (notEmptyString(ayanamsaKey, 3) && ayanamsaKey !== 'top') {
-    const aRow = ayanamshas.find(a => a.key === ayanamsaKey);
-    if (aRow) {
-      ayanamsha.value = aRow.value;
-      ayanamsha.key = ayanamsaKey;
-    }
-  }
+  const matchedAyaNum = fetchFull ? 0 : topKeys.length === 1 ? matchAyanamshaNum(topKeys[0]) : 0;
+  const ayanamshas = await calcAyanamshas(jd, matchedAyaNum);
+  const ayanamsha = matchDefaultAyanamshaItem(ayanamshas, ayanamsaKey);
   const hdP = await fetchHouseData(datetime, geo, 'P');
   const upagrahas = await calcUpagrahas(datetime, geo, ayanamsha.value);
   const indianTimeData = await fetchIndianTimeData(datetime, geo, tzOffset);
@@ -679,10 +769,11 @@ export const calcCompactChartData = async (
     indianTimeData,
     upagrahas,
     sunAtSunRise,
+    fetchFull
   );
-  const variants: Array<Map<string, any>> = grahaSet.bodies.map(gr =>
+  const variants: Array<Map<string, any>> = fetchFull? grahaSet.bodies.map(gr =>
     mapToVariantMap(gr, 0),
-  );
+  ) : [];
   const objectSets: Array<ObjectMatchSet> = [];
   let sphutaSet = [];
   const coreAyanamshas =
@@ -707,6 +798,7 @@ export const calcCompactChartData = async (
           indianTimeData,
           upagrahas,
           sunAtSunRise,
+          fetchFull
         );
         av.grahas.forEach(gr => {
           const variant = mapToVariantMap(gr, aya.value);
@@ -741,7 +833,7 @@ export const calcCompactChartData = async (
     indianTime: indianTimeData.toValues(),
     ayanamshas,
     upagrahas: upagrahas.values.map(mapUpagraha),
-    sphutas: sphutaSet,
+    sphutas: sphutaSet.filter(nvs => nvs.items.length > 0),
     numValues,
     stringValues: [],
     objects: objectSets,
@@ -749,79 +841,9 @@ export const calcCompactChartData = async (
   };
   const chart = new Chart(chartData);
   extraDataAyanamshas.forEach(ak => {
-    const ar = ayanamshas.find(a => a.key === ak);
-    if (ar) {
-      const aya = ayanamshaValues.find(av => av.key === ar.key);
-      const ayaItem = {
-        ...ar,
-        num: aya.value,
-        name: aya.name,
-      };
-      chart.setAyanamshaItem(ayaItem);
-      chart.bodies.forEach(gr => {
-        gr.setAyanamshaItem(ayaItem);
-      });
-      const sps = sphutaSet.find(sp => sp.num === ayaItem.num);
-      greekLots.forEach(lot => {
-        const getMethod = 'lotOf' + capitalize(lot.key);
-        if (sps instanceof Object) {
-          const spItem = {
-            key: getMethod,
-            value: chart[getMethod],
-          };
-          sps.items.push(spItem);
-        }
-      });
-      addUpapadaSecondAndLord(rashiSets, grahaSet, sps, ayaItem.num);
-      const objSet = objectSets.find(os => os.num === ayaItem.num);
-      if (objSet) {
-        const extraObjects = chart.matchLords();
-
-        Object.keys(houseTypeData).forEach(houseType => {
-          const getMethod = houseType.replace(/s$/, 'Rulers');
-          extraObjects.push({
-            key: [houseType, 'ruler'].join('_'),
-            type: 'graha',
-            value: chart[getMethod],
-          });
-        });
-        extraObjects.push({
-          key: 'yogaKaraka',
-          type: 'graha',
-          value: chart.yogaKaraka,
-        });
-        objSet.items = objSet.items.concat(extraObjects);
-      }
-    }
+    mergeExtraDataSetsByAyanamsha(ak, chart, objectSets, ayanamshas, grahaSet, sphutaSet, rashiSets);
   });
-  chartData.numValues.push({
-    key: 'sunMoonAngle',
-    value: chart.sunMoonAngle,
-  });
-  chartData.numValues.push({
-    key: 'tithi',
-    value: chart.tithi.num,
-  });
-  chartData.numValues.push({
-    key: 'karana',
-    value: chart.karana.num,
-  });
-  chartData.numValues.push({
-    key: 'yoga',
-    value: chart.yoga.num,
-  });
-  chartData.stringValues.push({
-    key: 'tithiLord',
-    value: chart.tithi.lord,
-  });
-  chartData.stringValues.push({
-    key: 'karanaLord',
-    value: chart.karana.ruler,
-  });
-  chartData.stringValues.push({
-    key: 'yogaLord',
-    value: chart.yoga.ruler,
-  });
+  addIndianNumericAndStringValues(chartData, chart);
   return chartData;
 };
 
@@ -849,46 +871,7 @@ const mapToVariantMap = (gr: any, ayanamsaNum: number) => {
   return variant;
 };
 
-const calcCompactVariantSet = (
-  ayanamsha: KeyValue,
-  grahaSet: GrahaSet,
-  hdP: HouseSet,
-  indianTimeData: IndianTime,
-  upagrahas,
-  sunAtSunRise,
-) => {
-  const applyAyanamsha = ayanamsha.value !== 0;
-  if (applyAyanamsha) {
-    grahaSet.bodies = grahaSet.bodies.map(b => {
-      b.lng = subtractLng360(b.lng, ayanamsha.value);
-      b.topo.lng = subtractLng360(b.topo.lng, ayanamsha.value);
-      return b;
-    });
-    hdP.ascendant = subtractLng360(hdP.ascendant, ayanamsha.value);
-    hdP.mc = subtractLng360(hdP.mc, ayanamsha.value);
-
-    if (hdP.houses.length > 0) {
-      hdP.houses = hdP.houses.map(h => {
-        return subtractLng360(h, ayanamsha.value);
-      });
-    }
-    sunAtSunRise.lng = subtractLng360(sunAtSunRise.lng, ayanamsha.value);
-  }
-
-  const firstHouseLng = getFirstHouseLng(hdP);
-
-  const wHouses = expandWholeHouses(firstHouseLng);
-  const hdW = new HouseSet({ ...hdP, houses: wHouses });
-  grahaSet.mergeHouseData(hdW, true);
-  grahaSet.matchValues();
-  const houses = [
-    { system: 'P', values: hdP.houses.slice(0, 6) },
-    { system: 'W', values: [firstHouseLng] },
-  ];
-  const houseData = { ...hdP, houses };
-
-  const grahas = grahaSet.bodies.map(cleanGraha);
-
+const addSphutasAndBaseObjects = (grahaSet: GrahaSet, hdW: HouseSet, indianTimeData: IndianTime, upagrahas: KeyValue[], sunAtSunRise) => {
   const sphutaObj = addSphutaData(
     grahaSet,
     hdW,
@@ -927,6 +910,57 @@ const calcCompactVariantSet = (
         refVal,
       };
     });
+  return { sphutas, objects };
+}
+
+const calcCompactVariantSet = (
+  ayanamsha: KeyValue,
+  grahaSet: GrahaSet,
+  hdP: HouseSet,
+  indianTimeData: IndianTime,
+  upagrahas,
+  sunAtSunRise,
+  fetchFull = true
+) => {
+  const applyAyanamsha = ayanamsha.value !== 0;
+  const shouldCalcVariants = fetchFull || applyAyanamsha;
+  if (applyAyanamsha) {
+    grahaSet.bodies = grahaSet.bodies.map(b => {
+      b.lng = subtractLng360(b.lng, ayanamsha.value);
+      if (fetchFull) {
+        b.topo.lng = subtractLng360(b.topo.lng, ayanamsha.value);
+      }
+      return b;
+    });
+    hdP.ascendant = subtractLng360(hdP.ascendant, ayanamsha.value);
+    hdP.mc = subtractLng360(hdP.mc, ayanamsha.value);
+
+    if (hdP.houses.length > 0) {
+      hdP.houses = hdP.houses.map(h => {
+        return subtractLng360(h, ayanamsha.value);
+      });
+    }
+    sunAtSunRise.lng = subtractLng360(sunAtSunRise.lng, ayanamsha.value);
+  }
+
+  const firstHouseLng = getFirstHouseLng(hdP);
+
+  const wHouses = expandWholeHouses(firstHouseLng);
+  const hdW = new HouseSet({ ...hdP, houses: wHouses });
+  grahaSet.mergeHouseData(hdW, true);
+  grahaSet.matchValues();
+  const houses = [
+    { system: 'W', values: [firstHouseLng] },
+  ];
+  if (fetchFull) {
+    houses.unshift({ system: 'P', values: hdP.houses.slice(0, 6) });
+  }
+  const houseData = { ...hdP, houses };
+  
+  const grahas = grahaSet.bodies.map(cleanGraha);
+  
+  const { sphutas, objects } = shouldCalcVariants? addSphutasAndBaseObjects(grahaSet, hdW, indianTimeData, upagrahas, sunAtSunRise) : { sphutas: [], objects: [] };
+    
   const rashis = matchRashis(hdW, grahaSet, true);
   const numValues = [];
   return {
@@ -939,12 +973,12 @@ const calcCompactVariantSet = (
   };
 };
 
-const calcAyanamshas = async (jd: number): Promise<Array<KeyValue>> => {
+const calcAyanamshas = async (jd: number, matchedNum = 0): Promise<Array<KeyValue>> => {
   const iflag = swisseph.SEFLG_SIDEREAL;
-  return ayanamshaValues.map(row => {
+  return ayanamshaValues.filter(row => matchedNum < 1 || matchedNum === row.value).map(row => {
     const { key, value } = row;
     swisseph.swe_set_sid_mode(value, 0, 0);
-    const result = getAyanamsa(jd, iflag);
+    const result = value !== 0? getAyanamsa(jd, iflag) : { ayanamsa: 0};
     const { ayanamsa } = result;
     return {
       key,

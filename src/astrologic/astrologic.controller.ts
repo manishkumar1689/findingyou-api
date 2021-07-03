@@ -304,19 +304,24 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('compact/:loc/:dt/:ayanamshaMode?/:topList?')
+  @Get('compact/:loc/:dt/:ayanamshaMode?/:topList?/:suppress?/:simple?')
   async compactDataSet(
     @Res() res,
     @Param('loc') loc,
     @Param('dt') dt,
     @Param('ayanamshaMode') ayanamshaMode,
     @Param('topList') topList,
+    @Param('suppress') suppress,
+    @Param('simple') simple,
   ) {
-    const data = await this.fetchCompactChart(loc, dt, ayanamshaMode, topList);
+    const fetchFull = smartCastInt(suppress, 0) < 1;
+    const simplify = smartCastInt(simple, 0) > 0;
+    const chartData = await this.fetchCompactChart(loc, dt, ayanamshaMode, topList, fetchFull);
+    const data = simplify? simplifyChart(chartData) : chartData;
     return res.status(HttpStatus.OK).json(data);
   }
 
-  async fetchCompactChart(loc: string, dt: string, ayanamshaMode = "true_citra", topList = "") {
+  async fetchCompactChart(loc: string, dt: string, ayanamshaMode = "true_citra", topList = "", fetchFull = true) {
     let data: any = { valid: false };
     if (validISODateString(dt) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
@@ -339,6 +344,7 @@ export class AstrologicController {
         ayanamshaKey,
         topKeys,
         geoInfo.offset,
+        fetchFull
       );
       data = {
         tzOffset: geoInfo.offset,

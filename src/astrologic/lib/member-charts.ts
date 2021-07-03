@@ -12,10 +12,6 @@ const removeIds = item => {
 
 export const simplifyGraha = (gr, ayanamshaVal = 0, ayanamshaIndex = 0) => {
   const lng = subtractLng360(gr.lng, ayanamshaVal);
-  const topo = {
-    lng: subtractLng360(gr.topo.lng, ayanamshaVal),
-    lat: gr.topo.lat,
-  };
   const transitions = gr.transitions.map(tr => {
     return {
       type: tr.type,
@@ -29,6 +25,7 @@ export const simplifyGraha = (gr, ayanamshaVal = 0, ayanamshaIndex = 0) => {
       removeIds(extractObject(gr.variants[ayanamshaIndex])),
     );
     delete extra.num;
+    console.log(gr.variants, ayanamshaIndex)
   }
   const { key, lat, lngSpeed, declination } = gr;
   return {
@@ -37,7 +34,6 @@ export const simplifyGraha = (gr, ayanamshaVal = 0, ayanamshaIndex = 0) => {
     lat,
     lngSpeed,
     declination,
-    topo,
     transitions,
     ...extra,
   };
@@ -69,7 +65,7 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra') => {
     const ayaIndex = ayanamshas.findIndex(ay => ay.key === ayanamshaKey);
     if (ayaIndex >= 0) {
       ayanamshaVal = ayanamshas[ayaIndex].value;
-      ayanamshaIndex = ayaIndex + 1;
+      ayanamshaIndex = ayaIndex;
     }
   }
   const ayanamshaNum = matchAyanamshaNum(ayanamshaKey);
@@ -78,7 +74,9 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra') => {
   );
   chart.placenames = chart.placenames.map(pl => {
     delete pl._id;
-    delete pl.geo._id;
+    if (pl.geo) {
+      delete pl.geo._id;
+    }
     return pl;
   });
   chart.subject = removeIds(chart.subject);
@@ -117,13 +115,12 @@ export const simplifyAstroChart = (data: any = null) => {
           lng,
           lat,
           lngSpeed,
-          topo,
           declination,
           transitions,
           variants
         } = row;
 
-        return {key, num, lng, lat, lngSpeed, transitions, ...variants[0]};
+        return {key, num, lng, lat, lngSpeed, declination, transitions, ...variants[0]};
       });
     }
     if (keys.includes("rashis") && data.rashis instanceof Array) {
