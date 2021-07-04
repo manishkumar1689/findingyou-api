@@ -32,6 +32,30 @@ export interface FileData {
   size: number;
 }
 
+const maxLargeSizeKey = (imageSizes = null) => {
+  const calcArea = (item = null) => {
+    let area = 0;
+    if (item instanceof Object) {
+      const { width, height } = item;
+      if (typeof width == 'number' && typeof height === 'number') {
+        area = width * height;
+      }
+    }
+    return area;
+  }
+  const keyAreas = imageSizes instanceof Object? Object.entries(imageSizes).map(entry => {
+    const [key, item] = entry;
+    const area = calcArea(item);
+    return {key, area };
+  }) : [];
+  const lastIndex = keyAreas.length - 1;
+  const hasSizes = lastIndex >= 0;
+  const areas = hasSizes? keyAreas.map(item => item.area) : [];
+  const max = hasSizes? Math.max(...areas) : 0;
+  const item = hasSizes? keyAreas.find(item => item.area === max) : null;
+  return item instanceof Object ? item.key : hasSizes? keyAreas[lastIndex].key : '';
+}
+
 export const uploadMediaFile = (
   userID: string,
   originalname: string,
@@ -69,14 +93,18 @@ export const uploadMediaFile = (
   const variants = [];
   if (isBitmap) {
     let ms = 0;
+    const largestSize = 
     Object.entries(imageSizes).forEach(entry => {
       const [key, imgSize] = entry;
+      const largestKey = maxLargeSizeKey(imageSizes);
       if (imageAttrsLargerThan(attrsMap, imgSize)) {
         setTimeout(() => {
-          resizeImage(fullPath, imgSize);
+          resizeImage(fullPath, imgSize, key, largestKey);
         }, ms);
         ms += 1000;
-        variants.push(['resize', imgSize.width, imgSize.height].join('-'));
+        if (key !== largestKey) {
+          variants.push(['resize', imgSize.width, imgSize.height].join('-'));
+        }
       }
     });
   }

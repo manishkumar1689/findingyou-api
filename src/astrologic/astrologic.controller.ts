@@ -368,7 +368,8 @@ export class AstrologicController {
   async saveUserChart(@Res() res, @Body() inData: ChartInputDTO) {
     const { _id } = inData;
     const chartID = notEmptyString(_id, 12) ? _id : '';
-    const data = await this.saveChartData(inData, true, chartID);
+    const status = notEmptyString(inData.status)? inData.status : 'user';
+    const data = await this.saveChartData({...inData, status}, true, chartID);
     return res.status(HttpStatus.OK).json(data);
   }
 
@@ -376,7 +377,7 @@ export class AstrologicController {
   async saveUserChartSimple(@Res() res, @Body() inData: ChartInputDTO) {
     const { _id } = inData;
     const chartID = notEmptyString(_id, 12) ? _id : '';
-    const data = await this.saveChartData(inData, true, chartID, 'true_citra');
+    const data = await this.saveChartData({...inData, status: 'member'}, true, chartID, 'true_citra', false);
     const {valid, shortTz } = data;
     const chart = valid ? simplifyChart(data.chart) : {};
     return res.status(HttpStatus.OK).json({valid, shortTz, chart});
@@ -457,7 +458,7 @@ export class AstrologicController {
     return res.json({ chartIds, num, valid});
   }
 
-  async saveChartData(inData: ChartInputDTO, save = true, chartID = '', ayanamsha = 'top') {
+  async saveChartData(inData: ChartInputDTO, save = true, chartID = '', ayanamsha = 'top', fetchFull = true) {
     let data: any = { valid: false, message: '', chart: null };
     const {
       user,
@@ -503,20 +504,25 @@ export class AstrologicController {
           const hasGeoTzData =
             notEmptyString(tz) &&
             isNumeric(tzOffset) &&
-            placenames instanceof Array;
+            placenames instanceof Array && placenames.length > 1;
           const geoInfo = await this.geoService.fetchGeoAndTimezone(
             geo.lat,
             geo.lng,
             datetime,
           );
           const dtUtc = applyTzOffsetToDateString(datetime, geoInfo.offset);
-          
+          const topKeys = (!fetchFull && ayanamsha !== 'top')? [ayanamsha] : [];
+          // always fetch chart data with tropical grahas, but apply ayanamsha(s)
+          // for derived value sets. For member charts only fetch one set of ayanamsha variants 
+          // as the others will never be used and 
+          // tropical values can easily be adjusted by known ayanamsha offsets
           const chartData = await calcCompactChartData(
             dtUtc,
             geo,
             'top',
-            [],
+            topKeys,
             geoInfo.offset,
+            fetchFull
           );
           if (chartData instanceof Object) {
             data.shortTz = toShortTzAbbr(dtUtc, geoInfo.tz);

@@ -18,7 +18,7 @@ export class GeoController {
   constructor(private geoService: GeoService) {}
 
   @Get('by-coords/:loc')
-  async byCoordinate(@Res() res, @Param('loc') loc) {
+  async byCoordinates(@Res() res, @Param('loc') loc) {
     let data: any = { valid: false };
     const coords = loc
       .split(',')
@@ -28,6 +28,22 @@ export class GeoController {
     if (coords.length > 1) {
       const [lat, lng] = coords;
       data = await this.geoService.fetchGeoData(lat, lng);
+    }
+    return res.send(data);
+  }
+
+  @Get('google-by-coords/:loc')
+  async googleByCoordinates(@Res() res, @Param('loc') loc) {
+    let data: any = { valid: false };
+    const coords = loc
+      .split(',')
+      .filter(isNumeric)
+      .map(parseFloat);
+    if (coords.length > 1) {
+      const [lat, lng] = coords;
+
+      console.log(lat,lng);
+      data = await this.geoService.googleNearby(lat, lng);
     }
     return res.send(data);
   }

@@ -40,6 +40,8 @@ export const resizeImage = (
     height: 640,
     quality: 90,
   },
+  key = "thumb",
+  largestKey = "large"
 ) => {
   const { mode, width, height, quality } = params;
   if (fs.existsSync(fp)) {
@@ -50,7 +52,8 @@ export const resizeImage = (
       args.push(quality.toString());
     }
     args.push(fp);
-    args.push(buildThumbPath(fp, params));
+    const targetPath = key === largestKey ? fp : buildThumbPath(fp, params);
+    args.push(targetPath);
     spawn(baseCmd, args);
   }
 };

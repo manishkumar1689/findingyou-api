@@ -176,6 +176,13 @@ export class GeoService {
     }
   }
 
+  processGooglePlaces(places: any[] = [], lat = 0, lng = 0) {
+    const mapGooglePlace = (place) => {
+      
+    }
+    return places instanceof Array? places.filter(pl => pl instanceof Object).map(mapGooglePlace) : [];
+  }
+
   async fetchGeoAndTimezone(lat: number, lng: number, datetime: string) {
     const data = await this.fetchGeoData(lat, lng);
     const offset = this.checkGmtOffset(data.tz, datetime);
@@ -464,6 +471,27 @@ export class GeoService {
           const { result } = data;
           if (result instanceof Object) {
             output = result;
+          }
+        }
+      }
+    });
+    return output;
+  }
+
+  async googleNearby(lat = 0, lng = 0) {
+    const latLngStr = [lat, lng].join(',');
+    const key = googleGeo.apiKey;
+    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latLngStr}&rankby=distance&type=cities&key=${key}`;
+    const output: any = { valid: false, results: [] };
+    
+    await this.getHttp(url).then(response => {
+      console.log(response);
+      if (response) {
+        const { data } = response;
+        if (data instanceof Object) {
+          const { results } = data;
+          if (results instanceof Array) {
+            output.results = results;
           }
         }
       }

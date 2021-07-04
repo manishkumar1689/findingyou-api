@@ -18,6 +18,7 @@ export const ChartSchema = new mongoose.Schema({
     required: true,
     ref: 'User',
   },
+  // If true, this the birth chart of the user who created it.
   isDefaultBirthChart: {
     type: Boolean,
     default: true,
@@ -26,21 +27,24 @@ export const ChartSchema = new mongoose.Schema({
     type: SubjectSchema,
     required: true,
   },
+  // helps decide whether to keep a chart record, member charts only contain one ayanamsha variant
   status: {
     type: String,
-    enum: ['user', 'reference', 'keep', 'test'],
+    enum: ['user', 'member', 'reference', 'keep', 'test'],
     required: false,
   },
-  // versioning, e.g. variant birth details
+  // The _id of the related birth chart if the eventType is anything other than birth
   parent: {
     type: ObjectId,
     required: false,
     ref: 'Chart',
   },
+  // UTC datetime for easy reference. This usually differs from local time
   datetime: {
     type: Date,
     required: true,
   },
+  // JD equivalent
   jd: {
     type: Number,
     required: true,
@@ -54,10 +58,13 @@ export const ChartSchema = new mongoose.Schema({
     required: false,
     default: [],
   },
+  // correct timezone e.g Europe/Zurich. The short code is generated
+  // NB the timezone may remain the same even if daylight saving rules change
   tz: {
     type: String,
     required: false,
   },
+  // timezone offset in seconds
   tzOffset: {
     type: Number,
     required: true,
