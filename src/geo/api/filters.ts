@@ -1,6 +1,6 @@
 import { Toponym } from '../interfaces/toponym.interface';
 import { notEmptyString } from '../../lib/validators';
-import { smartCastFloat } from 'src/lib/converters';
+import { smartCastFloat } from '../../lib/converters';
 
 export const filterDefaultName = (
   name: string,

@@ -1,4 +1,4 @@
-import { mapLngRange } from "src/lib/query-builders";
+import { mapLngRange } from "../../lib/query-builders";
 
 export interface AspectRow {
   key: string;
