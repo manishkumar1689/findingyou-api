@@ -1,5 +1,6 @@
 import { smartCastFloat } from '../../lib/converters';
 import { extractObject } from '../../lib/entities';
+import { KeyValue } from '../interfaces/key-value';
 import { subtractLng360 } from './helpers';
 import { HouseSystem } from './models/chart';
 import { matchAyanamshaNum } from './settings/ayanamsha-values';
@@ -10,6 +11,11 @@ const removeIds = item => {
   }
   return item;
 };
+
+export const simplifyUpagraha = (up: KeyValue, ayaOffset = 0) => {
+  const {key, value } = up;
+  return { key, value: subtractLng360(value, ayaOffset)};
+}
 
 export const simplifyGraha = (gr, ayanamshaVal = 0, ayanamshaIndex = 0) => {
   const lng = subtractLng360(gr.lng, ayanamshaVal);
@@ -55,13 +61,14 @@ const matchAyanamshaDataSet = (chart: any = null, key = "", num = 27) => {
   return [];
 }
 
-export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra') => {
+export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra', mode = 'complete') => {
   const isModel = chartRef instanceof Object && chartRef.constructor.name === 'model';
   const chart = isModel? chartRef.toObject() : chartRef;
   let ayanamshaVal = 0;
   let ayanamshaIndex = 0;
   const { grahas, ayanamshas } = chart;
-
+  const showExtraDataSets = mode === 'complete';
+  const showUpagrahas = ['complete', 'simple'].includes(mode);
   if (ayanamshas instanceof Array) {
     const ayaIndex = ayanamshas.findIndex(ay => ay.key === ayanamshaKey);
     if (ayaIndex >= 0) {
@@ -95,11 +102,14 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra') => {
   /* if (chart.sphutas instanceof Array && ayanamshaIndex < chart.sphutas.length) {
     chart.sphutas = chart.sphutas[ayanamshaIndex].items.map(removeIds);
   } */
-  chart.sphutas = matchAyanamshaDataSet(chart, 'sphutas', ayanamshaNum);
-  chart.objects = matchAyanamshaDataSet(chart, 'objects', ayanamshaNum);
-  chart.numValues = chart.numValues.map(removeIds);
-  chart.stringValues = chart.stringValues.map(removeIds);
-  chart.rashis = matchAyanamshaDataSet(chart, 'rashis', ayanamshaNum);
+  chart.sphutas = showExtraDataSets? matchAyanamshaDataSet(chart, 'sphutas', ayanamshaNum) : [];
+  chart.objects = showExtraDataSets? matchAyanamshaDataSet(chart, 'objects', ayanamshaNum) : [];
+  chart.numValues = showExtraDataSets? chart.numValues.map(removeIds) : [];
+  chart.stringValues = showExtraDataSets? chart.stringValues.map(removeIds) : [];
+  chart.rashis = showExtraDataSets? matchAyanamshaDataSet(chart, 'rashis', ayanamshaNum) : [];
+  if (chart.upagrahas instanceof Array  && chart.upagrahas.length > 0) {
+    chart.upagrahas = showUpagrahas? chart.upagrahas.map(up => simplifyUpagraha(up, ayanamshaVal)) : [];
+  }
   delete chart.__v;
   return chart;
 };
@@ -141,10 +151,7 @@ export const simplifyAstroChart = (data: any = null, applyAyanamsha = true) => {
       data.objects = data.objects[0].items;
     }
     if (applyAyanamsha && keys.includes("upagrahas") && data.upagrahas instanceof Array  && data.upagrahas.length > 0) {
-      data.upagrahas = data.upagrahas.map(up => {
-        const {key,value} = up;
-        return { key, value: subtractLng360(value, ayaOffset)};
-      });
+      data.upagrahas = data.upagrahas.map(up => simplifyUpagraha(up, ayaOffset));
     }
     data.ascendant = subtractLng360(data.ascendant, ayaOffset);
     data.mc = subtractLng360(data.mc, ayaOffset);
