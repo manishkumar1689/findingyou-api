@@ -481,11 +481,10 @@ export class GeoService {
   async googleNearby(lat = 0, lng = 0) {
     const latLngStr = [lat, lng].join(',');
     const key = googleGeo.apiKey;
-    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latLngStr}&rankby=distance&type=cities&key=${key}`;
+    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latLngStr}&rankby=distance&types=country,cities,locality&key=${key}`;
     const output: any = { valid: false, results: [] };
     
     await this.getHttp(url).then(response => {
-      console.log(response);
       if (response) {
         const { data } = response;
         if (data instanceof Object) {

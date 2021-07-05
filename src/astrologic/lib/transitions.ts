@@ -9,7 +9,7 @@ import { GeoLoc } from './models/geo-loc';
 
 export interface TimeSet {
   jd: number;
-  dt: string;
+  dt?: string;
   after: boolean;
 }
 
@@ -54,12 +54,6 @@ export const matchTransData = async (
   let data = { valid: false, transitTime: -1 };
   inData.transType = transType;
   const jd = inData.jd;
-  /* switch (transKey) {
-    case 'rise':
-      inData.jd -= 0.5;
-      break;
-  } */
-
   await riseTransAsync(...Object.values(inData)).catch(d => {
     data = d;
     if (!d.error) {
@@ -68,13 +62,13 @@ export const matchTransData = async (
       data.valid = false;
     }
   });
-  let result = { jd: -1, dt: '', after: false };
+  let result = { jd: -1, after: false };
   //const offset = Math.floor(jd) < Math.floor(data.transitTime) && transKey === 'set' ? 1 : 0;
   if (data.valid) {
     if (data.transitTime >= 0) {
       result = {
         jd: data.transitTime,
-        dt: jdToDateTime(data.transitTime),
+        //dt: jdToDateTime(data.transitTime),
         after: jd > data.transitTime,
       };
     }

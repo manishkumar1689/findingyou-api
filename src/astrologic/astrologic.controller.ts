@@ -321,7 +321,7 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  async fetchCompactChart(loc: string, dt: string, ayanamshaMode = "true_citra", topList = "", fetchFull = true) {
+  async fetchCompactChart(loc: string, dt: string, ayanamshaMode = "true_citra", topList = "", fetchFull = true, addExtraSets = true) {
     let data: any = { valid: false };
     if (validISODateString(dt) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
@@ -344,7 +344,8 @@ export class AstrologicController {
         ayanamshaKey,
         topKeys,
         geoInfo.offset,
-        fetchFull
+        fetchFull,
+        addExtraSets,
       );
       data = {
         tzOffset: geoInfo.offset,
@@ -356,11 +357,14 @@ export class AstrologicController {
     return data;
   }
 
-  @Get('current-chart/:loc/:dt?')
-  async fetchCurrent(@Res() res, @Param('loc') loc, @Param('dt') dt) {
+  @Get('current-chart/:loc/:dt?/:mode?')
+  async fetchCurrent(@Res() res, @Param('loc') loc, @Param('dt') dt, @Param('mode') mode) {
     const dtUtc = validISODateString(dt)? dt : currentISODate();
-    const data = await this.fetchCompactChart(loc, dtUtc, "true_citra");
-    const chart = simplifyAstroChart(data);
+    const simplify = mode !== "all";
+    const ayanamshaKey = notEmptyString(mode, 5)? mode : simplify ? "true_citra" : "top";
+    const topList = !simplify ? "top" : ayanamshaKey;
+    const data = await this.fetchCompactChart(loc, dtUtc, "top", topList, false, false);
+    const chart = simplify? simplifyAstroChart(data) : data;
     return res.json(data);
   }
 

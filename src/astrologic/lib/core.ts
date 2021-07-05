@@ -734,7 +734,8 @@ export const calcCompactChartData = async (
   ayanamsaKey = '',
   topKeys = [],
   tzOffset = 0,
-  fetchFull = true
+  fetchFull = true,
+  addExtraSets = true,
 ) => {
   const grahaSet = await calcGrahaSet(datetime, geo, fetchFull);
   const { jd } = grahaSet;
@@ -742,7 +743,8 @@ export const calcCompactChartData = async (
   const dayStartJd = Math.floor(jd + 0.5) - 0.5 - dayFracOffset;
   const transitions = await calcAllTransitionsJd(dayStartJd, geo, 0);
   grahaSet.mergeTransitions(transitions);
-  const matchedAyaNum = fetchFull ? 0 : topKeys.length === 1 ? matchAyanamshaNum(topKeys[0]) : 0;
+  const matchedAyaNum = fetchFull ? 0 : topKeys.length === 1 ? matchAyanamshaNum(topKeys[0]) : notEmptyString(ayanamsaKey, 5)? matchAyanamshaNum(ayanamsaKey) : 0;
+
   const ayanamshas = await calcAyanamshas(jd, matchedAyaNum);
   const ayanamsha = matchDefaultAyanamshaItem(ayanamshas, ayanamsaKey);
   const hdP = await fetchHouseData(datetime, geo, 'P');
@@ -769,7 +771,8 @@ export const calcCompactChartData = async (
     indianTimeData,
     upagrahas,
     sunAtSunRise,
-    fetchFull
+    fetchFull,
+    addExtraSets
   );
   const variants: Array<Map<string, any>> = fetchFull? grahaSet.bodies.map(gr =>
     mapToVariantMap(gr, 0),
@@ -782,7 +785,6 @@ export const calcCompactChartData = async (
   const extraDataAyanamshas = ['true_citra'];
   if (calcVariants) {
     let prevAyaVal = 0;
-    sphutaSet = [{ num: 0, items: sphutas }];
     coreAyanamshas.forEach(ak => {
       const ar = ayanamshas.find(a => a.key === ak);
       if (ar) {
@@ -804,18 +806,21 @@ export const calcCompactChartData = async (
           const variant = mapToVariantMap(gr, aya.value);
           variants.push(variant);
         });
-        sphutaSet.push({ num: aya.value, items: av.sphutas });
-        objectSets.push({ num: aya.value, items: av.objects });
-        if (extraDataAyanamshas.includes(ak)) {
-          rashiSets.push({ num: aya.value, items: av.rashis });
+        if (addExtraSets) {
+          sphutaSet.push({ num: aya.value, items: av.sphutas });
+          objectSets.push({ num: aya.value, items: av.objects });
+          if (extraDataAyanamshas.includes(ak)) {
+            rashiSets.push({ num: aya.value, items: av.rashis });
+          }
         }
       }
     });
-  } else {
-    sphutaSet = sphutas;
+  } else if (addExtraSets) {
+    sphutaSet.push({ num: ayanamsha.value, items: sphutas });
     rashiSets.push({ num: ayanamsha.value, items: rashis });
     objectSets.push({ num: ayanamsha.value, items: objects });
   }
+  
   const chartData = {
     jd,
     datetime,
@@ -843,7 +848,9 @@ export const calcCompactChartData = async (
   extraDataAyanamshas.forEach(ak => {
     mergeExtraDataSetsByAyanamsha(ak, chart, objectSets, ayanamshas, grahaSet, sphutaSet, rashiSets);
   });
-  addIndianNumericAndStringValues(chartData, chart);
+  if (addExtraSets) {
+    addIndianNumericAndStringValues(chartData, chart);
+  }
   return chartData;
 };
 
@@ -920,10 +927,11 @@ const calcCompactVariantSet = (
   indianTimeData: IndianTime,
   upagrahas,
   sunAtSunRise,
-  fetchFull = true
+  fetchFull = true,
+  addExtraSets = true
 ) => {
   const applyAyanamsha = ayanamsha.value !== 0;
-  const shouldCalcVariants = fetchFull || applyAyanamsha;
+  const shouldCalcVariants = (fetchFull || applyAyanamsha) && addExtraSets;
   if (applyAyanamsha) {
     grahaSet.bodies = grahaSet.bodies.map(b => {
       b.lng = subtractLng360(b.lng, ayanamsha.value);
@@ -958,7 +966,6 @@ const calcCompactVariantSet = (
   const houseData = { ...hdP, houses };
   
   const grahas = grahaSet.bodies.map(cleanGraha);
-  
   const { sphutas, objects } = shouldCalcVariants? addSphutasAndBaseObjects(grahaSet, hdW, indianTimeData, upagrahas, sunAtSunRise) : { sphutas: [], objects: [] };
     
   const rashis = matchRashis(hdW, grahaSet, true);
@@ -978,7 +985,7 @@ const calcAyanamshas = async (jd: number, matchedNum = 0): Promise<Array<KeyValu
   return ayanamshaValues.filter(row => matchedNum < 1 || matchedNum === row.value).map(row => {
     const { key, value } = row;
     swisseph.swe_set_sid_mode(value, 0, 0);
-    const result = value !== 0? getAyanamsa(jd, iflag) : { ayanamsa: 0};
+    const result = value !== 0? getAyanamsa(jd, iflag) : { ayanamsa: 0 };
     const { ayanamsa } = result;
     return {
       key,

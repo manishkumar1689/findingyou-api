@@ -1,6 +1,7 @@
 import { smartCastFloat } from '../../lib/converters';
 import { extractObject } from '../../lib/entities';
 import { subtractLng360 } from './helpers';
+import { HouseSystem } from './models/chart';
 import { matchAyanamshaNum } from './settings/ayanamsha-values';
 
 const removeIds = item => {
@@ -104,9 +105,16 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra') => {
 };
 
 
-export const simplifyAstroChart = (data: any = null) => {
+export const simplifyAstroChart = (data: any = null, applyAyanamsha = true) => {
   if (data instanceof Object) {
     const keys = Object.keys(data);
+    let ayaOffset = 0;
+    if (applyAyanamsha) {
+      const ayaRow = data.ayanamshas.find(ay => ay.key !== "raw");
+      if (ayaRow instanceof Object) {
+        ayaOffset = ayaRow.value;
+      }
+    }
     if (keys.includes("grahas") && data.grahas instanceof Array) {
       data.grahas = data.grahas.map(row => {
         const {
@@ -119,17 +127,35 @@ export const simplifyAstroChart = (data: any = null) => {
           transitions,
           variants
         } = row;
-
-        return {key, num, lng, lat, lngSpeed, declination, transitions, ...variants[0]};
+        const trs = transitions.map(tr => {
+          const { type, jd } = tr;
+          return {type, jd};
+        });
+        return {key, num, lng: subtractLng360(lng, ayaOffset), lat, lngSpeed, declination, transitions: trs, ...variants[0]};
       });
     }
-    if (keys.includes("rashis") && data.rashis instanceof Array) {
+    if (keys.includes("rashis") && data.rashis instanceof Array && data.rashis.length > 0) {
       data.rashis = data.rashis[0].items;
     }
-    if (keys.includes("objects") && data.objects instanceof Array) {
+    if (keys.includes("objects") && data.objects instanceof Array  && data.objects.length > 0) {
       data.objects = data.objects[0].items;
     }
-    
+    if (applyAyanamsha && keys.includes("upagrahas") && data.upagrahas instanceof Array  && data.upagrahas.length > 0) {
+      data.upagrahas = data.upagrahas.map(up => {
+        const {key,value} = up;
+        return { key, value: subtractLng360(value, ayaOffset)};
+      });
+    }
+    data.ascendant = subtractLng360(data.ascendant, ayaOffset);
+    data.mc = subtractLng360(data.mc, ayaOffset);
+    data.vertex = subtractLng360(data.vertex, ayaOffset);
+    data.houses = data.houses.map((hs: HouseSystem) => {
+      const { system, values } = hs;
+      return { system, values: values.map(v => {
+        const av = subtractLng360(v, ayaOffset);
+        return system === 'W'? Math.floor(av/30) * 30 : av;
+      })};
+    })
   }
   return data;
 }

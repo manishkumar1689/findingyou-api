@@ -31,7 +31,7 @@ import { mapRelationships } from '../map-relationships';
 
 interface VariantGroup {
   num: number;
-  sign: number;
+  sign?: number;
   house: number;
   nakshatra: number;
   relationship: string;
