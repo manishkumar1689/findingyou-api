@@ -11,6 +11,7 @@ import {
   filterDefaultName,
   filterToponyms,
   correctOceanTz,
+  mapExternalPlaceName,
 } from './api/filters';
 import { GeoPos } from '../astrologic/interfaces/geo-pos';
 import {
@@ -320,6 +321,23 @@ export class GeoService {
     }
   }
 
+  buildAltNames(name = "", placename = "") {
+    const altNames = [];
+    const nameLength = name.length;
+    const searchLength = placename.length;
+    const minAltNameLength = 2;
+    if (searchLength >= minAltNameLength) {
+      const name = placename.toLowerCase().trim();
+      const weight = (nameLength - name.length) * 10;
+      altNames.push({
+        name,
+        type: 'partial',
+        weight,
+      });
+    }
+    return altNames;
+  }
+
   async searchByFuzzyAddressRemote(placename: string, geo: any = null) {
     const params: Map<string, any> = new Map();
     params.set('input', placename);
@@ -327,7 +345,6 @@ export class GeoService {
     const qStr = mapToQueryString(params);
     const url =
       'https://maps.googleapis.com/maps/api/place/autocomplete/json' + qStr;
-
     const output = { valid: false, items: [], url };
     await this.getHttp(url).then(async response => {
       if (response) {
@@ -346,19 +363,7 @@ export class GeoService {
     if (output.valid) {
       if (output.items instanceof Array && output.items.length > 0) {
         output.items.forEach(item => {
-          const altNames = [];
-          const nameLength = item.name.length;
-          const searchLength = placename.length;
-          const minAltNameLength = 2;
-          if (searchLength >= minAltNameLength) {
-            const name = placename.toLowerCase().trim();
-            const weight = (nameLength - name.length) * 10;
-            altNames.push({
-              name,
-              type: 'partial',
-              weight,
-            });
-          }
+          const altNames = this.buildAltNames(item.name, placename);
           this.saveGeoName({ ...item, altNames });
         });
       }
@@ -367,8 +372,11 @@ export class GeoService {
   }
 
   async matchStoredGeoName(search: string) {
-    const rgx = new RegExp('\\b' + search);
-    const criteria = { 'altNames.name': search.toLowerCase() };
+    const rgx = new RegExp('\\b' + search, 'i');
+    const criteria = { $or: [
+      { 'altNames.name': search.toLowerCase() },
+      { 'name': rgx }
+    ]};
     const records = await this.geoNameModel
 
       .find(criteria)
@@ -422,28 +430,75 @@ export class GeoService {
     }
   }
 
+  mapGooglePrediction(pred: any = null, lat = 0, lng = 0) {
+    const [name, region, country] = pred.description.split(', ');
+    return {
+      region,
+      country,
+      fcode : "PPL",
+      lat,
+      lng,
+      pop : 0,
+      name,
+      fullName: name,
+    }
+  }
+
   async extractSuggestedItems(data = null, placename = '') {
     const items = [];
+    const placeTypes = ['locality', 'postal_town'];
     if (data instanceof Object) {
       const rgx = RegExp('\\b' + placename, 'i');
       const { predictions } = data;
 
       if (predictions instanceof Array) {
         for (const pred of predictions) {
-          const results = await this.searchByPlaceName(
-            pred.structured_formatting.main_text,
-            '',
-            0,
-            20,
-          );
-          if (results instanceof Array && results.length > 0) {
-            for (const item of results) {
-              if (rgx.test(item.fullName) && item.pop > 0) {
-                const isAdded = items.some(pl => {
-                  return pl.lng === item.lng && pl.lat === item.lat;
-                });
-                if (!isAdded) {
-                  items.push(item);
+          const predKeys = Object.keys(pred);
+          if (predKeys.includes("description") && predKeys.includes("types") && predKeys.includes("place_id")) {
+            
+            if (pred.types instanceof Array) {
+              if (pred.types.some(type => placeTypes.includes(type))) {
+                const pl = await this.getPlaceByGooglePlaceId(pred.place_id);
+                if (pl instanceof Object) {
+                  if (Object.keys(pl).includes("address_components")) {
+                    const { geometry } = pl;
+                    const {lat, lng} = geometry.location;
+                    if (pl.address_components instanceof Array) { 
+                      const matchedItems = pl.address_components.map(row => mapExternalPlaceName({name: row.long_name, lat, lng, type: row.types[0]}));
+                      const lastIndex = matchedItems.length - 1;
+                      if (lastIndex > 0) {
+                        const firstItem = matchedItems[0];
+                        const cc = matchedItems[lastIndex].name;
+                        const rg = lastIndex > 1? matchedItems[(lastIndex-1)].name : ""; 
+                        for (const item of matchedItems) {
+                          if (items.some(row => row.name === item.name) === false) {
+                            items.push(firstItem);
+                          }
+                        };
+                        const altNames = this.buildAltNames(firstItem.name, placename);
+                        this.saveGeoName({ ...firstItem, fcode: firstItem.type, country: cc, region: rg, altNames });
+                      }
+                    };
+                  }
+                }
+              }
+            }
+          } else if (predKeys.includes("structured_formatting")) {
+            const results = await this.searchByPlaceName(
+              pred.structured_formatting.main_text,
+              '',
+              0,
+              20,
+            );
+            if (results instanceof Array && results.length > 0) {
+              for (const item of results) {
+                if (rgx.test(item.fullName) && item.pop > 0) {
+                  const isAdded = items.some(pl => {
+                    return pl.lng === item.lng && pl.lat === item.lat;
+                  });
+                  if (!isAdded) {
+                    items.push(item);
+                  }
                 }
               }
             }
@@ -478,12 +533,37 @@ export class GeoService {
     return output;
   }
 
-  async googleNearby(lat = 0, lng = 0) {
-    const latLngStr = [lat, lng].join(',');
+  normalizeGoogleRegionCode(compStr = '') {
+    switch (compStr) {
+      case 'UK':
+        return 'GB';
+      case 'USA':
+        return 'US';
+      case 'gb':
+        return 'uk';
+      case 'usa':
+        return 'usa';
+      case 'USA':
+        return 'US';
+      default:
+        return compStr;
+    }
+  }
+
+  matchGoogleRegionCode(code = "") {
+    const codeStr = typeof code === 'string' ? code.trim() : '';
+    const isCountryCode = /^[A-Z][A-Z]$/.test(codeStr);
+    const compStr = isCountryCode ? code : code.toLocaleLowerCase();
+    return {code: this.normalizeGoogleRegionCode(compStr), regionType: isCountryCode ? 'country' : 'region' };
+  }
+
+  async googleNearby(nearby = '', regionCode = '') {
     const key = googleGeo.apiKey;
-    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latLngStr}&rankby=distance&types=country,cities,locality&key=${key}`;
+    //const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latLngStr}&rankby=distance&types=country,cities,locality&key=${key}`;
+    const { code, regionType } = this.matchGoogleRegionCode(regionCode);
+    const extraParams = notEmptyString(code)? `&components=${regionType}:${code}` : '';
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${nearby}${extraParams}&key=${key}`;
     const output: any = { valid: false, results: [] };
-    
     await this.getHttp(url).then(response => {
       if (response) {
         const { data } = response;

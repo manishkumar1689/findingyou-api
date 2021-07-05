@@ -32,19 +32,18 @@ export class GeoController {
     return res.send(data);
   }
 
-  @Get('google-by-coords/:loc')
-  async googleByCoordinates(@Res() res, @Param('loc') loc) {
+  @Get('google-by-coords/:loc/:code?')
+  async googleByCoordinates(@Res() res, @Param('loc') loc, @Param('code') code) {
     let data: any = { valid: false };
-    const coords = loc
+    /* const coords = loc
       .split(',')
       .filter(isNumeric)
       .map(parseFloat);
     if (coords.length > 1) {
       const [lat, lng] = coords;
-
-      console.log(lat,lng);
       data = await this.geoService.googleNearby(lat, lng);
-    }
+    } */
+    data = await this.geoService.googleNearby(loc, code);
     return res.send(data);
   }
 

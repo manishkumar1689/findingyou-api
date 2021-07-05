@@ -110,6 +110,7 @@ export const mapExternalPlaceName = (row: any = null) => {
         const compKey = key.toLowerCase().replace(/[_-]+/g, '');
         switch (compKey) {
           case 'name': 
+          case 'shortname':
             mp.set('name', value.toString());
             break;
           case 'fullname':
