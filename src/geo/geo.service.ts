@@ -177,12 +177,12 @@ export class GeoService {
     }
   }
 
-  processGooglePlaces(places: any[] = [], lat = 0, lng = 0) {
+  /* processGooglePlaces(places: any[] = [], lat = 0, lng = 0) {
     const mapGooglePlace = (place) => {
       
     }
     return places instanceof Array? places.filter(pl => pl instanceof Object).map(mapGooglePlace) : [];
-  }
+  } */
 
   async fetchGeoAndTimezone(lat: number, lng: number, datetime: string) {
     const data = await this.fetchGeoData(lat, lng);
