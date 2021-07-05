@@ -365,7 +365,7 @@ export class AstrologicController {
     const topList = !simplify ? "top" : ayanamshaKey;
     const data = await this.fetchCompactChart(loc, dtUtc, "top", topList, false, false);
     const chart = simplify? simplifyAstroChart(data) : data;
-    return res.json(data);
+    return res.json(chart);
   }
 
   @Post('save-user-chart')
@@ -377,13 +377,20 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Post('save-member-chart')
-  async saveUserChartSimple(@Res() res, @Body() inData: ChartInputDTO) {
+  @Post('save-member-chart/:ayanamsha?/:mode?')
+  async saveUserChartSimple(@Res() res,
+    @Body() inData: ChartInputDTO,
+    @Param('mode') mode: string,
+    @Param('ayanamsha') ayanamsha: string,
+  ) {
     const { _id } = inData;
     const chartID = notEmptyString(_id, 12) ? _id : '';
+    // basic | simple | complete
+    const ayaKey = notEmptyString(ayanamsha, 5)? ayanamsha : 'true_citra';
+    const simpleMode = notEmptyString(mode, 3)? mode : 'basic';
     const data = await this.saveChartData({...inData, status: 'member'}, true, chartID, 'true_citra', false);
     const {valid, shortTz } = data;
-    const chart = valid ? simplifyChart(data.chart) : {};
+    const chart = valid ? simplifyChart(data.chart, ayaKey, simpleMode) : {};
     return res.status(HttpStatus.OK).json({valid, shortTz, chart});
   }
 
@@ -446,7 +453,7 @@ export class AstrologicController {
             eventType: 'birth',
             roddenValue: 100,
           } as ChartInputDTO;
-          const saved = await this.saveChartData(inData);
+          const saved = await this.saveChartData(inData, true, '', 'true_citra', false);
           if (saved.valid) {
             chartIds.push({
               _id: saved.chart._id,

@@ -13,11 +13,11 @@ export const VariantSchema = new mongoose.Schema({
   },
   sign: {
     type: Number, //
-    required: true,
+    required: false,
   },
   house: {
     type: Number, //
-    required: true,
+    required: false,
   },
   nakshatra: {
     type: Number, //

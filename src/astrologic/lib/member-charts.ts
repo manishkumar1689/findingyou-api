@@ -17,7 +17,7 @@ export const simplifyUpagraha = (up: KeyValue, ayaOffset = 0) => {
   return { key, value: subtractLng360(value, ayaOffset)};
 }
 
-export const simplifyGraha = (gr, ayanamshaVal = 0, ayanamshaIndex = 0) => {
+export const simplifyGraha = (gr, ayanamshaVal = 0, ayanamshaNum = 9) => {
   const lng = subtractLng360(gr.lng, ayanamshaVal);
   const transitions = gr.transitions.map(tr => {
     return {
@@ -26,13 +26,17 @@ export const simplifyGraha = (gr, ayanamshaVal = 0, ayanamshaIndex = 0) => {
     };
   });
   let extra: any = {};
+  
   if (gr.variants instanceof Array) {
-    extra = Object.assign(
-      {},
-      removeIds(extractObject(gr.variants[ayanamshaIndex])),
-    );
-    delete extra.num;
-    console.log(gr.variants, ayanamshaIndex)
+    const variant = gr.variants.find(v => v.num === ayanamshaNum);
+    if (variant instanceof Object) {
+      extra = Object.assign(
+        {},
+        removeIds(extractObject(variant)),
+      );
+      delete extra.num;
+    }
+    
   }
   const { key, lat, lngSpeed, declination } = gr;
   return {
@@ -78,7 +82,7 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra', mode
   }
   const ayanamshaNum = matchAyanamshaNum(ayanamshaKey);
   chart.grahas = grahas.map(gr =>
-    simplifyGraha(gr, ayanamshaVal, ayanamshaIndex)
+    simplifyGraha(gr, ayanamshaVal, ayanamshaNum)
   );
   chart.placenames = chart.placenames.map(pl => {
     delete pl._id;

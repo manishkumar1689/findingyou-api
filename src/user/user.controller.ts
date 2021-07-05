@@ -221,6 +221,25 @@ export class UserController {
     const { query } = request;
     const startInt = smartCastInt(start, 0);
     const limitInt = smartCastInt(limit, 100);
+    let simpleMode = 'basic';
+    let ayanamshaKey = 'true_citra';
+    const queryKeys = Object.keys(query);
+    if (queryKeys.includes("mode") && notEmptyString(query.mode)) {
+      switch (query.mode) {
+        case 'simple':
+        case 'complete':
+          simpleMode = query.mode;
+          break;
+      }
+    }
+    if (queryKeys.includes("ayanamsha") && notEmptyString(query.ayanamsha)) {
+      switch (query.ayanamsha) {
+        case 'raw':
+        case 'tropical':
+          ayanamshaKey = query.ayanamsha;
+          break;
+      }
+    }
     const data = await this.userService.members(startInt, limitInt, query);
     const prefOptions = await this.settingService.getPreferences();
     const users = this.userService.filterByPreferences(
@@ -232,7 +251,7 @@ export class UserController {
     for (const user of users) {
       const chartObj = await this.astrologicService.getUserBirthChart(user._id);
       const hasChart = chartObj instanceof Object;
-      const chart = hasChart ? simplifyChart(chartObj) : {};
+      const chart = hasChart ? simplifyChart(chartObj, ayanamshaKey, simpleMode) : {};
       items.push({...user, chart, hasChart});
     }
     items.sort((a,b) => b.hasChart ? 1 : -1);

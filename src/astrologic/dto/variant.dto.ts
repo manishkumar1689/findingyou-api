@@ -5,13 +5,13 @@ export class VariantDTO {
   readonly num: number; // ayanamsha ref number
 
   @ApiProperty()
-  readonly sign: number;
+  readonly sign?: number;
 
   @ApiProperty()
-  readonly house: number;
+  readonly house?: number;
 
   @ApiProperty()
-  readonly nakshatra: number;
+  readonly nakshatra?: number;
 
   @ApiProperty()
   readonly relationship: string;
