@@ -6,7 +6,7 @@ import { geonamesApiBase, timezonedbApiBase } from './api';
 import { objectToQueryString, mapToQueryString } from '../lib/converters';
 import { AxiosResponse } from 'axios';
 import * as moment from 'moment-timezone';
-import { notEmptyString, isNumeric, validISODateString } from '../lib/validators';
+import { notEmptyString, isNumeric, validISODateString, emptyString } from '../lib/validators';
 import {
   filterDefaultName,
   filterToponyms,
@@ -22,6 +22,7 @@ import {
 import * as Redis from 'ioredis';
 import { RedisService } from 'nestjs-redis';
 import { GeoName } from './interfaces/geo-name.interface';
+import { generateNameSearchRegex } from 'src/astrologic/lib/helpers';
 
 @Injectable()
 export class GeoService {
@@ -311,14 +312,20 @@ export class GeoService {
     skipStored = false,
   ) {
     const records = !skipStored ? await this.matchStoredGeoName(placename) : [];
-    if (records.length > 0) {
-      return {
-        valid: true,
-        items: records,
-      };
-    } else {
-      return await this.searchByFuzzyAddressRemote(placename, geo);
+    const data = { valid: false, items: [] };
+    const numStored = records.length;
+    if (numStored > 0) {
+      data.valid = true;
+      data.items = records;
     }
+    if (numStored < 3 && (placename.length < 12 || numStored < 1)) {
+      const newData = await this.searchByFuzzyAddressRemote(placename, geo);
+      if (newData.valid) {
+        data.items = data.items.concat(newData.items);
+        data.valid = data.items.length > 0;
+      }
+    }
+    return data;
   }
 
   buildAltNames(name = "", placename = "") {
@@ -340,7 +347,7 @@ export class GeoService {
 
   async searchByFuzzyAddressRemote(placename: string, geo: any = null) {
     const params: Map<string, any> = new Map();
-    params.set('input', placename);
+    params.set('input', encodeURIComponent(placename));
     params.set('key', googleGeo.apiKey);
     const qStr = mapToQueryString(params);
     const url =
@@ -359,24 +366,39 @@ export class GeoService {
     if (!output.valid) {
       output.items = await this.searchByPlaceName(placename);
       output.valid = output.items.length > 0;
+      if (output.valid) {
+        for (const gItem of output.items) {
+          this.saveGeoName(gItem);
+        }
+      }
     }
     if (output.valid) {
       if (output.items instanceof Array && output.items.length > 0) {
-        output.items.forEach(item => {
+        
+        for (const item of output.items) {
           const altNames = this.buildAltNames(item.name, placename);
-          this.saveGeoName({ ...item, altNames });
-        });
+          const cData = await this.fetchGeoData(item.lat, item.lng);
+          if (cData.valid && cData.toponyms.length > 0) {
+            const country = cData.toponyms[0].name;
+            this.saveGeoName({ ...item, altNames, fcode: item.type, country }); 
+          }
+        }
       }
     }
     return output;
   }
 
   async matchStoredGeoName(search: string) {
-    const rgx = new RegExp('\\b' + search, 'i');
-    const criteria = { $or: [
-      { 'altNames.name': search.toLowerCase() },
-      { 'name': rgx }
-    ]};
+    const searchPattern = generateNameSearchRegex(search);
+    const letterRgx = new RegExp('^' + searchPattern, 'i');
+    const orConditions: any[] = [
+      { 'altNames.name': letterRgx }
+    ];
+    if (search.length > 4) {
+      const nameRgx = new RegExp('\\b' + searchPattern, 'i');
+      orConditions.push({ 'name': nameRgx });
+    }
+    const criteria = { $or: orConditions};
     const records = await this.geoNameModel
 
       .find(criteria)
@@ -402,6 +424,15 @@ export class GeoService {
         lng: inData.lng,
         lat: inData.lat,
       });
+      const keys = Object.keys(inData);
+      
+      if (keys.includes('type') && keys.includes('fcode') === false) {
+        inData.fcode = inData.type;
+        delete inData.type;
+      }
+      if (emptyString(inData.fcode)) {
+        inData.fcode = 'PPLL';
+      }
       if (records.length < 1) {
         const newGN = new this.geoNameModel(inData);
         newGN.save();
@@ -452,11 +483,12 @@ export class GeoService {
       const { predictions } = data;
 
       if (predictions instanceof Array) {
+        const placeIds: string[] = [];
         for (const pred of predictions) {
           const predKeys = Object.keys(pred);
           if (predKeys.includes("description") && predKeys.includes("types") && predKeys.includes("place_id")) {
-            
-            if (pred.types instanceof Array) {
+            if (pred.types instanceof Array && placeIds.includes(pred.place_id) === false) {
+              placeIds.push(pred.place_id);
               if (pred.types.some(type => placeTypes.includes(type))) {
                 const pl = await this.getPlaceByGooglePlaceId(pred.place_id);
                 if (pl instanceof Object) {
@@ -470,13 +502,10 @@ export class GeoService {
                         const firstItem = matchedItems[0];
                         const cc = matchedItems[lastIndex].name;
                         const rg = lastIndex > 1? matchedItems[(lastIndex-1)].name : ""; 
-                        for (const item of matchedItems) {
-                          if (items.some(row => row.name === item.name) === false) {
-                            items.push(firstItem);
-                          }
-                        };
                         const altNames = this.buildAltNames(firstItem.name, placename);
-                        this.saveGeoName({ ...firstItem, fcode: firstItem.type, country: cc, region: rg, altNames });
+                        const newItem = { ...firstItem, fcode: firstItem.type, country: cc, region: rg, altNames };
+                        items.push(newItem);
+                        this.saveGeoName(newItem);
                       }
                     };
                   }
@@ -517,7 +546,6 @@ export class GeoService {
     const qStr = mapToQueryString(params);
     const url =
       'https://maps.googleapis.com/maps/api/place/details/json' + qStr;
-
     let output: any = { valid: false };
     await this.getHttp(url).then(response => {
       if (response) {
