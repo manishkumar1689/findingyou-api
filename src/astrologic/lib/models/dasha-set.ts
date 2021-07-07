@@ -1,4 +1,4 @@
-/* import { notEmptyString, inRange, isNumeric } from '../../../lib/validators';
+import { notEmptyString, inRange, isNumeric } from '../../../lib/validators';
 import { Graha } from './graha-set';
 import dashaSets from '../settings/dasha-sets';
 import {
@@ -12,6 +12,7 @@ import {
 } from '../helpers';
 import { Chart } from './Chart';
 import { aspectGroups } from '../settings/graha-values';
+import { julRangeToAge, julToISODate } from '../date-funcs';
 
 export interface NakshatraMatch {
   key: string;
@@ -33,8 +34,6 @@ export interface DashaSpanItem {
   depth: number;
   start: string;
   end: string;
-  startDate: string;
-  endDate: string;
   iconClasses: string[];
   children: DashaSpanItem[];
   age?: any;
@@ -60,8 +59,6 @@ export const defaultDashaSpanItem = {
   depth: 0,
   start: '',
   end: '',
-  startDate: '',
-  endDate: '',
   iconClasses: [],
   children: [],
   age: null,
@@ -428,8 +425,6 @@ export const mapDashaItem = (
   const start = julToISODate(span.startJd, tzOffset);
   const end = julToISODate(span.endJd, tzOffset);
   const itemKey = [span.key, span.depth, depth, index].join('-');
-  const startDate = julToLongDate(span.startJd, tzOffset, false);
-  const endDate = julToLongDate(span.endJd, tzOffset, false);
   const children =
     depth < maxDepth
       ? span
@@ -439,14 +434,12 @@ export const mapDashaItem = (
           )
       : [];
   const iconClasses = [['icon', span.key].join('-')];
-  const age = julRangeToInterval(jd, span.startJd, tzOffset);
+  const age = julRangeToAge(jd, span.startJd, tzOffset);
   return {
     ...span,
     start,
     end,
     itemKey,
-    startDate,
-    endDate,
     iconClasses,
     children,
     age,
@@ -682,8 +675,7 @@ export const mapDashaPointAspects = (
             nakshatra: nakNum,
             system: sys27 ? 27 : 28,
             type: tg.key,
-            jd: targetJd,
-            startDate: julToDateOnly(targetJd, chart.tzOffset),
+            jd: targetJd
           };
           aspectMatches.push(aspectMatch);
         }
@@ -693,4 +685,4 @@ export const mapDashaPointAspects = (
   aspectMatches.sort((a, b) => (a.jd < b.jd ? -1 : 1));
   return aspectMatches;
 };
- */
+

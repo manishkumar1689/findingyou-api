@@ -1,3 +1,15 @@
+const vimshottariMatches = [
+  { years: 7, key: "ke" },
+  { years: 20, key: "ve" },
+  { years: 6, key: "su" },
+  { years: 10, key: "mo" },
+  { years: 7, key: "ma" },
+  { years: 18, key: "ra" },
+  { years: 16, key: "ju" },
+  { years: 19, key: "sa" },
+  { years: 17, key: "me" },
+];
+
 const dashaSets = [
   {
     key: 'vimshottari',
@@ -5,17 +17,17 @@ const dashaSets = [
     mode: 'repeat',
     lengthType: 'graha',
     length: 9,
-    nakshatraMatches: [
-      { years: 7, key: 'ke' },
-      { years: 20, key: 've' },
-      { years: 6, key: 'su' },
-      { years: 10, key: 'mo' },
-      { years: 7, key: 'ma' },
-      { years: 18, key: 'ra' },
-      { years: 16, key: 'ju' },
-      { years: 19, key: 'sa' },
-      { years: 17, key: 'me' },
-    ],
+    nakshatraMatches: vimshottariMatches,
+  },
+
+  {
+    key: "vimshottari_utpanna",
+    years: 120,
+    mode: "repeat",
+    lengthType: "graha",
+    length: 9,
+    offsetDegree: (360 / 27) * 4,
+    nakshatraMatches: vimshottariMatches,
   },
   /*
   SU3, MA3, JU3, SA3, KE3, MO3, ME3, VE3

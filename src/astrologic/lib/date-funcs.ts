@@ -271,3 +271,14 @@ export const decimalYear = (strDate = '') => {
 export const currentISODate = () => {
   return moment.utc().format();
 }
+
+export const julRangeToAge = (
+  startJd: number,
+  endJd: number,
+  tzOffset = 0
+) => {
+  const firstDate = julToISODateObj(startJd, tzOffset);
+  const secondDate = julToISODateObj(endJd, tzOffset);
+  const yearDiff = firstDate.diff(secondDate, "year", true);
+  return yearDiff;
+};

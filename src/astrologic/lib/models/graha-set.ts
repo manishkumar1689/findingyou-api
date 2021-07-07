@@ -25,6 +25,8 @@ import {
   nakshatra27,
   nakshatra28,
   subtractLng360,
+  withinNakshatra27,
+  nakshatra28Progress,
 } from '../helpers';
 import { AyanamshaItem, DefaultAyanamshaItem } from '../interfaces';
 import { mapRelationships } from '../map-relationships';
@@ -230,11 +232,19 @@ export class Graha extends BaseObject {
   }
 
   get nakshatra27() {
-    return nakshatra27(this.lng);
+    return nakshatra27(this.longitude);
+  }
+
+  get withinNakshatra27() {
+    return withinNakshatra27(this.longitude);
   }
 
   get nakshatra28() {
-    return nakshatra28(this.lng);
+    return nakshatra28(this.longitude);
+  }
+
+  get nakshatra28Progress() {
+    return nakshatra28Progress(this.longitude);
   }
 
   get padaDegrees() {
