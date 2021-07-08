@@ -803,8 +803,12 @@ export class AstrologicController {
                 const fourth = third.children[0];
                 balance.push(mapBalanceSpan(fourth));
                 if (fourth.children.length > 0) {
-                  const fifth = third.children[0];
+                  const fifth = fourth.children[0];
                   balance.push(mapBalanceSpan(fifth));
+                  if (fifth.children.length > 0) {
+                    const sixth = fifth.children[0];
+                    balance.push(mapBalanceSpan(sixth));
+                  }
                 }
               }
             }
