@@ -22,7 +22,7 @@ import {
 import * as Redis from 'ioredis';
 import { RedisService } from 'nestjs-redis';
 import { GeoName } from './interfaces/geo-name.interface';
-import { generateNameSearchRegex } from 'src/astrologic/lib/helpers';
+import { generateNameSearchRegex } from '../astrologic/lib/helpers';
 
 @Injectable()
 export class GeoService {

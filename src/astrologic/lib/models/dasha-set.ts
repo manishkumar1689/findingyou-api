@@ -10,9 +10,9 @@ import {
   nakshatra27Progress,
   nakshatra28Progress,
 } from '../helpers';
-import { Chart } from './Chart';
+import { Chart } from './chart';
 import { aspectGroups } from '../settings/graha-values';
-import { julRangeToAge, julToISODate } from '../date-funcs';
+import { julRangeToAge } from '../date-funcs';
 
 export interface NakshatraMatch {
   key: string;
