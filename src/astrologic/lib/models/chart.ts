@@ -320,7 +320,6 @@ export class Chart {
   }
 
   setAyanamshaItemByNum(num: number) {
-    let key = 'true_citra';
     const aRow = ayanamshaValues.find(a => a.value === num);
     const value = this.getAyanamshaValue(aRow.key);
     this.ayanamshaItem = {

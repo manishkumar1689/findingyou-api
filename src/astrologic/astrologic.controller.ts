@@ -93,6 +93,7 @@ import { SingleCore } from './interfaces/single-core';
 import { AssignPairedDTO } from './dto/assign-paired.dto';
 import { matchPlanetNum } from './lib/settings/graha-values';
 import { CreateUserDTO } from '../user/dto/create-user.dto';
+import { calcDashaSetByKey, DashaSpan, DashaSpanItem, mapDashaItem } from './lib/models/dasha-set';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -693,6 +694,125 @@ export class AstrologicController {
       }
     }
     return data;
+  }
+
+  @Get('dasha-set/:loc/:dt/:system/:key/:level?')
+  async fetchDashSet(@Res() res, @Param('loc') loc, @Param('dt') dt, @Param('system') system, @Param('key') key, @Param('level') level) {
+    const geo = locStringToGeo(loc);
+    const levelInt = smartCastInt(level, 3);
+    const chartData = await calcCompactChartData(
+      dt,
+      geo,
+      'top',
+      ['true_citra'],
+      0,
+      false,
+      false,
+    );
+    let data: any = {};
+    let nak = -1;
+    let lng = -1;
+    if (chartData instanceof Object) {
+      const chart = new Chart(chartData);
+      chart.setAyanamshaItemByNum(27);
+      const graha = chart.graha(key);
+      nak = graha.nakshatra27;
+      lng = graha.longitude;
+      data = calcDashaSetByKey(system, graha, chart.jd);
+      if (data.dashas instanceof Array) {
+        data.dashas = data.dashas.map(span =>
+          mapDashaItem(
+            span,
+            chart.jd,
+            data.set,
+            1,
+            levelInt,
+            chart.tzOffset
+          )
+        );
+      }
+    }
+    return res.json({...data, nak, lng});
+  }
+
+  @Get('dasha-balance/:loc/:dt/:refDt/:system/:key/:level?')
+  async getDashBalance(@Res() res, @Param('loc') loc, @Param('dt') dt, @Param('refDt') refDt, @Param('system') system, @Param('key') key, @Param('level') level) {
+    const geo = locStringToGeo(loc);
+    const levelInt = smartCastInt(level, 4);
+    const chartData = await calcCompactChartData(
+      dt,
+      geo,
+      'top',
+      ['true_citra'],
+      0,
+      false,
+      false,
+    );
+    let data: any = {};
+    let nak = -1;
+    let lng = -1;
+    const transitJd = calcJulDate(refDt);
+    const balance = [];
+    if (chartData instanceof Object) {
+      const chart = new Chart(chartData);
+      chart.setAyanamshaItemByNum(27);
+      const graha = chart.graha(key);
+      nak = graha.nakshatra27;
+      lng = graha.longitude;
+      data = calcDashaSetByKey(system, graha, chart.jd);
+      
+      if (data.dashas instanceof Array) {
+        data.dashas = data.dashas
+        .filter(row => transitJd >= row.startJd && transitJd < row.endJd)
+        .map(span =>
+          mapDashaItem(
+            span,
+            chart.jd,
+            data.set,
+            1,
+            levelInt,
+            chart.tzOffset,
+            transitJd
+          )
+        );
+        if (data.dashas.length > 0) {
+          const first = data.dashas[0];
+          const mapBalanceSpan = (span: DashaSpanItem) => {
+            const { key, startJd, endJd, age, nakNum } = span;
+            const duration = endJd - startJd;
+            const endAge = age + (duration / data.yearLength);
+            return {
+              key,
+              startJd,
+              endJd,
+              start: jdToDateTime(span.startJd),
+              end: jdToDateTime(span.endJd),
+              age,
+              endAge,
+              nakNum
+            }
+          }
+          balance.push(mapBalanceSpan(first));
+          if (first.children.length > 0) {
+            const second = first.children[0];
+            balance.push(mapBalanceSpan(second));
+            if (second.children.length > 0) {
+              const third = second.children[0];
+              balance.push(mapBalanceSpan(third));
+              if (third.children.length > 0) {
+                const fourth = third.children[0];
+                balance.push(mapBalanceSpan(fourth));
+                if (fourth.children.length > 0) {
+                  const fifth = third.children[0];
+                  balance.push(mapBalanceSpan(fifth));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return res.json({balance, nak, lng, yearLength: data.yearLength});
   }
 
   @Get('recalc-charts/:start?/:limit?')

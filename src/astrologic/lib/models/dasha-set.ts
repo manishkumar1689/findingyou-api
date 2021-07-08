@@ -24,6 +24,7 @@ export interface NakshatraMatch {
 export interface DashaData {
   dashas: Array<DashaSpan>;
   set: DashaSet;
+  yearLength?: number;
 }
 
 export interface DashaSpanItem {
@@ -32,9 +33,6 @@ export interface DashaSpanItem {
   startJd: number;
   endJd: number;
   depth: number;
-  start: string;
-  end: string;
-  iconClasses: string[];
   children: DashaSpanItem[];
   age?: any;
   system?: string;
@@ -410,37 +408,31 @@ export const calcDashaSetByKey = (
   return {
     dashas: calcTopDashaSpans(ds, nakNum, startJd, endJd),
     set: ds,
+    yearLength,
   };
 };
 
 export const mapDashaItem = (
   span,
-  index,
   jd = 0,
   dashaSet,
   depth = 0,
   maxDepth = 3,
   tzOffset = 0,
+  targetJd = -1
 ): DashaSpanItem => {
-  const start = julToISODate(span.startJd, tzOffset);
-  const end = julToISODate(span.endJd, tzOffset);
-  const itemKey = [span.key, span.depth, depth, index].join('-');
   const children =
     depth < maxDepth
       ? span
           .children(dashaSet)
-          .map((ds2, di2) =>
-            mapDashaItem(ds2, di2, jd, dashaSet, depth + 1, maxDepth, tzOffset),
+          .filter(sp => (targetJd < 0 || (targetJd >= sp.startJd && targetJd < sp.endJd)) )
+          .map(ds2 =>
+            mapDashaItem(ds2, jd, dashaSet, depth + 1, maxDepth, tzOffset, targetJd),
           )
       : [];
-  const iconClasses = [['icon', span.key].join('-')];
-  const age = julRangeToAge(jd, span.startJd, tzOffset);
+  const age = 0 - julRangeToAge(jd, span.startJd, tzOffset);
   return {
     ...span,
-    start,
-    end,
-    itemKey,
-    iconClasses,
     children,
     age,
   };
