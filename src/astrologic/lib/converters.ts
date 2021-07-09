@@ -16,6 +16,14 @@ export const locStringToGeo = (loc: string) => {
   return { lat, lng, alt };
 };
 
+export const latLngParamsToGeo = (latStr: string, lngStr: string, altStr = "") => {
+  const [lat, lng, altV] = [latStr, lngStr, altStr]
+    .filter(isNumeric)
+    .map(parseFloat);
+  const alt = isNumeric(altV) ? altV : ephemerisDefaults.altitude;
+  return { lat, lng, alt };
+};
+
 export const dmsToDegrees = (dms: degreesMinutesSeconds) => {
   let v = 0;
   const keys = Object.keys(dms);

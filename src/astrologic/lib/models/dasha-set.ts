@@ -12,7 +12,7 @@ import {
 } from '../helpers';
 import { Chart } from './chart';
 import { aspectGroups } from '../settings/graha-values';
-import { julRangeToAge } from '../date-funcs';
+import { jdToDateTime, julRangeToAge, julToISODate } from '../date-funcs';
 
 export interface NakshatraMatch {
   key: string;
@@ -166,6 +166,13 @@ export class DashaSpan {
       return children[index];
     }
   }
+}
+
+export interface BalanceRef {
+  lv1: string;
+  lv2: string;
+  lv3: string;
+  lv4?: string;
 }
 
 export const calcTopDashaSpans = (
@@ -412,6 +419,89 @@ export const calcDashaSetByKey = (
   };
 };
 
+export const filterByDashaContraints = (sp, targetJd = -1, after = false) => {
+  return targetJd > 0 ? (targetJd >= sp.startJd && targetJd < sp.endJd) || (after && targetJd < sp.startJd) : true;
+}
+
+export const mapBalanceSpan = (span: DashaSpanItem, yearLength = 365.25) => {
+  const { key, startJd, endJd, age, nakNum } = span;
+  const duration = endJd - startJd;
+  const endAge = age + (duration / yearLength);
+  return {
+    key,
+    startJd,
+    endJd,
+    start: jdToDateTime(span.startJd),
+    end: jdToDateTime(span.endJd),
+    age,
+    endAge,
+    nakNum
+  }
+}
+
+export class DashaBalanceItem {
+  key = '';
+  value = '';
+  level = 0;
+  constructor(key = '', value = '', level = 0) {
+    this.key = key;
+    this.value = value;
+    this.level = level;
+  }
+
+  get apply() {
+    return this.value.length > 1;
+  }
+
+  matches(key = "") {
+    return !this.apply || this.value == key;
+  }
+
+  matcheKey(key = "") {
+    return this.value == key;
+  }
+}
+
+export class DashaBalance {
+  lv1 = '';
+  lv2 = '';
+  lv3 = '';
+  lv4 = '';
+
+  maxLevel = -1;
+  
+  constructor(criteria: Map<string, string> = new Map()) {
+    [1, 2, 3, 4].map(num => { 
+      return {key: `lv${num}`, num };
+    }).forEach(level => {
+      if (criteria.has(level.key)) {
+        const keyVal = criteria.get(level.key);
+        if (notEmptyString(keyVal), 1) {
+          this[level.key] = keyVal;
+          this.maxLevel = level.num;
+        }
+      }
+    });
+  }
+
+  get  hasLevel1() {
+    return notEmptyString(this.lv1);
+  }
+  
+  get hasFilters() {
+    return this.maxLevel > 0;
+  }
+
+
+  matchBalanceItem(level = 1) {
+    const valid = level >= 1 && level <= 4;
+    const key = valid? `lv${level}` : '';
+    const value = valid ? this[key] : '';
+    return new DashaBalanceItem(key, value, level);
+  }
+
+} 
+
 export const mapDashaItem = (
   span,
   jd = 0,
@@ -419,24 +509,103 @@ export const mapDashaItem = (
   depth = 0,
   maxDepth = 3,
   tzOffset = 0,
-  targetJd = -1
+  targetJd = -1,
+  hasBalanceKeys = false
 ): DashaSpanItem => {
   const children =
     depth < maxDepth
       ? span
           .children(dashaSet)
-          .filter(sp => (targetJd < 0 || (targetJd >= sp.startJd && targetJd < sp.endJd)) )
+          .filter(sp => filterByDashaContraints(sp, targetJd, hasBalanceKeys) )
           .map(ds2 =>
-            mapDashaItem(ds2, jd, dashaSet, depth + 1, maxDepth, tzOffset, targetJd),
+            mapDashaItem(ds2, jd, dashaSet, depth + 1, maxDepth, tzOffset, targetJd, hasBalanceKeys),
           )
       : [];
-  const age = 0 - julRangeToAge(jd, span.startJd, tzOffset);
+  const age = julRangeToAge(span.startJd, jd, tzOffset);
   return {
     ...span,
     children,
     age,
   };
 };
+
+export const assignDashaBalances = (chart: Chart, transitJd = -1, maxLevel = 3, balanceRef: DashaBalance, system = 'vimshottari', key = 'mo') => {
+  const balances = [];
+  chart.setAyanamshaItemByNum(27);
+  const graha = chart.graha(key);
+  
+  const data = calcDashaSetByKey(system, graha, chart.jd);
+  if (data.dashas instanceof Array) {
+    const dashaSpans = data.dashas
+    .filter(row => filterByDashaContraints(row, transitJd, balanceRef.hasFilters))
+    .map(span =>
+      mapDashaItem(
+        span,
+        chart.jd,
+        data.set,
+        1,
+        maxLevel,
+        chart.tzOffset,
+        transitJd,
+        balanceRef.hasFilters
+      )
+    );
+    if (data.dashas.length > 0) {
+      if (balanceRef.hasFilters) {
+        const b1 = balanceRef.matchBalanceItem(1);
+        let lastMatched = false;
+        for (const row of dashaSpans) {
+          if (b1.matches(row.key)) {
+            if (balanceRef.maxLevel === 1 && b1.matcheKey(row.key) && row.startJd > transitJd && !lastMatched) {
+              balances.push(mapBalanceSpan(row, data.yearLength));
+              lastMatched = true;
+            }
+            if (row.children.length > 0 && balanceRef.maxLevel >= 2) {
+              const b2 = balanceRef.matchBalanceItem(2);
+              for (const r2 of row.children) {
+                if (balanceRef.maxLevel === 2 && b2.matcheKey(r2.key) && r2.startJd > transitJd && !lastMatched) {
+                  balances.push(mapBalanceSpan(row, data.yearLength));
+                  balances.push(mapBalanceSpan(r2, data.yearLength));
+                  lastMatched = true;
+                } else if (b2.matches(r2.key) && balanceRef.maxLevel >= 3) {
+                  const b3 = balanceRef.matchBalanceItem(3);
+                  for (const r3 of r2.children) {
+                    if (balanceRef.maxLevel === 3 && b3.matcheKey(r3.key) && r3.startJd > transitJd && !lastMatched) {
+                      balances.push(mapBalanceSpan(row, data.yearLength));
+                      balances.push(mapBalanceSpan(r2, data.yearLength));
+                      balances.push(mapBalanceSpan(r3, data.yearLength));
+                      lastMatched = true;
+                    } else if (b3.matches(r3.key) && balanceRef.maxLevel >= 4) {
+                      const b4 = balanceRef.matchBalanceItem(4);
+                      for (const r4 of r3.children) {
+                        if (balanceRef.maxLevel === 4 && b4.matcheKey(r4.key) && r4.startJd > transitJd && !lastMatched) {
+                          balances.push(mapBalanceSpan(row, data.yearLength));
+                          balances.push(mapBalanceSpan(r2, data.yearLength));
+                          balances.push(mapBalanceSpan(r3, data.yearLength));
+                          balances.push(mapBalanceSpan(r4, data.yearLength));
+                          lastMatched = true;
+                        }
+                      }
+                    }
+                  }
+                } 
+              };
+            }
+          }
+        }
+      } else {
+        const first = dashaSpans[0];
+        let currSpan = first;
+        balances.push(mapBalanceSpan(currSpan, data.yearLength));
+        while (currSpan.children.length > 0) {
+          currSpan = currSpan.children[0];
+          balances.push(mapBalanceSpan(currSpan, data.yearLength));
+        }
+      }
+    }
+  }
+  return balances;
+}
 
 export const calcDashaBalanceNextSub = (
   ds: DashaSet,
