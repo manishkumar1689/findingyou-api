@@ -419,8 +419,12 @@ export const calcDashaSetByKey = (
   };
 };
 
-export const filterByDashaContraints = (sp, targetJd = -1, after = false) => {
-  return targetJd > 0 ? (targetJd >= sp.startJd && targetJd < sp.endJd) || (after && targetJd < sp.startJd) : true;
+export const filterByDashaContraints = (sp: DashaSpan, targetJd = -1, after = false, endJd = -1) => {
+  const hasStart = targetJd > 0;
+  const hasRange = hasStart && endJd > 0 && endJd > targetJd;
+  const filterDashaAfterStart = (sp: DashaSpan) => (targetJd >= sp.startJd && targetJd <= sp.endJd) || (after && targetJd < sp.startJd);
+  const filterDashaBetween = (sp: DashaSpan) => (targetJd >= sp.startJd && endJd >= sp.endJd);
+  return hasRange ? filterDashaBetween(sp) : hasStart ? filterDashaAfterStart(sp) : true;
 }
 
 export const mapBalanceSpan = (span: DashaSpanItem, yearLength = 365.25) => {
@@ -503,22 +507,23 @@ export class DashaBalance {
 } 
 
 export const mapDashaItem = (
-  span,
+  span: DashaSpan,
   jd = 0,
   dashaSet,
   depth = 0,
   maxDepth = 3,
   tzOffset = 0,
   targetJd = -1,
-  hasBalanceKeys = false
+  hasBalanceKeys = false,
+  endJd = -1,
 ): DashaSpanItem => {
   const children =
     depth < maxDepth
       ? span
           .children(dashaSet)
-          .filter(sp => filterByDashaContraints(sp, targetJd, hasBalanceKeys) )
+          .filter(sp => filterByDashaContraints(sp, targetJd, hasBalanceKeys, endJd) )
           .map(ds2 =>
-            mapDashaItem(ds2, jd, dashaSet, depth + 1, maxDepth, tzOffset, targetJd, hasBalanceKeys),
+            mapDashaItem(ds2, jd, dashaSet, depth + 1, maxDepth, tzOffset, targetJd, hasBalanceKeys, endJd),
           )
       : [];
   const age = julRangeToAge(span.startJd, jd, tzOffset);

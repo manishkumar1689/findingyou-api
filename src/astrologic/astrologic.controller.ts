@@ -49,6 +49,7 @@ import {
   julToDateFormat,
   julToISODate,
   currentISODate,
+  durationStringToDays,
 } from './lib/date-funcs';
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
@@ -94,6 +95,7 @@ import { AssignPairedDTO } from './dto/assign-paired.dto';
 import { matchPlanetNum } from './lib/settings/graha-values';
 import { CreateUserDTO } from '../user/dto/create-user.dto';
 import { assignDashaBalances, calcDashaSetByKey, DashaBalance, DashaSpan, DashaSpanItem, filterByDashaContraints, mapBalanceSpan, mapDashaItem } from './lib/models/dasha-set';
+import { start } from 'repl';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -696,19 +698,13 @@ export class AstrologicController {
     return data;
   }
 
-  @Get('dasha-set/:loc/:dt/:system/:key/:level?')
-  async fetchDashSet(@Res() res, @Param('loc') loc, @Param('dt') dt, @Param('system') system, @Param('key') key, @Param('level') level) {
-    const geo = locStringToGeo(loc);
-    const levelInt = smartCastInt(level, 3);
-    const chartData = await calcCompactChartData(
-      dt,
-      geo,
-      'top',
-      ['true_citra'],
-      0,
-      false,
-      false,
-    );
+  /**
+   * Fetch a full set of dashas to given level. PLease note this can be slow beyond the 3rd level (pratyantardasha)
+   * 
+   */
+  @Get('dasha-set')
+  async fetchDashSet(@Res() res, @Query() query) {
+    const { dt, transitJd, system, key, chartData, maxLevel, durDays } = await this.matchDashaQueryParams(query);
     let data: any = {};
     let nak = -1;
     let lng = -1;
@@ -716,27 +712,31 @@ export class AstrologicController {
       const chart = new Chart(chartData);
       chart.setAyanamshaItemByNum(27);
       const graha = chart.graha(key);
+      const scanStartJd = transitJd;
+      const scanEndJd = durDays > 0? scanStartJd + durDays : -1;
       nak = graha.nakshatra27;
       lng = graha.longitude;
       data = calcDashaSetByKey(system, graha, chart.jd);
       if (data.dashas instanceof Array) {
-        data.dashas = data.dashas.map(span =>
+        data.dashas = data.dashas.filter(sp => scanStartJd < 1 || (scanStartJd <= sp.endJd  && scanEndJd >= sp.startJd)).map(span =>
           mapDashaItem(
             span,
             chart.jd,
             data.set,
             1,
-            levelInt,
-            chart.tzOffset
+            maxLevel,
+            chart.tzOffset,
+            scanStartJd,
+            false,
+            scanEndJd
           )
         );
       }
     }
-    return res.json({...data, nak, lng});
+    return res.json({...data, nak, lng });
   }
 
-  @Get('dasha-balance')
-  async getDashBalance(@Res() res, @Query() query) {
+  async matchDashaQueryParams(query) {
     const hasQuery = query instanceof Object && Object.keys(query).length > 1;
     const criteria: Map<string, string> = hasQuery ? new Map(Object.entries(query)) : new Map();
     const dt = criteria.has('dt')? criteria.get('dt') : '';
@@ -751,11 +751,23 @@ export class AstrologicController {
     const system = criteria.has('system') ? criteria.get('system') : 'vimshottari';
     const key = criteria.has('key') ? criteria.get('key') : 'mo';
     const chartId = criteria.has('chart')? criteria.get('chart') : '';
+    const userId = criteria.has('user')? criteria.get('user') : '';
     const hasChartId = notEmptyString(chartId, 16);
+    const hasUserId = notEmptyString(userId, 16);
     const validRefs = hasDt && (hasLoc || hasLatLng);
+    const balanceRef = new DashaBalance(criteria);
+    const duration = criteria.has('duration') ? criteria.get('duration') : '';
+    const durDays = notEmptyString(duration) ? durationStringToDays(duration) : '';
+    if (balanceRef.maxLevel > 0) {
+      levelInt = balanceRef.maxLevel;
+    }
     let chartData: any = null;
-    if (hasChartId) {
-      chartData = await this.astrologicService.getChart(chartId);
+    if (hasChartId || hasUserId) {
+      const chartModel = hasUserId ? await this.astrologicService.getUserBirthChart(userId) : await this.astrologicService.getChart(chartId);
+      if (chartModel instanceof Object) {
+        if (chartModel.constructor.name)
+        chartData = chartModel.toObject();
+      }
     } else if (validRefs) {
       chartData = await calcCompactChartData(
         dt,
@@ -767,23 +779,36 @@ export class AstrologicController {
         false,
       );
     }
+    return { dt, transitJd, chartId, userId, system, key, maxLevel: levelInt, chartData, balanceRef, durDays };
+  }
+
+  /*
+  * Fetch the dasha balance for a given date or when the mahadasha, antardasha or priantarddasha 
+  * next match specified graha keys
+  * All named parameters are added to the query string
+  * Charts may identified by chart id (chart=[chartID]), user if (user=[userID]) or by location + datetime time (&loc=65.15,-13.4&dt=1967-08-23:04:09:34) or (&lat=65.15&lng-13.4&dt=1967-08-23:04:09:34)
+  * The default system is vimshottari, but other systems may be specified with the system parameter
+  * The default base graha is the mmon, but other grahas may be specified with key and a two letter code (key=ma)
+  * If no target dasha grahas are specified, we need a reference transit date with transit=2021-07-18T12:00:00
+  * The level parameter determines the maximum depth
+  * To find the occurrence of a given dasha graha after a given date, use the lv1, lv2, lv3 and lv4 parameters
+  * in combination with either transit or after, (lv2=ma&after=2021-06-30T00:00:00). The maximum depth is the highest level specified
+  */
+  @Get('dasha-balance')
+  async getDashBalance(@Res() res, @Query() query) {
+    const { dt, transitJd, system, key, chartData, balanceRef, maxLevel } = await this.matchDashaQueryParams(query);
     
     let data: any = {};
     let nak = -1;
     let lng = -1;
-    
-    const balanceRef = new DashaBalance(criteria);
-    if (balanceRef.maxLevel > 0) {
-      levelInt = balanceRef.maxLevel;
-    }
     let balances = [];
     if (chartData instanceof Object) {
       const chart = new Chart(chartData);
       nak = chart.graha(key).nakshatra27;
       lng = chart.graha(key).longitude;
-      balances = assignDashaBalances(chart, transitJd, levelInt, balanceRef, system, key);
+      balances = assignDashaBalances(chart, transitJd, maxLevel, balanceRef, system, key);
     }
-    return res.json({balances, nak, lng, yearLength: data.yearLength, system, key});
+    return res.json({dt, balances, nak, lng, yearLength: data.yearLength, system, key});
   }
 
   @Get('recalc-charts/:start?/:limit?')

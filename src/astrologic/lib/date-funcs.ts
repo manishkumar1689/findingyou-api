@@ -106,6 +106,43 @@ export const jdToDateParts = (jd, gregFlag = 1) => {
   return swisseph.swe_revjul(jd, gregFlag);
 };
 
+export const convertUnitValsToDays = (numVal: number, unit = ""): number => {
+  switch (unit) {
+      case 'y':
+      case 'year':
+      case 'yr':
+      case 'yrs':
+      case 'years':
+        return numVal * 366;
+      case 'm':
+      case 'mon':
+      case 'mons':
+      case 'mns':
+      case 'month':
+      case 'months':
+        return numVal * 31;
+      case 'w':
+      case 'week':
+      case 'weeks':
+      case 'wk':
+      case 'wks':
+        return numVal * 7;
+      default:
+        return numVal;
+    }
+}
+
+export const durationStringToDays = (str = ""): number => {
+  const m = typeof str === 'string' ? str.trim().match(/^(\d+)([a-z]+)$/i) : [];
+  let days = 0;
+  if (m instanceof Array && m.length > 2) {
+    const numVal = parseInt(m[1], 10);
+    const unit = m[2].toLowerCase();
+    days = convertUnitValsToDays(numVal, unit);
+  }
+  return days;
+};
+
 export const zero2Pad = num => {
   let out = '';
   if (isNumeric(num)) {
