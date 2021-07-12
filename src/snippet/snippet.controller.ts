@@ -15,6 +15,9 @@ import { SnippetService } from './snippet.service';
 import { CreateSnippetDTO } from './dto/create-snippet.dto';
 import { BulkSnippetDTO } from './dto/bulk-snippet.dto';
 import { smartCastBool, smartCastString } from '../lib/converters';
+import { notEmptyString } from '../lib/validators';
+import { currentISODate } from '../astrologic/lib/date-funcs';
+import googleTranslateCodes from './sources/google-translate-codes';
 
 /*
 Provide alternative versions of snippets if not available
@@ -48,8 +51,42 @@ export class SnippetController {
   }
 
   @Post('save')
-  async save(@Res() res, @Body() createSnippetDTO: CreateSnippetDTO) {
-    const snippet = await this.snippetService.save(createSnippetDTO);
+  async save(@Res() res, @Body() createSnippetDTO: CreateSnippetDTO, @Query() query) {
+    const keys = query instanceof Object ? Object.keys(query) : [];
+    const translateLangStr = keys.includes('langs') ? query.langs : '';
+    const fromLang = keys.includes('from') ? query.from : 'en';
+    const translateLangs = notEmptyString(translateLangStr) ? translateLangStr.split(',') : [];
+    const { values } = createSnippetDTO;
+    if (values instanceof Array && translateLangs.length > 0) {
+      const defaultLang = createSnippetDTO.values.find(vn => vn.lang === fromLang || vn.lang.startsWith(`${fromLang}-`));
+      const nowDt = currentISODate();
+      if (defaultLang) {
+        for (const toKey of translateLangs) {
+          if (toKey !== fromLang) {
+            const versionIndex = values.findIndex(vn => vn.lang === toKey || vn.lang.startsWith(`${toKey}-`));
+            if (versionIndex < 0) {
+
+              const toLang = notEmptyString(toKey) ? toKey.split('|').shift() : '';
+              if (toLang.length > 1 && googleTranslateCodes.includes(toLang)) {
+                const { translation } = await this.snippetService.fetchGoogleTranslation(defaultLang.text, toLang, fromLang);
+                if (notEmptyString(translation)) {
+                  values.push({
+                    lang: toKey,
+                    active : true,
+                    approved: false,
+                    text: translation,
+                    modifiedAt: nowDt,
+                    createdAt: nowDt
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    const edited = {...createSnippetDTO, values } as CreateSnippetDTO;
+    const snippet = await this.snippetService.save(edited);
     return res.status(HttpStatus.OK).json({
       message: 'Snippet has been edited successfully',
       snippet,
@@ -156,6 +193,14 @@ export class SnippetController {
       valid = snippet instanceof Object;
     }
     return res.status(HttpStatus.OK).json({ ...data, valid });
+  }
+
+  @Get('translate/:text/:to/:from?')
+  async getTranslation(@Res() res, @Param('text') text, @Param('to') to, @Param('from') from) {
+    const source = notEmptyString(from)? from : 'en';
+    const target = notEmptyString(to)? to : '';
+    const data = await this.snippetService.fetchGoogleTranslation(text, target, source);
+    return res.status(HttpStatus.OK).json({...data, from, to});
   }
 
   @Delete('delete/:key/:user')

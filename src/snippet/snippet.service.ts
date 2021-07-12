@@ -1,15 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { HttpService, Injectable } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Snippet } from './interfaces/snippet.interface';
 import { CreateSnippetDTO } from './dto/create-snippet.dto';
 import { BulkSnippetDTO } from './dto/bulk-snippet.dto';
 import { extractDocId, hashMapToObject, extractObject } from '../lib/entities';
+import { v2 }  from '@google-cloud/translate';
+import { googleTranslate } from '../.config';
+const { Translate } = v2;
 
 @Injectable()
 export class SnippetService {
   constructor(
     @InjectModel('Snippet') private readonly snippetModel: Model<Snippet>,
+    private http: HttpService,
   ) {}
   // fetch all Snippets
   async list(publishedOnly = true, modFields = false): Promise<Snippet[]> {
@@ -244,4 +248,12 @@ export class SnippetService {
     }
     return hashMapToObject(mp);
   }
+
+  async fetchGoogleTranslation(text = "", target = "", source = "en") {
+    const {key, projectId } = googleTranslate;
+    const translate = new Translate({projectId, key});
+    const [translation] = await translate.translate(text, { to: target, from: source });
+    return { text, translation };
+  }
+
 }

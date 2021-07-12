@@ -44,6 +44,11 @@ export const googleGeo = {
   apiKey: 'AIzaSyAOeXTgZTB_cJUyV9B2DOiZI_6LoVU2vs8',
 };
 
+export const googleTranslate = {
+  key: 'AIzaSyA7DMs4bBxSjKd8XwBmH7VWPZniRdxeGIw',
+  projectId: 'snippets-319613',
+};
+
 export const hashSalt = '4jyddhd-90';
 
 export const maxResetMinutes = 180;
