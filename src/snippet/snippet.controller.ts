@@ -18,6 +18,7 @@ import { smartCastBool, smartCastString } from '../lib/converters';
 import { notEmptyString } from '../lib/validators';
 import { currentISODate } from '../astrologic/lib/date-funcs';
 import googleTranslateCodes from './sources/google-translate-codes';
+import { TranslateDTO } from './dto/translate.dto';
 
 /*
 Provide alternative versions of snippets if not available
@@ -65,10 +66,9 @@ export class SnippetController {
           if (toKey !== fromLang) {
             const versionIndex = values.findIndex(vn => vn.lang === toKey || vn.lang.startsWith(`${toKey}-`));
             if (versionIndex < 0) {
-
               const toLang = notEmptyString(toKey) ? toKey.split('|').shift() : '';
               if (toLang.length > 1 && googleTranslateCodes.includes(toLang)) {
-                const { translation } = await this.snippetService.fetchGoogleTranslation(defaultLang.text, toLang, fromLang);
+                const { translation } = await this.snippetService.translateItem(defaultLang.text, toLang, fromLang);
                 if (notEmptyString(translation)) {
                   values.push({
                     lang: toKey,
@@ -195,12 +195,14 @@ export class SnippetController {
     return res.status(HttpStatus.OK).json({ ...data, valid });
   }
 
-  @Get('translate/:text/:to/:from?')
-  async getTranslation(@Res() res, @Param('text') text, @Param('to') to, @Param('from') from) {
+  @Post('translate')
+  async getTranslation(@Res() res, @Body() translateDTO: TranslateDTO) {
+    const {from, to, text} = translateDTO;
     const source = notEmptyString(from)? from : 'en';
     const target = notEmptyString(to)? to : '';
-    const data = await this.snippetService.fetchGoogleTranslation(text, target, source);
-    return res.status(HttpStatus.OK).json({...data, from, to});
+    const data = googleTranslateCodes.includes(to) ? await this.snippetService.translateItem(text, target, source) : {};
+    const valid = Object.keys(data).includes('translation');
+    return res.status(HttpStatus.OK).json({...data, from, to, valid});
   }
 
   @Delete('delete/:key/:user')

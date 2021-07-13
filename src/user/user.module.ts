@@ -13,6 +13,7 @@ import { AstrologicService } from '../astrologic/astrologic.service';
 import { BodySpeedSchema } from '../astrologic/schemas/body-speed.schema';
 import { PairedChartSchema } from '../astrologic/schemas/paired-chart.schema';
 import { SnippetSchema } from '../snippet/schemas/snippet.schema';
+import { TranslatedItemSchema } from '../snippet/schemas/translated-item.schema';
 import { SnippetService } from '../snippet/snippet.service';
 import { ProtocolSchema } from '../setting/schemas/protocol.schema';
 import { GeoNameSchema } from '../geo/schemas/geo-name.schema';
@@ -28,6 +29,7 @@ import { PredictiveRuleSetSchema } from '../setting/schemas/predictive-rule-set.
       { name: 'Setting', schema: SettingSchema },
       { name: 'GeoName', schema: GeoNameSchema },
       { name: 'Snippet', schema: SnippetSchema },
+      { name: 'TranslatedItem', schema: TranslatedItemSchema },
       { name: 'Chart', schema: ChartSchema },
       { name: 'BodySpeed', schema: BodySpeedSchema },
       { name: 'PairedChart', schema: PairedChartSchema },
