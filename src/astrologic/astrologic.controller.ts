@@ -1141,6 +1141,9 @@ export class AstrologicController {
     });
   }
 
+  /*
+    Discover the next time a planet is within specified degree range
+  */
   @Get(
     'discover-degree-range-matches/:key/:lng/:orb?/:ayanamshaKey?/:max?',
   )

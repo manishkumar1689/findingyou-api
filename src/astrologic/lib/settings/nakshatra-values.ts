@@ -253,4 +253,71 @@ const nakshatraValues = [
   },
 ];
 
+const kotaCakraGroups = [
+  { key: 'e', flow: 1, nums: [1, 2, 3, 4] },
+  { key: 'se', flow: -1, nums: [5, 6, 7] },
+  { key: 's', flow: 1, nums: [8, 9, 10, 11] },
+  { key: 'sw', flow: -1, nums: [12, 13, 14] },
+  { key: 'w', flow: 1, nums: [15, 16, 17, 18] },
+  { key: 'nw', flow: -1, nums: [19, 20, 21] },
+  { key: 'n', flow: 1, nums: [22, 23, 24, 25] },
+  { key: 'ne', flow: -1, nums: [26, 27, 28] },
+];
+
+const matchKotaCakraDirection = (type = "s") => {
+	const row = kotaCakraGroups.find(row => row.key === type);
+	return row instanceof Object ? row.nums : [];
+}
+
+export const matchKotaCakraSection = (type = "inner") => {
+  switch (type) {
+    case "inner":
+    case "stambha":
+      return kotaCakraGroups.filter(row => row.flow === 1).map(row => row.nums[0]);
+    case "inner_middle":
+    case "madhya":
+      return kotaCakraGroups.map(row => {
+        const index = row.flow === 1 ? 1 : 2;
+        return row.nums[index];
+      });
+    case "boundary":
+    case "boundary_wall":
+    case "prakara":
+      return kotaCakraGroups.map(row => {
+        const index = row.flow === 1 ? 2 : 1;
+        return row.nums[index];
+      });
+    case "outer":
+    case "exterior":
+    case "bahya":
+      return kotaCakraGroups.map(row => {
+        const index = row.flow === 1 ? 3 : 0;
+        return row.nums[index];
+      });
+    default:
+    	return matchKotaCakraDirection(type);
+  }
+}
+
+export const sulaCakraGroups = [
+  { key: 'trident', nums: [8, 16, 22, 28] },
+  { key: 'next', nums: [1, 7, 9, 15, 17, 21, 23, 27] },
+  { key: 'other', nums:    [2,  3,  4,  5,  6, 10, 11, 12, 13, 14, 18, 19, 20, 24, 25, 26] }
+];
+
+const matchSulaCakaraGroup = (type = "") => {
+	const group = sulaCakraGroups.find(gr => gr.key === type);
+	return group instanceof Object ? group.nums : [];
+}
+
+export const matchSulaCakaraType = (type = "") => {
+	switch (type) {
+		case "trident":
+		case "next":
+			return matchSulaCakaraGroup(type);
+		default:
+			return matchSulaCakaraGroup('other');
+	}
+}
+
 export default nakshatraValues;
