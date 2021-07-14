@@ -320,4 +320,34 @@ export const matchSulaCakaraType = (type = "") => {
 	}
 }
 
+const candraGroups = [
+  { key: 'trident', nums: [3, 4, 5, 10, 11, 12, 17, 18, 19, 24, 25, 26] },
+  { key: 'outer', nums: [2, 6, 9, 13, 16, 20, 23, 27] },
+  { key: 'inner', nums:    [1,  7,  8,  14,  15, 21, 22, 28] }
+];
+
+const matchCandraGroup = (type = "") => {
+	const group = candraGroups.find(gr => gr.key === type);
+	return group instanceof Object ? group.nums : [];
+}
+
+const matchCandraTypeKey = (type = "") => {
+	switch (type) {
+		case "inner":
+		case "inner_circle":
+			return 'inner';
+		case "outer":
+		case "outer_circle":
+			return 'outer';
+		case 'trident':
+			return 'trident';
+		default:
+			return 'other';
+	}
+}
+
+export const matchCandraType = (type = "") => {
+	return matchCandraGroup(matchCandraTypeKey(type));
+}
+
 export default nakshatraValues;
