@@ -65,7 +65,7 @@ import {
   roundNumber,
 } from '../lib/converters';
 import { PairedChartInputDTO } from './dto/paired-chart-input.dto';
-import { midPointSurface, medianLatlng } from './lib/math-funcs';
+import { midPointSurface, medianLatlng, subtractLng360 } from './lib/math-funcs';
 import { PairedChartDTO } from './dto/paired-chart.dto';
 import {
   mapPairedChartInput,
@@ -94,8 +94,8 @@ import { SingleCore } from './interfaces/single-core';
 import { AssignPairedDTO } from './dto/assign-paired.dto';
 import { matchPlanetNum } from './lib/settings/graha-values';
 import { CreateUserDTO } from '../user/dto/create-user.dto';
-import { assignDashaBalances, calcDashaSetByKey, DashaBalance, DashaSpan, DashaSpanItem, filterByDashaContraints, mapBalanceSpan, mapDashaItem } from './lib/models/dasha-set';
-import { start } from 'repl';
+import { assignDashaBalances, calcDashaSetByKey, DashaBalance, mapDashaItem } from './lib/models/dasha-set';
+import { calcTropicalAscendant } from './lib/calc-ascendant';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -1142,7 +1142,7 @@ export class AstrologicController {
   }
 
   /*
-    Discover the next time a planet is within specified degree range
+    Discover charts with a planet within specified degree range
   */
   @Get(
     'discover-degree-range-matches/:key/:lng/:orb?/:ayanamshaKey?/:max?',
@@ -2452,6 +2452,39 @@ export class AstrologicController {
     const data = await matchNextTransitAtLng(key, lngFl, jdFl, ayanamsha);
     const targetDt = julToISODate(data.targetJd);
     return res.status(HttpStatus.OK).json({...data, targetDt});
+  }
+
+  @Get('sign-switches/:loc/:dt?/:ayanamsha?')
+  async signSwitches(@Res() res, @Param('dt') dt, @Param('loc') loc, @Param('ayanamsha') ayanamsha) {
+    const dtUtc = validISODateString(dt)? dt : currentISODate();
+    const geo = locStringToGeo(loc);
+    const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
+    const data = await this.fetchCompactChart(loc, dtUtc, "top", ayanamshaKey, false, false);
+    const chart = new Chart(data);
+    const coreKeys = [ "sa", "ju", "ma", "su", "ve", "me", "mo","as"];
+    chart.setAyanamshaItemByKey(ayanamshaKey);
+    const grahas = [];
+    for (const key of coreKeys) {
+      const gr = chart.graha(key);
+      const nextMatches = [];
+      for (let i = 0; i < 12; i++) {
+        const nextSign = ((gr.sign + i - 1) % 12) + 1;
+        const nextLng = (nextSign * 30) % 360;
+        const next = await matchNextTransitAtLng(key, nextLng, chart.jd, ayanamsha);
+        const currSign = nextSign < 12 ? nextSign + 1 : 1;
+        nextMatches.push({ sign: currSign, lng: nextLng, jd: next.targetJd, dt: julToISODate(next.targetJd) });
+      }
+      grahas.push({ 
+        key: gr.key,
+        jd: chart.jd,
+        dt: chart.datetime,
+        longitude: gr.longitude,
+        sign: gr.sign,
+        nextMatches
+      })
+    };
+    const ascendant = subtractLng360(calcTropicalAscendant(geo.lat, geo.lng, chart.jd), chart.getAyanamshaValue(ayanamshaKey));
+    return res.status(HttpStatus.OK).json({grahas, ascendant});
   }
 
   @Get('speed-patterns/:planet')

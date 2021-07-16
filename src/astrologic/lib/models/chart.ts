@@ -331,6 +331,18 @@ export class Chart {
     return this.ayanamshaItem;
   }
 
+  setAyanamshaItemByKey(key: string) {
+    const aRow = ayanamshaValues.find(a => a.key === key);
+    const value = this.getAyanamshaValue(key);
+    this.ayanamshaItem = {
+      num: aRow.value,
+      key,
+      value,
+      name: aRow.name,
+    };
+    return this.ayanamshaItem;
+  }
+
   getAyanamshaValue(key: string): number {
     const item = this.ayanamshas.find(a => a.key === key);
     if (item) {
