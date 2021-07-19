@@ -59,4 +59,8 @@ export class GeoLoc {
   get altitude() {
     return this.alt;
   }
+
+  get latLng() {
+    return { lat: this.lat, lng: this.lng };
+  }
 }

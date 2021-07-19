@@ -56,9 +56,10 @@ import { AspectSet, buildDegreeRange, buildLngRange } from './lib/calc-orbs';
 import { sanitize, smartCastInt } from '../lib/converters';
 import { KeyValue } from './interfaces/key-value';
 import { TagDTO } from './dto/tag.dto';
-import { shortenName, generateNameSearchRegex } from './lib/helpers';
+import { shortenName, generateNameSearchRegex, calcCoordsDistance } from './lib/helpers';
 import { minRemainingPaired } from '../.config';
 import { calcTropicalAscendantDt } from './lib/calc-ascendant';
+import { GeoLoc } from './lib/models/geo-loc';
 const { ObjectId } = Types;
 
 @Injectable()
@@ -874,6 +875,63 @@ export class AstrologicService {
       .then(c => (chart = c))
       .catch(console.log);
     return chart;
+  }
+
+  async matchExistingPlaceNames(geo: GeoLoc, km = 3) {
+    const latSize = km / 111;
+    
+    const calcLngScale = (lng) => Math.cos(Math.abs(lng) * (Math.PI / 180));
+    //const lngNeg = geo.lng < 0? -1 : 1;
+    const lngSize = 1 / (calcLngScale(geo.lng) * 111) * km;
+    
+    const latRange = { $gte: geo.lat - latSize, $lte: geo.lat + latSize };
+    const lngRange = { $gte: geo.lng - lngSize, $lte: geo.lng + lngSize };
+    console.log(lngRange, lngSize)
+    const steps = [
+      { 
+        $match: {
+          "placenames.geo.lat": latRange,
+          "placenames.geo.lng": lngRange
+        }
+      },
+      { 
+        $project: {
+          "placenames.name": 1,
+          "placenames.fullName": 1,
+          "placenames.geo.lat": 1,
+          "placenames.geo.lng": 1,
+          "placenames.geo.alt": 1,
+          "modifiedAt": 1
+        }
+      },
+      {
+        $sort: {
+          modifiedAt: -1
+        }
+      },
+      {
+        $limit: 10
+      }
+    ];
+    const records = await this.chartModel.aggregate(steps);
+    const items = [];
+    const keys: string[] = [];
+    const latLng = geo.latLng;
+    records.forEach(rec => {
+      const { placenames } = rec;
+      const lastIndex = placenames instanceof Array ? placenames.length - 1 : -1;
+      if (lastIndex >= 0) {
+        const nearest = placenames[lastIndex];
+        const key = [sanitize(nearest.fullName), nearest.geo.lat, nearest.geo.lng].join('__');
+        if (!keys.includes(key)) {
+            keys.push(key);
+            const distance = calcCoordsDistance(latLng, nearest.geo, 'km');
+            items.push({placenames, distance});
+        }
+      }
+    });
+    items.sort((a, b) => a.distance - b.distance);
+    return items;
   }
 
   async bulkUpdatePaired(start = 0, limit = 100, kutaSet = null, idStr = '') {

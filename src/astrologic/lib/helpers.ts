@@ -7,6 +7,7 @@ import {
   aspectGroups,
 } from './settings/graha-values';
 import { Graha } from './models/graha-set';
+import { LngLat } from './interfaces';
 
 export const extractString = (obj: any, key: string): string => {
   let str = '';
@@ -214,6 +215,40 @@ export const toSignValues = (
     };
   });
 };
+
+export const calcCoordsDistance = (geo1: LngLat, geo2: LngLat, unit = 'km') => {
+	if ((geo1.lat == geo2.lat) && (geo1.lng == geo2.lng)) {
+		return 0;
+	}
+	else {
+		const radlat1 = Math.PI * geo1.lat/180;
+		const radlat2 = Math.PI * geo1.lat/180;
+		const theta = geo1.lng-geo2.lng;
+		const radtheta = Math.PI * theta/180;
+		let dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
+		if (dist > 1) {
+			dist = 1;
+		}
+		dist = Math.acos(dist);
+		dist = dist * 180/Math.PI;
+		dist = dist * 60 * 1.1515;
+    const matchUnit = (str: string) => {
+      switch (str.trim().toLowerCase()) {
+        case 'km':
+        case 'k':
+          return 1.609344;
+        case 'nm':
+        case 'n':
+          return 0.8684;
+        default:
+          return 1;
+      }
+    }
+    const unitStr = typeof unit === 'string'? unit : 'm';
+    const multiplier = matchUnit(unitStr)
+		return dist * multiplier;
+	}
+}
 
 export const matchNakshatra28 = (index: number, offset = 0) => {
   const num = index + 1;

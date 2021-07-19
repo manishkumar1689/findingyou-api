@@ -38,6 +38,8 @@ import {
   calcCompactChartData,
   calcAllAspects,
   calcBodyJd,
+  calcBodiesJd,
+  calcAyanamsha,
 } from './lib/core';
 import {
   calcJulianDate,
@@ -96,6 +98,7 @@ import { matchPlanetNum } from './lib/settings/graha-values';
 import { CreateUserDTO } from '../user/dto/create-user.dto';
 import { assignDashaBalances, calcDashaSetByKey, DashaBalance, mapDashaItem } from './lib/models/dasha-set';
 import { calcTropicalAscendant } from './lib/calc-ascendant';
+import { GeoLoc } from './lib/models/geo-loc';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -369,6 +372,15 @@ export class AstrologicController {
     const data = await this.fetchCompactChart(loc, dtUtc, "top", topList, false, false);
     const chart = simplify? simplifyAstroChart(data) : data;
     return res.json(chart);
+  }
+
+  @Get('existing-placenames/:loc/:maxDistance?')
+  async fetchPlacenames(@Res() res, @Param('loc') loc, @Param('maxDistance') maxDistance ) {
+    const latLngAlt = locStringToGeo(loc);
+    const maxDistanceInt = smartCastInt(maxDistance, 3);
+    const geo = new GeoLoc(latLngAlt);
+    const data = await this.astrologicService.matchExistingPlaceNames(geo, maxDistanceInt);
+    return res.json(data);
   }
 
   @Post('save-user-chart')
@@ -2454,36 +2466,54 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json({...data, targetDt});
   }
 
-  @Get('sign-switches/:loc/:dt?/:ayanamsha?')
-  async signSwitches(@Res() res, @Param('dt') dt, @Param('loc') loc, @Param('ayanamsha') ayanamsha) {
-    const dtUtc = validISODateString(dt)? dt : currentISODate();
+  @Get('sign-switches/:loc/:start?/:end?/:ayanamsha?')
+  async signSwitches(@Res() res, @Param('loc') loc, @Param('start') start, @Param('end') end, @Param('ayanamsha') ayanamsha) {
+    const isValidDate = validISODateString(start);
+    const flVal = !isValidDate && isNumeric(start)? parseFloat(start) : -1;
+    const hasFl = flVal > 0;
+    const dtUtc = isValidDate? start : hasFl ? julToISODate(flVal) : currentISODate();
+    const startJd = hasFl ? flVal : calcJulDate(dtUtc);
+    const isValidEndDate = validISODateString(end);
+    const endFlVal = !isValidEndDate && isNumeric(end)? parseFloat(end) : -1;
+    const hasEndFl = endFlVal > 0;
+    const endFl = endFlVal > startJd ? endFlVal : startJd + endFlVal;
+    const endUtc = isValidEndDate? end : hasEndFl ? julToISODate(endFl) : currentISODate();
+    const endJd = hasEndFl ? endFl : calcJulDate(endUtc);
     const geo = locStringToGeo(loc);
     const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
-    const data = await this.fetchCompactChart(loc, dtUtc, "top", ayanamshaKey, false, false);
-    const chart = new Chart(data);
-    const coreKeys = [ "sa", "ju", "ma", "su", "ve", "me", "mo","as"];
-    chart.setAyanamshaItemByKey(ayanamshaKey);
+    const coreKeys = [ "sa", "ju", "ma", "su", "ve", "me", "mo"];
+    const bodies = await calcBodiesJd(startJd, coreKeys);
+    const ayanamshaVal = await calcAyanamsha(startJd, ayanamshaKey);
+    
     const grahas = [];
-    for (const key of coreKeys) {
-      const gr = chart.graha(key);
+    for (const gr of bodies) {
       const nextMatches = [];
-      for (let i = 0; i < 12; i++) {
-        const nextSign = ((gr.sign + i - 1) % 12) + 1;
+      let reachedEnd = false;
+      let i = 0;
+      const refLng = subtractLng360(gr.lng, ayanamshaVal);
+      const refSign = Math.floor(refLng / 30) + 1;
+      let refStartJd = startJd - 0;
+      while (!reachedEnd && i < 108) {
+        const nextSign = ((refSign + i - 1) % 12) + 1;
         const nextLng = (nextSign * 30) % 360;
-        const next = await matchNextTransitAtLng(key, nextLng, chart.jd, ayanamsha);
+        //console.log(gr.key, nextLng, gr.sign, julToISODate(endJd), endJd)
+        const next = await matchNextTransitAtLng(gr.key, nextLng, refStartJd, ayanamshaKey);
         const currSign = nextSign < 12 ? nextSign + 1 : 1;
-        nextMatches.push({ sign: currSign, lng: nextLng, jd: next.targetJd, dt: julToISODate(next.targetJd) });
+        refStartJd = next.targetJd;
+        nextMatches.push({ sign: currSign, lng: nextLng, jd: next.targetJd, dt: julToISODate(next.targetJd), spd: next.end.spd });
+        reachedEnd = next.targetJd >= endJd;
+        i++;
       }
       grahas.push({ 
         key: gr.key,
-        jd: chart.jd,
-        dt: chart.datetime,
-        longitude: gr.longitude,
-        sign: gr.sign,
+        jd: startJd,
+        dt: dtUtc,
+        longitude: refLng,
+        sign: refSign,
         nextMatches
       })
     };
-    const ascendant = subtractLng360(calcTropicalAscendant(geo.lat, geo.lng, chart.jd), chart.getAyanamshaValue(ayanamshaKey));
+    const ascendant = subtractLng360(calcTropicalAscendant(geo.lat, geo.lng, startJd), ayanamshaVal);
     return res.status(HttpStatus.OK).json({grahas, ascendant});
   }
 

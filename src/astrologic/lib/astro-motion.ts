@@ -1,6 +1,6 @@
 import * as swisseph from 'swisseph';
 import { calcUtAsync } from './sweph-async';
-import { calcJulDate, jdToDateTime } from './date-funcs';
+import { calcJulDate, jdToDateTime, julToISODate } from './date-funcs';
 import { isNumeric, notEmptyString, withinTolerance } from '../../lib/validators';
 import grahaValues from './settings/graha-values';
 import { matchPlanetNum } from './settings/graha-values';
@@ -227,9 +227,12 @@ export const matchProgressionJdStep = (key = "su") => {
       return 0.25;
     case "ma":
       return 1;
+    case "ve":
+      return 0.5;
     case "ju":
-    case "sa":
       return 2;
+    case "sa":
+      return 3;
     case "ur":
     case "ne":
     case "pl":
@@ -257,47 +260,58 @@ export const matchNextTransitAtLng = async (key = "su", lngFl = 0, jdFl = 0, aya
   const applyAyanamsha = ayaKey !== "tropical";
   const spds = [];
   const aya = applyAyanamsha? await calcAyanamsha(jdFl, ayaKey) : 0;
-    await calcBodySpeed(jdFl, num, (speed, lngTrop) => {
-      const lng = subtractLng360(lngTrop, aya);
-      spds.push({ speed, lng, jd: jdFl });
+  await calcBodySpeed(jdFl, num, (speed, lngTrop) => {
+    const lng = subtractLng360(lngTrop, aya);
+    spds.push({ speed, lng, jd: jdFl });
+  });
+  let refJd = jdFl;
+  let i = 0;
+  const step = matchProgressionJdStep(key);
+  let stopIndex = 1000;
+  let retroMult = 1;
+  while (i < stopIndex) {
+    refJd += step;
+    await calcBodySpeed(refJd, num, (speed, lng) => {
+      spds.push({ speed, lng, jd: refJd });
     });
-    let refJd = jdFl;
-    let i = 0;
-    const step = matchProgressionJdStep(key);
-    let stopIndex = 1000;
-    while (i < stopIndex) {
-      refJd += step;
-      await calcBodySpeed(refJd, num, (speed, lng) => {
-        //const lng = subtractLng360(lngTrop, aya);
-        spds.push({ speed, lng, jd: refJd });
-      });
-      const lastItem = spds[(spds.length -1)];
-      if (Math.abs(lastItem.lng - lngFl) < Math.abs(lastItem.speed * step)) {
-        stopIndex = i + 2;
-      }
-      i++;
+    const lastItem = spds[(spds.length -1)];
+    const retro = lastItem.speed < 0;
+    const diff = lastItem.lng - lngFl;
+    if (!retro && diff < lastItem.speed * step) {
+      stopIndex = i + 2;
+    } else if (retro && diff > lastItem.speed * step) {
+      stopIndex = i + 2;
     }
-    if (spds.length > 3) {
-      spds.splice(0, spds.length - 3);
+    retroMult = retro ? -1 : 1;
+    i++;
+  }
+  if (spds.length > 3) {
+    spds.splice(0, spds.length - 3);
+  }
+  let ranges = [];
+  const numSpds = spds.length;
+  for (let i = 1; i < numSpds; i++) {
+    const prevLng = spds[(i-1)].lng;
+    const prevSpd = spds[(i-1)].speed * step;
+    const currLng = spds[i].lng;
+    if ((currLng >= lngFl || (currLng + prevSpd) >= lngFl) && (prevLng <= lngFl || (prevLng - 360) <= lngFl)) {
+      ranges.push(spds[(i-1)]);
     }
-    let ranges = [];
-    const numSpds = spds.length;
-    for (let i = 1; i < numSpds; i++) {
-      const prevLng = spds[(i-1)].lng;
-      const prevSpd = spds[(i-1)].speed * step;
-      const currLng = spds[i].lng;
-      if ((currLng >= lngFl || (currLng + prevSpd) >= lngFl) && (prevLng <= lngFl || (prevLng - 360) <= lngFl)) {
-        ranges.push(spds[(i-1)]);
-      }
-    }
-    if (ranges.length < 2) {
-      ranges = spds.slice(spds.length -2, spds.length);
-    }
-    const [start, end ] = ranges;
-    const distance = subtractLng360(end.lng, start.lng);
-    const progressDeg = (lngFl - start.lng + 360) % 360;
-    const progress = progressDeg > 0 ? progressDeg / distance : 0;
-    const progressJd = progress * step;
-    const targetJd = start.jd + progressJd;
-    return { start, end, targetJd, num, ayanamsha: aya };
+  }
+  if (ranges.length < 2) {
+    ranges = spds.slice(spds.length -2, spds.length);
+  }
+  const [start, end ] = ranges;
+  //const diff = end.lng - start.lng;
+  const distance = subtractLng360(end.lng, start.lng);
+  //const relDeg = distance >= 180 ? start.lng - lngFl : lngFl - start.lng;
+  //const relDeg = distance;
+  const progressDeg = (distance + 360) % 360;
+  const progress = progressDeg > 0 ? progressDeg / distance : 0;
+  const progressJd = progress * step;
+  const targetJd = start.jd + progressJd;
+ /*  if (key === "ju") {
+    console.log(progressJd, julToISODate(targetJd), julToISODate(jdFl), relDeg, progressDeg, distance, lngFl - start.lng);
+  } */
+  return { start, end, targetJd, num, ayanamsha: aya };
 }
