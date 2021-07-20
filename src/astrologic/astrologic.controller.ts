@@ -350,7 +350,6 @@ export class AstrologicController {
         dt,
       );
     }
-    console.log(placeMatches.length, geoInfo, distance);
     return geoInfo;
   }
 
