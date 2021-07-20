@@ -8,7 +8,7 @@ import { BulkSnippetDTO } from './dto/bulk-snippet.dto';
 import { extractDocId, hashMapToObject, extractObject } from '../lib/entities';
 import { v2 }  from '@google-cloud/translate';
 import { googleTranslate } from '../.config';
-import { notEmptyString } from 'src/lib/validators';
+import { notEmptyString } from '../lib/validators';
 const { Translate } = v2;
 
 @Injectable()

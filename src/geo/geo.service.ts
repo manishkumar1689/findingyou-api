@@ -23,7 +23,7 @@ import * as Redis from 'ioredis';
 import { RedisService } from 'nestjs-redis';
 import { GeoName } from './interfaces/geo-name.interface';
 import { generateNameSearchRegex } from '../astrologic/lib/helpers';
-import { Toponym } from 'src/astrologic/lib/interfaces';
+import { Toponym } from '../astrologic/lib/interfaces';
 
 @Injectable()
 export class GeoService {
@@ -162,7 +162,7 @@ export class GeoService {
     return data;
   }
 
-  matchStandardTzOffset(tz, year = 2000) {
+  matchStandardTzOffset(tz: string, year = 2000) {
     const defVal = -86400;
     switch (tz) { 
       case 'Asia/Kolkata':

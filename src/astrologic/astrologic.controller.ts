@@ -100,7 +100,7 @@ import { AssignPairedDTO } from './dto/assign-paired.dto';
 import { matchPlanetNum } from './lib/settings/graha-values';
 import { CreateUserDTO } from '../user/dto/create-user.dto';
 import { assignDashaBalances, calcDashaSetByKey, DashaBalance, mapDashaItem } from './lib/models/dasha-set';
-import { calcAscendantTimeline, calcOffsetAscendant, calcTropicalAscendant } from './lib/calc-ascendant';
+import { calcAscendantTimelineItems, calcOffsetAscendant } from './lib/calc-ascendant';
 import { GeoLoc } from './lib/models/geo-loc';
 
 @Controller('astrologic')
@@ -330,8 +330,12 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  /**
+   * Fetch previously matched placenames and tz data if within 1km
+   * Otherwise search new geo info
+   */
   async fetchGeoInfo(geo = null, dt = "") {
-    const placeMatches = await this.astrologicService.matchExistingPlaceNames(new GeoLoc(geo), 5, 2);
+    const placeMatches = await this.astrologicService.matchExistingPlaceNames(new GeoLoc(geo), 4, 1);
     let geoInfo = { toponyms: [], tz: "", offset: 0 };
     let distance = 0;
     if (placeMatches.length > 0) {
@@ -2484,7 +2488,7 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json({...data, targetDt});
   }
 
-  @Get('sign-switches/:loc/:start?/:end?/:ayanamsha?')
+  @Get('sign-timeline/:loc/:start?/:end?/:ayanamsha?')
   async signSwitches(@Res() res, @Param('loc') loc, @Param('start') start, @Param('end') end, @Param('ayanamsha') ayanamsha) {
     const { dtUtc, jd } = matchJdAndDatetime(start);
     const startJd = jd;
@@ -2523,11 +2527,19 @@ export class AstrologicController {
         nextMatches
       })
     };
-    const ascendant = subtractLng360(calcTropicalAscendant(geo.lat, geo.lng, startJd), ayanamshaVal);
-    return res.status(HttpStatus.OK).json({grahas, ascendant, start: dtUtc, end: endDt });
+    const ascendant = calcOffsetAscendant(geo.lat, geo.lng, startJd, ayanamshaVal);
+    const ascendantData = calcAscendantTimelineItems(geo.lat, geo.lng, startJd, endJd, ayanamshaVal);
+    grahas.push({ 
+      key: "as", 
+      jd: startJd,
+      dt: dtUtc,
+      longitude: ascendant,
+      nextMatches: ascendantData.items
+    });
+    return res.status(HttpStatus.OK).json({grahas, start: dtUtc, end: endDt });
   }
 
-  @Get('ascendant-switches/:loc/:start?/:end?/:ayanamsha?')
+  @Get('ascendant-timeline/:loc/:start?/:end?/:ayanamsha?')
   async fetchAscendantTimeline(@Res() res, @Param('loc') loc, @Param('start') start, @Param('end') end, @Param('ayanamsha') ayanamsha) {
     const geo = locStringToGeo(loc);
     const { dtUtc, jd } = matchJdAndDatetime(start);
@@ -2536,11 +2548,8 @@ export class AstrologicController {
     const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
     const ayanamshaVal = await calcAyanamsha(startJd, ayanamshaKey);
     const { endJd, endDt } = matchEndJdAndDatetime(end, jd);
-    const data = calcAscendantTimeline(lat, lng, startJd, endJd, ayanamshaVal);
-    const items = data.items.map(item => {
-      return { ...item, dt: julToISODate(item.jd) }
-    });
-    return res.status(HttpStatus.OK).json({...data, items, startDt: dtUtc, endDt});
+    const data = calcAscendantTimelineItems(lat, lng, startJd, endJd, ayanamshaVal);
+    return res.status(HttpStatus.OK).json({...data, startDt: dtUtc, endDt});
   }
 
   @Get('ascendant/:loc/:dt?/:ayanamsha?')

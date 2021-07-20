@@ -1,4 +1,4 @@
-import { calcJulDate } from "./date-funcs";
+import { calcJulDate, julToISODate } from "./date-funcs";
 import { subtractLng360 } from "./math-funcs";
 
 export const degToPi = (deg: number): number => deg * (Math.PI / 180);
@@ -95,9 +95,19 @@ export const calcAscendantTimeline = (lat = 0, lng = 0, startJd = 0, endJd = 0, 
 			const targetLng = calcOffsetAscendant(lat, lng, targetJd, ayanamshaValue);
 			const multiplier = 30 / (diff * 3);
 			currJd += (minuteJd * multiplier);
-			items.push({ jd: targetJd, lng: targetLng, multiplier });
+			items.push({ jd: targetJd, lng: targetLng });
 		}
 		counter++;
 	}
 	return { items, startJd, endJd, dur: endJd - startJd, startDiff };
+}
+
+export const calcAscendantTimelineItems = (lat = 0, lng = 0, startJd = 0, endJd = 0, ayanamshaValue = 0) => {
+	const data = calcAscendantTimeline(lat, lng, startJd, endJd, ayanamshaValue)
+	data.items = data.items.map(item => {
+		const lng = Math.round(item.lng);
+		const sign = Math.floor(lng / 30) + 1; 
+		return { ...item, lng, sign, dt: julToISODate(item.jd) }
+	});
+	return data;
 }
