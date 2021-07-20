@@ -97,6 +97,22 @@ export const calcJulDate = (strDate, julian = false) => {
   return calcJulDateFromParts(dp, julian);
 };
 
+export const matchJdAndDatetime = (strRef = "", startJd = -1) => {
+  const isValidDate = validISODateString(strRef);
+  const flVal = !isValidDate && isNumeric(strRef)? parseFloat(strRef) : -1;
+  const hasFl = flVal > 0;
+  const refFl = startJd <= 0 || flVal > startJd ? flVal : startJd + flVal;
+  
+  const dtUtc = isValidDate? strRef : hasFl ? julToISODate(refFl) : currentISODate();
+  const jd = hasFl ? refFl : calcJulDate(dtUtc);
+  return { dtUtc, jd };
+}
+
+export const matchEndJdAndDatetime = (strRef = "", startJd = 0) => {
+  const { jd, dtUtc } = matchJdAndDatetime(strRef, startJd);
+  return { endJd: jd, endDt: dtUtc };
+}
+
 export const calcJulDateFromParts = (dp, julian = false) => {
   const greg_flag = julian === true ? 0 : 1;
   return swisseph.swe_julday(dp.year, dp.month, dp.day, dp.hour, greg_flag);

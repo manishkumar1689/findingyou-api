@@ -40,6 +40,7 @@ import {
   calcBodyJd,
   calcBodiesJd,
   calcAyanamsha,
+  fetchHouseDataJd,
 } from './lib/core';
 import {
   calcJulianDate,
@@ -52,6 +53,8 @@ import {
   julToISODate,
   currentISODate,
   durationStringToDays,
+  matchJdAndDatetime,
+  matchEndJdAndDatetime,
 } from './lib/date-funcs';
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
@@ -97,7 +100,7 @@ import { AssignPairedDTO } from './dto/assign-paired.dto';
 import { matchPlanetNum } from './lib/settings/graha-values';
 import { CreateUserDTO } from '../user/dto/create-user.dto';
 import { assignDashaBalances, calcDashaSetByKey, DashaBalance, mapDashaItem } from './lib/models/dasha-set';
-import { calcTropicalAscendant } from './lib/calc-ascendant';
+import { calcAscendantTimeline, calcOffsetAscendant, calcTropicalAscendant } from './lib/calc-ascendant';
 import { GeoLoc } from './lib/models/geo-loc';
 
 @Controller('astrologic')
@@ -327,15 +330,31 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  async fetchCompactChart(loc: string, dt: string, ayanamshaMode = "true_citra", topList = "", fetchFull = true, addExtraSets = true) {
-    let data: any = { valid: false };
-    if (validISODateString(dt) && notEmptyString(loc, 3)) {
-      const geo = locStringToGeo(loc);
-      const geoInfo = await this.geoService.fetchGeoAndTimezone(
+  async fetchGeoInfo(geo = null, dt = "") {
+    const placeMatches = await this.astrologicService.matchExistingPlaceNames(new GeoLoc(geo), 5, 2);
+    let geoInfo = { toponyms: [], tz: "", offset: 0 };
+    let distance = 0;
+    if (placeMatches.length > 0) {
+      const geoPlace = placeMatches[0];
+      const tzOffset = this.geoService.checkLocaleOffset(geoPlace.tz, dt, geoPlace.placenames);
+      distance = geoPlace.distance;
+      geoInfo = { toponyms: geoPlace.placenames, tz: geoPlace.tz, offset: tzOffset};
+    } else {
+      geoInfo = await this.geoService.fetchGeoAndTimezone(
         geo.lat,
         geo.lng,
         dt,
       );
+    }
+    console.log(placeMatches.length, geoInfo, distance);
+    return geoInfo;
+  }
+
+  async fetchCompactChart(loc: string, dt: string, ayanamshaMode = "true_citra", topList = "", fetchFull = true, addExtraSets = true) {
+    let data: any = { valid: false };
+    if (validISODateString(dt) && notEmptyString(loc, 3)) {
+      const geo = locStringToGeo(loc);
+      const geoInfo = await this.fetchGeoInfo(geo, dt);
       const dtUtc = applyTzOffsetToDateString(dt, geoInfo.offset);
 
       const ayanamshaKey = notEmptyString(ayanamshaMode, 3)
@@ -531,9 +550,8 @@ export class AstrologicController {
             notEmptyString(tz) &&
             isNumeric(tzOffset) &&
             placenames instanceof Array && placenames.length > 1;
-          const geoInfo = await this.geoService.fetchGeoAndTimezone(
-            geo.lat,
-            geo.lng,
+          const geoInfo = await this.fetchGeoInfo(
+            geo,
             datetime,
           );
           const dtUtc = applyTzOffsetToDateString(datetime, geoInfo.offset);
@@ -2468,17 +2486,9 @@ export class AstrologicController {
 
   @Get('sign-switches/:loc/:start?/:end?/:ayanamsha?')
   async signSwitches(@Res() res, @Param('loc') loc, @Param('start') start, @Param('end') end, @Param('ayanamsha') ayanamsha) {
-    const isValidDate = validISODateString(start);
-    const flVal = !isValidDate && isNumeric(start)? parseFloat(start) : -1;
-    const hasFl = flVal > 0;
-    const dtUtc = isValidDate? start : hasFl ? julToISODate(flVal) : currentISODate();
-    const startJd = hasFl ? flVal : calcJulDate(dtUtc);
-    const isValidEndDate = validISODateString(end);
-    const endFlVal = !isValidEndDate && isNumeric(end)? parseFloat(end) : -1;
-    const hasEndFl = endFlVal > 0;
-    const endFl = endFlVal > startJd ? endFlVal : startJd + endFlVal;
-    const endUtc = isValidEndDate? end : hasEndFl ? julToISODate(endFl) : currentISODate();
-    const endJd = hasEndFl ? endFl : calcJulDate(endUtc);
+    const { dtUtc, jd } = matchJdAndDatetime(start);
+    const startJd = jd;
+    const { endJd, endDt } = matchEndJdAndDatetime(end, jd);
     const geo = locStringToGeo(loc);
     const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
     const coreKeys = [ "sa", "ju", "ma", "su", "ve", "me", "mo"];
@@ -2514,8 +2524,38 @@ export class AstrologicController {
       })
     };
     const ascendant = subtractLng360(calcTropicalAscendant(geo.lat, geo.lng, startJd), ayanamshaVal);
-    return res.status(HttpStatus.OK).json({grahas, ascendant});
+    return res.status(HttpStatus.OK).json({grahas, ascendant, start: dtUtc, end: endDt });
   }
+
+  @Get('ascendant-switches/:loc/:start?/:end?/:ayanamsha?')
+  async fetchAscendantTimeline(@Res() res, @Param('loc') loc, @Param('start') start, @Param('end') end, @Param('ayanamsha') ayanamsha) {
+    const geo = locStringToGeo(loc);
+    const { dtUtc, jd } = matchJdAndDatetime(start);
+    const startJd = jd;
+    const { lat, lng } = geo;
+    const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
+    const ayanamshaVal = await calcAyanamsha(startJd, ayanamshaKey);
+    const { endJd, endDt } = matchEndJdAndDatetime(end, jd);
+    const data = calcAscendantTimeline(lat, lng, startJd, endJd, ayanamshaVal);
+    const items = data.items.map(item => {
+      return { ...item, dt: julToISODate(item.jd) }
+    });
+    return res.status(HttpStatus.OK).json({...data, items, startDt: dtUtc, endDt});
+  }
+
+  @Get('ascendant/:loc/:dt?/:ayanamsha?')
+  async fetchAscendant(@Res() res, @Param('loc') loc, @Param('dt') dt, @Param('ayanamsha') ayanamsha) {
+    const geo = locStringToGeo(loc);
+    const { dtUtc, jd } = matchJdAndDatetime(dt);
+    const { lat, lng } = geo;
+    const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
+    const ayanamshaVal = await calcAyanamsha(jd, ayanamshaKey);
+    const ascendant = calcOffsetAscendant(lat, lng, jd, ayanamshaVal);
+    const hd = await fetchHouseDataJd(jd, geo);
+    const lagna = subtractLng360(hd.ascendant, ayanamshaVal);
+    return res.status(HttpStatus.OK).json({ ascendant, lagna, dt: dtUtc });
+  }
+    
 
   @Get('speed-patterns/:planet')
   async motionPatternsByPlanet(@Res() res, @Param('planet') planet) {

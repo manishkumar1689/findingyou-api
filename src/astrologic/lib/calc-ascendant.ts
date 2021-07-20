@@ -1,4 +1,5 @@
 import { calcJulDate } from "./date-funcs";
+import { subtractLng360 } from "./math-funcs";
 
 export const degToPi = (deg: number): number => deg * (Math.PI / 180);
 
@@ -60,7 +61,43 @@ export const calcTropicalAscendant = (lat = 0, lng = 0, jd = 0): number => {
 	return (mod360(Math.atan2(ascX, ascY) / (Math.PI / 180)) + 360) % 360;
 }
 
+
+export const calcOffsetAscendant = (lat = 0, lng = 0, jd = 0, ayanamshaValue = 0): number => {
+	const asc = calcTropicalAscendant(lat, lng, jd);
+	return subtractLng360(asc, ayanamshaValue);
+}
+
 export const calcTropicalAscendantDt = (lat = 0, lng = 0, dt = ""): number => {
 	const jd = calcJulDate(dt);
 	return calcTropicalAscendant(lat, lng, jd);
+}
+
+export const calcAscendantTimeline = (lat = 0, lng = 0, startJd = 0, endJd = 0, ayanamshaValue = 0) => {
+	const asc = calcOffsetAscendant(lat, lng, startJd, ayanamshaValue);
+	const nextLng = asc < 330 ? Math.ceil(asc / 30) * 30 : 0;
+	const startDiff = subtractLng360(nextLng, asc);
+	const startMins = startDiff < 5 ? 0 : Math.floor(startDiff);
+	const minuteJd = 1 / 1440;
+	let currJd = startJd + (startMins * minuteJd);
+	const items = [];
+	let counter = 0;
+	let prevLng = asc;
+	while (currJd < endJd && counter < 1000000) {
+		currJd += minuteJd;
+		const nextLng = calcOffsetAscendant(lat, lng, currJd, ayanamshaValue);
+		const absVal = Math.abs(nextLng % 30);
+		const distance = absVal > 15 ? 0 - (30 - absVal) : absVal;
+		const diff = subtractLng360(nextLng, prevLng);
+		const progress = distance / diff;
+		prevLng = nextLng;
+		if (distance < 0.2 && distance > -0.2) {
+			const targetJd = currJd - (progress * minuteJd);
+			const targetLng = calcOffsetAscendant(lat, lng, targetJd, ayanamshaValue);
+			const multiplier = 30 / (diff * 3);
+			currJd += (minuteJd * multiplier);
+			items.push({ jd: targetJd, lng: targetLng, multiplier });
+		}
+		counter++;
+	}
+	return { items, startJd, endJd, dur: endJd - startJd, startDiff };
 }

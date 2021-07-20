@@ -302,16 +302,10 @@ export const matchNextTransitAtLng = async (key = "su", lngFl = 0, jdFl = 0, aya
     ranges = spds.slice(spds.length -2, spds.length);
   }
   const [start, end ] = ranges;
-  //const diff = end.lng - start.lng;
   const distance = subtractLng360(end.lng, start.lng);
-  //const relDeg = distance >= 180 ? start.lng - lngFl : lngFl - start.lng;
-  //const relDeg = distance;
   const progressDeg = (distance + 360) % 360;
   const progress = progressDeg > 0 ? progressDeg / distance : 0;
   const progressJd = progress * step;
   const targetJd = start.jd + progressJd;
- /*  if (key === "ju") {
-    console.log(progressJd, julToISODate(targetJd), julToISODate(jdFl), relDeg, progressDeg, distance, lngFl - start.lng);
-  } */
   return { start, end, targetJd, num, ayanamsha: aya };
 }

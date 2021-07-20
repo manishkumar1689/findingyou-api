@@ -877,25 +877,35 @@ export class AstrologicService {
     return chart;
   }
 
-  async matchExistingPlaceNames(geo: GeoLoc, km = 3) {
+  async matchExistingPlaceNames(geo: GeoLoc, km = 3, withinKm = 1) {
     const latSize = km / 111;
-    
     const calcLngScale = (lng) => Math.cos(Math.abs(lng) * (Math.PI / 180));
     //const lngNeg = geo.lng < 0? -1 : 1;
     const lngSize = 1 / (calcLngScale(geo.lng) * 111) * km;
     
     const latRange = { $gte: geo.lat - latSize, $lte: geo.lat + latSize };
     const lngRange = { $gte: geo.lng - lngSize, $lte: geo.lng + lngSize };
-    console.log(lngRange, lngSize)
     const steps = [
       { 
         $match: {
-          "placenames.geo.lat": latRange,
-          "placenames.geo.lng": lngRange
+          $or: [
+            {
+              "placenames.geo.lat": latRange,
+              "placenames.geo.lng": lngRange
+            },
+            {
+              "geo.lat": latRange,
+              "geo.lng": lngRange
+            },
+          ]
         }
       },
       { 
         $project: {
+          "tz": 1,
+          "tzOffset": 1,
+          "geo.lat": 1,
+          "geo.lng": 1,
           "placenames.name": 1,
           "placenames.fullName": 1,
           "placenames.geo.lat": 1,
@@ -918,20 +928,21 @@ export class AstrologicService {
     const keys: string[] = [];
     const latLng = geo.latLng;
     records.forEach(rec => {
-      const { placenames } = rec;
+      const { placenames, tz, tzOffset} = rec;
+      const chartGeo = rec.geo;
       const lastIndex = placenames instanceof Array ? placenames.length - 1 : -1;
       if (lastIndex >= 0) {
         const nearest = placenames[lastIndex];
         const key = [sanitize(nearest.fullName), nearest.geo.lat, nearest.geo.lng].join('__');
         if (!keys.includes(key)) {
             keys.push(key);
-            const distance = calcCoordsDistance(latLng, nearest.geo, 'km');
-            items.push({placenames, distance});
+            const distance = calcCoordsDistance(latLng, chartGeo, 'km');
+            items.push({placenames, distance, tz, tzOffset });
         }
       }
     });
     items.sort((a, b) => a.distance - b.distance);
-    return items;
+    return items.filter(r => r.distance <= withinKm);
   }
 
   async bulkUpdatePaired(start = 0, limit = 100, kutaSet = null, idStr = '') {

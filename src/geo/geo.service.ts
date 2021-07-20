@@ -23,6 +23,7 @@ import * as Redis from 'ioredis';
 import { RedisService } from 'nestjs-redis';
 import { GeoName } from './interfaces/geo-name.interface';
 import { generateNameSearchRegex } from '../astrologic/lib/helpers';
+import { Toponym } from 'src/astrologic/lib/interfaces';
 
 @Injectable()
 export class GeoService {
@@ -187,8 +188,13 @@ export class GeoService {
 
   async fetchGeoAndTimezone(lat: number, lng: number, datetime: string) {
     const data = await this.fetchGeoData(lat, lng);
-    const offset = this.checkGmtOffset(data.tz, datetime);
-    return { ...data, offset: correctOceanTz(data.toponyms, offset) };
+    const offset = this.checkLocaleOffset(data.tz, datetime, data.toponyms);
+    return { ...data, offset };
+  }
+
+  checkLocaleOffset(timeZone: string, datetime: string, toponyms: Toponym[] = []) {
+    const offset = this.checkGmtOffset(timeZone, datetime);
+    return correctOceanTz(toponyms, offset);
   }
 
   async fetchTzData(coords: GeoPos, datetime: string, skipRemote = false) {
