@@ -82,6 +82,7 @@ export const calcAscendantTimeline = (lat = 0, lng = 0, startJd = 0, endJd = 0, 
 	const items = [];
 	let counter = 0;
 	let prevLng = asc;
+	let prevJd = currJd;
 	while (currJd < endJd && counter < 1000000) {
 		currJd += minuteJd;
 		const nextLng = calcOffsetAscendant(lat, lng, currJd, ayanamshaValue);
@@ -95,7 +96,9 @@ export const calcAscendantTimeline = (lat = 0, lng = 0, startJd = 0, endJd = 0, 
 			const targetLng = calcOffsetAscendant(lat, lng, targetJd, ayanamshaValue);
 			const multiplier = 30 / (diff * 3);
 			currJd += (minuteJd * multiplier);
-			items.push({ jd: targetJd, lng: targetLng });
+			const duration = targetJd - prevJd;
+			items.push({ jd: targetJd, lng: targetLng, duration });
+			prevJd = targetJd;
 		}
 		counter++;
 	}

@@ -102,6 +102,8 @@ import { CreateUserDTO } from '../user/dto/create-user.dto';
 import { assignDashaBalances, calcDashaSetByKey, DashaBalance, mapDashaItem } from './lib/models/dasha-set';
 import { calcAscendantTimelineItems, calcOffsetAscendant } from './lib/calc-ascendant';
 import { GeoLoc } from './lib/models/geo-loc';
+import { Graha } from './lib/models/graha-set';
+import ayanamshaValues from './lib/settings/ayanamsha-values';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -2476,15 +2478,16 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('predictive/:key/:lng/:jd?/:ayanamsha?')
-  async predictiveGrahaLng(@Res() res, @Param('key') key, @Param('lng') lng, @Param('jd') jd, @Param('ayanamsha') ayanamsha) {
-    const useJd = isNumeric(jd) && jd > 0;
-    const dtVal = !useJd ? validISODateString(jd)? jd : new Date().toISOString() : "";
-    const jdFl = useJd ? parseInt(jd) : calcJulDate( dtVal.split(".").shift());
+  @Get('predictive/:key/:lng/:start?/:ayanamsha?')
+  async predictiveGrahaLng(@Res() res, @Param('key') key, @Param('lng') lng, @Param('start') start, @Param('ayanamsha') ayanamsha) {
+    //const useJd = isNumeric(jd) && jd > 0;
+    const { dtUtc, jd } = matchJdAndDatetime(start);
+    /* const dtVal = !useJd ? validISODateString(jd)? jd : new Date().toISOString() : "";
+    const jdFl = useJd ? parseInt(jd) : calcJulDate( dtVal.split(".").shift()); */
     const lngFl = isNumeric(lng)? parseInt(lng) : 0;
-    const data = await matchNextTransitAtLng(key, lngFl, jdFl, ayanamsha);
+    const data = await matchNextTransitAtLng(key, lngFl, jd, ayanamsha);
     const targetDt = julToISODate(data.targetJd);
-    return res.status(HttpStatus.OK).json({...data, targetDt});
+    return res.status(HttpStatus.OK).json({...data, startDt: dtUtc, targetDt});
   }
 
   @Get('sign-timeline/:loc/:start?/:end?/:ayanamsha?')
@@ -2497,7 +2500,6 @@ export class AstrologicController {
     const coreKeys = [ "sa", "ju", "ma", "su", "ve", "me", "mo"];
     const bodies = await calcBodiesJd(startJd, coreKeys);
     const ayanamshaVal = await calcAyanamsha(startJd, ayanamshaKey);
-    
     const grahas = [];
     for (const gr of bodies) {
       const nextMatches = [];
@@ -2509,31 +2511,36 @@ export class AstrologicController {
       while (!reachedEnd && i < 108) {
         const nextSign = ((refSign + i - 1) % 12) + 1;
         const nextLng = (nextSign * 30) % 360;
-        //console.log(gr.key, nextLng, gr.sign, julToISODate(endJd), endJd)
         const next = await matchNextTransitAtLng(gr.key, nextLng, refStartJd, ayanamshaKey);
         const currSign = nextSign < 12 ? nextSign + 1 : 1;
+        const duration = next.targetJd - refStartJd;
         refStartJd = next.targetJd;
-        nextMatches.push({ sign: currSign, lng: nextLng, jd: next.targetJd, dt: julToISODate(next.targetJd), spd: next.end.spd });
+        nextMatches.push({ sign: currSign, lng: nextLng, jd: next.targetJd, dt: julToISODate(next.targetJd), spd: next.end.spd, duration });
         reachedEnd = next.targetJd >= endJd;
         i++;
       }
+      const numMatches = nextMatches.length;
       grahas.push({ 
         key: gr.key,
         jd: startJd,
         dt: dtUtc,
         longitude: refLng,
         sign: refSign,
-        nextMatches
+        nextMatches,
+        avg: numMatches > 1 ? nextMatches.slice(1).map(m => m.duration).reduce((a,b) => a + b, 0) / (numMatches - 1) : 0
       })
     };
     const ascendant = calcOffsetAscendant(geo.lat, geo.lng, startJd, ayanamshaVal);
     const ascendantData = calcAscendantTimelineItems(geo.lat, geo.lng, startJd, endJd, ayanamshaVal);
+    const { items } = ascendantData;
+    const numMatches = items.length;
     grahas.push({ 
       key: "as", 
       jd: startJd,
       dt: dtUtc,
       longitude: ascendant,
-      nextMatches: ascendantData.items
+      nextMatches: items,
+      avg: numMatches > 1 ? items.slice(1).reduce((a,b) => a + b, 0) / (numMatches - 1) : 0
     });
     return res.status(HttpStatus.OK).json({grahas, start: dtUtc, end: endDt });
   }
@@ -2598,12 +2605,21 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json({...data, planet, num});
   }
 
-  @Get('calc-body/:key/:dt')
-  async calcBodyPosition(@Res() res, @Param('key') key: string, @Param('dt') dt: string) {
+  @Get('calc-body/:key/:dt/:ayanamsha?')
+  async calcBodyPosition(@Res() res, @Param('key') key: string, @Param('dt') dt: string, @Param('ayanamsha') ayanamsha) {
     const isJd = /^\d+(\.\d+)?$/.test(dt);
     const jd = isJd? smartCastInt(dt) : calcJulDate(dt);
+    const ayanamshaKey = notEmptyString(ayanamsha, 2)? ayanamsha : "true_citra";
+    let ayaVal = 0;
+    if (["raw", "tropical"].includes(ayanamshaKey) === false) {
+      ayaVal = await calcAyanamsha(jd, ayanamshaKey);
+    }
     const data = await calcBodyJd(jd, key, true);
-    return res.json(data);
+    const graha = new Graha(data);
+    const ayaRow = ayanamshaValues.find(av => av.key === ayanamshaKey);
+    const ayaItem = {...ayaRow, num: ayaRow.value, value: ayaVal};
+    graha.setAyanamshaItem(ayaItem);
+    return res.json({longitude: graha.longitude, ...graha});
   }
 
   @Get('planet-station-test/:planet/:startDt/:station')

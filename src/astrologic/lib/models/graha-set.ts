@@ -86,7 +86,7 @@ export class Graha extends BaseObject {
   enemies = [];
   relationship = new Relationship();
   mulaTrikon: -1;
-  mulaTrikonDegrees: 0;
+  mulaTrikonDegrees: [];
   exalted = 0;
   exaltedDegree = 0;
   debilitated = 0;

@@ -1,3 +1,5 @@
+import { subtractLng360 } from "../astrologic/lib/math-funcs";
+
 export const isString = str => typeof str === 'string' || str instanceof String;
 
 export const notEmptyString = (str, min = 1) =>
@@ -53,13 +55,19 @@ export const numericStringInRange = (numStr, min = -180, max = 180) => {
   return valid;
 };
 
-export const inRange = (num, range) => {
+export const inRange = (num, range: number[]) => {
   let valid = false;
   if (isNumeric(num) && range instanceof Array && range.length > 1) {
     num = parseFloat(num);
     valid = num >= range[0] && num <= range[1];
   }
   return valid;
+};
+
+export const inTolerance360 = (deg = 0, target = 0, tolerance = 1) => {
+  const range = [subtractLng360(target, tolerance), (target + tolerance) % 360];
+  const spanZero = deg + tolerance > 360 || deg - tolerance < 0;
+  return spanZero? (deg >= range[0] || deg < range[1]) && (deg < range[1] || deg > range[0]) : deg >= range[0] && deg <= range[1];
 };
 
 export const withinTolerance = (
