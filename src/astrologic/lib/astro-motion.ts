@@ -1,11 +1,31 @@
 import * as swisseph from 'swisseph';
 import { calcUtAsync } from './sweph-async';
 import { calcJulDate, jdToDateTime, julToISODate } from './date-funcs';
-import { inTolerance360, isNumeric, notEmptyString, withinTolerance } from '../../lib/validators';
 import grahaValues from './settings/graha-values';
+import { inTolerance360, isNumeric, notEmptyString, withinTolerance } from '../../lib/validators';
 import { matchPlanetNum } from './settings/graha-values';
-import { calcAyanamsha, fetchHouseDataJd } from './core';
+import { calcAyanamsha, calcBodiesJd, fetchHouseDataJd } from './core';
 import { subtractLng360 } from './math-funcs';
+import { calcAscendantTimelineItems, calcOffsetAscendant } from './calc-ascendant';
+import { LngLat } from './interfaces';
+
+export interface SignTimelineItem {
+  sign?: number;
+  lng: number;
+  jd: number;
+  dt?: string;
+  spd: number;
+  duration?: number;
+}
+
+export interface SignTimelineSet {
+  key: string;
+  jd: number;
+  dt?: string;
+  longitude: number;
+  nextMatches: SignTimelineItem[];
+  avg?: number;
+}
 
 export const calcBodySpeed = async (jd, num, callback) => {
   const flag =
@@ -315,4 +335,57 @@ export const matchNextTransitAtLng = async (key = "su", lngFl = 0, jdFl = 0, aya
   const progressJd = progress * step;
   const targetJd = start.jd + progressJd;
   return { start, end, targetJd, num, ayanamsha: aya };
+}
+
+export const calcSignSwitchAvg = (items: SignTimelineItem[]) => {
+  const numMatches = items.length;
+  return numMatches > 1 ? items.slice(1).map(item => item.duration).reduce((a,b) => a + b, 0) / (numMatches - 1) : 0
+}
+
+export const calcGrahaSignTimeline = async (geo: LngLat, startJd = 0, endJd = 0, ayanamshaKey = "true_citra"): Promise<SignTimelineSet[]> => {
+  const coreKeys = [ "sa", "ju", "ma", "su", "ve", "me", "mo"];
+  const bodies = await calcBodiesJd(startJd, coreKeys);
+  const ayanamshaVal = await calcAyanamsha(startJd, ayanamshaKey);
+  const grahas = [];
+  const dt = julToISODate(startJd);
+  for (const gr of bodies) {
+    const nextMatches = [];
+    let reachedEnd = false;
+    let i = 0;
+    const refLng = subtractLng360(gr.lng, ayanamshaVal);
+    const refSign = Math.floor(refLng / 30) + 1;
+    let refStartJd = startJd - 0;
+    while (!reachedEnd && i < 108) {
+      const nextSign = ((refSign + i - 1) % 12) + 1;
+      const nextLng = (nextSign * 30) % 360;
+      const next = await matchNextTransitAtLng(gr.key, nextLng, refStartJd, ayanamshaKey);
+      const currSign = nextSign < 12 ? nextSign + 1 : 1;
+      const duration = next.targetJd - refStartJd;
+      refStartJd = next.targetJd;
+      nextMatches.push({ sign: currSign, lng: nextLng, jd: next.targetJd, dt: julToISODate(next.targetJd), spd: next.end.spd, duration });
+      reachedEnd = next.targetJd >= endJd;
+      i++;
+    }
+    grahas.push({ 
+      key: gr.key,
+      jd: startJd,
+      dt,
+      longitude: refLng,
+      sign: refSign,
+      nextMatches,
+      avg: calcSignSwitchAvg(nextMatches)
+    })
+  };
+  const ascendant = calcOffsetAscendant(geo.lat, geo.lng, startJd, ayanamshaVal);
+  const ascendantData = calcAscendantTimelineItems(geo.lat, geo.lng, startJd, endJd, ayanamshaVal);
+  const { items } = ascendantData;
+  grahas.push({ 
+    key: "as", 
+    jd: startJd,
+    dt,
+    longitude: ascendant,
+    nextMatches: items,
+    avg: calcSignSwitchAvg(items)
+  });
+  return grahas;
 }

@@ -58,7 +58,7 @@ import {
 } from './lib/date-funcs';
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
-import { calcRetroGrade, calcStation, matchNextTransitAtLng } from './lib/astro-motion';
+import { calcGrahaSignTimeline, calcRetroGrade, calcStation, matchNextTransitAtLng } from './lib/astro-motion';
 import { toIndianTime, calcTransition } from './lib/transitions';
 import { readEpheFiles } from './lib/files';
 import { ChartInputDTO } from './dto/chart-input.dto';
@@ -2497,52 +2497,8 @@ export class AstrologicController {
     const { endJd, endDt } = matchEndJdAndDatetime(end, jd);
     const geo = locStringToGeo(loc);
     const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
-    const coreKeys = [ "sa", "ju", "ma", "su", "ve", "me", "mo"];
-    const bodies = await calcBodiesJd(startJd, coreKeys);
-    const ayanamshaVal = await calcAyanamsha(startJd, ayanamshaKey);
-    const grahas = [];
-    for (const gr of bodies) {
-      const nextMatches = [];
-      let reachedEnd = false;
-      let i = 0;
-      const refLng = subtractLng360(gr.lng, ayanamshaVal);
-      const refSign = Math.floor(refLng / 30) + 1;
-      let refStartJd = startJd - 0;
-      while (!reachedEnd && i < 108) {
-        const nextSign = ((refSign + i - 1) % 12) + 1;
-        const nextLng = (nextSign * 30) % 360;
-        const next = await matchNextTransitAtLng(gr.key, nextLng, refStartJd, ayanamshaKey);
-        const currSign = nextSign < 12 ? nextSign + 1 : 1;
-        const duration = next.targetJd - refStartJd;
-        refStartJd = next.targetJd;
-        nextMatches.push({ sign: currSign, lng: nextLng, jd: next.targetJd, dt: julToISODate(next.targetJd), spd: next.end.spd, duration });
-        reachedEnd = next.targetJd >= endJd;
-        i++;
-      }
-      const numMatches = nextMatches.length;
-      grahas.push({ 
-        key: gr.key,
-        jd: startJd,
-        dt: dtUtc,
-        longitude: refLng,
-        sign: refSign,
-        nextMatches,
-        avg: numMatches > 1 ? nextMatches.slice(1).map(m => m.duration).reduce((a,b) => a + b, 0) / (numMatches - 1) : 0
-      })
-    };
-    const ascendant = calcOffsetAscendant(geo.lat, geo.lng, startJd, ayanamshaVal);
-    const ascendantData = calcAscendantTimelineItems(geo.lat, geo.lng, startJd, endJd, ayanamshaVal);
-    const { items } = ascendantData;
-    const numMatches = items.length;
-    grahas.push({ 
-      key: "as", 
-      jd: startJd,
-      dt: dtUtc,
-      longitude: ascendant,
-      nextMatches: items,
-      avg: numMatches > 1 ? items.slice(1).reduce((a,b) => a + b, 0) / (numMatches - 1) : 0
-    });
-    return res.status(HttpStatus.OK).json({grahas, start: dtUtc, end: endDt });
+    const grahas = await calcGrahaSignTimeline(geo, startJd, endJd, ayanamshaKey);
+    return res.status(HttpStatus.OK).json({ start: dtUtc, end: endDt, grahas });
   }
 
   @Get('ascendant-timeline/:loc/:start?/:end?/:ayanamsha?')
@@ -2555,7 +2511,7 @@ export class AstrologicController {
     const ayanamshaVal = await calcAyanamsha(startJd, ayanamshaKey);
     const { endJd, endDt } = matchEndJdAndDatetime(end, jd);
     const data = calcAscendantTimelineItems(lat, lng, startJd, endJd, ayanamshaVal);
-    return res.status(HttpStatus.OK).json({...data, startDt: dtUtc, endDt});
+    return res.status(HttpStatus.OK).json({startDt: dtUtc, endDt, ...data});
   }
 
   @Get('ascendant/:loc/:dt?/:ayanamsha?')

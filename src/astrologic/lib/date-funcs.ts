@@ -110,7 +110,7 @@ export const matchJdAndDatetime = (strRef = "", startJd = -1) => {
 
 export const matchEndJdAndDatetime = (strRef = "", startJd = 0) => {
   const { jd, dtUtc } = matchJdAndDatetime(strRef, startJd);
-  return { endJd: jd, endDt: dtUtc };
+  return { endJd: jd, endDt: dtUtc.split(".").shift() };
 }
 
 export const calcJulDateFromParts = (dp, julian = false) => {
