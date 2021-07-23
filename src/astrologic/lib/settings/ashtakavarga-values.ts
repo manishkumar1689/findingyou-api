@@ -1,3 +1,4 @@
+import { naturalBenefics, naturalMalefics } from "sample-data/graha-values";
 import { loopShift, loopShiftInner, toSignValues } from "../helpers";
 import { KeyLng, SignValueSet } from "../interfaces";
 
@@ -234,6 +235,21 @@ export const getAshtakavargaBodyTable = (bodies: KeyLng[] = [], binduSet = "defa
         .filter((row) => row.values.length > 0);
 }
 
+export const getAshtakavargaBavItems = (bodies: KeyLng[] = []) => {
+  return getAshtakavargaBodyTable(bodies).map(row => {
+    const { key, values, sign } = row;
+    if (row.key === "sa") {
+      console.log(values);
+    }
+    //const value = values.map(vr => vr.value).reduce((a, b) => a + b, 0);
+    const signRow = values.find(vr => vr.sign === sign);
+    const value = signRow instanceof Object ? signRow.value : 0;
+    return { key, sign, value };
+  });
+}
+
+
+
 export const buildAsktakavargaSignSet = (bodies: KeyLng[]): SignValueSet[] => {
   const table = getAshtakavargaBodyTable(bodies);
   const grahaKeys = bodies.map(b => b.key);
@@ -246,6 +262,23 @@ export const buildAsktakavargaSignSet = (bodies: KeyLng[]): SignValueSet[] => {
     });
     return { sign,  values };
   });
+}
+
+export const getAshtakavargaBavBMN = (bodies: KeyLng[] = []) => {
+  const items = getAshtakavargaBavItems(bodies);
+  const malefic = items.filter(row => naturalBenefics.includes(row.key)).map(row => row.value).reduce((a, b) => a +b, 0) / naturalBenefics.length;
+  const benefic = items.filter(row => naturalMalefics.includes(row.key)).map(row => row.value).reduce((a, b) => a +b, 0) / naturalMalefics.length;
+  const mean = items.map(row => row.value).reduce((a, b) => a +b, 0) / items.length;
+  return [{
+    key: 'b',
+    value: benefic,
+  },{
+    key: 'm',
+    value: malefic,
+  },{
+    key: 'a',
+    value: mean,
+  }];
 }
 
 export default ashtakavargaValues;

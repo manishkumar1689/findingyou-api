@@ -91,20 +91,20 @@ import {
 import { mapNestedKaranaTithiYoga, mapToponyms } from './lib/mappers';
 import { CreateSettingDTO } from '../setting/dto/create-setting.dto';
 import typeTags from './lib/settings/relationship-types';
-import { KeyName } from './lib/interfaces';
+import { KeyName, KeyNumValue } from './lib/interfaces';
 import { TagReassignDTO } from './dto/tag-reassign.dto';
 import { TagDTO } from './dto/tag.dto';
 import { RuleSetDTO } from '../setting/dto/rule-set.dto';
 import { SingleCore } from './interfaces/single-core';
 import { AssignPairedDTO } from './dto/assign-paired.dto';
-import { matchPlanetNum } from './lib/settings/graha-values';
+import { matchPlanetNum, naturalBenefics, naturalMalefics } from './lib/settings/graha-values';
 import { CreateUserDTO } from '../user/dto/create-user.dto';
 import { assignDashaBalances, calcDashaSetByKey, DashaBalance, mapDashaItem } from './lib/models/dasha-set';
 import { calcAscendantTimelineItems, calcOffsetAscendant } from './lib/calc-ascendant';
 import { GeoLoc } from './lib/models/geo-loc';
 import { Graha } from './lib/models/graha-set';
 import ayanamshaValues from './lib/settings/ayanamsha-values';
-import { buildAsktakavargaSignSet, getAshtakavargaBodyTable } from './lib/settings/ashtakavarga-values';
+import { buildAsktakavargaSignSet, getAshtakavargaBavBMN, getAshtakavargaBavItems, getAshtakavargaBodyTable } from './lib/settings/ashtakavarga-values';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -2526,24 +2526,25 @@ export class AstrologicController {
   async fetchBavTimeline(@Res() res, @Param('loc') loc, @Param('mid') mid, @Param('span') span) {
     const geo = locStringToGeo(loc);
     const { jd } = matchJdAndDatetime(mid);
-    const spanJd = smartCastInt(span, 56);
+    const spanJd = smartCastInt(span, 28);
     const startJd = jd - (spanJd / 2);
     const endJd = jd + (spanJd / 2);
+    const itemsToKey = (items: KeyNumValue[]) => items.map(b => Math.floor(b.value * 10000).toString(10)).join('_')
     const data = await this.astrologicService.fetchBavTimeline(geo, startJd, endJd);
     const initBodies = data.map(row => {
       const {key, sign} = row;
       return { key, lng: row.longitude, sign };
     })
-    const initValues = getAshtakavargaBodyTable(initBodies).map(row => {
-      const {key, values, sign} = row;
-      const value = values.map(vr => vr.value).reduce((a, b) => a + b, 0);
-      return { key, sign, value };
-    });
+    const initValues = getAshtakavargaBavBMN(initBodies);
+    let prevVk = itemsToKey(initValues);
     const graphData = [{
       jd: startJd,
-      items: initValues
+      refJd: 0,
+      dt: julToISODate(startJd),
+      items: initValues,
+      vk: prevVk
     }]
-    const signSwitchRows = [{jd: startJd, bodies: initBodies, key: 'start'}];
+    const signSwitchRows = [];
     data.forEach(row => {
       if (row.nextMatches instanceof Array) {
         row.nextMatches.forEach(nm => {
@@ -2575,7 +2576,22 @@ export class AstrologicController {
       const bodies = row.bodies.length > 0? row.bodies : matchBodies(row.jd)
       return {...row, dt: julToISODate(row.jd), bodies};
     })
-    return res.status(HttpStatus.OK).json({grahas: data, graphData, signSwitchJds});
+    signSwitchJds.forEach(row => {
+      const {jd, dt, bodies} = row;
+      const items = getAshtakavargaBavBMN(bodies);
+      const vk = itemsToKey(items)
+      if (vk !== prevVk) {
+        graphData.push({
+          jd,
+          refJd: jd - startJd,
+          dt,
+          items,
+          vk
+        });
+        prevVk = vk;
+      }
+    });
+    return res.status(HttpStatus.OK).json({ items: graphData, valid: graphData.length > 0 });
   }
 
   @Get('ascendant-timeline/:loc/:start?/:end?/:ayanamsha?')
