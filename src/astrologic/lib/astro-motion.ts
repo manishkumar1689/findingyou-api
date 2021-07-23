@@ -23,6 +23,7 @@ export interface SignTimelineSet {
   jd: number;
   dt?: string;
   longitude: number;
+  sign?: number;
   nextMatches: SignTimelineItem[];
   avg?: number;
 }
@@ -342,7 +343,7 @@ export const calcSignSwitchAvg = (items: SignTimelineItem[]) => {
   return numMatches > 1 ? items.slice(1).map(item => item.duration).reduce((a,b) => a + b, 0) / (numMatches - 1) : 0
 }
 
-export const calcGrahaSignTimeline = async (geo: LngLat, startJd = 0, endJd = 0, ayanamshaKey = "true_citra"): Promise<SignTimelineSet[]> => {
+export const calcCoreSignTimeline = async (startJd = 0, endJd = 0, ayanamshaKey = "true_citra"): Promise<SignTimelineSet[]> => {
   const coreKeys = [ "sa", "ju", "ma", "su", "ve", "me", "mo"];
   const bodies = await calcBodiesJd(startJd, coreKeys);
   const ayanamshaVal = await calcAyanamsha(startJd, ayanamshaKey);
@@ -376,16 +377,27 @@ export const calcGrahaSignTimeline = async (geo: LngLat, startJd = 0, endJd = 0,
       avg: calcSignSwitchAvg(nextMatches)
     })
   };
+  return grahas;
+}
+
+export const calcAscendantTimelineSet = async (geo: LngLat, startJd = 0, endJd = 0, ayanamshaKey = "true_citra") => {
+  const ayanamshaVal = await calcAyanamsha(startJd, ayanamshaKey);
   const ascendant = calcOffsetAscendant(geo.lat, geo.lng, startJd, ayanamshaVal);
   const ascendantData = calcAscendantTimelineItems(geo.lat, geo.lng, startJd, endJd, ayanamshaVal);
   const { items } = ascendantData;
-  grahas.push({ 
+  return { 
     key: "as", 
     jd: startJd,
-    dt,
+    dt: julToISODate(startJd),
     longitude: ascendant,
     nextMatches: items,
     avg: calcSignSwitchAvg(items)
-  });
+  };
+}
+
+export const calcGrahaSignTimeline = async (geo: LngLat, startJd = 0, endJd = 0, ayanamshaKey = "true_citra"): Promise<SignTimelineSet[]> => {
+  const grahas = await calcCoreSignTimeline(startJd, endJd, ayanamshaKey);
+  const ascendantData = await calcAscendantTimelineSet(geo, startJd, endJd, ayanamshaKey);
+  grahas.push(ascendantData);
   return grahas;
 }

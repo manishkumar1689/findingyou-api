@@ -104,6 +104,7 @@ import { calcAscendantTimelineItems, calcOffsetAscendant } from './lib/calc-asce
 import { GeoLoc } from './lib/models/geo-loc';
 import { Graha } from './lib/models/graha-set';
 import ayanamshaValues from './lib/settings/ayanamsha-values';
+import { buildAsktakavargaSignSet, getAshtakavargaBodyTable } from './lib/settings/ashtakavarga-values';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -2490,6 +2491,17 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json({...data, startDt: dtUtc, targetDt});
   }
 
+  @Get('ayanamsha/:dt?/:ayanamsha?')
+  async ayanamsha(@Res() res, @Param('dt') dt, @Param('ayanamsha') ayanamsha) {
+    const { dtUtc, jd } = matchJdAndDatetime(dt);
+    const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
+    const ayaRow = ayanamshaValues.find(row => row.key === ayanamshaKey);
+    const ayaItem = ayaRow instanceof Object ? ayaRow : {key: "", value: 0, name: "" };
+    const { name}  = ayaItem;
+    const value = await calcAyanamsha(jd, ayanamshaKey);
+    return res.status(HttpStatus.OK).json({ dt: dtUtc, jd: jd, value, num: ayaItem.value, name, key: ayanamshaKey });
+  }
+
   @Get('sign-timeline/:loc/:start?/:end?/:ayanamsha?')
   async signSwitches(@Res() res, @Param('loc') loc, @Param('start') start, @Param('end') end, @Param('ayanamsha') ayanamsha) {
     const { dtUtc, jd } = matchJdAndDatetime(start);
@@ -2499,6 +2511,71 @@ export class AstrologicController {
     const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
     const grahas = await calcGrahaSignTimeline(geo, startJd, endJd, ayanamshaKey);
     return res.status(HttpStatus.OK).json({ start: dtUtc, end: endDt, grahas });
+  }
+
+  @Get('object-sign-timeline/:loc/:start?/:end?')
+  async fetchObjectTimeline(@Res() res, @Param('loc') loc, @Param('start') start, @Param('end') end) {
+    const geo = locStringToGeo(loc);
+    const { jd } = matchJdAndDatetime(start);
+    const { endJd } = matchEndJdAndDatetime(end, jd);
+    const data = await this.astrologicService.fetchBavTimeline(geo, jd, endJd);
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('bav-sign-timeline/:loc/:mid?/:span?')
+  async fetchBavTimeline(@Res() res, @Param('loc') loc, @Param('mid') mid, @Param('span') span) {
+    const geo = locStringToGeo(loc);
+    const { jd } = matchJdAndDatetime(mid);
+    const spanJd = smartCastInt(span, 56);
+    const startJd = jd - (spanJd / 2);
+    const endJd = jd + (spanJd / 2);
+    const data = await this.astrologicService.fetchBavTimeline(geo, startJd, endJd);
+    const initBodies = data.map(row => {
+      const {key, sign} = row;
+      return { key, lng: row.longitude, sign };
+    })
+    const initValues = getAshtakavargaBodyTable(initBodies).map(row => {
+      const {key, values, sign} = row;
+      const value = values.map(vr => vr.value).reduce((a, b) => a + b, 0);
+      return { key, sign, value };
+    });
+    const graphData = [{
+      jd: startJd,
+      items: initValues
+    }]
+    const signSwitchRows = [{jd: startJd, bodies: initBodies, key: 'start'}];
+    data.forEach(row => {
+      if (row.nextMatches instanceof Array) {
+        row.nextMatches.forEach(nm => {
+          if (nm.jd <= endJd) {
+            signSwitchRows.push({
+              jd: nm.jd,
+              bodies: [],
+              key: row.key,
+            })
+          }
+        })
+      }
+    })
+    signSwitchRows.sort((a, b) => a.jd - b.jd);
+
+    const matchBodies = (jd = 0) => {
+      const bds = data.map(rs => {
+        const { key, nextMatches} = rs;
+        const next = nextMatches.find(ri => ri.jd >= jd);
+        return next instanceof Object? { 
+          key,
+          sign: next.sign,
+          lng: next.lng
+        } : {key, lng: rs.longitude, sign: rs.sign };
+      })
+      return bds;
+    }
+    const signSwitchJds = signSwitchRows.map(row => {
+      const bodies = row.bodies.length > 0? row.bodies : matchBodies(row.jd)
+      return {...row, dt: julToISODate(row.jd), bodies};
+    })
+    return res.status(HttpStatus.OK).json({grahas: data, graphData, signSwitchJds});
   }
 
   @Get('ascendant-timeline/:loc/:start?/:end?/:ayanamsha?')

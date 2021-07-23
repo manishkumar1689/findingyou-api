@@ -25,6 +25,18 @@ export interface LngLat {
   alt?: number;
 }
 
+export interface SignValueSet {
+  sign: number;
+  house?: number;
+  values: KeyNumValue[];
+}
+
+export interface KeyLng {
+  key: string;
+  lng: number;
+  sign?: number;
+}
+
 export interface SurfaceTSData {
   geo: LngLat;
   ascendant: number;

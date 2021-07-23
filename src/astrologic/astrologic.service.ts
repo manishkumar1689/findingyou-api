@@ -4,7 +4,7 @@ import { Model, Types } from 'mongoose';
 import { BodySpeed } from './interfaces/body-speed.interface';
 import { Chart } from './interfaces/chart.interface';
 import { BodySpeedDTO } from './dto/body-speed.dto';
-import { calcAcceleration, calcStation } from './lib/astro-motion';
+import { calcAcceleration, calcAscendantTimelineSet, calcCoreSignTimeline, calcStation, SignTimelineSet } from './lib/astro-motion';
 import { subtractLng360 } from './lib/math-funcs';
 import grahaValues from './lib/settings/graha-values';
 import roddenScaleValues, {
@@ -60,6 +60,7 @@ import { shortenName, generateNameSearchRegex, calcCoordsDistance } from './lib/
 import { minRemainingPaired } from '../.config';
 import { calcTropicalAscendantDt } from './lib/calc-ascendant';
 import { GeoLoc } from './lib/models/geo-loc';
+import { LngLat } from './lib/interfaces';
 const { ObjectId } = Types;
 
 @Injectable()
@@ -2030,6 +2031,27 @@ export class AstrologicService {
     });
     results.sort((a, b) => a.jd - b.jd);
     return results;
+  }
+
+  async fetchBavTimeline(geo: LngLat, startJd = 0, endJd = 0): Promise<SignTimelineSet[]> {
+    const key = ['bav_timeline', startJd, endJd].join('_');
+    const storedResults = await this.redisGet(key);
+    const hasStored = storedResults instanceof Array && storedResults.length > 5;
+    const grahas = hasStored? storedResults : await calcCoreSignTimeline(startJd, endJd);
+    if (!hasStored && grahas instanceof Array) {
+      this.redisSet(key, storedResults)
+    }
+    const ascKey = ['bav_asc_timeline', geo.lat, geo.lng, startJd, endJd].join('_');
+    const storedAscResult = await this.redisGet(ascKey);
+    const hasAscStored = storedAscResult instanceof Object;
+    const ascSet = hasAscStored ? storedAscResult : await calcAscendantTimelineSet(geo, startJd, endJd);
+    if (ascSet instanceof Object) {
+      grahas.push(ascSet);
+      if (!hasAscStored) {
+        this.redisSet(ascKey, storedAscResult);
+      }
+    }
+    return grahas;
   }
 
   async pairedDuplicates(start = 0, limit = 20000) {
