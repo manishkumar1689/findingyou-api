@@ -1,5 +1,5 @@
-import { naturalBenefics, naturalMalefics } from "sample-data/graha-values";
-import { KeyNumValue } from "src/astrologic/lib/interfaces";
+import { naturalBenefics, naturalMalefics } from "./graha-values";
+/* import { KeyNumValue } from "../interfaces"; */
 import { SignTimelineSet } from "../astro-motion";
 import { julToISODate } from "../date-funcs";
 import { loopShift, loopShiftInner, toSignValues } from "../helpers";
