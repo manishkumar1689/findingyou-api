@@ -65,14 +65,21 @@ export const buildDatePartsFromParams = query => {
   return dp;
 };
 
-export const toDateParts = strDate => {
-  let dt = moment.utc(strDate);
-  let minSecs = dt.minutes() * 60 + dt.seconds();
-  let decHrs = dt.hours() + minSecs / 3600;
+export const toDateParts = (strDate: string) => {
+  const [dtPart, remainder] = strDate.trim().replace(' ', 'T').split("T");
+  const timeStr = remainder.split(".").shift();
+  const isNeg = dtPart.startsWith('-');
+  const dtStr = isNeg? dtPart.substring(1) : dtPart;
+  const [years, months, days] = dtStr.split("-").map(part => parseInt(part, 10));
+  const [hours, minutes, secs] = timeStr.split(":").map(part => parseInt(part, 10));
+  const seconds = typeof secs === 'number' ? secs : 0;
+  const minSecs = minutes * 60 + seconds;
+  const decHrs = hours + minSecs / 3600;
+  const negMultiplier = isNeg ? -1 : 1;
   return {
-    year: dt.year(),
-    month: dt.month() + 1,
-    day: dt.date(),
+    year: years * negMultiplier,
+    month: months,
+    day: days,
     hour: decHrs,
   };
 };

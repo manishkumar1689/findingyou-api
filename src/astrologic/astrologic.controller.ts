@@ -104,7 +104,7 @@ import { calcAscendantTimelineItems, calcOffsetAscendant } from './lib/calc-asce
 import { GeoLoc } from './lib/models/geo-loc';
 import { Graha } from './lib/models/graha-set';
 import ayanamshaValues from './lib/settings/ayanamsha-values';
-import { buildAsktakavargaSignSet, getAshtakavargaBavBMN, getAshtakavargaBavItems, getAshtakavargaBodyTable } from './lib/settings/ashtakavarga-values';
+import { buildAsktakavargaSignSet, calcBavGraphData, getAshtakavargaBavBMN, getAshtakavargaBavItems, getAshtakavargaBodyTable } from './lib/settings/ashtakavarga-values';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -2529,68 +2529,9 @@ export class AstrologicController {
     const spanJd = smartCastInt(span, 28);
     const startJd = jd - (spanJd / 2);
     const endJd = jd + (spanJd / 2);
-    const itemsToKey = (items: KeyNumValue[]) => items.map(b => Math.floor(b.value * 10000).toString(10)).join('_')
     const data = await this.astrologicService.fetchBavTimeline(geo, startJd, endJd);
-    const initBodies = data.map(row => {
-      const {key, sign} = row;
-      return { key, lng: row.longitude, sign };
-    })
-    const initValues = getAshtakavargaBavBMN(initBodies);
-    let prevVk = itemsToKey(initValues);
-    const graphData = [{
-      jd: startJd,
-      refJd: 0,
-      dt: julToISODate(startJd),
-      items: initValues,
-      vk: prevVk
-    }]
-    const signSwitchRows = [];
-    data.forEach(row => {
-      if (row.nextMatches instanceof Array) {
-        row.nextMatches.forEach(nm => {
-          if (nm.jd <= endJd) {
-            signSwitchRows.push({
-              jd: nm.jd,
-              bodies: [],
-              key: row.key,
-            })
-          }
-        })
-      }
-    })
-    signSwitchRows.sort((a, b) => a.jd - b.jd);
-
-    const matchBodies = (jd = 0) => {
-      const bds = data.map(rs => {
-        const { key, nextMatches} = rs;
-        const next = nextMatches.find(ri => ri.jd >= jd);
-        return next instanceof Object? { 
-          key,
-          sign: next.sign,
-          lng: next.lng
-        } : {key, lng: rs.longitude, sign: rs.sign };
-      })
-      return bds;
-    }
-    const signSwitchJds = signSwitchRows.map(row => {
-      const bodies = row.bodies.length > 0? row.bodies : matchBodies(row.jd)
-      return {...row, dt: julToISODate(row.jd), bodies};
-    })
-    signSwitchJds.forEach(row => {
-      const {jd, dt, bodies} = row;
-      const items = getAshtakavargaBavBMN(bodies);
-      const vk = itemsToKey(items)
-      if (vk !== prevVk) {
-        graphData.push({
-          jd,
-          refJd: jd - startJd,
-          dt,
-          items,
-          vk
-        });
-        prevVk = vk;
-      }
-    });
+    
+    const graphData = calcBavGraphData(data, startJd, endJd);
     return res.status(HttpStatus.OK).json({ items: graphData, valid: graphData.length > 0 });
   }
 

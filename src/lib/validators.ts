@@ -111,7 +111,7 @@ export const validLocationParameter = loc => {
 };
 
 export const validISODateString = str => {
-  return /^\d\d\d\d+-\d\d-\d\d((T|\s)\d\d:\d\d(:\d\d)?)?/.test(str);
+  return /^-?\d{1,4}-\d\d-\d\d((T|\s)\d\d:\d\d(:\d\d)?)?/.test(str);
 };
 
 export const validEmail = (email: string) => {

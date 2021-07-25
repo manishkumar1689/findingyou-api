@@ -1,4 +1,7 @@
 import { naturalBenefics, naturalMalefics } from "sample-data/graha-values";
+import { KeyNumValue } from "src/astrologic/lib/interfaces";
+import { SignTimelineSet } from "../astro-motion";
+import { julToISODate } from "../date-funcs";
 import { loopShift, loopShiftInner, toSignValues } from "../helpers";
 import { KeyLng, SignValueSet } from "../interfaces";
 
@@ -238,10 +241,6 @@ export const getAshtakavargaBodyTable = (bodies: KeyLng[] = [], binduSet = "defa
 export const getAshtakavargaBavItems = (bodies: KeyLng[] = []) => {
   return getAshtakavargaBodyTable(bodies).map(row => {
     const { key, values, sign } = row;
-    if (row.key === "sa") {
-      console.log(values);
-    }
-    //const value = values.map(vr => vr.value).reduce((a, b) => a + b, 0);
     const signRow = values.find(vr => vr.sign === sign);
     const value = signRow instanceof Object ? signRow.value : 0;
     return { key, sign, value };
@@ -264,21 +263,93 @@ export const buildAsktakavargaSignSet = (bodies: KeyLng[]): SignValueSet[] => {
   });
 }
 
-export const getAshtakavargaBavBMN = (bodies: KeyLng[] = []) => {
+export interface QualitySet {
+  b: number;
+  m: number;
+  a?: number;
+  n?: number;
+}
+
+export const getAshtakavargaBavBMN = (bodies: KeyLng[] = []): QualitySet => {
   const items = getAshtakavargaBavItems(bodies);
   const malefic = items.filter(row => naturalBenefics.includes(row.key)).map(row => row.value).reduce((a, b) => a +b, 0) / naturalBenefics.length;
   const benefic = items.filter(row => naturalMalefics.includes(row.key)).map(row => row.value).reduce((a, b) => a +b, 0) / naturalMalefics.length;
   const mean = items.map(row => row.value).reduce((a, b) => a +b, 0) / items.length;
-  return [{
-    key: 'b',
-    value: benefic,
-  },{
-    key: 'm',
-    value: malefic,
-  },{
-    key: 'a',
-    value: mean,
+  return {
+    b: benefic,
+    m: malefic,
+    a: mean,
+  };
+}
+
+const matchBavTimelineBodies = (data: SignTimelineSet[], jd = 0) => {
+  const bds = data.map(rs => {
+    const { key, nextMatches} = rs;
+    const next = nextMatches.find(ri => ri.jd >= jd);
+    return next instanceof Object? { 
+      key,
+      sign: next.sign,
+      lng: next.lng
+    } : {key, lng: rs.longitude, sign: rs.sign };
+  })
+  return bds;
+}
+
+export const calcBavGraphData = (data: SignTimelineSet[] = [], startJd = 0, endJd = 0, stepsPerDay = 2) => {
+  const initBodies = data.map(row => {
+    const { key, sign} = row;
+    return { key, lng: row.longitude, sign };
+  });
+  const initValues = getAshtakavargaBavBMN(initBodies);
+  const graphData = [{
+    jd: startJd,
+    refJd: 0,
+    dt: julToISODate(startJd),
+    ...initValues
   }];
+  let signSwitchJds = [];
+
+  if (stepsPerDay  < 1) {
+    const signSwitchRows = [];
+    data.forEach(row => {
+      if (row.nextMatches instanceof Array) {
+        row.nextMatches.forEach(nm => {
+          if (nm.jd <= endJd) {
+            signSwitchRows.push({
+              jd: nm.jd,
+              bodies: [],
+              key: row.key,
+            })
+          }
+        })
+      }
+    })
+    signSwitchRows.sort((a, b) => a.jd - b.jd);
+    signSwitchJds = signSwitchRows.map(row => {
+      const bodies = row.bodies.length > 0? row.bodies : matchBavTimelineBodies(data, row.jd)
+      return {...row, dt: julToISODate(row.jd), bodies};
+    })
+  } else {
+    const days = Math.floor(endJd - startJd);
+    const steps = days * stepsPerDay;
+    const frac = 1 / stepsPerDay;
+    for (let i = 1; i <= steps; i++) {
+      const sampleJd = startJd + (frac * i);
+      const bodies = matchBavTimelineBodies(data, sampleJd);
+      signSwitchJds.push({ jd: sampleJd, dt: julToISODate(sampleJd), bodies });
+    }
+  }
+  signSwitchJds.forEach(row => {
+    const {jd, dt, bodies} = row;
+    const items = getAshtakavargaBavBMN(bodies);
+    graphData.push({
+      jd,
+      refJd: jd - startJd,
+      dt,
+      ...items
+    });
+  });
+  return graphData;
 }
 
 export default ashtakavargaValues;
