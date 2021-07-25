@@ -2530,7 +2530,6 @@ export class AstrologicController {
     const startJd = jd - (spanJd / 2);
     const endJd = jd + (spanJd / 2);
     const data = await this.astrologicService.fetchBavTimeline(geo, startJd, endJd);
-    
     const graphData = calcBavGraphData(data, startJd, endJd);
     return res.status(HttpStatus.OK).json({ items: graphData, valid: graphData.length > 0 });
   }
