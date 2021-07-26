@@ -2522,15 +2522,24 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('bav-sign-timeline/:loc/:mid?/:span?')
-  async fetchBavTimeline(@Res() res, @Param('loc') loc, @Param('mid') mid, @Param('span') span) {
+  @Get('bav-sign-timeline/:loc/:dt?/:span?/:midMode?/:sample?')
+  async fetchBavTimeline(
+      @Res() res,
+      @Param('loc') loc,
+      @Param('dt') dt,
+      @Param('span') span,
+      @Param('midMode') midMode,
+      @Param('sample') sample
+    ) {
     const geo = locStringToGeo(loc);
-    const { jd } = matchJdAndDatetime(mid);
+    const { jd } = matchJdAndDatetime(dt);
     const spanJd = smartCastInt(span, 28);
-    const startJd = jd - (spanJd / 2);
-    const endJd = jd + (spanJd / 2);
+    const offset = midMode === 'mid' ? 0 - (spanJd / 2) : 0;
+    const startJd = jd + offset;
+    const endJd = jd + + spanJd + offset;
+    const sampleRate = smartCastInt(sample, 4);
     const data = await this.astrologicService.fetchBavTimeline(geo, startJd, endJd);
-    const graphData = calcBavGraphData(data, startJd, endJd);
+    const graphData = calcBavGraphData(data, startJd, endJd, sampleRate);
     return res.status(HttpStatus.OK).json({ items: graphData, valid: graphData.length > 0 });
   }
 
