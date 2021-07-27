@@ -294,15 +294,15 @@ export interface QualitySet {
 
 export const getAshtakavargaBavBMN = (bodies: KeyLng[] = []): QualitySet => {
   const items = getAshtakavargaBavItems(bodies);
-  const malefic = items.filter(row => naturalMalefics.includes(row.key)).map(row => row.value).reduce((a, b) => a +b, 0) / naturalBenefics.length;
-  const benefic = items.filter(row => naturalBenefics.includes(row.key)).map(row => row.value).reduce((a, b) => a +b, 0) / naturalMalefics.length;
+  const m = items.filter(row => naturalMalefics.includes(row.key)).map(row => row.value).reduce((a, b) => a +b, 0) / naturalBenefics.length;
+  const b = items.filter(row => naturalBenefics.includes(row.key)).map(row => row.value).reduce((a, b) => a +b, 0) / naturalMalefics.length;
 
   /* console.log(bodies.find(b => b.key === "mo")); */
-  const mean = items.map(row => row.value).reduce((a, b) => a +b, 0) / items.length;
+  const a = items.map(row => row.value).reduce((a, b) => a + b, 0) / items.length;
   return {
-    b: benefic,
-    m: malefic,
-    a: mean,
+    b,
+    m,
+    a,
   };
 }
 
