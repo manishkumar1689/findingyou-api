@@ -185,7 +185,7 @@ const ashtakavargaValues = [
   },
 ];
 
-const getAshtakavargaBodyRow = (graha, tableKey = "", binduSet = "default") => {
+const getAshtakavargaBodyRow = (graha: KeyLng, tableKey = "", binduSet = "default") => {
   let values = [];
   const tableSet = ashtakavargaValues.find((tv) => tv.key === tableKey);
   if (tableSet) {
@@ -229,8 +229,10 @@ export const getAshtakavargaBodyTable = (bodies: KeyLng[] = [], binduSet = "defa
    return bodies
         .map((gr) => {
           const values = getAshtakavargaBodyRowTotals(gr, bodies, binduSet);
+          
+          const sign = Math.floor(gr.lng / 30) + 1;
           return {
-            sign: Math.floor(gr.lng / 30) + 1,
+            sign,
             key: gr.key,
             values,
           };
@@ -238,11 +240,31 @@ export const getAshtakavargaBodyTable = (bodies: KeyLng[] = [], binduSet = "defa
         .filter((row) => row.values.length > 0);
 }
 
+export const getAshtakavargaGridTotal = (bodies: KeyLng[] = [], binduSet = "default") => {
+  return bodies
+       .map((gr) => {
+         const signIndex = Math.floor(gr.lng / 30);
+         const sign = signIndex + 1;
+         const row = ashtakavargaValues.find(bs => bs.key === gr.key);
+         const values = row.values.filter(r => r.bindu instanceof Array && r.bindu.length > 0).map(r => {
+          if (r.bindu instanceof Array && r.bindu.length > signIndex) {
+            return r.bindu[signIndex];
+          } else {
+            return 0;
+          }
+         });
+         return {
+           sign,
+           key: gr.key,
+           values,
+         };
+       });
+}
+
 export const getAshtakavargaBavItems = (bodies: KeyLng[] = []) => {
-  return getAshtakavargaBodyTable(bodies).map(row => {
+  return getAshtakavargaGridTotal(bodies).map(row => {
     const { key, values, sign } = row;
-    const signRow = values.find(vr => vr.sign === sign);
-    const value = signRow instanceof Object ? signRow.value : 0;
+    const value = values.reduce((a, b) => a + b, 0);
     return { key, sign, value };
   });
 }
@@ -274,6 +296,8 @@ export const getAshtakavargaBavBMN = (bodies: KeyLng[] = []): QualitySet => {
   const items = getAshtakavargaBavItems(bodies);
   const malefic = items.filter(row => naturalBenefics.includes(row.key)).map(row => row.value).reduce((a, b) => a +b, 0) / naturalBenefics.length;
   const benefic = items.filter(row => naturalMalefics.includes(row.key)).map(row => row.value).reduce((a, b) => a +b, 0) / naturalMalefics.length;
+
+  /* console.log(bodies.find(b => b.key === "mo")); */
   const mean = items.map(row => row.value).reduce((a, b) => a +b, 0) / items.length;
   return {
     b: benefic,
@@ -295,18 +319,7 @@ const matchBavTimelineBodies = (data: SignTimelineSet[], jd = 0) => {
   return bds;
 }
 
-export const calcBavGraphData = (data: SignTimelineSet[] = [], startJd = 0, endJd = 0, stepsPerDay = 2) => {
-  const initBodies = data.map(row => {
-    const { key, sign} = row;
-    return { key, lng: row.longitude, sign };
-  });
-  const initValues = getAshtakavargaBavBMN(initBodies);
-  const graphData = [{
-    jd: startJd,
-    refJd: 0,
-    dt: julToISODate(startJd),
-    ...initValues
-  }];
+export const calcBavSignSamples = (data: SignTimelineSet[] = [], startJd = 0, endJd = 0, stepsPerDay = 4) => {
   let signSwitchJds = [];
 
   if (stepsPerDay  < 1) {
@@ -339,6 +352,22 @@ export const calcBavGraphData = (data: SignTimelineSet[] = [], startJd = 0, endJ
       signSwitchJds.push({ jd: sampleJd, dt: julToISODate(sampleJd), bodies });
     }
   }
+  return signSwitchJds;
+}
+
+export const calcBavGraphData = (data: SignTimelineSet[] = [], startJd = 0, endJd = 0, stepsPerDay = 2) => {
+  const initBodies = data.map(row => {
+    const { key, sign} = row;
+    return { key, lng: row.longitude, sign };
+  });
+  const initValues = getAshtakavargaBavBMN(initBodies);
+  const graphData = [{
+    jd: startJd,
+    refJd: 0,
+    dt: julToISODate(startJd),
+    ...initValues
+  }];
+  const signSwitchJds = calcBavSignSamples(data, startJd, endJd, stepsPerDay);
   signSwitchJds.forEach(row => {
     const {jd, dt, bodies} = row;
     const items = getAshtakavargaBavBMN(bodies);

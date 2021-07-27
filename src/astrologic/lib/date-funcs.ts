@@ -104,13 +104,15 @@ export const calcJulDate = (strDate, julian = false) => {
   return calcJulDateFromParts(dp, julian);
 };
 
-export const matchJdAndDatetime = (strRef = "", startJd = -1) => {
+export const matchJdAndDatetime = (strRef = "", startJd = -1, fromDayStart = false, fromNoon = false) => {
   const isValidDate = validISODateString(strRef);
   const flVal = !isValidDate && isNumeric(strRef)? parseFloat(strRef) : -1;
   const hasFl = flVal > 0;
   const refFl = startJd <= 0 || flVal > startJd ? flVal : startJd + flVal;
   
-  const dtUtc = isValidDate? strRef : hasFl ? julToISODate(refFl) : currentISODate();
+  const dtUtcRaw = isValidDate? strRef : hasFl ? julToISODate(refFl) : currentISODate(fromDayStart);
+  const startHourDigits = fromNoon ? '12' : '00';
+  const dtUtc = fromDayStart? dtUtcRaw.split('T').shift() + `T${startHourDigits}:00:00` : dtUtcRaw;
   const jd = hasFl ? refFl : calcJulDate(dtUtc);
   return { dtUtc, jd };
 }
@@ -328,7 +330,7 @@ export const decimalYear = (strDate = '') => {
 };
 
 
-export const currentISODate = () => {
+export const currentISODate = (fromDayStart = false) => {
   return moment.utc().format();
 }
 

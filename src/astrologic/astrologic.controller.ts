@@ -97,14 +97,14 @@ import { TagDTO } from './dto/tag.dto';
 import { RuleSetDTO } from '../setting/dto/rule-set.dto';
 import { SingleCore } from './interfaces/single-core';
 import { AssignPairedDTO } from './dto/assign-paired.dto';
-import { matchPlanetNum, naturalBenefics, naturalMalefics } from './lib/settings/graha-values';
+import { matchPlanetNum } from './lib/settings/graha-values';
 import { CreateUserDTO } from '../user/dto/create-user.dto';
 import { assignDashaBalances, calcDashaSetByKey, DashaBalance, mapDashaItem } from './lib/models/dasha-set';
 import { calcAscendantTimelineItems, calcOffsetAscendant } from './lib/calc-ascendant';
 import { GeoLoc } from './lib/models/geo-loc';
 import { Graha } from './lib/models/graha-set';
 import ayanamshaValues from './lib/settings/ayanamsha-values';
-import { buildAsktakavargaSignSet, calcBavGraphData, getAshtakavargaBavBMN, getAshtakavargaBavItems, getAshtakavargaBodyTable } from './lib/settings/ashtakavarga-values';
+import { calcBavGraphData, calcBavSignSamples } from './lib/settings/ashtakavarga-values';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -2532,14 +2532,16 @@ export class AstrologicController {
       @Param('sample') sample
     ) {
     const geo = locStringToGeo(loc);
-    const { jd } = matchJdAndDatetime(dt);
+    const isMidMode = ['start', 'start-sample'].includes(midMode);
+    const returnGrahaRefValues = ['start-sample','sample'].includes(midMode);
+    const { jd } = matchJdAndDatetime(dt, -1, true, isMidMode);
     const spanJd = smartCastInt(span, 28);
-    const offset = midMode === 'mid' ? 0 - (spanJd / 2) : 0;
+    const offset = isMidMode ? 0 - (spanJd / 2) : 0;
     const startJd = jd + offset;
     const endJd = jd + + spanJd + offset;
-    const sampleRate = smartCastInt(sample, 4);
+    const sampleRate = smartCastInt(sample, 8);
     const data = await this.astrologicService.fetchBavTimeline(geo, startJd, endJd);
-    const graphData = calcBavGraphData(data, startJd, endJd, sampleRate);
+    const graphData = returnGrahaRefValues? calcBavSignSamples(data, startJd, endJd, sampleRate) : calcBavGraphData(data, startJd, endJd, sampleRate);
     return res.status(HttpStatus.OK).json({ items: graphData, valid: graphData.length > 0 });
   }
 
