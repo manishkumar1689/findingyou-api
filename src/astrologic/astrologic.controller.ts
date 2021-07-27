@@ -2532,7 +2532,7 @@ export class AstrologicController {
       @Param('sample') sample
     ) {
     const geo = locStringToGeo(loc);
-    const isMidMode = ['start', 'start-sample'].includes(midMode);
+    const isMidMode = ['start', 'start-sample'].includes(midMode) === false;
     const returnGrahaRefValues = ['start-sample','sample'].includes(midMode);
     const { jd } = matchJdAndDatetime(dt, -1, true, isMidMode);
     const spanJd = smartCastInt(span, 28);
