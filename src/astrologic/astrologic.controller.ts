@@ -2529,7 +2529,8 @@ export class AstrologicController {
       @Param('dt') dt,
       @Param('span') span,
       @Param('midMode') midMode,
-      @Param('sample') sample
+      @Param('sample') sample,
+      @Query() query
     ) {
     const geo = locStringToGeo(loc);
     const isMidMode = ['start', 'start-sample'].includes(midMode) === false;
@@ -2538,10 +2539,16 @@ export class AstrologicController {
     const spanJd = smartCastInt(span, 28);
     const offset = isMidMode ? 0 - (spanJd / 2) : 0;
     const startJd = jd + offset;
+    const coreKeys = ['sa', 'ju', 'ma', 'su', 've', 'me', 'mo', 'as'];
+    const refBodies: Map<string, number> = new Map();
+    const refBodyEntries = Object.entries(query).filter(entry => coreKeys.includes(entry[0]) && isNumeric(entry[1])).forEach(entry => {
+      const [key, val] = entry;
+      refBodies.set(key, smartCastInt(val.toString(), 0));
+    });
     const endJd = jd + + spanJd + offset;
     const sampleRate = smartCastInt(sample, 8);
     const data = await this.astrologicService.fetchBavTimeline(geo, startJd, endJd);
-    const graphData = returnGrahaRefValues? calcBavSignSamples(data, startJd, endJd, sampleRate) : calcBavGraphData(data, startJd, endJd, sampleRate);
+    const graphData = returnGrahaRefValues? calcBavSignSamples(data, startJd, endJd, sampleRate) : calcBavGraphData(data, refBodies, startJd, endJd, sampleRate);
     return res.status(HttpStatus.OK).json({ items: graphData, valid: graphData.length > 0 });
   }
 

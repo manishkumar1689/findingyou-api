@@ -5,6 +5,12 @@ import { julToISODate } from "../date-funcs";
 import { loopShift, loopShiftInner, toSignValues } from "../helpers";
 import { KeyLng, SignValueSet } from "../interfaces";
 
+const numIndicesAway = (sourceSign: number, targetSign: number, bindu: number[] = []) => {
+	const sourceIndex = sourceSign - 1;
+	const targetIndex = targetSign - 1;
+	const index = ((targetIndex - sourceIndex + 12) % 12);
+  return index >= 0 && index < bindu.length ? bindu[index] : 0;
+}
 /* 
     AV = Asthaka Varga
     BAV Bhinna Ashtaka Varga = AV value of a single Graha in house/sign
@@ -240,7 +246,7 @@ export const getAshtakavargaBodyTable = (bodies: KeyLng[] = [], binduSet = "defa
         .filter((row) => row.values.length > 0);
 }
 
-export const getAshtakavargaGridTotal = (bodies: KeyLng[] = [], binduSet = "default") => {
+export const getAshtakavargaGridTotal = (bodies: KeyLng[] = [], refBodies: Map<string, number> = new Map()) => {
   return bodies
        .map((gr) => {
          const signIndex = Math.floor(gr.lng / 30);
@@ -248,10 +254,13 @@ export const getAshtakavargaGridTotal = (bodies: KeyLng[] = [], binduSet = "defa
          const row = ashtakavargaValues.find(bs => bs.key === gr.key);
          const values = row.values.filter(r => r.bindu instanceof Array && r.bindu.length > 0).map(r => {
           if (r.bindu instanceof Array && r.bindu.length > signIndex) {
-            return r.bindu[signIndex];
+            const innerBodyValue = refBodies.get(r.key);
+            const toSignIndex = typeof innerBodyValue === 'number'? innerBodyValue : 0;
+            return numIndicesAway(signIndex, toSignIndex, r.bindu);
           } else {
             return 0;
           }
+
          });
          return {
            sign,
@@ -261,8 +270,8 @@ export const getAshtakavargaGridTotal = (bodies: KeyLng[] = [], binduSet = "defa
        });
 }
 
-export const getAshtakavargaBavItems = (bodies: KeyLng[] = []) => {
-  return getAshtakavargaGridTotal(bodies).map(row => {
+export const getAshtakavargaBavItems = (bodies: KeyLng[] = [], refBodies: Map<string, number> = new Map()) => {
+  return getAshtakavargaGridTotal(bodies, refBodies).map(row => {
     const { key, values, sign } = row;
     const value = values.reduce((a, b) => a + b, 0);
     return { key, sign, value };
@@ -292,8 +301,8 @@ export interface QualitySet {
   n?: number;
 }
 
-export const getAshtakavargaBavBMN = (bodies: KeyLng[] = []): QualitySet => {
-  const items = getAshtakavargaBavItems(bodies);
+export const getAshtakavargaBavBMN = (bodies: KeyLng[] = [], refBodies: Map<string, number> = new Map()): QualitySet => {
+  const items = getAshtakavargaBavItems(bodies, refBodies);
   const m = items.filter(row => naturalMalefics.includes(row.key)).map(row => row.value).reduce((a, b) => a +b, 0) / naturalBenefics.length;
   const b = items.filter(row => naturalBenefics.includes(row.key)).map(row => row.value).reduce((a, b) => a +b, 0) / naturalMalefics.length;
 
@@ -355,12 +364,12 @@ export const calcBavSignSamples = (data: SignTimelineSet[] = [], startJd = 0, en
   return signSwitchJds;
 }
 
-export const calcBavGraphData = (data: SignTimelineSet[] = [], startJd = 0, endJd = 0, stepsPerDay = 2) => {
+export const calcBavGraphData = (data: SignTimelineSet[] = [], refBodies: Map<string, number> = new Map(), startJd = 0, endJd = 0, stepsPerDay = 2) => {
   const initBodies = data.map(row => {
     const { key, sign} = row;
     return { key, lng: row.longitude, sign };
   });
-  const initValues = getAshtakavargaBavBMN(initBodies);
+  const initValues = getAshtakavargaBavBMN(initBodies, refBodies);
   const graphData = [{
     jd: startJd,
     refJd: 0,
@@ -370,7 +379,7 @@ export const calcBavGraphData = (data: SignTimelineSet[] = [], startJd = 0, endJ
   const signSwitchJds = calcBavSignSamples(data, startJd, endJd, stepsPerDay);
   signSwitchJds.forEach(row => {
     const {jd, dt, bodies} = row;
-    const items = getAshtakavargaBavBMN(bodies);
+    const items = getAshtakavargaBavBMN(bodies, refBodies);
     graphData.push({
       jd,
       refJd: jd - startJd,
