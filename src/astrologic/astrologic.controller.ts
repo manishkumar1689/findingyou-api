@@ -2541,10 +2541,12 @@ export class AstrologicController {
     const startJd = jd + offset;
     const coreKeys = ['sa', 'ju', 'ma', 'su', 've', 'me', 'mo', 'as'];
     const refBodies: Map<string, number> = new Map();
-    const refBodyEntries = Object.entries(query).filter(entry => coreKeys.includes(entry[0]) && isNumeric(entry[1])).forEach(entry => {
-      const [key, val] = entry;
-      refBodies.set(key, smartCastInt(val.toString(), 0));
-    });
+    if (query instanceof Object) {
+      Object.entries(query).filter(entry => coreKeys.includes(entry[0]) && isNumeric(entry[1])).forEach(entry => {
+        const [key, val] = entry;
+        refBodies.set(key, smartCastInt(val.toString(), 0));
+      });
+    }
     const endJd = jd + + spanJd + offset;
     const sampleRate = smartCastInt(sample, 8);
     const data = await this.astrologicService.fetchBavTimeline(geo, startJd, endJd);

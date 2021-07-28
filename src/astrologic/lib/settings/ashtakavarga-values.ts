@@ -5,7 +5,7 @@ import { julToISODate } from "../date-funcs";
 import { loopShift, loopShiftInner, toSignValues } from "../helpers";
 import { KeyLng, SignValueSet } from "../interfaces";
 
-const numIndicesAway = (sourceSign: number, targetSign: number, bindu: number[] = []) => {
+const matchIndexShiftedArrayValue = (sourceSign: number, targetSign: number, bindu: number[] = []) => {
 	const sourceIndex = sourceSign - 1;
 	const targetIndex = targetSign - 1;
 	const index = ((targetIndex - sourceIndex + 12) % 12);
@@ -256,11 +256,10 @@ export const getAshtakavargaGridTotal = (bodies: KeyLng[] = [], refBodies: Map<s
           if (r.bindu instanceof Array && r.bindu.length > signIndex) {
             const innerBodyValue = refBodies.get(r.key);
             const toSignIndex = typeof innerBodyValue === 'number'? innerBodyValue : 0;
-            return numIndicesAway(signIndex, toSignIndex, r.bindu);
+            return matchIndexShiftedArrayValue(signIndex, toSignIndex, r.bindu);
           } else {
             return 0;
           }
-
          });
          return {
            sign,
@@ -305,8 +304,6 @@ export const getAshtakavargaBavBMN = (bodies: KeyLng[] = [], refBodies: Map<stri
   const items = getAshtakavargaBavItems(bodies, refBodies);
   const m = items.filter(row => naturalMalefics.includes(row.key)).map(row => row.value).reduce((a, b) => a +b, 0) / naturalBenefics.length;
   const b = items.filter(row => naturalBenefics.includes(row.key)).map(row => row.value).reduce((a, b) => a +b, 0) / naturalMalefics.length;
-
-  /* console.log(bodies.find(b => b.key === "mo")); */
   const a = items.map(row => row.value).reduce((a, b) => a + b, 0) / items.length;
   return {
     b,
