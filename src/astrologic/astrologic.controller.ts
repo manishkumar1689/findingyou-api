@@ -2522,31 +2522,31 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('bav-sign-timeline/:loc/:dt?/:span?/:midMode?/:sample?')
+  @Get('bav-sign-timeline/:loc/:dt?')
   async fetchBavTimeline(
       @Res() res,
       @Param('loc') loc,
       @Param('dt') dt,
-      @Param('span') span,
-      @Param('midMode') midMode,
-      @Param('sample') sample,
       @Query() query
     ) {
     const geo = locStringToGeo(loc);
-    const isMidMode = ['start', 'start-sample'].includes(midMode) === false;
-    const returnGrahaRefValues = ['start-sample','sample'].includes(midMode);
+    const queryEntries = query instanceof Object ? Object.entries(query) : [];
+    const queryKeys = queryEntries.map(entry => entry[0]);
+    const mode = queryKeys.includes('mode') ? query.mode : 'mid';
+    const span = queryKeys.includes('span') ? query.span : 28;
+    const sample = queryKeys.includes('sample') ? query.span : 8;
+    const isMidMode = ['start', 'start-sample'].includes(mode) === false;
+    const returnGrahaRefValues = ['start-sample','sample'].includes(mode);
     const { jd } = matchJdAndDatetime(dt, -1, true, isMidMode);
     const spanJd = smartCastInt(span, 28);
     const offset = isMidMode ? 0 - (spanJd / 2) : 0;
     const startJd = jd + offset;
-    const coreKeys = ['sa', 'ju', 'ma', 'su', 've', 'me', 'mo', 'as'];
+    const coreKeys = ['sa', 'ju', 'ma', 'su', 've', 'me', 'mo', 'as', 'ke', 'ra'];
     const refBodies: Map<string, number> = new Map();
-    if (query instanceof Object) {
-      Object.entries(query).filter(entry => coreKeys.includes(entry[0]) && isNumeric(entry[1])).forEach(entry => {
-        const [key, val] = entry;
-        refBodies.set(key, smartCastInt(val.toString(), 0));
-      });
-    }
+    queryEntries.filter(entry => coreKeys.includes(entry[0]) && isNumeric(entry[1])).forEach(entry => {
+      const [key, val] = entry;
+      refBodies.set(key, smartCastInt(val.toString(), 0));
+    });
     const endJd = jd + + spanJd + offset;
     const sampleRate = smartCastInt(sample, 8);
     const data = await this.astrologicService.fetchBavTimeline(geo, startJd, endJd);
