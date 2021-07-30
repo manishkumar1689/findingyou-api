@@ -13,9 +13,9 @@ const multipleKeyScales = [
   },
   {
     key: 'jungian',
-    name: 'Jungian 8 (introvert - extravert)',
+    name: 'Jungian',
     range: [1, 10],
-    items: ['sensing', 'intuiting', 'thinking', 'feeling'],
+    items: ['extrovert_introvert', 'sensing_intuiting', 'thinking_feeling', 'judging_perceiving'],
   },
 ];
 

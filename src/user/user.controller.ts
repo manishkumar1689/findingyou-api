@@ -35,7 +35,7 @@ import {
 import roleValues from './settings/roles';
 import paymentValues from './settings/payments-options';
 import countryValues from './settings/countries';
-import getDefaultPreferences from './settings/preference-options';
+import getDefaultPreferences, { translateItemKey } from './settings/preference-options';
 import surveyList from './settings/survey-list';
 import multipleKeyScales from './settings/multiscales';
 import permissionValues from './settings/permissions';
@@ -792,7 +792,14 @@ export class UserController {
       data = getDefaultPreferences(surveyKey);
     } else {
       if (setting.value instanceof Array) {
-        data = setting.value;
+        data = setting.value.map(row => {
+          if (row instanceof Object && row.type === 'multiple_key_scale' && Object.keys(row).includes("options") && row.options instanceof Array) {
+            row.options = row.options.map(opt => {
+              return { ...opt,name: translateItemKey(opt.key) }
+            }) ;
+          }
+          return row;
+        });
       }
     }
     return data;

@@ -55,7 +55,7 @@ const surveyList = [
     multiscales: 'jungian',
     type: 'psychometric',
     enabled: true,
-    range: [1, 4],
+    range: [1, 10],
   },
   {
     key: 'ayurvedic',

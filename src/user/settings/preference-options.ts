@@ -345,6 +345,24 @@ const buildSubOpts = (range: Array<number>) => {
   }
 };
 
+export const translateItemKey = (key: string) => {
+  const refKey = key.toLowerCase().replace(/[-_]+/g, '');
+  switch (refKey) {
+    case 'minus2':
+      return 'Very Inaccurate';
+    case 'minus1':
+      return 'Moderately Inaccurate';
+    case 'neutral':
+      return 'Neither Inaccurate nor Accurate';
+    case 'plus1':
+      return 'Moderately Accurate';
+    case 'plus2':
+      return 'Very Accurate';
+    default:
+      return key.replace(/[_-]/, ' ');
+  }
+}
+
 const matchValueOpts = (category: string) => {
   const optSet = multipleKeyScales.find(ms => ms.key === category);
   let vo = [];
@@ -353,7 +371,7 @@ const matchValueOpts = (category: string) => {
     if (items instanceof Array) {
       vo = items.map(itemKey => {
         return {
-          key: [category, itemKey].join('_'),
+          key: [category, translateItemKey(itemKey)].join('_'),
           category,
           name: itemKey,
           value: 3,
@@ -366,11 +384,12 @@ const matchValueOpts = (category: string) => {
 };
 
 const buildOptions = (category: string) => {
-  const keys = ['never', 'rarely', 'sometimes', 'always'];
+  const keys = ['minus1', 'minus2', 'neutral', 'plus1', 'plus2'];
   return keys.map(key => {
     const valueOpts = matchValueOpts(category);
     return {
       key,
+      name: translateItemKey(key),
       valueOpts,
     };
   });
