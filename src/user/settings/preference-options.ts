@@ -359,7 +359,7 @@ export const translateItemKey = (key: string) => {
     case 'plus2':
       return 'Very Accurate';
     default:
-      return key.replace(/[_-]/, ' ');
+      return key.replace(/^(\w+)_(\w+)$/, "$1 - $2").replace(/[_-]/g, ' ');
   }
 }
 
