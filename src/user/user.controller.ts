@@ -35,7 +35,7 @@ import {
 import roleValues from './settings/roles';
 import paymentValues from './settings/payments-options';
 import countryValues from './settings/countries';
-import getDefaultPreferences, { translateItemKey } from './settings/preference-options';
+import getDefaultPreferences, { buildSurveyOptions, translateItemKey } from './settings/preference-options';
 import surveyList from './settings/survey-list';
 import multipleKeyScales from './settings/multiscales';
 import permissionValues from './settings/permissions';
@@ -339,7 +339,12 @@ export class UserController {
         data = setting.value;
       }
     }
-    return res.status(HttpStatus.OK).json(data);
+    
+    const dataWithOptions = data.map(item => {
+      const valueOpts = buildSurveyOptions(item.key);
+      return { ...item, options: valueOpts};
+    })
+    return res.status(HttpStatus.OK).json(dataWithOptions);
   }
 
   async getPreferencesByKey(surveyKey = '', key = '') {

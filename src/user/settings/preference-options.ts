@@ -395,6 +395,8 @@ const buildOptions = (category: string) => {
   });
 };
 
+export const buildSurveyOptions = (category = "") => buildOptions(category);
+
 const matchPersonalityOptions = (subkey = 'personality') => {
   let questions = [];
   switch (subkey) {
