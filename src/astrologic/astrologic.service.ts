@@ -2038,17 +2038,17 @@ export class AstrologicService {
     const storedResults = await this.redisGet(key);
     const hasStored = storedResults instanceof Array && storedResults.length > 5;
     const grahas = hasStored? storedResults : await calcCoreSignTimeline(startJd, endJd);
-    if (!hasStored && grahas instanceof Array) {
-      this.redisSet(key, storedResults)
+    if (!hasStored && grahas instanceof Array && grahas.length > 5) {
+      this.redisSet(key, grahas);
     }
-    const ascKey = ['bav_asc_timeline', geo.lat, geo.lng, startJd, endJd].join('_');
+    const ascKey = ['bav_asc_timeline', geo.lat.toFixed(3), geo.lng.toFixed(3), startJd, endJd].join('_');
     const storedAscResult = await this.redisGet(ascKey);
     const hasAscStored = storedAscResult instanceof Object;
     const ascSet = hasAscStored ? storedAscResult : await calcAscendantTimelineSet(geo, startJd, endJd);
     if (ascSet instanceof Object) {
       grahas.push(ascSet);
       if (!hasAscStored) {
-        this.redisSet(ascKey, storedAscResult);
+        this.redisSet(ascKey, ascSet);
       }
     }
     return grahas;
