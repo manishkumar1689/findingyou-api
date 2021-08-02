@@ -56,6 +56,7 @@ import { SampleDataDTO } from './dto/sample-data.dto';
 import { SampleRecordDTO } from './dto/sample-record.dto';
 import { simplifyChart } from '../astrologic/lib/member-charts';
 import { MediaItemDTO } from './dto/media-item.dto';
+import { Options } from '@nestjs/common';
 
 @Controller('user')
 export class UserController {
@@ -252,7 +253,11 @@ export class UserController {
       const chartObj = await this.astrologicService.getUserBirthChart(user._id);
       const hasChart = chartObj instanceof Object;
       const chart = hasChart ? simplifyChart(chartObj, ayanamshaKey, simpleMode) : {};
-      items.push({...user, chart, hasChart});
+      let preferences = [];
+      if (user.preferences instanceof Array && user.preferences.length > 0) {
+          preferences = await this.settingService.processPreferences(user.preferences);
+      }
+      items.push({...user, preferences, chart, hasChart});
     }
     items.sort((a,b) => b.hasChart ? 1 : -1);
     return res.json(items);
@@ -304,13 +309,23 @@ export class UserController {
     if (!user) {
       throw new NotFoundException('User does not exist!');
     }
-    return res.status(HttpStatus.OK).json(user);
+    let preferences: any[] = [];
+    if (user instanceof Object) {
+      if (user.preferences instanceof Array && user.preferences.length > 0) {
+        if (user.constructor.name === "model") {
+          const userObj = user.toObject();
+          preferences = await this.settingService.processPreferences(userObj.preferences);
+        }
+      }
+    }
+    return res.status(HttpStatus.OK).json({user, preferences});
   }
 
   // Fetch preference options
-  @Get('survey-list')
-  async listSurveys(@Res() res) {
+  @Get('survey-list/:mode?')
+  async listSurveys(@Res() res, @Param('mode') mode) {
     const setting = await this.settingService.getByKey('survey_list');
+    const addMultiScaleInfo = mode === 'info';
     let data: Array<SurveyItem> = [];
     if (!setting) {
       data = surveyList;
@@ -319,36 +334,31 @@ export class UserController {
         data = setting.value;
       }
     }
+    if (addMultiScaleInfo) {
+      const multiscaleTypes = await this.settingService.surveyMultiscales();
+      data = data.map(item => {
+        let scaleParams: any = {};
+        const { multiscales } = item;
+        if (notEmptyString(multiscales)) {
+          const multiscaleOptions = multiscaleTypes.find(item => item.key === multiscales);
+          if (multiscaleOptions instanceof Object) {
+            scaleParams = multiscaleOptions;
+          }
+        }
+        return { ...item, scaleParams };
+      })
+    }
     return res.status(HttpStatus.OK).json(data);
   }
 
   @Get('survey-multiscales')
   async getSurveryMultiscales(@Res() res) {
-    const key = 'survey_multiscales';
-    const setting = await this.settingService.getByKey(key);
-    const hasValue =
-      setting instanceof Object &&
-      Object.keys(setting).includes('value') &&
-      setting.value instanceof Array &&
-      setting.value.length > 0;
-    let data: Array<any> = [];
-    if (!hasValue) {
-      data = multipleKeyScales;
-    } else {
-      if (setting.value instanceof Array) {
-        data = setting.value;
-      }
-    }
-    
-    const dataWithOptions = data.map(item => {
-      const valueOpts = buildSurveyOptions(item.key);
-      return { ...item, options: valueOpts};
-    })
+    const dataWithOptions = await this.settingService.surveyMultiscales();
     return res.status(HttpStatus.OK).json(dataWithOptions);
   }
 
   async getPreferencesByKey(surveyKey = '', key = '') {
-    const prefOpts = await this.getPreferenceOptions(surveyKey);
+    const prefOpts = await this.settingService.getPreferenceOptions(surveyKey);
     const data = { valid: false, num: 0, items: [] };
     const mapLocalised = v => {
       return {
@@ -783,28 +793,6 @@ export class UserController {
     } else if (setting instanceof Object) {
       if (setting.value instanceof Array) {
         data = setting.value;
-      }
-    }
-    return data;
-  }
-
-  async getPreferenceOptions(
-    surveyKey = 'preference_options',
-  ): Promise<Array<PreferenceOption>> {
-    const setting = await this.settingService.getByKey(surveyKey);
-    let data: Array<PreferenceOption> = [];
-    if (!setting) {
-      data = getDefaultPreferences(surveyKey);
-    } else {
-      if (setting.value instanceof Array) {
-        data = setting.value.map(row => {
-          if (row instanceof Object && row.type === 'multiple_key_scale' && Object.keys(row).includes("options") && row.options instanceof Array) {
-            row.options = row.options.map(opt => {
-              return { ...opt,name: translateItemKey(opt.key) }
-            }) ;
-          }
-          return row;
-        });
       }
     }
     return data;

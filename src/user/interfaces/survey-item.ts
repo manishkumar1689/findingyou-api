@@ -5,4 +5,5 @@ export interface SurveyItem {
   readonly type: string;
   readonly enabled: boolean;
   readonly range?: number[];
+  readonly scaleParams?: any;
 }

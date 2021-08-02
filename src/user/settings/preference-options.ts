@@ -359,7 +359,7 @@ export const translateItemKey = (key: string) => {
     case 'plus2':
       return 'Very Accurate';
     default:
-      return key.replace(/^(\w+)_(\w+)$/, "$1 - $2").replace(/[_-]/g, ' ');
+      return key.replace(/^(\w+)_(\w+)$/, "$1 - $2").replace(/(\w+)[_-]+(\w)/g, '$1 $2');
   }
 }
 
@@ -371,9 +371,9 @@ const matchValueOpts = (category: string) => {
     if (items instanceof Array) {
       vo = items.map(itemKey => {
         return {
-          key: [category, translateItemKey(itemKey)].join('_'),
+          key: [category, itemKey].join('_'),
           category,
-          name: itemKey,
+          name: translateItemKey(itemKey),
           value: 3,
           options: buildSubOpts(range),
         };

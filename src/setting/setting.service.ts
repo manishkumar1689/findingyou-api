@@ -9,11 +9,16 @@ import { Protocol } from './interfaces/protocol.interface';
 import { ProtocolDTO } from './dto/protocol.dto';
 import { mergeRoddenValues } from '../astrologic/lib/settings/rodden-scale-values';
 import { KeyName } from '../astrologic/lib/interfaces';
-import { extractDocId } from '../lib/entities';
+import { extractDocId, extractFromRedisClient, extractFromRedisMap, storeInRedis } from '../lib/entities';
 import { defaultPairedTagOptionSets } from '../astrologic/lib/settings/vocab-values';
 import { RuleSetDTO } from './dto/rule-set.dto';
 import { PredictiveRuleSet } from './interfaces/predictive-rule-set.interface';
 import { PredictiveRuleSetDTO } from './dto/predictive-rule-set.dto';
+import getDefaultPreferences, { buildSurveyOptions, translateItemKey } from '../user/settings/preference-options';
+import multipleKeyScales from '../user/settings/multiscales';
+import { PreferenceOption } from 'src/user/interfaces/preference-option.interface';
+import { RedisService } from 'nestjs-redis';
+import * as Redis from 'ioredis';
 
 @Injectable()
 export class SettingService {
@@ -22,7 +27,23 @@ export class SettingService {
     @InjectModel('Protocol')
     private readonly protocolModel: Model<Protocol>,
     @InjectModel('PredictiveRuleSet') private readonly predictiveRuleSetModel: Model<PredictiveRuleSet>,
+    private readonly redisService: RedisService,
   ) {}
+
+  async redisClient(): Promise<Redis.Redis> {
+    const redisMap = this.redisService.getClients();
+    return extractFromRedisMap(redisMap);
+  }
+
+  async redisGet(key: string): Promise<any> {
+    const client = await this.redisClient();
+    return await extractFromRedisClient(client, key);
+  }
+
+  async redisSet(key: string, value): Promise<boolean> {
+    const client = await this.redisClient();
+    return await storeInRedis(client, key, value);
+  }
   // fetch all Settings
   async getAllSetting(): Promise<Setting[]> {
     const Settings = await this.settingModel
@@ -115,6 +136,132 @@ export class SettingService {
           .filter(key => key !== '_new')
           .filter((x, i, a) => a.indexOf(x) === i)
       : [];
+  }
+
+  async getPreferenceOptions(
+    surveyKey = 'preference_options',
+  ): Promise<Array<PreferenceOption>> {
+    const setting = await this.getByKey(surveyKey);
+    let data: Array<PreferenceOption> = [];
+    if (!setting) {
+      data = getDefaultPreferences(surveyKey);
+    } else {
+      if (setting.value instanceof Array) {
+        data = setting.value.map(row => {
+          if (row instanceof Object && row.type === 'multiple_key_scale' && Object.keys(row).includes("options") && row.options instanceof Array) {
+            row.options = row.options.map(opt => {
+              return { ...opt,name: translateItemKey(opt.key) }
+            }) ;
+          }
+          return row;
+        });
+      }
+    }
+    return data;
+  }
+
+  async processPreferences(preferences: any[]) {
+    const multiscaleData = await this.surveyMultiscales();
+    const surveys = await this.getSurveys();
+    return preferences
+      .filter(pref => pref instanceof Object)
+      .map(pref => {
+      const {key, type, value } = pref;
+      let score: any = {};
+      if (notEmptyString(type) && type.startsWith("multiple_key_scale")) {
+        const survey = surveys.find(s => s.items.some(opt =>opt.key === key));
+        if (survey instanceof Object) {
+          const question = survey.items.find(opt => opt.key === key);
+          if (question instanceof Object ) {
+            const optData = question.options.find(opt => opt.key === value);
+            if (optData instanceof Object) {
+              if (optData.valueOpts instanceof Array) {
+                const category = optData.valueOpts[0].category;
+                const row = multiscaleData.find(item => item.key === category);
+                const values = optData.valueOpts.map(op => {
+                  const keyEnd = op.key.split("_").splice(1).join("_");
+                  return [keyEnd, op.value]
+                });
+                const num = values.length;
+                const total = values.map(entry => entry[1]).reduce((a, b) => a + b, 0);
+                const max = row.range[1] * num;
+                const min = row.range[0] * num;
+                score = { 
+                  scales: Object.fromEntries(values),
+                  max,
+                  min,
+                  total
+                }
+              }
+            }
+          }
+        }
+      }
+      return {...pref, score } 
+    });
+  }
+
+  async getSurveys() {
+    const key = 'preference_surveys';
+    const stored = await this.redisGet(key); 
+    const hasStored = stored instanceof Array && stored.length > 0;
+    const rows = hasStored ? stored : await this.getAllSurveys();
+    if (!hasStored && rows.length > 0) {
+      this.redisSet(key, rows);
+    }
+    return rows;
+  }
+
+  async getAllSurveys() {
+    const keys = await this.getPreferenceKeys();
+    const surveys: Array<any> = [];
+    for (const key of keys) {
+      const setting = await this.getByKey(key);
+      if (setting instanceof Object) {
+        const { value } = setting;
+        if (value instanceof Array) {
+          const num = value.length;
+          const valid = num > 0;
+          surveys.push({key, items: value, num, valid });
+        }
+      }
+    }
+    return surveys;
+  }
+
+  async surveyMultiscales() {
+    const key = 'survey_multiscales';
+    const stored = await this.redisGet(key);
+    const hasStored = stored instanceof Array && stored.length > 0;
+    const rows = hasStored ? stored : await this.surveyMultiscaleList();
+    if (!hasStored && rows.length > 0) {
+      this.redisSet(key, rows);
+    }
+    return rows;
+  }
+
+  async surveyMultiscaleList() {
+    const key = 'survey_multiscales';
+    const setting = await this.getByKey(key);
+    const hasValue =
+      setting instanceof Object &&
+      Object.keys(setting).includes('value') &&
+      setting.value instanceof Array &&
+      setting.value.length > 0;
+    let data: Array<any> = [];
+    if (!hasValue) {
+      data = multipleKeyScales;
+    } else {
+      if (setting.value instanceof Array) {
+        data = setting.value;
+      }
+    }
+    
+    const dataWithOptions = data.map(item => {
+      const valueOpts = buildSurveyOptions(item.key);
+      return { ...item, options: valueOpts};
+    });
+    return dataWithOptions;
   }
 
   async saveRelationshipType(newType: KeyName) {
