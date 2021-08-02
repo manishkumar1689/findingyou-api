@@ -16,7 +16,7 @@ import { PredictiveRuleSet } from './interfaces/predictive-rule-set.interface';
 import { PredictiveRuleSetDTO } from './dto/predictive-rule-set.dto';
 import getDefaultPreferences, { buildSurveyOptions, translateItemKey } from '../user/settings/preference-options';
 import multipleKeyScales from '../user/settings/multiscales';
-import { PreferenceOption } from 'src/user/interfaces/preference-option.interface';
+import { PreferenceOption } from '../user/interfaces/preference-option.interface';
 import { RedisService } from 'nestjs-redis';
 import * as Redis from 'ioredis';
 
