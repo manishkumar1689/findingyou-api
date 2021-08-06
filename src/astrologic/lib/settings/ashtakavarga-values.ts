@@ -191,8 +191,10 @@ const ashtakavargaValues = [
   },
 ];
 
-const getAshtakavargaBodyRow = (graha: KeyLng, tableKey = "", binduSet = "default") => {
+const getAshtakavargaBodyRow = (lngItem: KeyLng, tableKey = "", binduSet = "default") => {
   let values = [];
+  const sign = Math.floor(lngItem.lng / 30) + 1;
+  const graha = { ...lngItem, sign };
   const tableSet = ashtakavargaValues.find((tv) => tv.key === tableKey);
   if (tableSet) {
     if (tableSet.values instanceof Array) {
@@ -270,20 +272,21 @@ export const getAshtakavargaBodyGrid = (bodies: KeyLng[] = [], binduSet = "defau
   const gridValues = getAshtakavargaBodyValues(bodies, binduSet);
   return Array.from(Array(12)).map((_, i) => i).map(signIndex => { 
     const sign = signIndex + 1;
-    return {
-      sign,
-      values: gridValues.map(g1 => { 
-        const values = g1.values.map(g2 => { 
-          return { 
+    const values = gridValues.map(g1 => {
+      const { key, values } = g1;
+      return {
+        key,
+        values: values.map(g2 => {
+          return {
             key: g2.key,
-            value: g2.values[signIndex].value, 
+            value: g2.values[signIndex].value
           }
         })
-        return { 
-          key: g1.key,
-          values
-        }
-      })
+      };
+    });
+    return {
+      sign,
+      values
     }
   });
 }
