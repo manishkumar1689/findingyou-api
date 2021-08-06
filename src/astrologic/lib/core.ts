@@ -1253,6 +1253,41 @@ export const calcBodiesInHouses = async (
   return { ...grahaSet, ...houseData, aprakasa: apValues, upagrahas, rashis };
 };
 
+export const calcCoreGrahaPositions = async (datetime = null, geo, ayanamshaKey = "true_citra") => {
+  const jd = calcJulDate(datetime);
+  let ayaVal = 0;
+  let ayanamshaNum = 0;
+  const matchedRow = ayanamshaValues.find(item => item.key == ayanamshaKey);
+  const ayaRow = matchedRow instanceof Object ? matchedRow : ayanamshaValues[0];
+  if (matchedRow instanceof Object) {
+    ayanamshaNum = matchedRow.value;
+    matchSideralMode(ayaRow.key);
+    const { ayanamsa } = getAyanamsa(jd, swisseph.SEFLG_SIDEREAL);
+    ayaVal = ayanamsa;
+  }
+
+  const ayanamshaItem = {
+    num: ayanamshaNum,
+    value: ayaVal,
+    name: ayaRow.name,
+    key: ayaRow.key,
+  };
+  const grahaSet = await calcGrahaSet(datetime, geo, false);
+  if (ayaVal > 0) {
+    grahaSet.bodies.forEach(body => {
+      body.setAyanamshaItem(ayanamshaItem);
+    });
+  }
+  const houseData = await fetchHouseData(datetime, geo, 'W');
+  const ascendantLng = subtractLng360(houseData.ascendant, ayaVal);
+  const bodies = grahaSet.bodies.map(b => {
+    const {key, lng} = b;
+    return {key, lng};
+  });
+  bodies.push({key: "as", lng: ascendantLng})
+  return {bodies, ayanamsha: ayanamshaItem };
+}
+
 /*
 @param datetime: string isodate
 @param geo: latLng

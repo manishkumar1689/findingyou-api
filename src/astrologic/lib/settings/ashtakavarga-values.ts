@@ -197,6 +197,7 @@ const getAshtakavargaBodyRow = (graha: KeyLng, tableKey = "", binduSet = "defaul
   if (tableSet) {
     if (tableSet.values instanceof Array) {
       const gv = tableSet.values.find((rv) => rv.key === graha.key);
+
       if (gv) {
         const binduVals = binduSet === "vm" && gv.ex === true ? gv.vm : gv.bindu;
         const innerVals = loopShiftInner(
@@ -223,7 +224,9 @@ const getAshtakavargaBodyRowTotals = (graha: KeyLng, bodies: KeyLng[], binduSet 
       row = br;
     } else {
       row = row.map((item, itemIndex) => {
-        item.value = item.value + br[itemIndex].value;
+        if (itemIndex < br.length) {
+          item.value = item.value + br[itemIndex].value;
+        }
         return item;
       });
     }
@@ -244,6 +247,45 @@ export const getAshtakavargaBodyTable = (bodies: KeyLng[] = [], binduSet = "defa
           };
         })
         .filter((row) => row.values.length > 0);
+}
+
+export const getAshtakavargaBodyValues = (bodies: KeyLng[] = [], binduSet = "default") => {
+  return bodies
+       .map((gr) => {
+         const values = bodies.map(gr2 => {
+            return {
+              key: gr2.key,
+              values: getAshtakavargaBodyRow(gr, gr2.key, binduSet)
+            };
+         });
+         return { 
+           key: gr.key,
+           values
+         }
+       })
+       .filter((row) => row.values.length > 0);
+}
+
+export const getAshtakavargaBodyGrid = (bodies: KeyLng[] = [], binduSet = "default") => {
+  const gridValues = getAshtakavargaBodyValues(bodies, binduSet);
+  return Array.from(Array(12)).map((_, i) => i).map(signIndex => { 
+    const sign = signIndex + 1;
+    return {
+      sign,
+      values: gridValues.map(g1 => { 
+        const values = g1.values.map(g2 => { 
+          return { 
+            key: g2.key,
+            value: g2.values[signIndex].value, 
+          }
+        })
+        return { 
+          key: g1.key,
+          values
+        }
+      })
+    }
+  });
 }
 
 export const getAshtakavargaGridTotal = (bodies: KeyLng[] = [], refBodies: Map<string, number> = new Map()) => {

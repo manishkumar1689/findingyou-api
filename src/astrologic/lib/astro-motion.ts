@@ -344,7 +344,16 @@ export const calcSignSwitchAvg = (items: SignTimelineItem[]) => {
 }
 
 export const calcCoreSignTimeline = async (startJd = 0, endJd = 0, ayanamshaKey = "true_citra"): Promise<SignTimelineSet[]> => {
+  return await calcCoreIntervalTimeline(12, startJd, endJd, ayanamshaKey);
+}
+
+export const calcCoreKakshaTimeline = async (startJd = 0, endJd = 0, ayanamshaKey = "true_citra"): Promise<SignTimelineSet[]> => {
+  return await calcCoreIntervalTimeline(96, startJd, endJd, ayanamshaKey);
+}
+
+export const calcCoreIntervalTimeline = async (subDiv = 12, startJd = 0, endJd = 0, ayanamshaKey = "true_citra"): Promise<SignTimelineSet[]> => {
   const coreKeys = [ "sa", "ju", "ma", "su", "ve", "me", "mo"];
+  const degInterval = 360 / subDiv;
   const bodies = await calcBodiesJd(startJd, coreKeys);
   const ayanamshaVal = await calcAyanamsha(startJd, ayanamshaKey);
   const grahas = [];
@@ -354,13 +363,13 @@ export const calcCoreSignTimeline = async (startJd = 0, endJd = 0, ayanamshaKey 
     let reachedEnd = false;
     let i = 0;
     const refLng = subtractLng360(gr.lng, ayanamshaVal);
-    const refSign = Math.floor(refLng / 30) + 1;
+    const refSign = Math.floor(refLng / degInterval) + 1;
     let refStartJd = startJd - 0;
     while (!reachedEnd && i < 108) {
-      const nextSign = ((refSign + i - 1) % 12) + 1;
-      const nextLng = (nextSign * 30) % 360;
+      const nextSign = ((refSign + i - 1) % subDiv) + 1;
+      const nextLng = (nextSign * degInterval) % 360;
       const next = await matchNextTransitAtLng(gr.key, nextLng, refStartJd, ayanamshaKey);
-      const currSign = nextSign < 12 ? nextSign + 1 : 1;
+      const currSign = nextSign < subDiv ? nextSign + 1 : 1;
       const duration = next.targetJd - refStartJd;
       refStartJd = next.targetJd;
       nextMatches.push({ sign: currSign, lng: nextLng, jd: next.targetJd, dt: julToISODate(next.targetJd), spd: next.end.spd, duration });
@@ -381,9 +390,17 @@ export const calcCoreSignTimeline = async (startJd = 0, endJd = 0, ayanamshaKey 
 }
 
 export const calcAscendantTimelineSet = async (geo: LngLat, startJd = 0, endJd = 0, ayanamshaKey = "true_citra") => {
+  return await calcAscendantIntervalTimelineSet(12, geo, startJd, endJd, ayanamshaKey);
+}
+
+export const calcAscendantKakshaSet = async (geo: LngLat, startJd = 0, endJd = 0, ayanamshaKey = "true_citra") => {
+  return await calcAscendantIntervalTimelineSet(96, geo, startJd, endJd, ayanamshaKey);
+}
+
+export const calcAscendantIntervalTimelineSet = async (subDiv = 12, geo: LngLat, startJd = 0, endJd = 0, ayanamshaKey = "true_citra") => {
   const ayanamshaVal = await calcAyanamsha(startJd, ayanamshaKey);
   const ascendant = calcOffsetAscendant(geo.lat, geo.lng, startJd, ayanamshaVal);
-  const ascendantData = calcAscendantTimelineItems(geo.lat, geo.lng, startJd, endJd, ayanamshaVal);
+  const ascendantData = calcAscendantTimelineItems(subDiv, geo.lat, geo.lng, startJd, endJd, ayanamshaVal);
   const { items } = ascendantData;
   return { 
     key: "as", 

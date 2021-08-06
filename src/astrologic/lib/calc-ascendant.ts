@@ -72,9 +72,10 @@ export const calcTropicalAscendantDt = (lat = 0, lng = 0, dt = ""): number => {
 	return calcTropicalAscendant(lat, lng, jd);
 }
 
-export const calcAscendantTimeline = (lat = 0, lng = 0, startJd = 0, endJd = 0, ayanamshaValue = 0) => {
+export const calcAscendantTimeline = (subDiv = 12, lat = 0, lng = 0, startJd = 0, endJd = 0, ayanamshaValue = 0) => {
 	const asc = calcOffsetAscendant(lat, lng, startJd, ayanamshaValue);
-	const nextLng = asc < 330 ? Math.ceil(asc / 30) * 30 : 0;
+	const degInterval = 360 / subDiv;
+	const nextLng = asc < ((subDiv-1) * (360/subDiv)) ? Math.ceil(asc / degInterval) * degInterval : 0;
 	const startDiff = subtractLng360(nextLng, asc);
 	const startMins = startDiff < 5 ? 0 : Math.floor(startDiff);
 	const minuteJd = 1 / 1440;
@@ -86,8 +87,8 @@ export const calcAscendantTimeline = (lat = 0, lng = 0, startJd = 0, endJd = 0, 
 	while (currJd < endJd && counter < 1000000) {
 		currJd += minuteJd;
 		const nextLng = calcOffsetAscendant(lat, lng, currJd, ayanamshaValue);
-		const absVal = Math.abs(nextLng % 30);
-		const distance = absVal > 15 ? 0 - (30 - absVal) : absVal;
+		const absVal = Math.abs(nextLng % degInterval);
+		const distance = absVal > (degInterval / 2) ? 0 - (degInterval - absVal) : absVal;
 		const diff = subtractLng360(nextLng, prevLng);
 		const progress = distance / diff;
 		prevLng = nextLng;
@@ -105,11 +106,16 @@ export const calcAscendantTimeline = (lat = 0, lng = 0, startJd = 0, endJd = 0, 
 	return { items, startJd, endJd, dur: endJd - startJd, startDiff };
 }
 
-export const calcAscendantTimelineItems = (lat = 0, lng = 0, startJd = 0, endJd = 0, ayanamshaValue = 0) => {
-	const data = calcAscendantTimeline(lat, lng, startJd, endJd, ayanamshaValue)
+export const calcAscendantIntervalTimelineItems = (lat = 0, lng = 0, startJd = 0, endJd = 0, ayanamshaValue = 0) => {
+	return calcAscendantTimelineItems(12, lat, lng, startJd, endJd, ayanamshaValue);
+}
+
+export const calcAscendantTimelineItems = (subDiv = 12, lat = 0, lng = 0, startJd = 0, endJd = 0, ayanamshaValue = 0) => {
+	const data = calcAscendantTimeline(subDiv, lat, lng, startJd, endJd, ayanamshaValue);
+	const degInterval = 360 / subDiv;
 	data.items = data.items.map(item => {
 		const lng = Math.round(item.lng);
-		const sign = Math.floor(lng / 30) + 1; 
+		const sign = Math.floor(lng / degInterval) + 1; 
 		return { ...item, lng, sign, dt: julToISODate(item.jd) }
 	});
 	return data;

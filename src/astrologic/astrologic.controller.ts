@@ -41,6 +41,7 @@ import {
   calcBodiesJd,
   calcAyanamsha,
   fetchHouseDataJd,
+  calcCoreGrahaPositions,
 } from './lib/core';
 import {
   calcJulianDate,
@@ -91,7 +92,7 @@ import {
 import { mapNestedKaranaTithiYoga, mapToponyms } from './lib/mappers';
 import { CreateSettingDTO } from '../setting/dto/create-setting.dto';
 import typeTags from './lib/settings/relationship-types';
-import { KeyName, KeyNumValue } from './lib/interfaces';
+import { KeyName } from './lib/interfaces';
 import { TagReassignDTO } from './dto/tag-reassign.dto';
 import { TagDTO } from './dto/tag.dto';
 import { RuleSetDTO } from '../setting/dto/rule-set.dto';
@@ -104,7 +105,7 @@ import { calcAscendantTimelineItems, calcOffsetAscendant } from './lib/calc-asce
 import { GeoLoc } from './lib/models/geo-loc';
 import { Graha } from './lib/models/graha-set';
 import ayanamshaValues from './lib/settings/ayanamsha-values';
-import { calcBavGraphData, calcBavSignSamples } from './lib/settings/ashtakavarga-values';
+import { calcBavGraphData, calcBavSignSamples, getAshtakavargaBodyGrid, getAshtakavargaBodyTable } from './lib/settings/ashtakavarga-values';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -263,6 +264,22 @@ export class AstrologicController {
       const sysRef = notEmptyString(system) ? system : 'W';
       const ayanamshaNum = isNumeric(ayanamsha) ? parseInt(ayanamsha, 10) : 27;
       data = await calcBodiesInHouses(dt, geo, sysRef, ayanamshaNum);
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('core-grahas/:loc/:dt/:ayanamsha?')
+  async coreGrahasByDateGeo(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Param('ayanamsha') ayanamsha,
+  ) {
+    let data: any = { valid: false };
+    if (notEmptyString(dt, 6) && notEmptyString(loc, 3)) {
+      const geo = locStringToGeo(loc);
+      const ayanamshaKey = notEmptyString(ayanamsha) ? ayanamsha : 'true_citra';
+      data = await calcCoreGrahaPositions(dt, geo, ayanamshaKey);
     }
     return res.status(HttpStatus.OK).json(data);
   }
@@ -2513,12 +2530,64 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json({ start: dtUtc, end: endDt, grahas });
   }
 
+  @Get('kaksha-transit-timeline/:chartID/:loc/:start?/:end?/:ayanamsha?')
+  async kakshaTimeline(@Res() res, @Param('chartID') chartID, @Param('loc') loc, @Param('start') start, @Param('end') end, @Param('ayanamsha') ayanamsha) {
+    const { dtUtc, jd } = matchJdAndDatetime(start);
+    const startJd = jd;
+    const { endJd, endDt } = matchEndJdAndDatetime(end, jd);
+    const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
+    const chartData = await this.astrologicService.getChart(chartID);
+    const simpleChart = chartData instanceof Object ? simplifyChart(chartData, ayanamshaKey) : null;
+    const birthGrahas = simpleChart instanceof Object ? simpleChart.grahas.map(gr => {
+      const {key, lng, sign } = gr;
+      return { key, lng, sign };
+    }) : [];
+    const keys = ['sa','ju','ma','ve','me','su', 'mo'];
+    const lngs = keys.map(key => {
+      const gr = birthGrahas.find(g => g.key === key);
+      const lng = gr instanceof Object ? gr.lng : 0;
+      return { key, lng };
+    });
+    const ascendantLng = simpleChart.ascendant;
+    lngs.push({
+      key: "as",
+      lng: ascendantLng
+    });
+    
+    const bav = getAshtakavargaBodyGrid(lngs, simpleChart.jd);
+    const geo = locStringToGeo(loc);
+    
+    const grahaItems = await this.astrologicService.fetchKakshaTimeline(geo, startJd, endJd);
+    const times = grahaItems.map(row => {
+      const { key, jd, dt, longitude, sign, nextMatches } = row;
+      const first = { key, jd, dt, lng: longitude, sign }
+      const subs = nextMatches.map(r => {
+        const { jd, dt, lng, sign } = r;
+        return { key, jd, dt, lng, sign }
+      });
+      return [first, ...subs];
+    }).reduce((a, b) => a.concat(b), [])
+    .filter(sub => sub.jd < endJd);
+    times.sort((a, b) => a.jd - b.jd);
+
+    return res.status(HttpStatus.OK).json({ dt: chartData.datetime, geo: chartData.geo, lngs, bav, start: dtUtc, end: endDt, times });
+  }
+
   @Get('object-sign-timeline/:loc/:start?/:end?')
   async fetchObjectTimeline(@Res() res, @Param('loc') loc, @Param('start') start, @Param('end') end) {
     const geo = locStringToGeo(loc);
     const { jd } = matchJdAndDatetime(start);
     const { endJd } = matchEndJdAndDatetime(end, jd);
     const data = await this.astrologicService.fetchBavTimeline(geo, jd, endJd);
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('kaksha-timeline/:loc/:start?/:end?')
+  async fetchKakshaTimeline(@Res() res, @Param('loc') loc, @Param('start') start, @Param('end') end) {
+    const geo = locStringToGeo(loc);
+    const { jd } = matchJdAndDatetime(start);
+    const { endJd } = matchEndJdAndDatetime(end, jd);
+    const data = await this.astrologicService.fetchKakshaTimeline(geo, jd, endJd);
     return res.status(HttpStatus.OK).json(data);
   }
 
@@ -2563,7 +2632,7 @@ export class AstrologicController {
     const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
     const ayanamshaVal = await calcAyanamsha(startJd, ayanamshaKey);
     const { endJd, endDt } = matchEndJdAndDatetime(end, jd);
-    const data = calcAscendantTimelineItems(lat, lng, startJd, endJd, ayanamshaVal);
+    const data = calcAscendantTimelineItems(12, lat, lng, startJd, endJd, ayanamshaVal);
     return res.status(HttpStatus.OK).json({startDt: dtUtc, endDt, ...data});
   }
 
