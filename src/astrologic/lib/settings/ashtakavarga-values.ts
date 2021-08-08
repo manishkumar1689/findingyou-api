@@ -196,21 +196,19 @@ const getAshtakavargaBodyRow = (lngItem: KeyLng, tableKey = "", binduSet = "defa
   const sign = Math.floor(lngItem.lng / 30) + 1;
   const graha = { ...lngItem, sign };
   const tableSet = ashtakavargaValues.find((tv) => tv.key === tableKey);
-  if (tableSet) {
-    if (tableSet.values instanceof Array) {
-      const gv = tableSet.values.find((rv) => rv.key === graha.key);
+  if (tableSet.values instanceof Array) {
+    const gv = tableSet.values.find((rv) => rv.key === graha.key);
 
-      if (gv) {
-        const binduVals = binduSet === "vm" && gv.ex === true ? gv.vm : gv.bindu;
-        const innerVals = loopShiftInner(
-          toSignValues(binduVals),
-          graha.sign - 1
-        );
-        values = loopShift(
-          innerVals,
-          innerVals.findIndex((p) => p.sign === 1)
-        );
-      }
+    if (gv) {
+      const binduVals = binduSet === "vm" && gv.ex === true ? gv.vm : gv.bindu;
+      const innerVals = loopShiftInner(
+        toSignValues(binduVals),
+        graha.sign - 1
+      );
+      values = loopShift(
+        innerVals,
+        innerVals.findIndex((p) => p.sign === 1)
+      );
     }
   }
   return values;
@@ -268,15 +266,40 @@ export const getAshtakavargaBodyValues = (bodies: KeyLng[] = [], binduSet = "def
        .filter((row) => row.values.length > 0);
 }
 
+
+export const flipGridValues = (gridValues: any[]) => {
+  const keys = gridValues.length > 1 ? gridValues[0].values.map(row => row.key) : [];
+  return gridValues.map(row => {
+    const values = keys.map(k1 => {
+      const items = row.values.map(r2 => {
+        const r2v = r2.values.find(r3 => r3.key === k1);
+        return {
+          key: r2v.key,
+          value: r2v.value,
+        }
+      });
+      return {
+        key: k1,
+        values: items 
+      }
+    });
+    return {
+      sign: row.sign,
+      values
+    }	
+  })
+}
+
 export const getAshtakavargaBodyGrid = (bodies: KeyLng[] = [], binduSet = "default") => {
   const gridValues = getAshtakavargaBodyValues(bodies, binduSet);
-  return Array.from(Array(12)).map((_, i) => i).map(signIndex => { 
+  const baseKeys = bodies.map(b => b.key).splice(0, 8);
+  const grid = Array.from(Array(12)).map((_, i) => i).map(signIndex => { 
     const sign = signIndex + 1;
-    const values = gridValues.map(g1 => {
+    const values = gridValues.filter(g1 => baseKeys.includes(g1.key)).map(g1 => {
       const { key, values } = g1;
       return {
         key,
-        values: values.map(g2 => {
+        values: values.filter(g2 => baseKeys.includes(g2.key) && Object.keys(g2).includes("values") && g2.values instanceof Array && signIndex < g2.values.length).map(g2 => {
           return {
             key: g2.key,
             value: g2.values[signIndex].value
@@ -289,7 +312,9 @@ export const getAshtakavargaBodyGrid = (bodies: KeyLng[] = [], binduSet = "defau
       values
     }
   });
+  return flipGridValues(grid);
 }
+
 
 export const getAshtakavargaGridTotal = (bodies: KeyLng[] = [], refBodies: Map<string, number> = new Map()) => {
   return bodies

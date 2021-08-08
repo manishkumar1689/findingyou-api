@@ -2542,16 +2542,18 @@ export class AstrologicController {
       const {key, lng, sign } = gr;
       return { key, lng, sign };
     }) : [];
-    const keys = ['sa','ju','ma','ve','me','su', 'mo'];
+
+    const ascendantLng = simpleChart.ascendant;
+    birthGrahas.push({
+      key: "as",
+      lng: ascendantLng,
+      sign: Math.floor(ascendantLng / 30) + 1
+    });
+    const keys = ['sa','ju','ma','su', 've','me','mo', 'as'];
     const lngs = keys.map(key => {
       const gr = birthGrahas.find(g => g.key === key);
       const lng = gr instanceof Object ? gr.lng : 0;
       return { key, lng };
-    });
-    const ascendantLng = simpleChart.ascendant;
-    lngs.push({
-      key: "as",
-      lng: ascendantLng
     });
     
     const bav = getAshtakavargaBodyGrid(lngs, simpleChart.jd);

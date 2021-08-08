@@ -118,7 +118,6 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra', mode
   return chart;
 };
 
-
 export const simplifyAstroChart = (data: any = null, applyAyanamsha = true) => {
   if (data instanceof Object) {
     const keys = Object.keys(data);
