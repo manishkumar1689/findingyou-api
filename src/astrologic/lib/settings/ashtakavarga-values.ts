@@ -274,13 +274,13 @@ export const flipGridValues = (gridValues: any[]) => {
       const items = row.values.map(r2 => {
         const r2v = r2.values.find(r3 => r3.key === k1);
         return {
-          key: r2v.key,
+          key: r2.key,
           value: r2v.value,
         }
       });
       return {
         key: k1,
-        values: items 
+        values: items.filter(item => item.value > 0).map(item => item.key)
       }
     });
     return {

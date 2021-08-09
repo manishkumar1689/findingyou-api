@@ -2556,7 +2556,7 @@ export class AstrologicController {
       return { key, lng };
     });
     
-    const bav = getAshtakavargaBodyGrid(lngs, simpleChart.jd);
+    const bavGrid = getAshtakavargaBodyGrid(lngs, simpleChart.jd);
     const geo = locStringToGeo(loc);
     
     const grahaItems = await this.astrologicService.fetchKakshaTimeline(geo, startJd, endJd);
@@ -2571,8 +2571,39 @@ export class AstrologicController {
     }).reduce((a, b) => a.concat(b), [])
     .filter(sub => sub.jd < endJd);
     times.sort((a, b) => a.jd - b.jd);
+    const rows = [];
+    const kakshyaMap: Map<number, any> = new Map();
 
-    return res.status(HttpStatus.OK).json({ dt: chartData.datetime, geo: chartData.geo, lngs, bav, start: dtUtc, end: endDt, times });
+    
+    times.forEach((row, index) => {
+      const kakshyaIndex = row.sign % 8;
+      const kakshyaKey = keys[kakshyaIndex];
+      const rowIndex = keys.indexOf(row.key);
+      const signIndex = Math.floor(row.lng / 30);
+      const bavRow = signIndex >= 0 && signIndex < bavGrid.length ? bavGrid[signIndex] : null;
+      const bavValueRows = bavRow instanceof Object ? bavRow.values : []
+      const bavKeys = kakshyaIndex < bavValueRows.length ? bavValueRows[kakshyaIndex].values : [];
+      if (notEmptyString(kakshyaKey)) {
+        kakshyaMap.set(rowIndex, {
+          lord: kakshyaKey,
+          lng: row.lng,
+          hasBindu:  bavKeys.includes(row.key),
+          sign: Math.floor(row.lng / 30) + 1,
+          num: Math.floor(row.lng / 3.5) + 1
+        })
+        if (kakshyaMap.size === 8) {
+          rows.push({
+            jd: row.jd,
+            items: [...kakshyaMap.entries()].map(entry => {
+              const [subIndex, value] = entry;
+              const key = keys[subIndex];
+              return { key, ...value }
+            }),
+          });
+        }
+      }
+    });
+    return res.status(HttpStatus.OK).json({ dt: chartData.datetime, geo: chartData.geo, start: dtUtc, end: endDt, rows });
   }
 
   @Get('object-sign-timeline/:loc/:start?/:end?')

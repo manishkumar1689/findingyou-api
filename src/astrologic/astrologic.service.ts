@@ -2067,7 +2067,9 @@ export class AstrologicService {
     const hasAscStored = storedAscResult instanceof Object;
     const ascSet = hasAscStored ? storedAscResult : await calcAscendantKakshaSet(geo, startJd, endJd);
     if (ascSet instanceof Object) {
-      grahas.push(ascSet);
+      const lng = Object.keys(ascSet).includes("lng")? ascSet.lng : ascSet.longitude;
+      const sign = Math.floor(lng / 30) + 1;
+      grahas.push({...ascSet, lng, sign });
       if (!hasAscStored) {
         this.redisSet(ascKey, ascSet);
       }
