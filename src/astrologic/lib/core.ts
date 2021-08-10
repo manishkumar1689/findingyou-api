@@ -1273,16 +1273,16 @@ export const calcCoreGrahaPositions = async (datetime = null, geo, ayanamshaKey 
     key: ayaRow.key,
   };
   const grahaSet = await calcGrahaSet(datetime, geo, false);
-  if (ayaVal > 0) {
+  /* if (ayaVal > 0) {
     grahaSet.bodies.forEach(body => {
       body.setAyanamshaItem(ayanamshaItem);
     });
-  }
+  } */
   const houseData = await fetchHouseData(datetime, geo, 'W');
   const ascendantLng = subtractLng360(houseData.ascendant, ayaVal);
   const bodies = grahaSet.bodies.map(b => {
     const {key, lng} = b;
-    return {key, lng};
+    return {key, lng: subtractLng360(lng, ayaVal)};
   });
   bodies.push({key: "as", lng: ascendantLng})
   return {bodies, ayanamsha: ayanamshaItem };

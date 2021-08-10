@@ -2062,7 +2062,7 @@ export class AstrologicService {
       keyParts.push("ex_mo");
     }
     const key = keyParts.join('_');
-    const storedResults = await this.redisGet(key);
+    const storedResults = await this.redisGet(key + 'w');
     const hasStored = storedResults instanceof Array && storedResults.length > 5;
     const grahas = hasStored? storedResults : await calcCoreKakshaTimeline(startJd, endJd, excludeMoon);
     if (!hasStored && grahas instanceof Array && grahas.length > 5) {
