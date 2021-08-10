@@ -347,12 +347,15 @@ export const calcCoreSignTimeline = async (startJd = 0, endJd = 0, ayanamshaKey 
   return await calcCoreIntervalTimeline(12, startJd, endJd, ayanamshaKey);
 }
 
-export const calcCoreKakshaTimeline = async (startJd = 0, endJd = 0, ayanamshaKey = "true_citra"): Promise<SignTimelineSet[]> => {
-  return await calcCoreIntervalTimeline(96, startJd, endJd, ayanamshaKey);
+export const calcCoreKakshaTimeline = async (startJd = 0, endJd = 0, excludeMoon = false, ayanamshaKey = "true_citra"): Promise<SignTimelineSet[]> => {
+  return await calcCoreIntervalTimeline(96, startJd, endJd, ayanamshaKey, excludeMoon);
 }
 
-export const calcCoreIntervalTimeline = async (subDiv = 12, startJd = 0, endJd = 0, ayanamshaKey = "true_citra"): Promise<SignTimelineSet[]> => {
-  const coreKeys = [ "sa", "ju", "ma", "su", "ve", "me", "mo"];
+export const calcCoreIntervalTimeline = async (subDiv = 12, startJd = 0, endJd = 0, ayanamshaKey = "true_citra", excludeMoon = false): Promise<SignTimelineSet[]> => {
+  const coreKeys = [ "sa", "ju", "ma", "su", "ve", "me"];
+  if (!excludeMoon) {
+    coreKeys.push("mo");
+  }
   const degInterval = 360 / subDiv;
   const bodies = await calcBodiesJd(startJd, coreKeys);
   const ayanamshaVal = await calcAyanamsha(startJd, ayanamshaKey);

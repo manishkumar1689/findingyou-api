@@ -2054,24 +2054,32 @@ export class AstrologicService {
     return grahas;
   }
 
-  async fetchKakshaTimeline(geo: LngLat, startJd = 0, endJd = 0, atAscendantIntervals = true): Promise<SignTimelineSet[]> {
-    const key = ['kaksha_timeline', startJd, endJd].join('_');
+  async fetchKakshaTimeline(geo: LngLat, startJd = 0, endJd = 0, excludeKeys = []): Promise<SignTimelineSet[]> {
+    const includeAscendant = excludeKeys.includes("as") === false;
+    const keyParts = ['kaksha_timeline', startJd, endJd];
+    const excludeMoon = excludeKeys.includes("mo");
+    if (excludeMoon) {
+      keyParts.push("ex_mo");
+    }
+    const key = keyParts.join('_');
     const storedResults = await this.redisGet(key);
     const hasStored = storedResults instanceof Array && storedResults.length > 5;
-    const grahas = hasStored? storedResults : await calcCoreKakshaTimeline(startJd, endJd);
+    const grahas = hasStored? storedResults : await calcCoreKakshaTimeline(startJd, endJd, excludeMoon);
     if (!hasStored && grahas instanceof Array && grahas.length > 5) {
       this.redisSet(key, grahas);
     }
-    const ascKey = ['kaksha_asc_timeline', geo.lat.toFixed(3), geo.lng.toFixed(3), startJd, endJd].join('_');
-    const storedAscResult = await this.redisGet(ascKey);
-    const hasAscStored = storedAscResult instanceof Object;
-    const ascSet = hasAscStored ? storedAscResult : await calcAscendantKakshaSet(geo, startJd, endJd);
-    if (ascSet instanceof Object) {
-      const lng = Object.keys(ascSet).includes("lng")? ascSet.lng : ascSet.longitude;
-      const sign = Math.floor(lng / 30) + 1;
-      grahas.push({...ascSet, lng, sign });
-      if (!hasAscStored) {
-        this.redisSet(ascKey, ascSet);
+    if (includeAscendant) {
+      const ascKey = ['kaksha_asc_timeline', geo.lat.toFixed(3), geo.lng.toFixed(3), startJd, endJd].join('_');
+      const storedAscResult = await this.redisGet(ascKey);
+      const hasAscStored = storedAscResult instanceof Object;
+      const ascSet = hasAscStored ? storedAscResult : await calcAscendantKakshaSet(geo, startJd, endJd);
+      if (ascSet instanceof Object) {
+        const lng = Object.keys(ascSet).includes("lng")? ascSet.lng : ascSet.longitude;
+        const sign = Math.floor(lng / 30) + 1;
+        grahas.push({...ascSet, lng, sign });
+        if (!hasAscStored) {
+          this.redisSet(ascKey, ascSet);
+        }
       }
     }
     return grahas;

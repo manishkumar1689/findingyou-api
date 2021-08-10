@@ -2557,7 +2557,7 @@ export class AstrologicController {
       return { key, lng };
     });
     const kakshyaKeys = keys.filter(k => excludeKeys.includes(k) === false);
-
+    
     const bavGrid = getAshtakavargaBodyGrid(lngs, simpleChart.jd);
     const geo = locStringToGeo(loc);
     
@@ -2575,7 +2575,7 @@ export class AstrologicController {
     times.sort((a, b) => a.jd - b.jd);
     const rows = [];
     const kakshyaMap: Map<number, any> = new Map();
-
+    const numKeys = kakshyaKeys.length;
     
     times.forEach((row, index) => {
       const index96 = Math.floor(row.lng / (360/96));
@@ -2595,7 +2595,7 @@ export class AstrologicController {
           sign: Math.floor(row.lng / 30) + 1,
           num
         })
-        if (kakshyaMap.size === 8) {
+        if (kakshyaMap.size === numKeys) {
           rows.push({
             jd: row.jd,
             items: [...kakshyaMap.entries()].map(entry => {
