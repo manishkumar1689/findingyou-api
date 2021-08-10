@@ -2530,12 +2530,13 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json({ start: dtUtc, end: endDt, grahas });
   }
 
-  @Get('kaksha-transit-timeline/:chartID/:loc/:start?/:end?/:ayanamsha?')
-  async kakshaTimeline(@Res() res, @Param('chartID') chartID, @Param('loc') loc, @Param('start') start, @Param('end') end, @Param('ayanamsha') ayanamsha) {
+  @Get('kaksha-transit-timeline/:chartID/:loc/:start?/:end?/:exclude?/:ayanamsha?')
+  async kakshaTimeline(@Res() res, @Param('chartID') chartID, @Param('loc') loc, @Param('start') start, @Param('end') end, @Param('exclude') exclude, @Param('ayanamsha') ayanamsha) {
     const { dtUtc, jd } = matchJdAndDatetime(start);
     const startJd = jd;
     const { endJd, endDt } = matchEndJdAndDatetime(end, jd);
     const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
+    const excludeKeys = notEmptyString(exclude)? exclude.split(',').filter(p => p.length === 2) : []; 
     const chartData = await this.astrologicService.getChart(chartID);
     const simpleChart = chartData instanceof Object ? simplifyChart(chartData, ayanamshaKey) : null;
     const birthGrahas = simpleChart instanceof Object ? simpleChart.grahas.map(gr => {
@@ -2555,11 +2556,12 @@ export class AstrologicController {
       const lng = gr instanceof Object ? gr.lng : 0;
       return { key, lng };
     });
-    
+    const kakshyaKeys = keys.filter(k => excludeKeys.includes(k) === false);
+
     const bavGrid = getAshtakavargaBodyGrid(lngs, simpleChart.jd);
     const geo = locStringToGeo(loc);
     
-    const grahaItems = await this.astrologicService.fetchKakshaTimeline(geo, startJd, endJd);
+    const grahaItems = await this.astrologicService.fetchKakshaTimeline(geo, startJd, endJd, excludeKeys);
     const times = grahaItems.map(row => {
       const { key, jd, dt, longitude, sign, nextMatches } = row;
       const first = { key, jd, dt, lng: longitude, sign }
@@ -2576,7 +2578,9 @@ export class AstrologicController {
 
     
     times.forEach((row, index) => {
-      const kakshyaIndex = row.sign % 8;
+      const index96 = Math.floor(row.lng / (360/96));
+      const num = index96 + 1;
+      const kakshyaIndex = index96 % 8;
       const kakshyaKey = keys[kakshyaIndex];
       const rowIndex = keys.indexOf(row.key);
       const signIndex = Math.floor(row.lng / 30);
@@ -2589,7 +2593,7 @@ export class AstrologicController {
           lng: row.lng,
           hasBindu:  bavKeys.includes(row.key),
           sign: Math.floor(row.lng / 30) + 1,
-          num: Math.floor(row.lng / 3.5) + 1
+          num
         })
         if (kakshyaMap.size === 8) {
           rows.push({
@@ -2603,7 +2607,7 @@ export class AstrologicController {
         }
       }
     });
-    return res.status(HttpStatus.OK).json({ dt: chartData.datetime, geo: chartData.geo, start: dtUtc, end: endDt, rows });
+    return res.status(HttpStatus.OK).json({ dt: chartData.datetime, geo: chartData.geo, start: dtUtc, end: endDt, kakshyaKeys, rows });
   }
 
   @Get('object-sign-timeline/:loc/:start?/:end?')

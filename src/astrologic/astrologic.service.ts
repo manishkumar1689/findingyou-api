@@ -2054,7 +2054,7 @@ export class AstrologicService {
     return grahas;
   }
 
-  async fetchKakshaTimeline(geo: LngLat, startJd = 0, endJd = 0): Promise<SignTimelineSet[]> {
+  async fetchKakshaTimeline(geo: LngLat, startJd = 0, endJd = 0, atAscendantIntervals = true): Promise<SignTimelineSet[]> {
     const key = ['kaksha_timeline', startJd, endJd].join('_');
     const storedResults = await this.redisGet(key);
     const hasStored = storedResults instanceof Array && storedResults.length > 5;
