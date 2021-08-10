@@ -2591,10 +2591,10 @@ export class AstrologicController {
         kakshyaMap.set(rowIndex, {
           lord: kakshyaKey,
           lng: row.lng,
-          hasBindu:  bavKeys.includes(row.key),
+          hasBindu:  bavKeys.includes(kakshyaKey),
           sign: Math.floor(row.lng / 30) + 1,
           num
-        })
+        });
         if (kakshyaMap.size === numKeys) {
           rows.push({
             jd: row.jd,

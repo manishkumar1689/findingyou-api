@@ -362,14 +362,13 @@ export const calcCoreIntervalTimeline = async (subDiv = 12, startJd = 0, endJd =
   const degInterval = 360 / subDiv;
   const bodies = await calcBodiesJd(startJd, coreKeys);
   const ayanamshaVal = await calcAyanamsha(startJd, ayanamshaKey);
-  
   const grahas = [];
   const dt = julToISODate(startJd);
   for (const gr of bodies) {
     const nextMatches = [];
     let reachedEnd = false;
     let i = 0;
-    const refLng = subtractLng360(gr.lng, 0);
+    const refLng = subtractLng360(gr.lng, ayanamshaVal);
     const refSign = Math.floor(refLng / degInterval) + 1;
     let refStartJd = startJd - 0;
     while (!reachedEnd && i < 108) {
