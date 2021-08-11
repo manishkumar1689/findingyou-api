@@ -61,6 +61,9 @@ import { minRemainingPaired } from '../.config';
 import { calcTropicalAscendantDt } from './lib/calc-ascendant';
 import { GeoLoc } from './lib/models/geo-loc';
 import { LngLat } from './lib/interfaces';
+import { simplifyChart } from './lib/member-charts';
+import { getAshtakavargaBodyGrid } from './lib/settings/ashtakavarga-values';
+import { GeoPos } from './interfaces/geo-pos';
 const { ObjectId } = Types;
 
 @Injectable()
@@ -2056,7 +2059,7 @@ export class AstrologicService {
 
   async fetchKakshaTimeline(geo: LngLat, startJd = 0, endJd = 0, excludeKeys = []): Promise<SignTimelineSet[]> {
     const includeAscendant = excludeKeys.includes("as") === false;
-    const keyParts = ['kaksha_timeline', startJd, endJd];
+    const keyParts = ['kakshya_tl', startJd, endJd];
     const excludeMoon = excludeKeys.includes("mo");
     if (excludeMoon) {
       keyParts.push("ex_mo");
@@ -2069,7 +2072,7 @@ export class AstrologicService {
       this.redisSet(key, grahas);
     }
     if (includeAscendant) {
-      const ascKey = ['kaksha_asc_timeline', geo.lat.toFixed(3), geo.lng.toFixed(3), startJd, endJd].join('_');
+      const ascKey = ['kakshya_asc_tl', geo.lat.toFixed(3), geo.lng.toFixed(3), startJd, endJd].join('_');
       const storedAscResult = await this.redisGet(ascKey);
       const hasAscStored = storedAscResult instanceof Object;
       const ascSet = hasAscStored ? storedAscResult : await calcAscendantKakshaSet(geo, startJd, endJd);
@@ -2083,6 +2086,78 @@ export class AstrologicService {
       }
     }
     return grahas;
+  }
+
+  async fetchKakshaTimelineData(chartID = "", geo: GeoPos , startJd = 0, endJd = 0, excludeKeys = [], ayanamshaKey = "true_citra") {
+    const chartData = await this.getChart(chartID);
+    const simpleChart = chartData instanceof Object ? simplifyChart(chartData, ayanamshaKey) : null;
+    const birthGrahas = simpleChart instanceof Object ? simpleChart.grahas.map(gr => {
+      const {key, lng, sign } = gr;
+      return { key, lng, sign };
+    }) : [];
+    const ascendantLng = simpleChart.ascendant;
+    birthGrahas.push({
+      key: "as",
+      lng: ascendantLng,
+      sign: Math.floor(ascendantLng / 30) + 1
+    });
+    const keys = ['sa','ju','ma','su', 've','me','mo', 'as'];
+    const lngs = keys.map(key => {
+      const gr = birthGrahas.find(g => g.key === key);
+      const lng = gr instanceof Object ? gr.lng : 0;
+      return { key, lng };
+    });
+    const kakshyaKeys = keys.filter(k => excludeKeys.includes(k) === false);
+    
+    const bavGrid = getAshtakavargaBodyGrid(lngs, simpleChart.jd);
+    
+    const grahaItems = await this.fetchKakshaTimeline(geo, startJd, endJd, excludeKeys);
+    const times = grahaItems.map(row => {
+      const { key, jd, dt, longitude, sign, nextMatches } = row;
+      const first = { key, jd, dt, lng: longitude, sign }
+      const subs = nextMatches.map(r => {
+        const { jd, dt, lng, sign } = r;
+        return { key, jd, dt, lng, sign }
+      });
+      return [first, ...subs];
+    }).reduce((a, b) => a.concat(b), [])
+    .filter(sub => sub.jd < endJd);
+    times.sort((a, b) => a.jd - b.jd);
+    const rows = [];
+    const kakshyaMap: Map<number, any> = new Map();
+    const numKeys = kakshyaKeys.length;
+    
+    times.forEach((row, index) => {
+      const index96 = Math.floor(row.lng / (360/96));
+      const num = index96 + 1;
+      const kakshyaIndex = index96 % 8;
+      const kakshyaKey = keys[kakshyaIndex];
+      const rowIndex = keys.indexOf(row.key);
+      const signIndex = Math.floor(row.lng / 30);
+      const bavRow = signIndex >= 0 && signIndex < bavGrid.length ? bavGrid[signIndex] : null;
+      const bavValueRows = bavRow instanceof Object ? bavRow.values : []
+      const bavKeys = kakshyaIndex < bavValueRows.length ? bavValueRows[kakshyaIndex].values : [];
+      if (notEmptyString(kakshyaKey)) {
+        kakshyaMap.set(rowIndex, {
+          lord: kakshyaKey,
+          lng: row.lng,
+          hasBindu:  bavKeys.includes(kakshyaKey),
+          sign: Math.floor(row.lng / 30) + 1,
+          num
+        });
+        if (kakshyaMap.size === numKeys) {
+          rows.push({
+            jd: row.jd,
+            items: [...kakshyaMap.entries()].map(entry => {
+              const [subIndex, value] = entry;
+              const key = keys[subIndex];
+              return { key, ...value }
+            }),
+          });
+        }
+      }
+    });
+    return { rows, datetime: chartData.datetime, geo: chartData.geo };
   }
 
   async pairedDuplicates(start = 0, limit = 20000) {

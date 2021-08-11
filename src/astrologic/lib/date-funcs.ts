@@ -104,7 +104,8 @@ export const calcJulDate = (strDate, julian = false) => {
   return calcJulDateFromParts(dp, julian);
 };
 
-export const matchJdAndDatetime = (strRef = "", startJd = -1, fromDayStart = false, fromNoon = false) => {
+export const matchJdAndDatetime = (dtRef = "", startJd = -1, fromDayStart = false, fromNoon = false) => {
+  const strRef = typeof dtRef === "string" ? dtRef.trim().replace(/\s+/, 'T') : dtRef;
   const isValidDate = validISODateString(strRef);
   const flVal = !isValidDate && isNumeric(strRef)? parseFloat(strRef) : -1;
   const hasFl = flVal > 0;

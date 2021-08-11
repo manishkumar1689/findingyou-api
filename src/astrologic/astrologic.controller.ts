@@ -105,7 +105,8 @@ import { calcAscendantTimelineItems, calcOffsetAscendant } from './lib/calc-asce
 import { GeoLoc } from './lib/models/geo-loc';
 import { Graha } from './lib/models/graha-set';
 import ayanamshaValues from './lib/settings/ayanamsha-values';
-import { calcBavGraphData, calcBavSignSamples, getAshtakavargaBodyGrid, getAshtakavargaBodyTable } from './lib/settings/ashtakavarga-values';
+import { calcBavGraphData, calcBavSignSamples } from './lib/settings/ashtakavarga-values';
+import { GeoPos } from './interfaces/geo-pos';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -2537,77 +2538,43 @@ export class AstrologicController {
     const { endJd, endDt } = matchEndJdAndDatetime(end, jd);
     const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
     const excludeKeys = notEmptyString(exclude)? exclude.split(',').filter(p => p.length === 2) : []; 
-    const chartData = await this.astrologicService.getChart(chartID);
-    const simpleChart = chartData instanceof Object ? simplifyChart(chartData, ayanamshaKey) : null;
-    const birthGrahas = simpleChart instanceof Object ? simpleChart.grahas.map(gr => {
-      const {key, lng, sign } = gr;
-      return { key, lng, sign };
-    }) : [];
+    const currGeo: GeoPos = locStringToGeo(loc);
+    const {rows, datetime, geo } = await this.astrologicService.fetchKakshaTimelineData(chartID, currGeo, startJd, endJd, excludeKeys, ayanamshaKey);
+    return res.status(HttpStatus.OK).json({ dt: datetime, geo: geo, currGeo,  start: dtUtc, end: endDt, rows });
+  }
 
-    const ascendantLng = simpleChart.ascendant;
-    birthGrahas.push({
-      key: "as",
-      lng: ascendantLng,
-      sign: Math.floor(ascendantLng / 30) + 1
-    });
-    const keys = ['sa','ju','ma','su', 've','me','mo', 'as'];
-    const lngs = keys.map(key => {
-      const gr = birthGrahas.find(g => g.key === key);
-      const lng = gr instanceof Object ? gr.lng : 0;
-      return { key, lng };
-    });
-    const kakshyaKeys = keys.filter(k => excludeKeys.includes(k) === false);
-    
-    const bavGrid = getAshtakavargaBodyGrid(lngs, simpleChart.jd);
-    const geo = locStringToGeo(loc);
-    
-    const grahaItems = await this.astrologicService.fetchKakshaTimeline(geo, startJd, endJd, excludeKeys);
-    const times = grahaItems.map(row => {
-      const { key, jd, dt, longitude, sign, nextMatches } = row;
-      const first = { key, jd, dt, lng: longitude, sign }
-      const subs = nextMatches.map(r => {
-        const { jd, dt, lng, sign } = r;
-        return { key, jd, dt, lng, sign }
-      });
-      return [first, ...subs];
-    }).reduce((a, b) => a.concat(b), [])
-    .filter(sub => sub.jd < endJd);
-    times.sort((a, b) => a.jd - b.jd);
-    const rows = [];
-    const kakshyaMap: Map<number, any> = new Map();
-    const numKeys = kakshyaKeys.length;
-    
-    times.forEach((row, index) => {
-      const index96 = Math.floor(row.lng / (360/96));
-      const num = index96 + 1;
-      const kakshyaIndex = index96 % 8;
-      const kakshyaKey = keys[kakshyaIndex];
-      const rowIndex = keys.indexOf(row.key);
-      const signIndex = Math.floor(row.lng / 30);
-      const bavRow = signIndex >= 0 && signIndex < bavGrid.length ? bavGrid[signIndex] : null;
-      const bavValueRows = bavRow instanceof Object ? bavRow.values : []
-      const bavKeys = kakshyaIndex < bavValueRows.length ? bavValueRows[kakshyaIndex].values : [];
-      if (notEmptyString(kakshyaKey)) {
-        kakshyaMap.set(rowIndex, {
-          lord: kakshyaKey,
-          lng: row.lng,
-          hasBindu:  bavKeys.includes(kakshyaKey),
-          sign: Math.floor(row.lng / 30) + 1,
-          num
+  @Get('kaksha-transit-graph/:chartID/:loc/:start?/:end?/:ayanamsha?')
+  async kakshaTimelineGraph(@Res() res, @Param('chartID') chartID, @Param('loc') loc, @Param('start') start, @Param('end') end, @Param('exclude') exclude, @Param('ayanamsha') ayanamsha) {
+    const { dtUtc, jd } = matchJdAndDatetime(start);
+    const startJd = jd;
+    const { endJd, endDt } = matchEndJdAndDatetime(end, jd);
+    const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
+    const excludeKeys = []; 
+    const currGeo: GeoPos = locStringToGeo(loc);
+    const {rows, datetime, geo } = await this.astrologicService.fetchKakshaTimelineData(chartID, currGeo, startJd, endJd, excludeKeys, ayanamshaKey);
+    const samples = [];
+    const hasAscendant = excludeKeys.includes("as") === false;
+    const hasMoon = excludeKeys.includes("mo") === false;
+    const stepsPerDay = hasAscendant ? 192 : hasMoon ? 48 : 12;
+    const sampleInterval = 1 / stepsPerDay;
+    const numSteps = Math.ceil(endJd - startJd) * stepsPerDay;
+    for (let i = 0; i < numSteps; i++) {
+      const refJd = startJd + (i * sampleInterval);
+      const rowIndex = i < 1 ? 0 : rows.findIndex(row => row.jd >= refJd);
+      if (rowIndex >= 0) {
+        const row = rows[rowIndex];
+        const bindus = row.items.filter(item => item.hasBindu).map(item => item.key);
+        const total = bindus.length;
+        const lords = row.items.map(item => item.lord);
+        samples.push({
+          jd: row.jd,
+          total,
+          lords,
+          bindus,
         });
-        if (kakshyaMap.size === numKeys) {
-          rows.push({
-            jd: row.jd,
-            items: [...kakshyaMap.entries()].map(entry => {
-              const [subIndex, value] = entry;
-              const key = keys[subIndex];
-              return { key, ...value }
-            }),
-          });
-        }
       }
-    });
-    return res.status(HttpStatus.OK).json({ dt: chartData.datetime, geo: chartData.geo, start: dtUtc, end: endDt, kakshyaKeys, rows });
+    }
+    return res.status(HttpStatus.OK).json({ dt: datetime, geo: geo, currGeo,  start: dtUtc, end: endDt, items: samples, numSteps, stepsPerDay });
   }
 
   @Get('object-sign-timeline/:loc/:start?/:end?')

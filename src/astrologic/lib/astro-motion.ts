@@ -245,7 +245,7 @@ export const calcRetroGrade = async (datetime, num) => {
 export const matchProgressionJdStep = (key = "su") => {
   switch (key) {
     case "mo":
-      return 0.25;
+      return 0.125;
     case "ma":
       return 1;
     case "ve":
@@ -283,11 +283,8 @@ export const matchNextTransitAtLng = async (key = "su", lngFl = 0, jdFl = 0, aya
   const applyAyanamsha = ayaKey !== "tropical";
   const spds = [];
   const aya = applyAyanamsha? await calcAyanamsha(jdFl, ayaKey) : 0;
+  
   await calcBodySpeed(jdFl, num, (speed, lng) => {
-    /* const lng = subtractLng360(lngTrop, aya);
-    if (key === "sa") {
-      console.log(lngTrop, aya)
-    } */
     spds.push({ speed, lng, jd: jdFl });
   });
   let refJd = jdFl;
@@ -299,7 +296,6 @@ export const matchNextTransitAtLng = async (key = "su", lngFl = 0, jdFl = 0, aya
   while (i < stopIndex) {
     refJd += step;
     await calcBodySpeed(refJd, num, (speed, lng) => {
-      //const lng = subtractLng360(lngTrop, aya);
       spds.push({ speed, lng, jd: refJd });
     });
     const lastItem = spds[(spds.length -1)];
@@ -368,7 +364,8 @@ export const calcCoreIntervalTimeline = async (subDiv = 12, startJd = 0, endJd =
     const nextMatches = [];
     let reachedEnd = false;
     let i = 0;
-    const refLng = subtractLng360(gr.lng, ayanamshaVal);
+    //const refLng = subtractLng360(gr.lng, ayanamshaVal);
+    const refLng = gr.lng;
     const refSign = Math.floor(refLng / degInterval) + 1;
     let refStartJd = startJd - 0;
     while (!reachedEnd && i < 108) {
