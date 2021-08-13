@@ -430,7 +430,7 @@ export class AstrologicController {
     const jd = calcJulDate(dtUtc);
     const asc = calcOffsetAscendant(geo.lat, geo.lng, jd, ayanamshaVal);
     const adjusted = applyAscendantToSimpleChart(chart, geo, ayanamshaKey);
-    return res.json({chart, adjusted, asc });
+    return res.json({chart: adjusted });
   }
 
   @Get('existing-placenames/:loc/:maxDistance?')

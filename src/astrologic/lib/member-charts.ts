@@ -204,7 +204,10 @@ export const applyAscendantToSimpleChart = (chart = null, geo: GeoPos, ayanamsha
         values: [firstHouse]
       }
     ]
-    return { ...chart, placenames: [], geo, ascendant: asc, houses };
+    const grahas = chart.grahas.map(gr => {
+      return { ...gr, transitions: [] }
+    });
+    return { ...chart, placenames: [], grahas, indianTime: {}, upagrahas: [], geo, ascendant: asc, houses };
   } else {
     return Object.assign({}, chart);
   }
