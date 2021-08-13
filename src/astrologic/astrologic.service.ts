@@ -19,6 +19,7 @@ import {
   yearSpanAddFieldSteps,
 } from './../lib/query-builders';
 import {
+  applyTzOffsetToDateString,
   calcJulDate,
   calcJulDateFromParts,
   julToISODateObj,
@@ -49,7 +50,7 @@ import {
   SlugNameVocab,
   matchVocabKey,
 } from './lib/settings/vocab-values';
-import { calcAllAspects, calcAyanamsha } from './lib/core';
+import { calcAllAspects, calcAyanamsha, calcCompactChartData } from './lib/core';
 import { Chart as ChartClass } from './lib/models/chart';
 import { Kuta } from './lib/kuta';
 import { AspectSet, buildDegreeRange, buildLngRange } from './lib/calc-orbs';
@@ -1686,6 +1687,68 @@ export class AstrologicService {
         .sort(sort)
         .exec();
     }
+  }
+
+  /*
+  Fetch a snapshot of a chart at 0ºN 0ºE as the basis
+  for modified charts with geo-sensitive ascendants
+  */
+  async getChartSnapshot(dt = "", ayanamshaMode = 'true_citra', skipCache = false) {
+    const key = ['chartsnap', dt, ayanamshaMode].join('_');
+    const stored = skipCache ? null : this.redisGet(key);
+    const hasStored = stored instanceof Object && Object.keys(stored).includes("grahas");
+    const data = hasStored ? stored : await this.fixedChartSnapshot(dt, ayanamshaMode);
+    if (!hasStored && data instanceof Object) {
+      this.redisSet(key, data);
+    }
+    return data;
+  }
+
+  async fixedChartSnapshot(dt = "", ayanamshaMode = 'true_citra') {
+    let data: any = { valid: false };
+    if (validISODateString(dt)) {
+      const geo = {
+        lat: 0,
+        lng: 0
+      };
+      const geoInfo = { 
+        countryName: '',
+        cc: '',
+        tz: 'Africa/Accra',
+        toponyms: [
+          {
+            name: 'Atlantic',
+            fullName: 'Atlantic Ocean',
+            type: 'SEA',
+            ...geo
+          }
+        ],
+        offset: 0
+      }
+      const dtUtc = applyTzOffsetToDateString(dt, geoInfo.offset);
+
+      const ayanamshaKey = notEmptyString(ayanamshaMode, 3)
+        ? ayanamshaMode.toLowerCase().replace(/-/g, '_')
+        : '';
+        console.log(ayanamshaKey)
+      const topKeys = [];
+      data = await calcCompactChartData(
+        dtUtc,
+        geo,
+        ayanamshaKey,
+        topKeys,
+        geoInfo.offset,
+        false,
+        false,
+      );
+      data = {
+        tzOffset: geoInfo.offset,
+        tz: geoInfo.tz,
+        placenames: geoInfo.toponyms,
+        ...data,
+      };
+    }
+    return data;
   }
 
   async relatedChartSubjects(chartID: string) {

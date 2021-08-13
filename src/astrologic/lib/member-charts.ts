@@ -1,9 +1,25 @@
 import { smartCastFloat } from '../../lib/converters';
 import { extractObject } from '../../lib/entities';
+import { GeoPos } from '../interfaces/geo-pos';
 import { KeyValue } from '../interfaces/key-value';
+import { calcOffsetAscendant } from './calc-ascendant';
 import { subtractLng360 } from './helpers';
 import { HouseSystem } from './models/chart';
 import { matchAyanamshaNum } from './settings/ayanamsha-values';
+
+/*
+  Loose check on a temporary object before subsequent processing
+*/
+export const isChartObject = (chart = null) => {
+  let valid = false;
+  if (chart instanceof Object) {
+    const keys = Object.keys(chart);
+    if (keys.includes("jd") && keys.includes("ascendant") && keys.includes("grahas")) {
+      valid = chart.grahas instanceof Array && chart.grahas.length > 5;
+    }
+  }
+  return valid;
+}
 
 const removeIds = item => {
   if (item instanceof Object) {
@@ -65,7 +81,7 @@ const matchAyanamshaDataSet = (chart: any = null, key = "", num = 27) => {
   return [];
 }
 
-export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra', mode = 'complete') => {
+export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra', mode = 'complete', applyAyanamsha = true, adjustAscendant = true) => {
   const isModel = chartRef instanceof Object && chartRef.constructor.name === 'model';
   const chart = isModel? chartRef.toObject() : chartRef;
   let ayanamshaVal = 0;
@@ -81,9 +97,11 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra', mode
     }
   }
   const ayanamshaNum = matchAyanamshaNum(ayanamshaKey);
-  chart.grahas = grahas.map(gr =>
-    simplifyGraha(gr, ayanamshaVal, ayanamshaNum)
-  );
+  if (applyAyanamsha) {
+    chart.grahas = grahas.map(gr =>
+      simplifyGraha(gr, ayanamshaVal, ayanamshaNum)
+    );
+  }
   chart.placenames = chart.placenames.map(pl => {
     delete pl._id;
     if (pl.geo) {
@@ -93,11 +111,12 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra', mode
   });
   chart.subject = removeIds(chart.subject);
   chart.geo = removeIds(chart.geo);
-
-  chart.ascendant = subtractLng360(
-    smartCastFloat(chart.ascendant),
-    ayanamshaVal,
-  );
+  if (adjustAscendant) {
+    chart.ascendant = subtractLng360(
+      smartCastFloat(chart.ascendant),
+      ayanamshaVal,
+    );
+  }
   chart.mc = subtractLng360(smartCastFloat(chart.mc), ayanamshaVal);
   chart.vertex = subtractLng360(smartCastFloat(chart.vertex), ayanamshaVal);
   delete chart._id;
@@ -118,7 +137,7 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra', mode
   return chart;
 };
 
-export const simplifyAstroChart = (data: any = null, applyAyanamsha = true) => {
+export const simplifyAstroChart = (data: any = null, applyAyanamsha = true, adjustAscendant = true) => {
   if (data instanceof Object) {
     const keys = Object.keys(data);
     let ayaOffset = 0;
@@ -156,16 +175,37 @@ export const simplifyAstroChart = (data: any = null, applyAyanamsha = true) => {
     if (applyAyanamsha && keys.includes("upagrahas") && data.upagrahas instanceof Array  && data.upagrahas.length > 0) {
       data.upagrahas = data.upagrahas.map(up => simplifyUpagraha(up, ayaOffset));
     }
-    data.ascendant = subtractLng360(data.ascendant, ayaOffset);
-    data.mc = subtractLng360(data.mc, ayaOffset);
-    data.vertex = subtractLng360(data.vertex, ayaOffset);
-    data.houses = data.houses.map((hs: HouseSystem) => {
-      const { system, values } = hs;
-      return { system, values: values.map(v => {
-        const av = subtractLng360(v, ayaOffset);
-        return system === 'W'? Math.floor(av/30) * 30 : av;
-      })};
-    })
+    if (adjustAscendant) {
+      data.ascendant = subtractLng360(data.ascendant, ayaOffset);
+      data.mc = subtractLng360(data.mc, ayaOffset);
+      data.vertex = subtractLng360(data.vertex, ayaOffset);
+      data.houses = data.houses.map((hs: HouseSystem) => {
+        const { system, values } = hs;
+        return { system, values: values.map(v => {
+          const av = subtractLng360(v, ayaOffset);
+          return system === 'W'? Math.floor(av/30) * 30 : av;
+        })};
+      })
+    }
   }
   return data;
+}
+
+
+export const applyAscendantToSimpleChart = (chart = null, geo: GeoPos, ayanamshaKey = "true_citra") => {
+  if (isChartObject(chart)) {
+    const ayaRow = chart.ayanamshas.find(r => r.key === ayanamshaKey);
+    const ayanamshaVal = ayaRow instanceof Object? ayaRow.value : 0;
+    const asc = calcOffsetAscendant(geo.lat, geo.lng, chart.jd, ayanamshaVal);
+    const firstHouse = Math.floor(asc / 30) * 30;
+    const houses = [
+      { 
+        system: "W",
+        values: [firstHouse]
+      }
+    ]
+    return { ...chart, placenames: [], geo, ascendant: asc, houses };
+  } else {
+    return Object.assign({}, chart);
+  }
 }

@@ -22,7 +22,7 @@ import {
   isNumber,
 } from '../lib/validators';
 import { latLngParamsToGeo, locStringToGeo } from './lib/converters';
-import { simplifyAstroChart, simplifyChart } from './lib/member-charts';
+import { applyAscendantToSimpleChart, simplifyAstroChart, simplifyChart } from './lib/member-charts';
 import {
   calcAllTransitions,
   fetchHouseData,
@@ -347,7 +347,7 @@ export class AstrologicController {
     const fetchFull = smartCastInt(suppress, 0) < 1;
     const simplify = smartCastInt(simple, 0) > 0;
     const chartData = await this.fetchCompactChart(loc, dt, ayanamshaMode, topList, fetchFull);
-    const data = simplify? simplifyChart(chartData) : chartData;
+    const data = simplify? simplifyChart(chartData, ayanamshaMode, 'complete', false, false) : chartData;
     return res.status(HttpStatus.OK).json(data);
   }
 
@@ -413,8 +413,24 @@ export class AstrologicController {
     const ayanamshaKey = notEmptyString(mode, 5)? mode : simplify ? "true_citra" : "top";
     const topList = !simplify ? "top" : ayanamshaKey;
     const data = await this.fetchCompactChart(loc, dtUtc, "top", topList, false, false);
-    const chart = simplify? simplifyAstroChart(data) : data;
+    const chart = simplify? simplifyAstroChart(data, true, true) : data;
     return res.json(chart);
+  }
+
+  @Get('snapshot/:loc/:dt?/:mode?')
+  async fetchShapshot(@Res() res, @Param('loc') loc, @Param('dt') dt, @Param('mode') mode) {
+    const dtUtc = validISODateString(dt)? dt : currentISODate();
+    const simplify = mode !== "all";
+    const ayanamshaKey = notEmptyString(mode, 5)? mode : simplify ? "true_citra" : "top";
+    const data = await this.astrologicService.getChartSnapshot(dtUtc, ayanamshaKey);
+    const chart = simplify? simplifyAstroChart(data, false, false) : data;
+    const ayaRow = chart.ayanamshas.find(r => r.key === ayanamshaKey);
+    const ayanamshaVal = ayaRow instanceof Object? ayaRow.value : 0;
+    const geo = locStringToGeo(loc);
+    const jd = calcJulDate(dtUtc);
+    const asc = calcOffsetAscendant(geo.lat, geo.lng, jd, ayanamshaVal);
+    const adjusted = applyAscendantToSimpleChart(chart, geo, ayanamshaKey);
+    return res.json({chart, adjusted, asc });
   }
 
   @Get('existing-placenames/:loc/:maxDistance?')
