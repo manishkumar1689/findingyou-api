@@ -1730,7 +1730,6 @@ export class AstrologicService {
       const ayanamshaKey = notEmptyString(ayanamshaMode, 3)
         ? ayanamshaMode.toLowerCase().replace(/-/g, '_')
         : '';
-        console.log(ayanamshaKey)
       const topKeys = [];
       data = await calcCompactChartData(
         dtUtc,
