@@ -61,7 +61,6 @@ export const calcTropicalAscendant = (lat = 0, lng = 0, jd = 0): number => {
 	return (mod360(Math.atan2(ascX, ascY) / (Math.PI / 180)) + 360) % 360;
 }
 
-
 export const calcOffsetAscendant = (lat = 0, lng = 0, jd = 0, ayanamshaValue = 0): number => {
 	const asc = calcTropicalAscendant(lat, lng, jd);
 	return subtractLng360(asc, ayanamshaValue);
