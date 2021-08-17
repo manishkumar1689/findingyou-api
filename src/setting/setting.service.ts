@@ -493,6 +493,10 @@ export class SettingService {
     return result;
   }
 
+  async getRuleSet(ruleID = "") {
+    return await this.predictiveRuleSetModel.findById(ruleID);
+  }
+
   async saveRuleSet(id = '', colRef = '', ruleIndex = 0, ruleSet: RuleSetDTO) {
     const protocol = await this.protocolModel.findById(id);
     const result: any = { valid: false, protocol: null, matches: [] };

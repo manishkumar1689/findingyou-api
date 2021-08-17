@@ -51,6 +51,8 @@ import {
   Protocol,
   ProtocolResultSet,
   RuleSet,
+  matchAspectRange,
+  matchAspectRanges,
 } from './protocol-models';
 import { calcInclusiveSignPositions } from '../math-funcs';
 import {
@@ -1356,6 +1358,40 @@ export class Tag {
   }
 }
 
+export const matchGrahaEquivalent = (obj: ObjectType, chart: Chart, ayanamshaNum = 27) => {
+  const { key, type } = obj;
+  let matchedKey = key;
+  if (key.length > 2) {
+    chart.setAyanamshaItemByNum(ayanamshaNum);
+    const parts = key.split('_');
+    if (parts.length > 0) {
+      const lastPart = parts[parts.length - 1];
+      const section = parts[parts.length - 2];
+      if (isNumeric(lastPart)) {
+        const num = parseInt(lastPart);
+        if (section === 'house') {
+          matchedKey = chart.matchHouseSignRuler(num);
+        } else if (section === 'chara') {
+          matchedKey = chart.matchCharaKaraka(num);
+        }
+      } else {
+        switch (lastPart) {
+          case 'malefics':
+          case 'benefics':
+            matchedKey = lastPart;
+            break;
+        }
+        switch (type) {
+          case 'lots':
+            matchedKey = ['lot', capitalize(lastPart)].join('Of');
+            break;
+        }
+      }
+    }
+  }
+  return matchedKey;
+}
+
 export class PairedChart {
   _id?: string;
   user: string;
@@ -1590,7 +1626,7 @@ export class PairedChart {
       let aspected = false;
       if (aspectMatched) {
         //const [minVal, maxVal] = protocol.matchRange(aspectKey, k1, k2);
-        const ranges = protocol.matchRanges(aspectKey, k1, k2);
+        const ranges = matchAspectRanges(aspectKey, k1, k2, protocol.orbs);
 
         const isApplying = condition.isNeutral
           ? true
@@ -1916,6 +1952,10 @@ export class PairedChart {
     return { aspectValue, aspectMatched };
   }
 
+  matchGrahaEquivalent(obj: ObjectType, chart: Chart) {
+    return matchGrahaEquivalent(obj, chart, this.ayanamshaNum);
+  }
+
   matchCondition(condition: Condition, protocol: Protocol) {
     let matched = false;
 
@@ -2055,40 +2095,6 @@ export class PairedChart {
     } else {
       return false;
     }
-  }
-
-  matchGrahaEquivalent(obj: ObjectType, chart: Chart) {
-    const { key, type } = obj;
-    let matchedKey = key;
-    if (key.length > 2) {
-      chart.setAyanamshaItemByNum(this.ayanamshaNum);
-      const parts = key.split('_');
-      if (parts.length > 0) {
-        const lastPart = parts[parts.length - 1];
-        const section = parts[parts.length - 2];
-        if (isNumeric(lastPart)) {
-          const num = parseInt(lastPart);
-          if (section === 'house') {
-            matchedKey = chart.matchHouseSignRuler(num);
-          } else if (section === 'chara') {
-            matchedKey = chart.matchCharaKaraka(num);
-          }
-        } else {
-          switch (lastPart) {
-            case 'malefics':
-            case 'benefics':
-              matchedKey = lastPart;
-              break;
-          }
-          switch (type) {
-            case 'lots':
-              matchedKey = ['lot', capitalize(lastPart)].join('Of');
-              break;
-          }
-        }
-      }
-    }
-    return matchedKey;
   }
 
   matchAspects(ref1: string, ref2: string, reverse = false) {

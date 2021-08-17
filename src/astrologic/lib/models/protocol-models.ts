@@ -3,11 +3,16 @@ import { inRange, isNumeric, notEmptyString } from '../../../lib/validators';
 import { smartCastFloat } from '../../../lib/converters';
 import { contextTypes } from '../settings/compatibility-sets';
 import { calcOrb, calcAllAspectRanges } from '../calc-orbs';
-import { subtractLng360 } from '../helpers';
+import { subtractLng360, addLng360, calcDist360 } from '../helpers';
 import ayanamshaValues from '../settings/ayanamsha-values';
 import { SignHouse } from '../../interfaces/sign-house';
 import { calcInclusiveTwelfths } from '../math-funcs';
-import { PairedChart } from './chart';
+import { Chart, matchGrahaEquivalent, PairedChart } from './chart';
+import { currentJulianDay } from '../julian-date';
+import { assignDashaBalances, DashaBalance } from './dasha-set';
+import { matchNextTransitAtLng } from '../astro-motion';
+import { julToISODate } from '../date-funcs';
+import { GeoPos } from 'src/astrologic/interfaces/geo-pos';
 
 export interface KeyNumVal {
   key: string;
@@ -530,6 +535,31 @@ export class RuleSet {
   }
 }
 
+export class PredictiveRule extends RuleSet {
+  
+  type = "";
+  text = "";
+  userId = "";
+
+  constructor(inData = null) {
+    super(inData);
+    if (inData instanceof Object) {
+      const {type, text, user} = inData;
+      if (typeof type === 'string') {
+        this.type = type;
+      }
+      if (typeof text === 'string') {
+        this.text = text;
+      }
+      if (typeof user === 'string') {
+        this.userId = user;
+      } else if (user instanceof Object) {
+        this.userId = user.toString();
+      }
+    }
+  }
+}
+
 export interface SimpleUser {
   _id: string;
   identifier: string;
@@ -723,50 +753,13 @@ export class Protocol {
     return defaultVal;
   }
 
-  matchOrb(aspect: string, k1: string, k2: string, aspectData = null) {
-    let orbDouble = 1;
-
-    if (this.orbs.length > 0) {
-      orbDouble = matchOrbFromGrid(aspect, k1, k2, this.orbs);
-    }
-    if (orbDouble < 0) {
-      const matchedOrbData =
-        aspectData instanceof Object ? aspectData : calcOrb(aspect, k1, k2);
-      orbDouble = matchedOrbData.orb;
-    }
-    return orbDouble;
-  }
-
   orbFromGrid(aspect: string, k1: string, k2: string) {
     return matchOrbFromGrid(aspect, k1, k2, this.orbs);
   }
 
   matchOrbValue(aspect: string, k1: string, k2: string) {
     const aspectData = calcOrb(aspect, k1, k2);
-    return this.matchOrb(aspect, k1, k2, aspectData);
-  }
-
-  matchRange(aspect: string, k1: string, k2: string) {
-    const aspectData = calcOrb(aspect, k1, k2);
-    const orb = this.matchOrb(aspect, k1, k2, aspectData);
-    const range =
-      orb !== aspectData.orb
-        ? [subtractLng360(aspectData.deg, orb), (aspectData.deg + orb) % 360]
-        : aspectData.range;
-    return range;
-  }
-
-  matchRanges(aspect: string, k1: string, k2: string) {
-    const aspectData = calcOrb(aspect, k1, k2);
-    const orb = this.matchOrb(aspect, k1, k2, aspectData);
-    const ranges =
-      orb !== aspectData.orb
-        ? calcAllAspectRanges(aspectData.row, orb, [
-            subtractLng360(aspectData.deg, orb),
-            (aspectData.deg + orb) % 360,
-          ])
-        : [aspectData.range];
-    return ranges;
+    return matchAspectOrb(aspect, k1, k2, aspectData, this.orbs);
   }
 
   kutaMax(kutaType = '', variantKey = '') {
@@ -1201,6 +1194,42 @@ const useRuleSet = (
   return filterByRuleSet === false || ruleSetIndex === filterIndex;
 };
 
+export const  matchAspectOrb = (aspect: string, k1: string, k2: string, aspectData = null, orbs: KeyOrbs[] = []) => {
+  let orbDouble = 1;
+  if (orbs.length > 0) {
+    orbDouble = matchOrbFromGrid(aspect, k1, k2, orbs);
+  }
+  if (orbDouble < 0) {
+    const matchedOrbData =
+      aspectData instanceof Object ? aspectData : calcOrb(aspect, k1, k2);
+    orbDouble = matchedOrbData.orb;
+  }
+  return orbDouble;
+}
+
+export const matchAspectRange = (aspect: string, k1: string, k2: string, orbs: KeyOrbs[] = []) => {
+  const aspectData = calcOrb(aspect, k1, k2);
+  const orb = matchAspectOrb(aspect, k1, k2, aspectData, orbs);
+  const range =
+    orb !== aspectData.orb
+      ? [subtractLng360(aspectData.deg, orb), (aspectData.deg + orb) % 360]
+      : aspectData.range;
+  return range;
+}
+
+export const matchAspectRanges = (aspect: string, k1: string, k2: string, orbs: KeyOrbs[] = []) => {
+  const aspectData = calcOrb(aspect, k1, k2);
+  const orb = matchAspectOrb(aspect, k1, k2, aspectData, orbs);
+  const ranges =
+    orb !== aspectData.orb
+      ? calcAllAspectRanges(aspectData.row, orb, [
+          subtractLng360(aspectData.deg, orb),
+          (aspectData.deg + orb) % 360,
+        ])
+      : [aspectData.range];
+  return ranges;
+}
+
 export const assessChart = (
   protocol: Protocol,
   paired = null,
@@ -1335,3 +1364,59 @@ export const compatibilityResultSetHasScores = (row: any = null) => {
   }
   return false;
 };
+
+export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Chart) => {
+  const transitJd = currentJulianDay();
+  const [t1, k1] = cond.c1Key.split("__");
+  const criteria: Map<string, any> = new Map();
+  criteria.set(`lv${level}`, k1);
+  criteria.set(`maxLevel`, level);
+  const balanceRef = new DashaBalance(criteria)
+  const results = assignDashaBalances(chart, transitJd, level, balanceRef, 'vimshottari', 'mo');
+  let start = 0;
+  let end = 0;
+  let validPeriod = results.length > 0;
+  if (validPeriod) {
+    const last = results[results.length - 1];
+    start = last.start;
+    end = last.end;
+  }
+  
+  const [t2, k2] = cond.c2Key.split("__");
+  
+  const ayaItem = chart.setAyanamshaItemByKey("true_citra");
+  const gk1 = matchGrahaEquivalent(cond.object1, chart);
+  const gk2 = matchGrahaEquivalent(cond.object2, chart);
+  const orb = calcOrb(cond.context, gk1, gk2);
+  const g1 = chart.graha(gk1);
+  const g2 = chart.graha(gk2);
+  g1.setAyanamshaItem(ayaItem);
+  g2.setAyanamshaItem(ayaItem);
+  const dist = calcDist360(g1.longitude, g2.longitude);
+  const inOrb = inRange(dist, orb.range);
+  const valid = validPeriod && inOrb;
+  return {valid, start, end };
+}
+
+export const processTransitMatch = async (cond: Condition, chart: Chart, geo: GeoPos) => {
+  const ayaItem = chart.setAyanamshaItemByKey("true_citra");
+  const startJd = currentJulianDay();
+  const gk1 = matchGrahaEquivalent(cond.object1, chart);
+  const gk2 = matchGrahaEquivalent(cond.object2, chart);
+  const g1 = chart.graha(gk1);
+  g1.setAyanamshaItem(ayaItem);
+  const ranges = matchAspectRanges(cond.context, gk1, gk2);
+  const targetRanges = ranges.map(range => range.map(num => addLng360(num,g1.longitude)));
+  const nextMatches = [];
+  for (const range of targetRanges) {
+    for (const lng of range) {
+      const next = await matchNextTransitAtLng(gk2, lng, startJd);
+      nextMatches.push(next.targetJd);
+    }
+  }
+  nextMatches.sort((a, b) => a - b);
+  const valid = nextMatches.length > 0;
+  const start = nextMatches.length > 0 ? julToISODate(nextMatches[0]) : "";
+  const end = start;
+  return {valid, start, end };
+}

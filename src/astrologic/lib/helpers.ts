@@ -167,6 +167,9 @@ export const calcVargaValue = (lng: number, num: number) => (lng * num) % 360;
 export const subtractLng360 = (lng: number, offset = 0) =>
   (lng + 360 - offset) % 360;
 
+export const addLng360 = (lng: number, offset = 0) =>
+  (lng + 360 + offset) % 360;
+
 export const subtractSign = (sign1: number, sign2: number) =>
   (sign1 + 12 - sign2) % 12;
 

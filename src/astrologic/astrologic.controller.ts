@@ -20,6 +20,7 @@ import {
   validISODateString,
   notEmptyString,
   isNumber,
+  inRange,
 } from '../lib/validators';
 import { latLngParamsToGeo, locStringToGeo } from './lib/converters';
 import { applyAscendantToSimpleChart, simplifyAstroChart, simplifyChart } from './lib/member-charts';
@@ -80,14 +81,19 @@ import {
   Record,
 } from '../lib/parse-astro-csv';
 import { Kuta } from './lib/kuta';
-import { Chart, PairedChart } from './lib/models/chart';
+import { Chart, matchGrahaEquivalent, PairedChart } from './lib/models/chart';
 import { AspectSet, calcOrb } from './lib/calc-orbs';
 import { AspectSetDTO } from './dto/aspect-set.dto';
 import {
   assessChart,
   compatibilityResultSetHasScores,
+  Condition,
   matchOrbFromGrid,
+  PredictiveRule,
+  processTransitDashaRuleSet,
+  processTransitMatch,
   Protocol,
+  RuleSet,
 } from './lib/models/protocol-models';
 import { mapNestedKaranaTithiYoga, mapToponyms } from './lib/mappers';
 import { CreateSettingDTO } from '../setting/dto/create-setting.dto';
@@ -107,6 +113,9 @@ import { Graha } from './lib/models/graha-set';
 import ayanamshaValues from './lib/settings/ayanamsha-values';
 import { calcBavGraphData, calcBavSignSamples } from './lib/settings/ashtakavarga-values';
 import { GeoPos } from './interfaces/geo-pos';
+import { Model } from 'mongoose';
+import { currentJulianDay } from './lib/julian-date';
+import { calcDist360 } from './lib/helpers';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -834,8 +843,7 @@ export class AstrologicController {
     let chartData: any = null;
     if (hasChartId || hasUserId) {
       const chartModel = hasUserId ? await this.astrologicService.getUserBirthChart(userId) : await this.astrologicService.getChart(chartId);
-      if (chartModel instanceof Object) {
-        if (chartModel.constructor.name)
+      if (chartModel instanceof Model) {
         chartData = chartModel.toObject();
       }
     } else if (validRefs) {
@@ -879,6 +887,53 @@ export class AstrologicController {
       balances = assignDashaBalances(chart, transitJd, maxLevel, balanceRef, system, key);
     }
     return res.json({dt, balances, nak, lng, yearLength: data.yearLength, system, key});
+  }
+
+  @Get('predictive-rule-check/:ruleID/:chartID/:loc?')
+  async checkRulesetForChart(@Res() res, @Param('ruleID') ruleID, @Param('chartID') chartID, @Param('loc') loc) {
+    const ruleData = await this.settingService.getRuleSet(ruleID);
+    const hasRuleData = ruleData instanceof Model;
+    const rule = new PredictiveRule(ruleData);
+    const chartRecord = await this.astrologicService.getChart(chartID);
+    const hasChart = chartRecord instanceof Model;
+    const andMode = rule.conditionSet.operator  !== "or";
+    const chartData = hasChart? chartRecord.toObject() : {};
+    const chart = new Chart(chartData);
+    const geo = typeof loc === 'string' && /^\d(\.\d),d(\.\d),\d?$/.test(loc)? locStringToGeo(loc) : chart.geo;
+    const outerConditions = rule.conditionSet.conditionRefs.filter(cr => !cr.isSet);
+    const outerItems = [];
+    for (const cond of outerConditions) {
+      if (cond instanceof Condition) {
+        const newOuterItem = await this.processPredictiveRuleSet(cond, rule.type, chart, geo);
+        outerItems.push(newOuterItem);
+      }
+    }
+    const valid = hasRuleData &&  hasChart;
+    const numOuterValid = outerItems.filter(oi => oi.valid).length;
+    const matches = andMode ? numOuterValid === outerItems.length : numOuterValid > 0;
+    return res.json({ valid , matches, outerItems, rule, chart});
+  }
+
+  async processPredictiveRuleSet(cond: Condition, ruleType = "", chart: Chart, geo: GeoPos) {
+    const result = { valid: false, start: null, end: null, score: 0 };
+    switch (ruleType) {
+      case 'transit':
+        return await this.processTransitRuleSet(cond, chart, geo);
+      default:
+        return result;
+    }
+  }
+
+  async processTransitRuleSet(cond: Condition, chart: Chart, geo: GeoPos) {
+    const [fromCat, subType] = cond.fromMode.split("_");
+    switch (fromCat) {
+      case "level":
+        return await processTransitDashaRuleSet(cond, parseInt(subType, 10), chart);
+      case "transit":
+        return await processTransitMatch(cond, chart, geo);
+      default:
+        return { valid: false };
+    }
   }
 
   @Get('recalc-charts/:start?/:limit?')
