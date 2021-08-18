@@ -11,8 +11,7 @@ import { Chart, matchGrahaEquivalent, PairedChart } from './chart';
 import { currentJulianDay } from '../julian-date';
 import { assignDashaBalances, DashaBalance } from './dasha-set';
 import { matchNextTransitAtLng } from '../astro-motion';
-import { julToISODate } from '../date-funcs';
-import { GeoPos } from 'src/astrologic/interfaces/geo-pos';
+import { GeoPos } from '../../interfaces/geo-pos';
 import { calcNextAscendantLng } from '../calc-ascendant';
 
 export interface KeyNumVal {

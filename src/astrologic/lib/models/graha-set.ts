@@ -30,7 +30,6 @@ import {
 } from '../helpers';
 import { AyanamshaItem, DefaultAyanamshaItem } from '../interfaces';
 import { mapRelationships } from '../map-relationships';
-import { KeyValue } from 'src/astrologic/interfaces/key-value';
 
 interface VariantGroup {
   num: number;
