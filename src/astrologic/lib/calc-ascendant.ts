@@ -1,4 +1,6 @@
+import { calcAyanamsha } from "./core";
 import { calcJulDate, julToISODate } from "./date-funcs";
+import { calcDist360 } from "./helpers";
 import { subtractLng360 } from "./math-funcs";
 
 export const degToPi = (deg: number): number => deg * (Math.PI / 180);
@@ -104,6 +106,42 @@ export const calcAscendantTimeline = (subDiv = 12, lat = 0, lng = 0, startJd = 0
 		counter++;
 	}
 	return { items, startJd, endJd, dur: endJd - startJd, startDiff };
+}
+
+export const calcNextAscendantLng = async (targetLng = 0, lat = 0, lng = 0, startJd = 0, ayanamshaKey = "true_citra") => {
+	const ayanamshaValue = await calcAyanamsha(startJd, ayanamshaKey)
+	const asc = calcOffsetAscendant(lat, lng, startJd, ayanamshaValue);
+	const tolerance = 0.2;
+	const minuteJd = 1 / 2880;
+	const items = [];
+	let counter = 0;
+	let currJd = startJd;
+	let matchedJd = 0;
+	let prevLng = 0;
+	let matchedLngs: number[][] = [];
+	while (matchedLngs.length < 3 && counter < 1000000) {
+		currJd += minuteJd;
+		const nextLng = calcOffsetAscendant(lat, lng, currJd, ayanamshaValue);
+		const distance = calcDist360(targetLng, nextLng);
+		if (distance <= tolerance && distance > (0 - tolerance)) {
+			const diff = nextLng - targetLng;
+			const prog = nextLng - prevLng;
+			const diffLng = diff < 180 ? diff : 360 - diff;
+			const progLng = prog <= -180 ? 360 + prog : prog;
+			matchedLngs.push([nextLng, currJd, diffLng, progLng]);
+		}
+		counter++;
+		prevLng = nextLng;
+	}
+	const num = matchedLngs.length;
+	if (num > 0) {
+		const last = matchedLngs[num - 1];
+		const [mDeg, mJd, mDiff, step] = last;
+		const progress = (mDiff / step);
+		const diffJd = 0 - (minuteJd * progress);
+		matchedJd = mJd + diffJd;
+	}
+	return { startJd, targetJd: matchedJd };
 }
 
 export const calcAscendantIntervalTimelineItems = (lat = 0, lng = 0, startJd = 0, endJd = 0, ayanamshaValue = 0) => {

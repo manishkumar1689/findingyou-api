@@ -13,6 +13,7 @@ import { assignDashaBalances, DashaBalance } from './dasha-set';
 import { matchNextTransitAtLng } from '../astro-motion';
 import { julToISODate } from '../date-funcs';
 import { GeoPos } from 'src/astrologic/interfaces/geo-pos';
+import { calcNextAscendantLng } from '../calc-ascendant';
 
 export interface KeyNumVal {
   key: string;
@@ -1382,13 +1383,14 @@ export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Ch
   let validPeriod = results.length > 0;
   if (validPeriod) {
     const last = results[results.length - 1];
-    start = last.start;
-    end = last.end;
+    start = last.startJd;
+    end = last.endJd;
   }
   
   const [t2, k2] = cond.c2Key.split("__");
   
   const ayaItem = chart.setAyanamshaItemByKey("true_citra");
+  const ct = matchContextType(cond.context);
   const gk1 = matchGrahaEquivalent(cond.object1, chart);
   const gk2 = matchGrahaEquivalent(cond.object2, chart);
   const orb = calcOrb(cond.context, gk1, gk2);
@@ -1396,10 +1398,18 @@ export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Ch
   const g2 = chart.graha(gk2);
   g1.setAyanamshaItem(ayaItem);
   g2.setAyanamshaItem(ayaItem);
-  const dist = calcDist360(g1.longitude, g2.longitude);
-  const inOrb = inRange(dist, orb.range);
-  const valid = validPeriod && inOrb;
-  return {valid, start, end };
+  let valid = false;
+  if (ct.isAspect) {
+    const ranges = matchAspectRanges(cond.context, gk1, gk2);
+    const dist = calcDist360(g1.longitude, g2.longitude);
+    ranges.forEach(range => {
+      const inOrb = inRange(dist, range);
+      if (inOrb) {
+        valid = validPeriod && inOrb;
+      }
+    });
+  }
+  return { valid, start, end };
 }
 
 export const processTransitMatch = async (cond: Condition, chart: Chart, geo: GeoPos) => {
@@ -1409,20 +1419,21 @@ export const processTransitMatch = async (cond: Condition, chart: Chart, geo: Ge
   const gk2 = matchGrahaEquivalent(cond.object2, chart);
   const g1 = chart.graha(gk1);
   g1.setAyanamshaItem(ayaItem);
-  const ranges = matchAspectRanges(cond.context, gk1, gk2);
-  const targetRanges = ranges.map(range => range.map(num => addLng360(num,g1.longitude)));
   const nextMatches = [];
   const ct = matchContextType(cond.context);
-  console.log(ct);
-  for (const range of targetRanges) {
-    for (const lng of range) {
-      const next = await matchNextTransitAtLng(gk2, lng, startJd);
-      nextMatches.push(next.targetJd);
+  if (ct.isAspect) {
+    const ranges = matchAspectRanges(cond.context, gk1, gk2);
+    const targetRanges = ranges.map(range => range.map(num => addLng360(num,g1.longitude)));
+    for (const range of targetRanges) {
+      for (const lng of range) {
+        const next = gk2 === 'as' ? await matchNextTransitAtLng(gk2, lng, startJd) : await calcNextAscendantLng(lng, geo.lat, geo.lng, startJd);
+        nextMatches.push(next.targetJd);
+      }
     }
   }
   nextMatches.sort((a, b) => a - b);
   const valid = nextMatches.length > 0;
-  const start = nextMatches.length > 0 ? julToISODate(nextMatches[0]) : "";
+  const start = nextMatches.length > 0 ? nextMatches[0] : 0;
   const end = start;
   return {valid, start, end };
 }

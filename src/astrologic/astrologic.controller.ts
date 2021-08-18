@@ -107,7 +107,7 @@ import { AssignPairedDTO } from './dto/assign-paired.dto';
 import { matchPlanetNum } from './lib/settings/graha-values';
 import { CreateUserDTO } from '../user/dto/create-user.dto';
 import { assignDashaBalances, calcDashaSetByKey, DashaBalance, mapDashaItem } from './lib/models/dasha-set';
-import { calcAscendantTimelineItems, calcOffsetAscendant } from './lib/calc-ascendant';
+import { calcAscendantTimelineItems, calcNextAscendantLng, calcOffsetAscendant } from './lib/calc-ascendant';
 import { GeoLoc } from './lib/models/geo-loc';
 import { Graha } from './lib/models/graha-set';
 import ayanamshaValues from './lib/settings/ayanamsha-values';
@@ -889,6 +889,16 @@ export class AstrologicController {
     return res.json({dt, balances, nak, lng, yearLength: data.yearLength, system, key});
   }
 
+  @Get('next-ascendant/:lng/:loc/:dt?')
+  async fetchNextAscendant(@Res() res, @Param('lng') lng, @Param('loc') loc, @Param('dt') dt) {
+    const { dtUtc, jd } = matchJdAndDatetime(dt);
+    const geo = locStringToGeo(loc);
+    const lngFl = smartCastFloat(lng, 0)
+    const data = await calcNextAscendantLng(lngFl, geo.lat, geo.lng, jd, "true_citra")
+    
+    return res.json({data});
+  }
+
   @Get('predictive-rule-check/:ruleID/:chartID/:loc?')
   async checkRulesetForChart(@Res() res, @Param('ruleID') ruleID, @Param('chartID') chartID, @Param('loc') loc) {
     const ruleData = await this.settingService.getRuleSet(ruleID);
@@ -911,7 +921,7 @@ export class AstrologicController {
     const valid = hasRuleData &&  hasChart;
     const numOuterValid = outerItems.filter(oi => oi.valid).length;
     const matches = andMode ? numOuterValid === outerItems.length : numOuterValid > 0;
-    return res.json({ valid , matches, outerItems, rule, chart});
+    return res.json({ valid , matches, items: outerItems });
   }
 
   async processPredictiveRuleSet(cond: Condition, ruleType = "", chart: Chart, geo: GeoPos) {
