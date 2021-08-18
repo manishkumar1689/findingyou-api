@@ -29,6 +29,11 @@ export interface KeyNumPair {
   pair: number[];
 }
 
+export const matchContextType = (context: string) => {
+  const matched = contextTypes.find(ct => ct.key === context);
+  return new ContextType(matched);
+}
+
 export class SectionScore {
   type = '';
   scores: Array<KeyNumPair> = [];
@@ -161,8 +166,7 @@ export class Condition {
   }
 
   get contextType() {
-    const matched = contextTypes.find(ct => ct.key === this.context);
-    return new ContextType(matched);
+    return matchContextType(this.context)
   }
 
   get object1() {
@@ -1408,6 +1412,8 @@ export const processTransitMatch = async (cond: Condition, chart: Chart, geo: Ge
   const ranges = matchAspectRanges(cond.context, gk1, gk2);
   const targetRanges = ranges.map(range => range.map(num => addLng360(num,g1.longitude)));
   const nextMatches = [];
+  const ct = matchContextType(cond.context);
+  console.log(ct);
   for (const range of targetRanges) {
     for (const lng of range) {
       const next = await matchNextTransitAtLng(gk2, lng, startJd);
