@@ -650,7 +650,8 @@ export class UserService {
       const userData = user.toObject();
       const { preferences } = userData;
       const prefs = preferences instanceof Array ? preferences : [];
-      for (const prefItem of prefItems) {
+      const filteredPreferences = prefItems.filter(pr => pr instanceof Object && pr.type !== 'user');
+      for (const prefItem of filteredPreferences) {
         const pKeys = Object.keys(prefItem);
         if (
             pKeys.includes('key') &&
@@ -670,9 +671,25 @@ export class UserService {
         }
       }
       const dt = new Date();
+      const editMap: Map<string, any> = new Map();
+      editMap.set('preferences', prefs);
+      editMap.set('modifiedAt', dt);
+      const userOpts = prefItems.filter(pr => pr instanceof Object && pr.type === 'user');
+      if (userOpts.length > 0) {
+        userOpts.forEach(row => {
+          const { key, value } = row;
+          const dataType = typeof value;
+          if (key === 'gender' && dataType === 'string') {
+            editMap.set('gender', value);
+          } else if (key === 'geo' && dataType === 'object') {
+            editMap.set('geo', value);
+          } 
+        });
+      }
+      const edited = Object.fromEntries(editMap.entries());
       data.user = await this.userModel.findByIdAndUpdate(
         userID,
-        { preferences: prefs, modifiedAt: dt },
+        edited,
         {
           new: true,
         },

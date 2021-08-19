@@ -53,6 +53,8 @@ import {
   RuleSet,
   matchAspectRange,
   matchAspectRanges,
+  funcBmMap,
+  matchBmGrahaKeys,
 } from './protocol-models';
 import { calcInclusiveSignPositions } from '../math-funcs';
 import {
@@ -1726,33 +1728,7 @@ export class PairedChart {
       : numMatches > 0;
   }
 
-  matchBmGrahaKeys(key: string, condition: Condition, chart: Chart) {
-    if (key.length === 2) {
-      return [key];
-    } else {
-      if (condition.isNatural) {
-        switch (key) {
-          case 'benefics':
-            return naturalBenefics;
-          case 'malefics':
-            return naturalMalefics;
-          default:
-            return [];
-        }
-      } else if (condition.isFunctional) {
-        const bm = this.funcBmMap(chart);
-        switch (key) {
-          case 'benefics':
-            return bm.get('b');
-          case 'malefics':
-            return bm.get('m');
-          default:
-            return bm.get('n');
-        }
-      }
-    }
-    return [];
-  }
+  
 
   /*
 
@@ -1765,8 +1741,8 @@ export class PairedChart {
     k1 = '',
     k2 = '',
   ) {
-    const grKeys1 = this.matchBmGrahaKeys(k1, condition, fromChart);
-    const grKeys2 = this.matchBmGrahaKeys(k2, condition, toChart);
+    const grKeys1 = matchBmGrahaKeys(k1, condition, fromChart);
+    const grKeys2 = matchBmGrahaKeys(k2, condition, toChart);
     let matched = false;
     const bmRows: Array<BmMatchRow> = [];
     grKeys1.forEach(gk1 => {
@@ -1848,10 +1824,8 @@ export class PairedChart {
     fromChart: Chart,
     toChart: Chart,
     k1 = '',
-    k2 = '',
   ) {
-    const grKeys1 = this.matchBmGrahaKeys(k1, condition, fromChart);
-    //const grKeys2 = this.matchBmGrahaKeys(k2, condition, toChart);
+    const grKeys1 = matchBmGrahaKeys(k1, condition, fromChart);
 
     const bmMatches = [];
     const isFunctional = condition.isFunctional;
@@ -1891,10 +1865,7 @@ export class PairedChart {
   }
 
   funcBmMap(chart: Chart, build = true): Map<string, Array<string>> {
-    const hsRows = build ? chart.buildSignHouseRows() : [];
-    return build
-      ? buildFunctionalBMMap(coreIndianGrahaKeys, hsRows)
-      : new Map();
+    return funcBmMap(chart, build);
   }
 
   matchYutiCondition(condition: Condition, fromChart: Chart, toChart: Chart) {
@@ -2036,8 +2007,7 @@ export class PairedChart {
         condition,
         fromChart,
         toChart,
-        k1,
-        k2,
+        k1
       );
     } else if (condition.isDrishtiAspect) {
       matched = this.matchDrishtiCondition(

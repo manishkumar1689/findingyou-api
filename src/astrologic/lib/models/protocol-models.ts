@@ -5,14 +5,17 @@ import { contextTypes } from '../settings/compatibility-sets';
 import { calcOrb, calcAllAspectRanges } from '../calc-orbs';
 import { subtractLng360, addLng360, calcDist360 } from '../helpers';
 import ayanamshaValues from '../settings/ayanamsha-values';
-import { SignHouse } from '../../interfaces/sign-house';
-import { calcInclusiveTwelfths } from '../math-funcs';
-import { Chart, matchGrahaEquivalent, PairedChart } from './chart';
+import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
+import { calcInclusiveSignPositions, calcInclusiveTwelfths } from '../math-funcs';
+import { Chart, filterBmMatchRow, matchGrahaEquivalent, PairedChart } from './chart';
 import { currentJulianDay } from '../julian-date';
 import { assignDashaBalances, DashaBalance } from './dasha-set';
 import { matchNextTransitAtLng } from '../astro-motion';
 import { GeoPos } from '../../interfaces/geo-pos';
 import { calcNextAscendantLng } from '../calc-ascendant';
+import { buildFunctionalBMMap, naturalBenefics, naturalMalefics } from '../settings/graha-values';
+import { coreIndianGrahaKeys } from './graha-set';
+import { settings } from 'cluster';
 
 export interface KeyNumVal {
   key: string;
@@ -68,6 +71,58 @@ export class SectionScore {
       });
     }
   }
+}
+
+export const funcBmMap = (chart: Chart, build = true): Map<string, Array<string>> => {
+  const hsRows = build ? chart.buildSignHouseRows() : [];
+  return build
+    ? buildFunctionalBMMap(coreIndianGrahaKeys, hsRows)
+    : new Map();
+}
+
+export const matchBmGrahaKeys = (key: string, condition: Condition, chart: Chart) => {
+  if (key.length === 2) {
+    return [key];
+  } else {
+    if (condition.isNatural) {
+      switch (key) {
+        case 'benefics':
+          return naturalBenefics;
+        case 'malefics':
+          return naturalMalefics;
+        default:
+          return [];
+      }
+    } else if (condition.isFunctional) {
+      const bm = funcBmMap(chart);
+      switch (key) {
+        case 'benefics':
+          return bm.get('b');
+        case 'malefics':
+          return bm.get('m');
+        default:
+          return bm.get('n');
+      }
+    }
+  }
+  return [];
+}
+
+export const matchDrishti = (grahaKey: string, signNum = 0, drishtiMap: Map<string, number[]> = new Map()) => {
+  const aspects = drishtiMap.get(grahaKey);
+  if (aspects instanceof Array && signNum > 0 && signNum <= 12) {
+    const index = signNum - 1;
+    return aspects[index];
+  }
+  return 0;
+}
+
+export const matchRashiDrishti = (sign1 = 0, sign2 = 0, drishtiMap: Map<number, number[]> = new Map()) => {
+  const aspects = drishtiMap.get(sign1);
+  if (aspects instanceof Array && sign2 > 0 && sign2 <= 12) {
+    return aspects.indexOf(sign2);
+  }
+  return 0;
 }
 
 export class Condition {
@@ -723,20 +778,11 @@ export class Protocol {
   }
 
   matchDrishti(grahaKey: string, signNum = 0) {
-    const aspects = this.grahaDrishtiMap.get(grahaKey);
-    if (aspects instanceof Array && signNum > 0 && signNum <= 12) {
-      const index = signNum - 1;
-      return aspects[index];
-    }
-    return 0;
+    return matchDrishti(grahaKey, signNum, this.grahaDrishtiMap);
   }
 
   matchRashiDrishti(sign1 = 0, sign2 = 0) {
-    const aspects = this.rashiDrishtiMap.get(sign1);
-    if (aspects instanceof Array && sign2 > 0 && sign2 <= 12) {
-      return aspects.indexOf(sign2);
-    }
-    return 0;
+    return matchRashiDrishti(sign1, sign2, this.rashiDrishtiMap);
   }
 
   getCollection(index: number) {
@@ -1369,7 +1415,7 @@ export const compatibilityResultSetHasScores = (row: any = null) => {
   return false;
 };
 
-export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Chart) => {
+export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Chart, settings = null) => {
   const transitJd = currentJulianDay();
   const [t1, k1] = cond.c1Key.split("__");
   const criteria: Map<string, any> = new Map();
@@ -1386,20 +1432,17 @@ export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Ch
     end = last.endJd;
   }
   
-  const [t2, k2] = cond.c2Key.split("__");
-  
   const ayaItem = chart.setAyanamshaItemByKey("true_citra");
   const ct = matchContextType(cond.context);
-  const gk1 = matchGrahaEquivalent(cond.object1, chart);
-  const gk2 = matchGrahaEquivalent(cond.object2, chart);
-  const orb = calcOrb(cond.context, gk1, gk2);
-  const g1 = chart.graha(gk1);
-  const g2 = chart.graha(gk2);
+  const gkTransit = matchGrahaEquivalent(cond.object1, chart);
+  const gkBirth = matchGrahaEquivalent(cond.object2, chart);
+  const g1 = chart.graha(gkBirth);
+  const g2 = chart.graha(gkTransit);
   g1.setAyanamshaItem(ayaItem);
   g2.setAyanamshaItem(ayaItem);
   let valid = false;
   if (ct.isAspect) {
-    const ranges = matchAspectRanges(cond.context, gk1, gk2);
+    const ranges = matchAspectRanges(cond.context, gkBirth, gkTransit);
     const dist = calcDist360(g1.longitude, g2.longitude);
     ranges.forEach(range => {
       const inOrb = inRange(dist, range);
@@ -1407,32 +1450,129 @@ export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Ch
         valid = validPeriod && inOrb;
       }
     });
+  } else if (ct.isDrishtiAspect) {
+    const ranges = matchDrishtiConditionSignLngs(cond, chart, gkBirth, gkTransit, settings).map(deg => [deg, deg + 30]);
+    valid = ranges.some(range => {
+      const [start, end] = range;
+      return g1.longitude >= start && g1.longitude < end;
+    });
   }
   return { valid, start, end };
 }
 
-export const processTransitMatch = async (cond: Condition, chart: Chart, geo: GeoPos) => {
+export const matchGrahaInTargetRanges = async (targetRanges: number[][], startJd = 0, gkTransit = "", geo: GeoPos) => {
+  const nextMatches = [];
+  const isAscendant = gkTransit === 'as';
+  for (const range of targetRanges) {
+    for (const lng of range) {
+      const next = isAscendant ? await calcNextAscendantLng(lng, geo.lat, geo.lng, startJd) : await matchNextTransitAtLng(gkTransit, lng, startJd);
+      nextMatches.push(next.targetJd);
+    }
+  }
+  return nextMatches;
+}
+
+export const processTransitMatch = async (cond: Condition, chart: Chart, geo: GeoPos, settings = null) => {
   const ayaItem = chart.setAyanamshaItemByKey("true_citra");
   const startJd = currentJulianDay();
-  const gk1 = matchGrahaEquivalent(cond.object1, chart);
-  const gk2 = matchGrahaEquivalent(cond.object2, chart);
-  const g1 = chart.graha(gk1);
+  const gkTransit = matchGrahaEquivalent(cond.object1, chart);
+  const gkBirth = matchGrahaEquivalent(cond.object2, chart);
+  const g1 = chart.graha(gkBirth);
   g1.setAyanamshaItem(ayaItem);
-  const nextMatches = [];
+  let nextMatches = [];
   const ct = matchContextType(cond.context);
   if (ct.isAspect) {
-    const ranges = matchAspectRanges(cond.context, gk1, gk2);
+    const ranges = matchAspectRanges(cond.context, gkBirth, gkTransit);
     const targetRanges = ranges.map(range => range.map(num => addLng360(num,g1.longitude)));
-    for (const range of targetRanges) {
-      for (const lng of range) {
-        const next = gk2 === 'as' ? await matchNextTransitAtLng(gk2, lng, startJd) : await calcNextAscendantLng(lng, geo.lat, geo.lng, startJd);
-        nextMatches.push(next.targetJd);
-      }
-    }
+    nextMatches = await matchGrahaInTargetRanges(targetRanges, startJd, gkTransit, geo);
+  } else if (ct.isDrishtiAspect) {
+    const ranges = matchDrishtiConditionSignLngs(cond, chart, gkBirth, gkTransit, settings).map(deg => [deg, deg + 30]);
+    nextMatches = await matchGrahaInTargetRanges(ranges, startJd, gkTransit, geo);
   }
   nextMatches.sort((a, b) => a - b);
   const valid = nextMatches.length > 0;
   const start = nextMatches.length > 0 ? nextMatches[0] : 0;
   const end = start;
   return {valid, start, end };
+}
+
+export const matchDrishtiConditionSignLngs = (
+  condition: Condition,
+  fromChart: Chart,
+  k1 = '',
+  k2 = '',
+  settings: ProtocolSettings
+) => {
+  const degs = [];
+  for (let i = 0; i < 12; i++) {
+    const deg = i * 30;
+    const matched = matchDrishtiCondition(condition, fromChart, deg, k1, k2, settings);
+    if (matched) {
+      degs.push(deg);
+    }
+  }
+  return degs;
+};
+
+export const matchDrishtiCondition = (
+  condition: Condition,
+  fromChart: Chart,
+  toLng: number,
+  k1 = '',
+  k2 = '',
+  settings: ProtocolSettings
+) => {
+  const grKeys1 = matchBmGrahaKeys(k1, condition, fromChart);
+  const grKeys2 = matchBmGrahaKeys(k2, condition, fromChart);
+  //let matched = false;
+  const bmRows: Array<BmMatchRow> = [];
+  grKeys1.forEach(gk1 => {
+    grKeys2.forEach(gk2 => {
+      const gr1 = fromChart.graha(gk1);
+      if (gr1 instanceof Object) {
+        const sign2 = Math.floor(toLng / 30) + 1;
+        const sendsDiff = calcInclusiveSignPositions(
+          gr1.signNum,
+          sign2,
+        );
+        const applyRashi = condition.isRashiDrishti;
+        // sends drishti
+        const sendsVal = applyRashi
+          ? matchRashiDrishti(gr1.signNum, sendsDiff, settings.rashiDrishti)
+          : matchDrishti(gk1, sendsDiff, settings.grahaDrishti);
+        const getsDiff = calcInclusiveSignPositions(sign2, gr1.signNum);
+        // receives / gets drishti
+        const getsVal = applyRashi
+          ? matchRashiDrishti(gr1.signNum, getsDiff)
+          : matchDrishti(gk2, getsDiff, settings.grahaDrishti);
+        bmRows.push({
+          k1: gk1,
+          sendsDiff,
+          sendsVal,
+          k2: gk2,
+          getsDiff,
+          getsVal,
+        });
+      }
+    });
+  });
+  /* const keyParts = condition.contextType.key.split('_');
+  const firstPart = keyParts[0];
+  const numVal = isNumeric(firstPart) ? parseInt(firstPart) : -1;
+  switch (firstPart) {
+    case 'any':
+    case 'receives':
+    case 'sends':
+      matched = bmRows.some(row => filterBmMatchRow(row, condition));
+      break;
+    case 'all':
+      matched = bmRows.every(row => filterBmMatchRow(row, condition));
+      break;
+    default:
+      matched =
+        bmRows.filter(row => filterBmMatchRow(row, condition)).length ===
+        numVal;
+      break;
+  } */
+  return bmRows.some(row => filterBmMatchRow(row, condition));
 }

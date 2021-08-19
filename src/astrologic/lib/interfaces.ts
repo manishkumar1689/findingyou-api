@@ -65,3 +65,9 @@ export interface Toponym {
   lng: number;
   type: string;
 }
+
+export interface ProtocolSettings {
+  kuta: any,
+  grahaDrishti: Map<string, number[]>;
+  rashiDrishti: Map<number, number[]>;
+}

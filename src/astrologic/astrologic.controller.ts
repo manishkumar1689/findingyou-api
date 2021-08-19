@@ -88,6 +88,8 @@ import {
   assessChart,
   compatibilityResultSetHasScores,
   Condition,
+  matchDrishtiCondition,
+  matchDrishtiConditionSignLngs,
   matchOrbFromGrid,
   PredictiveRule,
   processTransitDashaRuleSet,
@@ -98,7 +100,7 @@ import {
 import { mapNestedKaranaTithiYoga, mapToponyms } from './lib/mappers';
 import { CreateSettingDTO } from '../setting/dto/create-setting.dto';
 import typeTags from './lib/settings/relationship-types';
-import { KeyName } from './lib/interfaces';
+import { KeyName, ProtocolSettings } from './lib/interfaces';
 import { TagReassignDTO } from './dto/tag-reassign.dto';
 import { TagDTO } from './dto/tag.dto';
 import { RuleSetDTO } from '../setting/dto/rule-set.dto';
@@ -116,6 +118,7 @@ import { GeoPos } from './interfaces/geo-pos';
 import { Model } from 'mongoose';
 import { currentJulianDay } from './lib/julian-date';
 import { calcDist360 } from './lib/helpers';
+import { settings } from 'cluster';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -904,6 +907,7 @@ export class AstrologicController {
     const ruleData = await this.settingService.getRuleSet(ruleID);
     const hasRuleData = ruleData instanceof Model;
     const rule = new PredictiveRule(ruleData);
+    const settings = await this.settingService.getProtocolSettings();
     const chartRecord = await this.astrologicService.getChart(chartID);
     const hasChart = chartRecord instanceof Model;
     const andMode = rule.conditionSet.operator  !== "or";
@@ -914,33 +918,53 @@ export class AstrologicController {
     const outerItems = [];
     for (const cond of outerConditions) {
       if (cond instanceof Condition) {
-        const newOuterItem = await this.processPredictiveRuleSet(cond, rule.type, chart, geo);
+        const newOuterItem = await this.processPredictiveRuleSet(cond, rule.type, chart, geo, settings);
         outerItems.push(newOuterItem);
       }
     }
     const valid = hasRuleData &&  hasChart;
     const numOuterValid = outerItems.filter(oi => oi.valid).length;
     const matches = andMode ? numOuterValid === outerItems.length : numOuterValid > 0;
+    /* const cond = new Condition();
+    const drM = matchDrishtiCondition(cond); */
+    const cm = {
+      isTrue: true,
+      fromMode: 'transit',
+      toMode: 'birth',
+      c1Key: 'graha__me',
+      c2Key: 'graha__mo',
+      varga1: 1,
+      varga2: 1,
+      context: 'receives_graha_drishti',
+      aspectQuality: '',
+      lordRev: false,
+      isSet: false,
+      kutaRange: [ -1, -1 ],
+      outcome: false
+    }
+    const cond = new Condition(cm);
+    const dr = matchDrishtiConditionSignLngs(cond, chart, 'ma', 'ju', settings);
+    console.log(dr);
     return res.json({ valid , matches, items: outerItems });
   }
 
-  async processPredictiveRuleSet(cond: Condition, ruleType = "", chart: Chart, geo: GeoPos) {
+  async processPredictiveRuleSet(cond: Condition, ruleType = "", chart: Chart, geo: GeoPos, settings: ProtocolSettings) {
     const result = { valid: false, start: null, end: null, score: 0 };
     switch (ruleType) {
       case 'transit':
-        return await this.processTransitRuleSet(cond, chart, geo);
+        return await this.processTransitRuleSet(cond, chart, geo, settings);
       default:
         return result;
     }
   }
 
-  async processTransitRuleSet(cond: Condition, chart: Chart, geo: GeoPos) {
+  async processTransitRuleSet(cond: Condition, chart: Chart, geo: GeoPos, settings: ProtocolSettings) {
     const [fromCat, subType] = cond.fromMode.split("_");
     switch (fromCat) {
       case "level":
-        return await processTransitDashaRuleSet(cond, parseInt(subType, 10), chart);
+        return await processTransitDashaRuleSet(cond, parseInt(subType, 10), chart, settings);
       case "transit":
-        return await processTransitMatch(cond, chart, geo);
+        return await processTransitMatch(cond, chart, geo, settings);
       default:
         return { valid: false };
     }

@@ -19,6 +19,7 @@ import multipleKeyScales from '../user/settings/multiscales';
 import { PreferenceOption } from '../user/interfaces/preference-option.interface';
 import { RedisService } from 'nestjs-redis';
 import * as Redis from 'ioredis';
+import { ProtocolSettings } from 'src/astrologic/lib/models/protocol-models';
 
 @Injectable()
 export class SettingService {
@@ -284,7 +285,7 @@ export class SettingService {
     return types;
   }
 
-  async getProtocolSettings() {
+  async getProtocolSettings(): Promise<ProtocolSettings> {
     return {
       kuta: await this.getKutas(),
       grahaDrishti: await this.getDrishtiMatches(),
