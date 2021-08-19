@@ -925,9 +925,8 @@ export class AstrologicController {
     const valid = hasRuleData &&  hasChart;
     const numOuterValid = outerItems.filter(oi => oi.valid).length;
     const matches = andMode ? numOuterValid === outerItems.length : numOuterValid > 0;
-    /* const cond = new Condition();
-    const drM = matchDrishtiCondition(cond); */
-    const cm = {
+    
+    /* const cm = {
       isTrue: true,
       fromMode: 'transit',
       toMode: 'birth',
@@ -944,7 +943,7 @@ export class AstrologicController {
     }
     const cond = new Condition(cm);
     const dr = matchDrishtiConditionSignLngs(cond, chart, 'ma', 'ju', settings);
-    console.log(dr);
+    */
     return res.json({ valid , matches, items: outerItems });
   }
 
