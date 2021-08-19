@@ -9,7 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { hashSalt } from '../.config';
 import { generateHash } from '../lib/hash';
 import * as moment from 'moment-timezone';
-import { isNumeric, notEmptyString } from '../lib/validators';
+import { inRange, isNumeric, notEmptyString } from '../lib/validators';
 import { Role } from './interfaces/role.interface';
 import { Payment } from './interfaces/payment.interface';
 import { PaymentOption } from './interfaces/payment-option.interface';
@@ -683,7 +683,7 @@ export class UserService {
             editMap.set('gender', value);
           } else if (key === 'geo' && dataType === 'object') {
             const {lat, lng, altVal } = value;
-            if (isNumeric(lat) && isNumeric(lng)) {
+            if (isNumeric(lat) && isNumeric(lng) && inRange(lng, [-180, 180]) && inRange(lat, [-90, 90])) {
               const alt = smartCastFloat(altVal, 10);
               editMap.set('geo', { lat, lng, alt});
               editMap.set('coords', [lng, lat]);
