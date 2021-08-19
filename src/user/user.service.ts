@@ -16,7 +16,7 @@ import { PaymentOption } from './interfaces/payment-option.interface';
 import { PaymentDTO } from './dto/payment.dto';
 import { ProfileDTO } from './dto/profile.dto';
 import { MatchedOption, PrefKeyValue } from './settings/preference-options';
-import { smartCastBool } from '../lib/converters';
+import { smartCastBool, smartCastFloat } from '../lib/converters';
 import { MediaItemDTO } from './dto/media-item.dto';
 import { PreferenceDTO } from './dto/preference.dto';
 const userSelectPaths = [
@@ -682,7 +682,12 @@ export class UserService {
           if (key === 'gender' && dataType === 'string') {
             editMap.set('gender', value);
           } else if (key === 'geo' && dataType === 'object') {
-            editMap.set('geo', value);
+            const {lat, lng, altVal } = value;
+            if (isNumeric(lat) && isNumeric(lng)) {
+              const alt = smartCastFloat(altVal, 10);
+              editMap.set('geo', { lat, lng, alt});
+              editMap.set('coords', [lng, lat]);
+            }
           } 
         });
       }
