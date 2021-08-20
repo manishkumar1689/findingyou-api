@@ -19,7 +19,7 @@ import multipleKeyScales from '../user/settings/multiscales';
 import { PreferenceOption } from '../user/interfaces/preference-option.interface';
 import { RedisService } from 'nestjs-redis';
 import * as Redis from 'ioredis';
-import { ProtocolSettings } from 'src/astrologic/lib/models/protocol-models';
+import { ProtocolSettings } from '../astrologic/lib/models/protocol-models';
 
 @Injectable()
 export class SettingService {
