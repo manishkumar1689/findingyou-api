@@ -1394,6 +1394,38 @@ export const matchGrahaEquivalent = (obj: ObjectType, chart: Chart, ayanamshaNum
   return matchedKey;
 }
 
+export const matchSignNums = (key: string) => {
+  const tail = key.split('__').pop();
+  let signs: number[] = [];
+  if (isNumeric(tail)) {
+    signs = [parseInt(tail, 10)];
+  } else {
+    switch (tail) {
+      case "odd":
+        signs = [1,3,5,7,9,11];
+        break;
+      case "even":
+        signs = [2,4,6,8,10,12];
+        break;
+      case "fire":
+      case "earth":
+      case "air":
+      case "water":
+        signs =rashiValues.filter(rv => rv.element === tail).map(rv => rv.num);
+        break;
+      case "movable":
+      case "fixed":
+        signs = rashiValues.filter(rv => rv.mobility === tail).map(rv => rv.num);
+        break;
+        case "head_rising":
+        case "fixed":
+          signs = rashiValues.filter(rv => rv.mobility === tail).map(rv => rv.num);
+          break;
+    }
+  }
+  return signs;
+}
+
 export class PairedChart {
   _id?: string;
   user: string;

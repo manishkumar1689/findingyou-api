@@ -7,7 +7,7 @@ import { subtractLng360, addLng360, calcDist360 } from '../helpers';
 import ayanamshaValues from '../settings/ayanamsha-values';
 import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
 import { calcInclusiveSignPositions, calcInclusiveTwelfths } from '../math-funcs';
-import { Chart, filterBmMatchRow, matchGrahaEquivalent, PairedChart } from './chart';
+import { Chart, filterBmMatchRow, matchGrahaEquivalent, matchSignNums, PairedChart } from './chart';
 import { currentJulianDay } from '../julian-date';
 import { assignDashaBalances, DashaBalance } from './dasha-set';
 import { matchNextTransitAtLng } from '../astro-motion';
@@ -15,7 +15,6 @@ import { GeoPos } from '../../interfaces/geo-pos';
 import { calcNextAscendantLng } from '../calc-ascendant';
 import { buildFunctionalBMMap, naturalBenefics, naturalMalefics } from '../settings/graha-values';
 import { coreIndianGrahaKeys } from './graha-set';
-import { settings } from 'cluster';
 
 export interface KeyNumVal {
   key: string;
@@ -246,6 +245,10 @@ export class Condition {
 
   get sameSign() {
     return this.contextType.sameSign;
+  }
+
+  get matchBirthSign() {
+    return this.c1Key.endsWith("birth_asc")
   }
 
   get usesMidChart() {
@@ -1575,4 +1578,14 @@ export const matchDrishtiCondition = (
       break;
   } */
   return bmRows.some(row => filterBmMatchRow(row, condition));
+}
+
+export const processByBirthSign = (condition: Condition, fromChart: Chart) => {
+  const signs = matchSignNums(condition.c2Key);
+  fromChart.setAyanamshaItemByKey("true_citra");
+  const ascSign = Math.floor(fromChart.lagna / 30) + 1;
+  const valid = signs.includes(ascSign);
+  const start = fromChart.jd;
+  const end = fromChart.jd + (200 * 365.25);
+  return { valid, start, end };
 }

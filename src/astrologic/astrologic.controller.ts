@@ -92,6 +92,7 @@ import {
   matchDrishtiConditionSignLngs,
   matchOrbFromGrid,
   PredictiveRule,
+  processByBirthSign,
   processTransitDashaRuleSet,
   processTransitMatch,
   Protocol,
@@ -940,7 +941,10 @@ export class AstrologicController {
 
   async processTransitRuleSet(cond: Condition, chart: Chart, geo: GeoPos, settings: ProtocolSettings) {
     const [fromCat, subType] = cond.fromMode.split("_");
-    switch (fromCat) {
+    const refCat = cond.matchBirthSign ? 'birth_asc' : fromCat;
+    switch (refCat) {
+      case "birth_asc":
+        return processByBirthSign(cond, chart);
       case "level":
         return await processTransitDashaRuleSet(cond, parseInt(subType, 10), chart, settings);
       case "transit":
