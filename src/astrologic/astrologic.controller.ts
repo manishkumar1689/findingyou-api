@@ -925,25 +925,6 @@ export class AstrologicController {
     const valid = hasRuleData &&  hasChart;
     const numOuterValid = outerItems.filter(oi => oi.valid).length;
     const matches = andMode ? numOuterValid === outerItems.length : numOuterValid > 0;
-    
-    /* const cm = {
-      isTrue: true,
-      fromMode: 'transit',
-      toMode: 'birth',
-      c1Key: 'graha__me',
-      c2Key: 'graha__mo',
-      varga1: 1,
-      varga2: 1,
-      context: 'receives_graha_drishti',
-      aspectQuality: '',
-      lordRev: false,
-      isSet: false,
-      kutaRange: [ -1, -1 ],
-      outcome: false
-    }
-    const cond = new Condition(cm);
-    const dr = matchDrishtiConditionSignLngs(cond, chart, 'ma', 'ju', settings);
-    */
     return res.json({ valid , matches, items: outerItems });
   }
 
