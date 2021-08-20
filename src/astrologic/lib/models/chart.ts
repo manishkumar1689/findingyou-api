@@ -1417,9 +1417,12 @@ export const matchSignNums = (key: string) => {
       case "fixed":
         signs = rashiValues.filter(rv => rv.mobility === tail).map(rv => rv.num);
         break;
-        case "head_rising":
-        case "fixed":
-          signs = rashiValues.filter(rv => rv.mobility === tail).map(rv => rv.num);
+      case "head_rising":
+      case "back_rising":
+      case "both_rising":
+          const risingBase = tail.split("_").shift();
+          const risingKeys = risingBase === "both" ? ['head','back'] : [risingBase];
+          signs = rashiValues.filter(rv => risingKeys.every(rk => rv.rising.includes(rk))).map(rv => rv.num);
           break;
     }
   }
