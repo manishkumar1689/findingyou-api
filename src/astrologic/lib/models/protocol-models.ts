@@ -1271,6 +1271,11 @@ export const matchAspectRange = (aspect: string, k1: string, k2: string, orbs: K
 }
 
 export const matchAspectRanges = (aspect: string, k1: string, k2: string, orbs: KeyOrbs[] = []) => {
+  const isSign = isNumeric(k1);
+  if (isSign) {
+    const signNum = parseInt(k1, 10);
+    return [[((signNum - 1) * 30), (signNum * 30)]];
+  }
   const aspectData = calcOrb(aspect, k1, k2);
   const orb = matchAspectOrb(aspect, k1, k2, aspectData, orbs);
   const ranges =
@@ -1434,7 +1439,6 @@ export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Ch
     start = last.startJd;
     end = last.endJd;
   }
-  
   const ayaItem = chart.setAyanamshaItemByKey("true_citra");
   const ct = matchContextType(cond.context);
   const gkTransit = matchGrahaEquivalent(cond.object1, chart);
@@ -1559,24 +1563,6 @@ export const matchDrishtiCondition = (
       }
     });
   });
-  /* const keyParts = condition.contextType.key.split('_');
-  const firstPart = keyParts[0];
-  const numVal = isNumeric(firstPart) ? parseInt(firstPart) : -1;
-  switch (firstPart) {
-    case 'any':
-    case 'receives':
-    case 'sends':
-      matched = bmRows.some(row => filterBmMatchRow(row, condition));
-      break;
-    case 'all':
-      matched = bmRows.every(row => filterBmMatchRow(row, condition));
-      break;
-    default:
-      matched =
-        bmRows.filter(row => filterBmMatchRow(row, condition)).length ===
-        numVal;
-      break;
-  } */
   return bmRows.some(row => filterBmMatchRow(row, condition));
 }
 
