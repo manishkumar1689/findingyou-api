@@ -1561,7 +1561,7 @@ export const matchDignity = (chart: Chart, typeKey = "", grahaKey = "") => {
     if (type === 'rel') {
       const relationship = mapRelationships(
         graha.sign,
-        chart.get(graha.ruler).sign,
+        chart.graha(graha.ruler).sign,
         graha.isOwnSign,
         graha.natural,
       );

@@ -28,7 +28,6 @@ export const mapRelationships = (
       ),
     };
   });
-
   const compoundKeys = compoundMatches
     .filter(cm => cm.values.some(v => v))
     .map(cm => cm.key);

@@ -104,7 +104,9 @@ export class Graha extends BaseObject {
   constructor(body: any = null) {
     super();
     if (body instanceof Object) {
-      Object.entries(body).forEach(entry => {
+      const row = grahaValues.find(g => g.key === body.key);
+      const obj = row instanceof Object ? { ...row, ...body} : body;
+      Object.entries(obj).forEach(entry => {
         const [key, value] = entry;
         switch (key) {
           case 'longitude':
