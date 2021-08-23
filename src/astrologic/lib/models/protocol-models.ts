@@ -1447,7 +1447,8 @@ export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Ch
   const ct = matchContextType(cond.context);
   const gkTransit = matchGrahaEquivalent(cond.object1, chart);
   const gkBirth = matchGrahaEquivalent(cond.object2, chart);
-  const isDignity = gkBirth.length > 3;
+  const isSign = cond.context === "in_sign";
+  const isDignity = !isSign && gkBirth.length > 3;
   const g1 = chart.graha(gkBirth);
   const g2 = chart.graha(gkTransit);
   g1.setAyanamshaItem(ayaItem);
@@ -1470,6 +1471,8 @@ export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Ch
     });
   } else if (isDignity) {
     valid = matchDignity(chart, gkBirth, gkTransit);
+  } else if (isSign) {
+    valid = matchByBirthSign(cond, chart);
   }
   return { valid, start, end };
 }
@@ -1674,4 +1677,12 @@ export const processByBirthSign = (condition: Condition, fromChart: Chart) => {
   const start = fromChart.jd;
   const end = fromChart.jd + (200 * 365.25);
   return { valid, start, end };
+}
+
+export const matchByBirthSign = (cond: Condition, chart: Chart) => {
+  const refKey = matchGrahaEquivalent(cond.object1, chart);
+  chart.setAyanamshaItemByKey("true_citra");
+  const graha = chart.graha(refKey);
+  const signNums = matchSignNums(cond.c2Key);
+  return signNums.includes(graha.signNum);
 }
