@@ -199,7 +199,13 @@ export class Graha extends BaseObject {
     return degToSign(lngD1) === degToSign(lngD9);
   }
 
-  get retrodgrade(): boolean {
+  get vargottamaSign(): number {
+    const adjustedLng = subtractLng360(this.lng, this.ayanamshaValue);
+    const lngD9 = calcVargaValue(adjustedLng, 9);
+    return degToSign(lngD9);
+  }
+
+  get retrograde(): boolean {
     return this.lngSpeed < 0;
   }
 
@@ -208,6 +214,15 @@ export class Graha extends BaseObject {
       return directionalStrengthMap[this.key] === this.variant.house;
     } else {
       return false;
+    }
+  }
+
+  directionalStrengthSign(firstSignNum = 1): number {
+    if (Object.keys(directionalStrengthMap).includes(this.key)) {
+      const house = directionalStrengthMap[this.key];
+      return ((house - 1) + (firstSignNum - 1) % 12) + 1;
+    } else {
+      return 0;
     }
   }
 

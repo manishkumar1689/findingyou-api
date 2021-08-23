@@ -15,6 +15,9 @@ import { GeoPos } from '../../interfaces/geo-pos';
 import { calcNextAscendantLng } from '../calc-ascendant';
 import { buildFunctionalBMMap, naturalBenefics, naturalMalefics } from '../settings/graha-values';
 import { coreIndianGrahaKeys } from './graha-set';
+import grahaValues from '../settings/graha-values';
+import { mapRelationships } from '../map-relationships';
+import { sign } from 'crypto';
 
 export interface KeyNumVal {
   key: string;
@@ -1275,17 +1278,18 @@ export const matchAspectRanges = (aspect: string, k1: string, k2: string, orbs: 
   if (isSign) {
     const signNum = parseInt(k1, 10);
     return [[((signNum - 1) * 30), (signNum * 30)]];
+  } else {
+    const aspectData = calcOrb(aspect, k1, k2);
+    const orb = matchAspectOrb(aspect, k1, k2, aspectData, orbs);
+    const ranges =
+      orb !== aspectData.orb
+        ? calcAllAspectRanges(aspectData.row, orb, [
+            subtractLng360(aspectData.deg, orb),
+            (aspectData.deg + orb) % 360,
+          ])
+        : [aspectData.range];
+    return ranges;
   }
-  const aspectData = calcOrb(aspect, k1, k2);
-  const orb = matchAspectOrb(aspect, k1, k2, aspectData, orbs);
-  const ranges =
-    orb !== aspectData.orb
-      ? calcAllAspectRanges(aspectData.row, orb, [
-          subtractLng360(aspectData.deg, orb),
-          (aspectData.deg + orb) % 360,
-        ])
-      : [aspectData.range];
-  return ranges;
 }
 
 export const assessChart = (
@@ -1443,6 +1447,7 @@ export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Ch
   const ct = matchContextType(cond.context);
   const gkTransit = matchGrahaEquivalent(cond.object1, chart);
   const gkBirth = matchGrahaEquivalent(cond.object2, chart);
+  const isDignity = gkBirth.length > 3;
   const g1 = chart.graha(gkBirth);
   const g2 = chart.graha(gkTransit);
   g1.setAyanamshaItem(ayaItem);
@@ -1463,6 +1468,8 @@ export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Ch
       const [start, end] = range;
       return g1.longitude >= start && g1.longitude < end;
     });
+  } else if (isDignity) {
+    valid = matchDignity(chart, gkBirth, gkTransit);
   }
   return { valid, start, end };
 }
@@ -1479,11 +1486,104 @@ export const matchGrahaInTargetRanges = async (targetRanges: number[][], startJd
   return nextMatches;
 }
 
+export const matchRelationshipType = (key = '') => {
+  const baseKey = key.replace(/_signs?$/, '').toLowerCase().replace(/_/, '');
+  switch (baseKey) {
+    case 'greatfriend':
+    case 'bestfriend':
+      return { key: 'bestFriend', type: 'rel' };
+    case 'friend':
+    case 'enemy':
+    case 'neutral':
+      return { key: baseKey, type: 'rel' };
+    case 'archenemy':
+    case 'greatenemy':
+      return { key: 'archEnemy', type: 'rel' };
+    case 'own':
+      return { key: 'ownSign', type: 'arr_attr' };
+    case 'mulatrikona':
+      return { key: 'mulaTrikona', type: 'attr' };
+    case 'exalted':
+      return { key: 'exalted', type: 'attr' };
+    case 'vargottama':
+      return { key: 'vargottamaSign', type: 'attr' };
+    case 'retrograde':
+      return { key: 'retrograde', type: 'bool' };
+    case 'directionalstrength':
+      return { key: 'directionalStrengthSign', type: 'method' };
+  }
+}
+
+export const matchSpecialRanges = (chart: Chart, typeKey = "", grahaKey = "") => {
+  chart.setAyanamshaItemByKey('true_citra')
+  const graha = chart.graha(grahaKey);
+  const signs: number[] = [];
+  if (grahaKey.length === 2) {
+    const { key, type } = matchRelationshipType(typeKey);
+    for (let n = 1; n <= 12; n++) {
+      if (type === 'rel') {
+        const relationship = mapRelationships(
+          graha.sign,
+          chart.get(graha.ruler).sign,
+          graha.isOwnSign,
+          graha.natural,
+        );
+        if (relationship.compound === key) {
+          signs.push(n);
+        }
+      } else if (type === 'arr_attr') {
+        if (graha[type] instanceof Array) {
+          graha[type].forEach(sign => {
+            signs.push(sign);
+          })
+        }
+      } else if (type === 'attr') {
+        if (typeof graha[type] === 'number') {
+          signs.push(graha[type]);
+        }
+      } else if (type === 'method') {
+        if (graha[type](chart.firstHouseSign)) {
+          signs.push(graha[type]);
+        }
+      }
+    }
+  }
+  return signs.map(signNum => [((signNum -1) * 30), (signNum * 30)]);
+}
+
+export const matchDignity = (chart: Chart, typeKey = "", grahaKey = "") => {
+  chart.setAyanamshaItemByKey('true_citra');
+
+  
+  const graha = chart.graha(grahaKey);
+  if (grahaKey.length === 2) {
+    const { key, type } = matchRelationshipType(typeKey);
+    if (type === 'rel') {
+      const relationship = mapRelationships(
+        graha.sign,
+        chart.get(graha.ruler).sign,
+        graha.isOwnSign,
+        graha.natural,
+      );
+      return relationship.compound === key;
+    } else if (type === 'arr_attr') {
+      return graha[key].includes(graha.sign);
+    } else if (type === 'attr') {
+      return graha[key] === graha.sign;
+    } else if (type === 'method') {
+      return graha[key](chart.firstHouseSign) === graha.sign;
+    } else if (type === 'bool') {
+      return graha[key];
+    }
+  }
+  return false;
+}
+
 export const processTransitMatch = async (cond: Condition, chart: Chart, geo: GeoPos, settings = null) => {
   const ayaItem = chart.setAyanamshaItemByKey("true_citra");
   const startJd = currentJulianDay();
   const gkTransit = matchGrahaEquivalent(cond.object1, chart);
-  const gkBirth = matchGrahaEquivalent(cond.object2, chart);
+  const gkBirth = matchGrahaEquivalent(cond.object2, chart);  
   const g1 = chart.graha(gkBirth);
   g1.setAyanamshaItem(ayaItem);
   let nextMatches = [];
