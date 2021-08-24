@@ -1878,16 +1878,36 @@ export class AstrologicService {
   async nextPrevStation(
     num: number,
     jd: number,
-    station: string,
+    stationKey: string,
     prev: boolean,
   ): Promise<BodySpeed> {
     const relCondition = prev ? { $lte: jd } : { $gte: jd };
     const sortDir = prev ? -1 : 1;
+    const station = notEmptyString(stationKey, 2)? stationKey : { $nin: ['sample', 'peak', 'retro-peak'] };
+    const criteria: any = { num, jd: relCondition, station }
     return await this.bodySpeedModel
-      .findOne({ num, jd: relCondition, station })
+      .findOne(criteria)
       .sort({ jd: sortDir })
       .limit(1)
       .exec();
+  }
+
+  async matchStations(key: string, jd: number): Promise<any> {
+    const row = grahaValues.find(gr => gr.key === key);
+    const num = row instanceof Object ? row.num : -1;
+    const nudge = 1/1440;
+    const prev = await this.nextPrevStation(num, jd, '-', true);
+    //const prev2 = await this.nextPrevStation(num, prev.jd - nudge, '-', true);
+    const next = await this.nextPrevStation(num, jd, '-', false);
+    const next2 = await this.nextPrevStation(num, next.jd + nudge, '-', false);
+    const retrograde = prev.station === 'retro-start';
+    const nextDirect =retrograde ? jd : next.jd;
+    const nextRetro = retrograde ? jd : next.jd;
+    const nextLng = next.lng;
+    const prevLng = prev.lng;
+    const nextPeriod = next2.jd - next.jd;
+    const currPeriod = next.jd - prev.jd;
+    return { retrograde, nextDirect, nextRetro, currPeriod, nextPeriod, prevLng, nextLng };
   }
 
   async transitionsByPlanet(

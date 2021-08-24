@@ -16,6 +16,7 @@ import { calcNextAscendantLng } from '../calc-ascendant';
 import { buildFunctionalBMMap, naturalBenefics, naturalMalefics } from '../settings/graha-values';
 import { coreIndianGrahaKeys } from './graha-set';
 import { mapRelationships } from '../map-relationships';
+import { matchKotaCakraSection } from '../settings/nakshatra-values';
 
 export interface KeyNumVal {
   key: string;
@@ -1708,4 +1709,12 @@ export const matchByBirthSign = (cond: Condition, chart: Chart) => {
   const graha = chart.graha(refKey);
   const signNums = matchSignNums(cond.c2Key);
   return signNums.includes(graha.signNum);
+}
+
+export const matchKotaChakra = (cond: Condition, chart: Chart) => {
+  chart.setAyanamshaItemByNum(27);
+  const refGrKey = matchGrahaEquivalent(cond.object1, chart);
+  const moonLng = chart.graha('mo');
+  const nums = matchKotaCakraSection(cond.c2Key);
+  console.log(nums, cond.c2Key, moonLng);
 }

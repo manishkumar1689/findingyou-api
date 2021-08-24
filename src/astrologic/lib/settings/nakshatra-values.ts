@@ -294,9 +294,28 @@ export const matchKotaCakraSection = (type = "inner") => {
         const index = row.flow === 1 ? 3 : 0;
         return row.nums[index];
       });
+    case "entry":
+      return kotaCakraGroups.filter(row => row.flow > 0).map(row => row.nums).reduce((a, b) => a.concat(b));
+    case "exit":
+      return kotaCakraGroups.filter(row => row.flow < 0).map(row => row.nums).reduce((a, b) => a.concat(b));
     default:
     	return matchKotaCakraDirection(type);
   }
+}
+
+export const kotaCakraGrahaDirections = { 
+  su: [1],
+  mo: [1],
+  me: [1, -1],
+  ve: [1, -1],
+  ma: [1, -1],
+  ju: [1, -1],
+  sa: [1, -1],
+  ur: [1, -1],
+  ne: [1, -1],
+  pl: [1, -1],
+  ra: [-1],
+  ke: [-1]
 }
 
 export const sulaCakraGroups = [

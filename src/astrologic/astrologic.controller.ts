@@ -90,6 +90,7 @@ import {
   Condition,
   matchDrishtiCondition,
   matchDrishtiConditionSignLngs,
+  matchKotaChakra,
   matchOrbFromGrid,
   PredictiveRule,
   processByBirthSign,
@@ -934,9 +935,16 @@ export class AstrologicController {
     switch (ruleType) {
       case 'transit':
         return await this.processTransitRuleSet(cond, chart, geo, settings);
+      case 'kota':
+          return this.processKotaCakra(cond, chart);
       default:
         return result;
     }
+  }
+
+  async processKotaCakra(cond: Condition, chart: Chart) {
+    const result = matchKotaChakra(cond, chart);
+    
   }
 
   async processTransitRuleSet(cond: Condition, chart: Chart, geo: GeoPos, settings: ProtocolSettings) {
@@ -2583,6 +2591,19 @@ export class AstrologicController {
       const num = parseInt(planet);
       data = await this.astrologicService.savePlanetStations(num, dt, days);
     }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('direction/:key/:dt?')
+  async sampleStationByGraha(
+    @Res() res,
+    @Param('key') key,
+    @Param('dt') dt,
+  ) {
+    
+    const { dtUtc, jd } = matchJdAndDatetime(dt);
+    let data: any = { valid: false, dtUtc, jd, result: null };
+    data.result = await this.astrologicService.matchStations(key, jd);
     return res.status(HttpStatus.OK).json(data);
   }
 
