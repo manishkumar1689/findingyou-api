@@ -156,8 +156,12 @@ export class Graha extends BaseObject {
     return Math.floor(this.lng / 30) + 1;
   }
 
+  get signIndex() {
+    return Math.floor(this.longitude / 30);
+  }
+
   get signNum() {
-    return Math.floor(this.longitude / 30) + 1;
+    return this.signIndex + 1;
   }
 
   get nakshatra27Num() {

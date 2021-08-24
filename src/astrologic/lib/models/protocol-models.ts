@@ -15,9 +15,7 @@ import { GeoPos } from '../../interfaces/geo-pos';
 import { calcNextAscendantLng } from '../calc-ascendant';
 import { buildFunctionalBMMap, naturalBenefics, naturalMalefics } from '../settings/graha-values';
 import { coreIndianGrahaKeys } from './graha-set';
-import grahaValues from '../settings/graha-values';
 import { mapRelationships } from '../map-relationships';
-import { sign } from 'crypto';
 
 export interface KeyNumVal {
   key: string;
@@ -83,6 +81,7 @@ export const funcBmMap = (chart: Chart, build = true): Map<string, Array<string>
 }
 
 export const matchBmGrahaKeys = (key: string, condition: Condition, chart: Chart) => {
+
   if (key.length === 2) {
     return [key];
   } else {
@@ -372,7 +371,7 @@ export class Condition {
   }
 
   get isNatural() {
-    return this.c1Key.startsWith('natbm_');
+    return this.c1Key.startsWith('natbm_') || this.context.endsWith('kartari_yoga');
   }
 
   get sendsDrishti() {
@@ -1118,6 +1117,10 @@ export class ContextType {
     }
   }
 
+  get isSign() {
+    return this.key === "in_sign";
+  }
+
   get bySign() {
     switch (this.key) {
       case 'in_sign':
@@ -1166,6 +1169,17 @@ export class ContextType {
     return keys.includes(this.key);
   }
 
+  get bmKey() {
+    switch (this.key) {
+      case 'shubha_kartari_yoga':
+        return 'benefics';
+      case 'papa_kartari_yoga':
+        return 'malefics';
+      default:
+        return 'neutral';
+    }
+  }
+
   get isDrishtiAspect() {
     const keys = [
       'sends_graha_drishti',
@@ -1181,7 +1195,7 @@ export class ContextType {
   }
 
   get isKartariYoga() {
-    const keys = ['shubha_kartari_yoga', 'papa_kartari_yoga', 'kartari_yoga'];
+    const keys = ['kartari_yoga', 'papa_kartari_yoga', 'shubha_kartari_yoga'];
     return keys.includes(this.key);
   }
 
@@ -1447,8 +1461,7 @@ export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Ch
   const ct = matchContextType(cond.context);
   const gkTransit = matchGrahaEquivalent(cond.object1, chart);
   const gkBirth = matchGrahaEquivalent(cond.object2, chart);
-  const isSign = cond.context === "in_sign";
-  const isDignity = !isSign && gkBirth.length > 3;
+  const isDignity = !ct.isKartariYoga && !ct.isSign && gkBirth.length > 3;
   const g1 = chart.graha(gkBirth);
   const g2 = chart.graha(gkTransit);
   g1.setAyanamshaItem(ayaItem);
@@ -1471,8 +1484,18 @@ export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Ch
     });
   } else if (isDignity) {
     valid = matchDignity(chart, gkBirth, gkTransit);
-  } else if (isSign) {
+  } else if (ct.isSign) {
     valid = matchByBirthSign(cond, chart);
+  } else if (ct.isKartariYoga) {
+    chart.setAyanamshaItemByNum(27);
+    const keys = matchBmGrahaKeys(ct.bmKey, cond, chart);
+    const refGr = chart.graha(gkTransit);
+    const adjacentSignIndices =  [(refGr.signIndex + 11) % 12, (refGr.signIndex + 1) % 12];
+    const filtered = keys.filter(k => {
+      const gr = chart.graha(k);
+      return adjacentSignIndices.includes(gr.signIndex);
+    });
+    valid = filtered.length >= 2;
   }
   return { valid, start, end };
 }

@@ -179,6 +179,20 @@ export const contextTypes = [
     isKuta: false,
   },
   {
+    key: 'shubha_kartari_yoga',
+    name: 'has kartari yoga',
+    isAspect: false,
+    c2groups: [],
+    isKuta: false,
+  },
+  {
+    key: 'papa_kartari_yoga',
+    name: 'has papa kartari yoga',
+    isAspect: false,
+    c2groups: [],
+    isKuta: false,
+  },
+  {
     key: 'all_ashtakutas',
     name: 'Aṣṭakūṭas',
     isAspect: false,
