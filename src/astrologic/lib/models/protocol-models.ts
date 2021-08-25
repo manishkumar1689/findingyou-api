@@ -3,14 +3,14 @@ import { inRange, isNumeric, notEmptyString } from '../../../lib/validators';
 import { smartCastFloat } from '../../../lib/converters';
 import { contextTypes } from '../settings/compatibility-sets';
 import { calcOrb, calcAllAspectRanges } from '../calc-orbs';
-import { subtractLng360, addLng360, calcDist360 } from '../helpers';
+import { subtractLng360, addLng360, calcDist360, nakshatra28Progress, nakshatra28, numbersToRanges, numbersToSpans, nakshatra28ToDegrees, numbersToNakshatraDegreeRanges } from '../helpers';
 import ayanamshaValues from '../settings/ayanamsha-values';
 import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
 import { calcInclusiveSignPositions, calcInclusiveTwelfths } from '../math-funcs';
 import { Chart, filterBmMatchRow, matchGrahaEquivalent, matchSignNums, PairedChart } from './chart';
 import { currentJulianDay } from '../julian-date';
 import { assignDashaBalances, DashaBalance } from './dasha-set';
-import { matchNextTransitAtLng } from '../astro-motion';
+import { calcBodyPos, matchNextTransitAtLng } from '../astro-motion';
 import { GeoPos } from '../../interfaces/geo-pos';
 import { calcNextAscendantLng } from '../calc-ascendant';
 import { buildFunctionalBMMap, naturalBenefics, naturalMalefics } from '../settings/graha-values';
@@ -1711,10 +1711,75 @@ export const matchByBirthSign = (cond: Condition, chart: Chart) => {
   return signNums.includes(graha.signNum);
 }
 
-export const matchKotaChakra = (cond: Condition, chart: Chart) => {
+const calcKotaOffsetPos = (lng: number, offset = 0) => {
+  return ((nakshatra28(lng - 1) + offset) % 28) + 1;
+}
+
+const calcNextKotaMatches = async (ranges: number[][], refGrKey = "", currJd = 0, ayaKey = 'true_citra', dir = 0) => {
+  const nextMatches = [];
+  for (const range of ranges) {
+    const [start, end] = range;
+    const startMatch = await matchNextTransitAtLng(refGrKey, start, currJd, ayaKey, dir, end);
+    nextMatches.push({ 
+      lng: start,
+      jd: startMatch.targetJd,
+      speed: startMatch.speed
+    });
+    /* const endMatch = await matchNextTransitAtLng(refGrKey, start, currJd, ayaKey, dir, end);
+    nextMatches.push({ 
+      mode: 'end',
+      lng: end,
+      jd: endMatch.targetJd,
+      speed: endMatch.speed
+    }); */
+  }
+  return nextMatches;
+}
+
+const flipEntryKey = (key: string) => {
+  const flipkeys = ['exit', 'entry'];
+  return flipkeys.includes(key)? key === 'entry' ? 'exit' : 'entry' : key;
+}
+
+export const matchKotaChakra = async (cond: Condition, chart: Chart) => {
   chart.setAyanamshaItemByNum(27);
+  const ayaKey = 'true_citra';
   const refGrKey = matchGrahaEquivalent(cond.object1, chart);
-  const moonLng = chart.graha('mo');
-  const nums = matchKotaCakraSection(cond.c2Key);
-  console.log(nums, cond.c2Key, moonLng);
+  const moon = chart.graha('mo');
+  
+  const nakIndex = nakshatra28(moon.longitude) - 1;
+  const kotaOffset = ((27 - nakIndex + 28) % 28);
+  //const mercPos = calcKotaOffsetPos(merc.longitude, kotaOffset);
+  const applySpeedMode = ['entry', 'exit'].includes(cond.c2Key);
+  const alwaysNeg = ['ke', 'ra'].includes(refGrKey)
+  const alwaysPos = ['mo', 'su'].includes(refGrKey);
+  const filterKey = alwaysNeg &&  applySpeedMode ? flipEntryKey(cond.c2Key) : cond.c2Key;
+  const dir1 = applySpeedMode? alwaysNeg? -1 : 1 : 0;
+  const dir2 = applySpeedMode? -1 : 0;
+  const fetchMore = applySpeedMode && !alwaysNeg && !alwaysPos;
+  const currJd = currentJulianDay();
+  const bodyPos = await calcBodyPos(refGrKey, currJd);
+  const bodyNakNum = calcKotaOffsetPos(bodyPos.lng, kotaOffset);
+  const nums = matchKotaCakraSection(filterKey);
+  const isMatched = nums.includes(bodyNakNum)  && ((bodyPos.speed > 0 && !alwaysNeg) || (bodyPos.speed < 0 && alwaysNeg));
+  const ranges = numbersToNakshatraDegreeRanges(nums, kotaOffset);
+  //const mercMatched = nums.includes(mercPos);
+  
+  const nextMatches = await calcNextKotaMatches(ranges, refGrKey, currJd, ayaKey, dir1);
+  if (fetchMore) {
+    const reverseKey = flipEntryKey(cond.c2Key);
+    const nums2 = matchKotaCakraSection(reverseKey);
+    const ranges2 = numbersToNakshatraDegreeRanges(nums2, kotaOffset);
+    const moreMatches = await calcNextKotaMatches(ranges2, refGrKey, currJd, ayaKey, dir2);
+    moreMatches.forEach(row => {
+      nextMatches.push(row);
+    })
+  }
+  nextMatches.sort((a, b) => a.jd - b.jd)
+  /* console.log({
+    refGrKey, nums, ranges, first: nextMatches[0], bodyPos, bodyNakNum, isMatched, key2: cond.c2Key, moonLng: moon.longitude, kotaOffset
+  }); */
+  const valid = isMatched || nextMatches.length > 0;
+  const start = isMatched ? currJd : valid ? nextMatches[0].jd : null;
+  return { valid, start };
 }

@@ -931,7 +931,7 @@ export class AstrologicController {
   }
 
   async processPredictiveRuleSet(cond: Condition, ruleType = "", chart: Chart, geo: GeoPos, settings: ProtocolSettings) {
-    const result = { valid: false, start: null, end: null, score: 0 };
+    const result: any = { valid: false, start: null, end: null, score: 0 };
     switch (ruleType) {
       case 'transit':
         return await this.processTransitRuleSet(cond, chart, geo, settings);
@@ -943,8 +943,7 @@ export class AstrologicController {
   }
 
   async processKotaCakra(cond: Condition, chart: Chart) {
-    const result = matchKotaChakra(cond, chart);
-    
+    return matchKotaChakra(cond, chart);
   }
 
   async processTransitRuleSet(cond: Condition, chart: Chart, geo: GeoPos, settings: ProtocolSettings) {

@@ -411,6 +411,73 @@ export const nakshatra28 = (lng: number) => {
   return nkVal;
 };
 
+export const nakshatra28ToDegrees = (nakRef: number, kotaOffset = 0): number[] => {
+  const nak = (360/27);
+  const nakNum = ((nakRef - 1 + kotaOffset + 28) % 28) + 1;
+  let start = (nakNum - 1) * nak;
+  let end = nakNum  * nak;
+  const [minAbhjit, maxAbhjit] = abhijitNakshatraRange();
+  if (nakNum === 21) {
+    end = minAbhjit;
+  } else if (nakNum === 22) {
+    start = minAbhjit;
+    end = maxAbhjit;
+  } else if (nakNum > 22) {
+    if (nakNum === 23) {
+      start = maxAbhjit;
+    } else {
+      start -= nak;
+    }
+    end -= nak;
+    if (end > 360) {
+      end = 360;
+    }
+  }
+  return [start, end];
+};
+
+export const numbersToRanges = (nums: number[], addEndOffset = true): number[][] => {
+  const ranges = [];
+  const endOffset = addEndOffset ? 1 : 0;
+  if (nums.length > 0) {
+    const lastIndex = nums.length - 1;
+    if (nums.length > 1) {
+      nums.sort((a, b) => a - b);
+      let min = nums[0];
+      for (let i = 0; i < lastIndex; i++) {
+        const next = nums[(i+1)];
+        const curr = nums[i];
+        if (curr !== next - 1) {
+          ranges.push([min, curr + endOffset]);
+          min = next;
+        }
+        if (i === (lastIndex -1)) {
+          ranges.push([min, next + endOffset]);
+        }
+      }
+    } else {
+      ranges.push([nums[0], nums[0] + endOffset]);
+    }
+  }
+  return ranges;
+}
+
+export const numbersToSpans = (nums: number[]) => {
+  return numbersToRanges(nums, false);
+}
+
+export const numbersToNakshatraDegreeRanges = (nums: number[], kotaOffset = 0): number[][] => {
+  return numbersToSpans(nums).map(span => {
+    if (span[0] === span[1]) {
+      return nakshatra28ToDegrees(span[0], kotaOffset);
+    } else {
+      const start = nakshatra28ToDegrees(span[0], kotaOffset);
+      const end = nakshatra28ToDegrees(span[1], kotaOffset);
+      return [start[0], end[1]];
+    }
+  });
+}
+
 export const withinNakshatra27 = (lng: number) => {
   return lng % (360 / 27);
 };

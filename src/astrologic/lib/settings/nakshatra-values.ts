@@ -254,14 +254,14 @@ const nakshatraValues = [
 ];
 
 const kotaCakraGroups = [
-  { key: 'e', flow: 1, nums: [1, 2, 3, 4] },
-  { key: 'se', flow: -1, nums: [5, 6, 7] },
-  { key: 's', flow: 1, nums: [8, 9, 10, 11] },
-  { key: 'sw', flow: -1, nums: [12, 13, 14] },
-  { key: 'w', flow: 1, nums: [15, 16, 17, 18] },
-  { key: 'nw', flow: -1, nums: [19, 20, 21] },
-  { key: 'n', flow: 1, nums: [22, 23, 24, 25] },
-  { key: 'ne', flow: -1, nums: [26, 27, 28] },
+  { key: 'nw', flow: 1, nums: [1, 2, 3] },
+  { key: 'n', flow: -1, nums: [4, 5, 6, 7] },
+  { key: 'ne', flow: 1, nums: [8, 9, 10] },
+  { key: 'e', flow: -1, nums: [11, 12, 13, 14] },
+  { key: 'se', flow: 1, nums: [15, 16, 17] },
+  { key: 's', flow: -1, nums: [18, 19, 20, 21] },
+  { key: 'sw', flow: 1, nums: [21, 22, 24] },
+  { key: 'w', flow: -1, nums: [25, 26, 27, 28] },
 ];
 
 const matchKotaCakraDirection = (type = "s") => {
