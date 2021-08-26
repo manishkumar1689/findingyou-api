@@ -10,6 +10,7 @@ import { calcAscendantTimelineItems, calcOffsetAscendant } from './calc-ascendan
 import { LngLat } from './interfaces';
 import { currentJulianDay } from './julian-date';
 import { addLng360 } from './helpers';
+import { connectableObservableDescriptor } from 'rxjs/internal/observable/ConnectableObservable';
 
 export interface SignTimelineItem {
   sign?: number;
@@ -403,10 +404,12 @@ export class RangeSet {
 
   isValidDirection(speed: number) {
     const retrograde = speed < 0;
-    return this.neutral || retrograde === this.retrogradeOnly;
+    
+    return this.neutral || (retrograde && this.retrogradeOnly) || (!retrograde && this.directOnly);
   }
 
   isValid(deg: 0, speed = 0) {
+    //console.log(this.retrogradeOnly, this.directOnly, deg, this.range, inRange(deg, this.range))
     return inRange(deg, this.range) && this.isValidDirection(speed);
   }
 
@@ -442,6 +445,7 @@ export const matchNextTransitAtLngRanges = async (key = "su", rangeSets: RangeSe
     }
     i++;
   }
+  //console.log(spds, stopIndex);
   const hasMatch = spds.length > 0;
   const firstMatch = hasMatch ? spds[0] : null;
   const targetJd = hasMatch? firstMatch.jd : 0;

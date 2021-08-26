@@ -64,6 +64,8 @@ import {
 } from '../settings/graha-values';
 import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
 import { Kuta } from '../kuta';
+import { calcDashaSetByKey, matchCurrentDashaLord } from './dasha-set';
+import { currentJulianDay } from '../julian-date';
 
 
 export interface Subject {
@@ -437,6 +439,12 @@ export class Chart {
       numVal = item.value;
     }
     return numVal;
+  }
+
+  get kotaSvami() {
+    const moonSign = this.graha('mo').signNum;
+    const rashi = rashiValues.find(r => r.num === moonSign);
+    return rashi instanceof Object ? rashi.ruler : '';
   }
 
   get ayanamshaOffset() {
@@ -1388,6 +1396,18 @@ export const matchGrahaEquivalent = (obj: ObjectType, chart: Chart, ayanamshaNum
             matchedKey = ['lot', capitalize(lastPart)].join('Of');
             break;
         }
+      }
+    }
+    if (matchedKey.length > 2) {
+      chart.setAyanamshaItemByNum(ayanamshaNum);
+      const currJd = currentJulianDay();
+      switch (matchedKey) {
+        case 'lord_dasha':
+          matchedKey = matchCurrentDashaLord(chart, currJd);
+          break;
+        case 'kota_svami':
+          matchedKey = chart.kotaSvami;
+          break;
       }
     }
   }
