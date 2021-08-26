@@ -2,7 +2,7 @@ import * as swisseph from 'swisseph';
 import { calcUtAsync } from './sweph-async';
 import { calcJulDate, jdToDateTime, julToISODate } from './date-funcs';
 import grahaValues from './settings/graha-values';
-import { inTolerance360, isNumeric, notEmptyString, withinTolerance } from '../../lib/validators';
+import { inRange, inTolerance360, isNumber, isNumeric, notEmptyString, withinRanges, withinTolerance } from '../../lib/validators';
 import { matchPlanetNum } from './settings/graha-values';
 import { calcAyanamsha, calcBodiesJd, fetchHouseDataJd } from './core';
 import { subtractLng360 } from './math-funcs';
@@ -37,7 +37,7 @@ export const calcBodySpeed = async (jd, num, callback) => {
     switch(num) {
       case 101:
       case 102: 
-        num = swisseph.SE_TRUE_NODE;
+        num = swisseph.SE_MEAN_NODE;
         flip = num === 102;
         break;
     }
@@ -310,59 +310,37 @@ export const fetchAscendant = async (key = "as", jd = 0, geo = null) => {
   }
 }
 
-export const matchNextTransitAtLng = async (key = "su", lngFl = 0, jdFl = 0, ayanamsha = "true_citra", speedMode = 0, endLngFl = -1) => {
+export const matchNextTransitAtLng = async (key = "su", lngFl = 0, jdFl = 0, ayanamsha = "true_citra") => {
   const num = isNumeric(key)? parseInt(key) : matchPlanetNum(key);
   const ayaKey = notEmptyString(ayanamsha)? ayanamsha : "true_citra";
   const applyAyanamsha = ayaKey !== "tropical";
   const spds = [];
   const aya = applyAyanamsha? await calcAyanamsha(jdFl, ayaKey) : 0;
-  const filterBySpeed = speedMode !== 0;
-  const rangeMode = endLngFl >= 0;
   await calcBodySpeed(jdFl, num, (speed, lng) => {
-    const retro = speed < 0;
-    if (!filterBySpeed || retro === speedMode < 0) {
-      spds.push({ speed, lng, jd: jdFl });
-    }
+    spds.push({ speed, lng, jd: jdFl });
   });
   let refJd = jdFl;
   let i = 0;
-  const rangeMultiplier = rangeMode ? 3 : 1;
-  const step = matchProgressionJdStep(key) * rangeMultiplier;
-  let stopIndex = rangeMode? 18000 : 6000;
+  const step = matchProgressionJdStep(key);
+  let stopIndex = 6000;
   let matchedIndex = false;
-  let retroMult = 1;
   while (i < stopIndex) {
     refJd += step;
     await calcBodySpeed(refJd, num, (speed, lng) => {
-      const retrograde = speed < 0;
-      if (!filterBySpeed || retrograde === speedMode < 0) {
-        spds.push({ speed, lng, jd: refJd });
-      }
+      spds.push({ speed, lng, jd: refJd });
     });
-    let retro = false;
     if (spds.length > 0) {
       const lastItem = spds[(spds.length -1)];
-      retro = lastItem.speed < 0;
+      const retro = lastItem.speed < 0;
       const diff = lastItem.lng - lngFl;
-      if (!rangeMode) {
-        const matchedRow = (!retro && diff < lastItem.speed * step && diff >= 0) || (retro && diff > lastItem.speed * step && diff <= 0);
-        if (matchedRow) {
-          if (!matchedIndex) {
-            stopIndex = i + 2;
-            matchedIndex = true;
-          }
-        }
-      } else {
-        const matchedRow = lastItem.lng >= lngFl && lastItem.lng < endLngFl;
-        if (matchedRow) {
-          if (!matchedIndex) {
-            stopIndex = i + 2;
-            matchedIndex = true;
-          }
+      const matchedRow = (!retro && diff < lastItem.speed * step && diff >= 0) || (retro && diff > lastItem.speed * step && diff <= 0);
+      if (matchedRow) {
+        if (!matchedIndex) {
+          stopIndex = i + 2;
+          matchedIndex = true;
         }
       }
     }
-    retroMult = retro ? -1 : 1;
     i++;
   }
   if (spds.length > 3) {
@@ -374,10 +352,7 @@ export const matchNextTransitAtLng = async (key = "su", lngFl = 0, jdFl = 0, aya
     const prevLng = spds[(i-1)].lng;
     const prevSpd = spds[(i-1)].speed * step;
     const currLng = spds[i].lng;
-    if (
-      rangeMode ||
-      ((currLng >= lngFl || (currLng + prevSpd) >= lngFl) && (prevLng <= lngFl || (prevLng - 360) <= lngFl))
-    ) {
+    if ((currLng >= lngFl || (currLng + prevSpd) >= lngFl) && (prevLng <= lngFl || (prevLng - 360) <= lngFl)) {
       ranges.push(spds[(i-1)]);
     }
   }
@@ -387,7 +362,7 @@ export const matchNextTransitAtLng = async (key = "su", lngFl = 0, jdFl = 0, aya
   const [start, end ] = ranges;
   const distance = subtractLng360(lngFl, start.lng);
   const spanDeg = subtractLng360(end.lng, start.lng);
-  const progress = rangeMode? 0 : spanDeg > 0 ? distance / spanDeg : 0;
+  const progress = spanDeg > 0 ? distance / spanDeg : 0;
   const progressJd = progress * step;
   const targetJd = start.jd + progressJd;
   let speed = 0;
@@ -395,6 +370,87 @@ export const matchNextTransitAtLng = async (key = "su", lngFl = 0, jdFl = 0, aya
     speed = sp;
   });
   return { start, end, speed, targetJd, num, ayanamsha: aya };
+}
+
+export class RangeSet {
+  range = [0, 0];
+  speedMode = 0;
+
+  constructor(range: number[] = [], spMode = 0) {
+    if (range instanceof Array && range.length === 2) {
+      this.range = range;
+    }
+    if (spMode !== 0 && isNumber(spMode)) {
+      this.speedMode = spMode < 0? -1 : 1;
+    }
+  }
+
+  get applySpeed() {
+    return this.speedMode !== 0;
+  }
+
+  get neutral() {
+    return this.speedMode === 0;
+  }
+
+  get directOnly() {
+    return this.speedMode > 0;
+  }
+
+  get retrogradeOnly() {
+    return this.speedMode < 0;
+  }
+
+  isValidDirection(speed: number) {
+    const retrograde = speed < 0;
+    return this.neutral || retrograde === this.retrogradeOnly;
+  }
+
+  isValid(deg: 0, speed = 0) {
+    return inRange(deg, this.range) && this.isValidDirection(speed);
+  }
+
+}
+
+export const matchNextTransitAtLngRanges = async (key = "su", rangeSets: RangeSet[] = [], jdFl = 0, ayanamsha = "true_citra") => {
+  const num = isNumeric(key)? parseInt(key) : matchPlanetNum(key);
+  const ayaKey = notEmptyString(ayanamsha)? ayanamsha : "true_citra";
+  const applyAyanamsha = ayaKey !== "tropical";
+  const spds = [];
+  const aya = applyAyanamsha? await calcAyanamsha(jdFl, ayaKey) : 0;
+  await calcBodySpeed(jdFl, num, (speed, lng) => {
+    if (rangeSets.some(range => range.isValid(lng, speed))) {
+      spds.push({ speed, lng, jd: jdFl });
+    }
+  });
+  let refJd = jdFl;
+  let i = 0;
+  const step = matchProgressionJdStep(key) * 2;
+  let stopIndex = spds.length < 1? 18000 : 0;
+  let matchedIndex = false;
+  while (i < stopIndex) {
+    refJd += step;
+    await calcBodySpeed(refJd, num, (speed, lng) => {
+      if (rangeSets.some(range => range.isValid(lng, speed))) {
+        spds.push({ speed, lng, jd: refJd });
+        stopIndex = i;
+        matchedIndex = true;
+      }
+    });
+    if (matchedIndex) {
+      break;
+    }
+    i++;
+  }
+  const hasMatch = spds.length > 0;
+  const firstMatch = hasMatch ? spds[0] : null;
+  const targetJd = hasMatch? firstMatch.jd : 0;
+  let speed = 0;
+  await calcBodySpeed(targetJd, num, (sp) => {
+    speed = sp;
+  });
+  const targetLng = hasMatch? firstMatch.lng : 0;
+  return { valid: targetJd > 0, speed, targetJd, targetLng, num, ayanamsha: aya };
 }
 
 export const calcSignSwitchAvg = (items: SignTimelineItem[]) => {

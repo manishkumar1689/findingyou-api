@@ -64,6 +64,10 @@ export const inRange = (num, range: number[]) => {
   return valid;
 };
 
+export const withinRanges = (num: number, ranges: number[][]) => {
+  return ranges.some(range => inRange(num, range));
+}
+
 export const inTolerance360 = (deg = 0, target = 0, tolerance = 1) => {
   const range = [subtractLng360(target, tolerance), (target + tolerance) % 360];
   const spanZero = deg + tolerance > 360 || deg - tolerance < 0;

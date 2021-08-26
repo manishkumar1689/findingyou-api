@@ -60,7 +60,7 @@ import {
 } from './lib/date-funcs';
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
-import { calcGrahaSignTimeline, calcRetroGrade, calcStation, matchNextTransitAtLng } from './lib/astro-motion';
+import { calcGrahaSignTimeline, calcRetroGrade, calcStation, matchNextTransitAtLng, matchNextTransitAtLngRanges, RangeSet } from './lib/astro-motion';
 import { toIndianTime, calcTransition } from './lib/transitions';
 import { readEpheFiles } from './lib/files';
 import { ChartInputDTO } from './dto/chart-input.dto';
@@ -932,6 +932,7 @@ export class AstrologicController {
 
   async processPredictiveRuleSet(cond: Condition, ruleType = "", chart: Chart, geo: GeoPos, settings: ProtocolSettings) {
     const result: any = { valid: false, start: null, end: null, score: 0 };
+    
     switch (ruleType) {
       case 'transit':
         return await this.processTransitRuleSet(cond, chart, geo, settings);
@@ -2608,14 +2609,25 @@ export class AstrologicController {
 
   @Get('predictive/:key/:lng/:start?/:ayanamsha?')
   async predictiveGrahaLng(@Res() res, @Param('key') key, @Param('lng') lng, @Param('start') start, @Param('ayanamsha') ayanamsha) {
-    //const useJd = isNumeric(jd) && jd > 0;
     const { dtUtc, jd } = matchJdAndDatetime(start);
-    /* const dtVal = !useJd ? validISODateString(jd)? jd : new Date().toISOString() : "";
-    const jdFl = useJd ? parseInt(jd) : calcJulDate( dtVal.split(".").shift()); */
     const lngFl = isNumeric(lng)? parseInt(lng) : 0;
     const data = await matchNextTransitAtLng(key, lngFl, jd, ayanamsha);
     const targetDt = julToISODate(data.targetJd);
     return res.status(HttpStatus.OK).json({...data, startDt: dtUtc, targetDt});
+  }
+
+  @Get('predictive-ranges/:key/:range/:start?/:ayanamsha?')
+  async predictiveGrahaLngRanges(@Res() res, @Param('key') key, @Param('range') range, @Param('start') start, @Param('ayanamsha') ayanamsha) {
+    const { dtUtc, jd } = matchJdAndDatetime(start);
+    const rangeItems = range.split(',').filter(row => /^\d+(\.\d+)?:\d+(\.\d+)?(:-?[01])?$/.test(row)).map(row => row.split(':').map(parseFloat));
+    const rangeSets = rangeItems.map(row => {
+      const dirFlag = row.length > 2? row[2] : 0;
+      const dir = dirFlag < 0 ? -1 : dirFlag > 0 ? 1 : 0;
+      return new RangeSet(row.slice(0, 2), dir);
+    })
+    const data = await matchNextTransitAtLngRanges(key, rangeSets, jd, ayanamsha);
+    const targetDt = julToISODate(data.targetJd);
+    return res.status(HttpStatus.OK).json({...data, key, startDt: dtUtc, targetDt, rangeSets });
   }
 
   @Get('ayanamsha/:dt?/:ayanamsha?')

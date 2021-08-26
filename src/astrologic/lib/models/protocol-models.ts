@@ -10,13 +10,14 @@ import { calcInclusiveSignPositions, calcInclusiveTwelfths } from '../math-funcs
 import { Chart, filterBmMatchRow, matchGrahaEquivalent, matchSignNums, PairedChart } from './chart';
 import { currentJulianDay } from '../julian-date';
 import { assignDashaBalances, DashaBalance } from './dasha-set';
-import { calcBodyPos, matchNextTransitAtLng } from '../astro-motion';
+import { calcBodyPos, matchNextTransitAtLng, matchNextTransitAtLngRanges, RangeSet } from '../astro-motion';
 import { GeoPos } from '../../interfaces/geo-pos';
 import { calcNextAscendantLng } from '../calc-ascendant';
 import { buildFunctionalBMMap, naturalBenefics, naturalMalefics } from '../settings/graha-values';
 import { coreIndianGrahaKeys } from './graha-set';
 import { mapRelationships } from '../map-relationships';
 import { matchKotaCakraSection } from '../settings/nakshatra-values';
+import { dir } from 'console';
 
 export interface KeyNumVal {
   key: string;
@@ -1715,26 +1716,19 @@ const calcKotaOffsetPos = (lng: number, offset = 0) => {
   return ((nakshatra28(lng - 1) + offset) % 28) + 1;
 }
 
-const calcNextKotaMatches = async (ranges: number[][], refGrKey = "", currJd = 0, ayaKey = 'true_citra', dir = 0) => {
+/* const calcNextKotaMatches = async (ranges: number[][], refGrKey = "", currJd = 0, ayaKey = 'true_citra', dir = 0) => {
   const nextMatches = [];
   for (const range of ranges) {
     const [start, end] = range;
-    const startMatch = await matchNextTransitAtLng(refGrKey, start, currJd, ayaKey, dir, end);
+    const startMatch = await matchNextTransitAtLng(refGrKey, start, currJd, ayaKey);
     nextMatches.push({ 
       lng: start,
       jd: startMatch.targetJd,
       speed: startMatch.speed
     });
-    /* const endMatch = await matchNextTransitAtLng(refGrKey, start, currJd, ayaKey, dir, end);
-    nextMatches.push({ 
-      mode: 'end',
-      lng: end,
-      jd: endMatch.targetJd,
-      speed: endMatch.speed
-    }); */
   }
   return nextMatches;
-}
+} */
 
 const flipEntryKey = (key: string) => {
   const flipkeys = ['exit', 'entry'];
@@ -1751,35 +1745,33 @@ export const matchKotaChakra = async (cond: Condition, chart: Chart) => {
   const kotaOffset = ((27 - nakIndex + 28) % 28);
   //const mercPos = calcKotaOffsetPos(merc.longitude, kotaOffset);
   const applySpeedMode = ['entry', 'exit'].includes(cond.c2Key);
+  const flipDir = cond.context === 'retrograde';
   const alwaysNeg = ['ke', 'ra'].includes(refGrKey)
   const alwaysPos = ['mo', 'su'].includes(refGrKey);
   const filterKey = alwaysNeg &&  applySpeedMode ? flipEntryKey(cond.c2Key) : cond.c2Key;
-  const dir1 = applySpeedMode? alwaysNeg? -1 : 1 : 0;
-  const dir2 = applySpeedMode? -1 : 0;
+  const dir1 = applySpeedMode? alwaysNeg? -1 : flipDir? -1 : 1 : 0;
+  const dir2 = applySpeedMode? flipDir ? 1 : -1 : 0;
   const fetchMore = applySpeedMode && !alwaysNeg && !alwaysPos;
   const currJd = currentJulianDay();
-  const bodyPos = await calcBodyPos(refGrKey, currJd);
-  const bodyNakNum = calcKotaOffsetPos(bodyPos.lng, kotaOffset);
   const nums = matchKotaCakraSection(filterKey);
-  const isMatched = nums.includes(bodyNakNum)  && ((bodyPos.speed > 0 && !alwaysNeg) || (bodyPos.speed < 0 && alwaysNeg));
-  const ranges = numbersToNakshatraDegreeRanges(nums, kotaOffset);
-  //const mercMatched = nums.includes(mercPos);
   
-  const nextMatches = await calcNextKotaMatches(ranges, refGrKey, currJd, ayaKey, dir1);
+  const rangeSets = numbersToNakshatraDegreeRanges(nums, kotaOffset).map(rng => {
+    return new RangeSet(rng, dir1);
+  });
   if (fetchMore) {
     const reverseKey = flipEntryKey(cond.c2Key);
     const nums2 = matchKotaCakraSection(reverseKey);
     const ranges2 = numbersToNakshatraDegreeRanges(nums2, kotaOffset);
-    const moreMatches = await calcNextKotaMatches(ranges2, refGrKey, currJd, ayaKey, dir2);
-    moreMatches.forEach(row => {
-      nextMatches.push(row);
-    })
+    if (ranges2.length > 0) {
+      ranges2.forEach(rng => {
+        rangeSets.push( new RangeSet(rng, dir2) );
+      })
+    }
   }
-  nextMatches.sort((a, b) => a.jd - b.jd)
-  /* console.log({
-    refGrKey, nums, ranges, first: nextMatches[0], bodyPos, bodyNakNum, isMatched, key2: cond.c2Key, moonLng: moon.longitude, kotaOffset
-  }); */
-  const valid = isMatched || nextMatches.length > 0;
-  const start = isMatched ? currJd : valid ? nextMatches[0].jd : null;
-  return { valid, start };
+  const nextMatch = await matchNextTransitAtLngRanges(refGrKey, rangeSets, currJd, ayaKey);
+  const valid = nextMatch.valid;
+  const start = nextMatch.targetJd;
+  const items = [nextMatch];
+  
+  return { valid, start, items };
 }
