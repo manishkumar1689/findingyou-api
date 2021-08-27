@@ -1462,41 +1462,47 @@ export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Ch
   const ct = matchContextType(cond.context);
   const gkTransit = matchGrahaEquivalent(cond.object1, chart);
   const gkBirth = matchGrahaEquivalent(cond.object2, chart);
+  const birthKeys = gkBirth.split(',');
   const isDignity = !ct.isKartariYoga && !ct.isSign && gkBirth.length > 3;
   const g1 = chart.graha(gkBirth);
   const g2 = chart.graha(gkTransit);
   g1.setAyanamshaItem(ayaItem);
   g2.setAyanamshaItem(ayaItem);
   let valid = false;
-  if (ct.isAspect) {
-    const ranges = matchAspectRanges(cond.context, gkBirth, gkTransit);
-    const dist = calcDist360(g1.longitude, g2.longitude);
-    ranges.forEach(range => {
-      const inOrb = inRange(dist, range);
-      if (inOrb) {
-        valid = validPeriod && inOrb;
-      }
-    });
-  } else if (ct.isDrishtiAspect) {
-    const ranges = matchDrishtiConditionSignLngs(cond, chart, gkBirth, gkTransit, settings).map(deg => [deg, deg + 30]);
-    valid = ranges.some(range => {
-      const [start, end] = range;
-      return g1.longitude >= start && g1.longitude < end;
-    });
-  } else if (isDignity) {
-    valid = matchDignity(chart, gkBirth, gkTransit);
-  } else if (ct.isSign) {
-    valid = matchByBirthSign(cond, chart);
-  } else if (ct.isKartariYoga) {
-    chart.setAyanamshaItemByNum(27);
-    const keys = matchBmGrahaKeys(ct.bmKey, cond, chart);
-    const refGr = chart.graha(gkTransit);
-    const adjacentSignIndices =  [(refGr.signIndex + 11) % 12, (refGr.signIndex + 1) % 12];
-    const filtered = keys.filter(k => {
-      const gr = chart.graha(k);
-      return adjacentSignIndices.includes(gr.signIndex);
-    });
-    valid = filtered.length >= 2;
+  for (const bKey of birthKeys) {
+    if (ct.isAspect) {
+      const ranges = matchAspectRanges(cond.context, bKey, gkTransit);
+      const dist = calcDist360(g1.longitude, g2.longitude);
+      ranges.forEach(range => {
+        const inOrb = inRange(dist, range);
+        if (inOrb) {
+          valid = validPeriod && inOrb;
+        }
+      });
+    } else if (ct.isDrishtiAspect) {
+      const ranges = matchDrishtiConditionSignLngs(cond, chart, bKey, gkTransit, settings).map(deg => [deg, deg + 30]);
+      valid = ranges.some(range => {
+        const [start, end] = range;
+        return g1.longitude >= start && g1.longitude < end;
+      });
+    } else if (isDignity) {
+      valid = matchDignity(chart, bKey, gkTransit);
+    } else if (ct.isSign) {
+      valid = matchByBirthSign(cond, chart);
+    } else if (ct.isKartariYoga) {
+      chart.setAyanamshaItemByNum(27);
+      const keys = matchBmGrahaKeys(ct.bmKey, cond, chart);
+      const refGr = chart.graha(gkTransit);
+      const adjacentSignIndices =  [(refGr.signIndex + 11) % 12, (refGr.signIndex + 1) % 12];
+      const filtered = keys.filter(k => {
+        const gr = chart.graha(k);
+        return adjacentSignIndices.includes(gr.signIndex);
+      });
+      valid = filtered.length >= 2;
+    }
+    if (valid) {
+      break;
+    }
   }
   return { valid, start, end };
 }

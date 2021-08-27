@@ -439,6 +439,17 @@ export class Chart {
     return numVal;
   }
 
+  funcBmMap(build = true): Map<string, Array<string>> {
+    return funcBmMap(this, build);
+  }
+
+  matchBM(type = 'benefic', isFunctional = false) {
+    const bm = this.funcBmMap(isFunctional);
+    const isMalefic = type.includes('malef');
+    const letter = isMalefic ? 'm' : 'b';
+    return isFunctional ? bm.get(letter) : isMalefic ? naturalMalefics : naturalBenefics;
+  }
+
   get kotaSvami() {
     const moonSign = this.graha('mo').signNum;
     const rashi = rashiValues.find(r => r.num === moonSign);
@@ -1371,6 +1382,12 @@ export class Tag {
   }
 }
 
+const matchBMKey = (chart: Chart, key = "") => {
+  const [mode, type] = key.split('_').pop();
+  const isFunctional = mode.startsWith('fun');
+  return chart.matchBM(type, isFunctional).join(',');
+}
+
 export const matchGrahaEquivalent = (obj: ObjectType, chart: Chart, ayanamshaNum = 27) => {
   const { key, type } = obj;
   let matchedKey = key;
@@ -1411,6 +1428,12 @@ export const matchGrahaEquivalent = (obj: ObjectType, chart: Chart, ayanamshaNum
         case 'kota_pala':
         case 'kota_paala':
           matchedKey = chart.kotaPala;
+          break;
+        case 'nat_benefic':
+        case 'nat_malefic':
+        case 'func_benefic':
+        case 'func_malefic':
+          matchedKey = matchBMKey(chart, matchedKey);
           break;
       }
     }
@@ -2003,7 +2026,6 @@ export class PairedChart {
     const k1 = this.matchGrahaEquivalent(obj1, fromChart);
     const baseChart2 = condition.fromFirstHouseStructure ? fromChart : toChart;
     const k2 = this.matchGrahaEquivalent(obj2, baseChart2);
-
     if (condition.isLongAspect) {
       const keys1 = condition.matchesMultiple1 ? coreIndianGrahaKeys : [k1];
       const keys2 = condition.matchesMultiple2 ? coreIndianGrahaKeys : [k2];
