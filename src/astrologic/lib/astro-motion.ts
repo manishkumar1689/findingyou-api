@@ -2,7 +2,7 @@ import * as swisseph from 'swisseph';
 import { calcUtAsync } from './sweph-async';
 import { calcJulDate, jdToDateTime, julToISODate } from './date-funcs';
 import grahaValues from './settings/graha-values';
-import { inRange, inTolerance360, isNumber, isNumeric, notEmptyString, withinRanges, withinTolerance } from '../../lib/validators';
+import { inRange360, isNumber, isNumeric, notEmptyString, withinTolerance } from '../../lib/validators';
 import { matchPlanetNum } from './settings/graha-values';
 import { calcAyanamsha, calcBodiesJd, fetchHouseDataJd } from './core';
 import { subtractLng360 } from './math-funcs';
@@ -10,7 +10,6 @@ import { calcAscendantTimelineItems, calcOffsetAscendant } from './calc-ascendan
 import { LngLat } from './interfaces';
 import { currentJulianDay } from './julian-date';
 import { addLng360 } from './helpers';
-import { connectableObservableDescriptor } from 'rxjs/internal/observable/ConnectableObservable';
 
 export interface SignTimelineItem {
   sign?: number;
@@ -409,8 +408,7 @@ export class RangeSet {
   }
 
   isValid(deg: 0, speed = 0) {
-    //console.log(this.retrogradeOnly, this.directOnly, deg, this.range, inRange(deg, this.range))
-    return inRange(deg, this.range) && this.isValidDirection(speed);
+    return inRange360(deg, this.range) && this.isValidDirection(speed);
   }
 
 }

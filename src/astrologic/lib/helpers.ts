@@ -411,9 +411,9 @@ export const nakshatra28 = (lng: number) => {
   return nkVal;
 };
 
-export const nakshatra28ToDegrees = (nakRef: number, kotaOffset = 0): number[] => {
+export const nakshatra28ToDegrees = (nakRef: number, offset = 0): number[] => {
   const nak = (360/27);
-  const nakNum = ((nakRef - 1 + kotaOffset + 28) % 28) + 1;
+  const nakNum = ((nakRef - 1 + offset + 28) % 28) + 1;
   let start = (nakNum - 1) * nak;
   let end = nakNum  * nak;
   const [minAbhjit, maxAbhjit] = abhijitNakshatraRange();
@@ -466,13 +466,13 @@ export const numbersToSpans = (nums: number[]) => {
   return numbersToRanges(nums, false);
 }
 
-export const numbersToNakshatraDegreeRanges = (nums: number[], kotaOffset = 0): number[][] => {
+export const numbersToNakshatraDegreeRanges = (nums: number[], offset = 0): number[][] => {
   return numbersToSpans(nums).map(span => {
     if (span[0] === span[1]) {
-      return nakshatra28ToDegrees(span[0], kotaOffset);
+      return nakshatra28ToDegrees(span[0], offset);
     } else {
-      const start = nakshatra28ToDegrees(span[0], kotaOffset);
-      const end = nakshatra28ToDegrees(span[1], kotaOffset);
+      const start = nakshatra28ToDegrees(span[0], offset);
+      const end = nakshatra28ToDegrees(span[1], offset);
       return [start[0], end[1]];
     }
   });

@@ -87,6 +87,7 @@ import {
   Condition,
   matchKotaChakra,
   matchOrbFromGrid,
+  matchShulaChakra,
   PredictiveRule,
   processByBirthSign,
   processTransitDashaRuleSet,
@@ -928,14 +929,12 @@ export class AstrologicController {
       case 'transit':
         return await this.processTransitRuleSet(cond, chart, geo, settings);
       case 'kota':
-          return this.processKotaCakra(cond, chart);
+        return matchKotaChakra(cond, chart);
+      case 'shula':
+        return matchShulaChakra(cond, chart);
       default:
         return result;
     }
-  }
-
-  async processKotaCakra(cond: Condition, chart: Chart) {
-    return matchKotaChakra(cond, chart);
   }
 
   async processTransitRuleSet(cond: Condition, chart: Chart, geo: GeoPos, settings: ProtocolSettings) {

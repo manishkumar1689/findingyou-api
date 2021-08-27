@@ -1717,24 +1717,6 @@ export const matchByBirthSign = (cond: Condition, chart: Chart) => {
   return signNums.includes(graha.signNum);
 }
 
-const calcKotaOffsetPos = (lng: number, offset = 0) => {
-  return ((nakshatra28(lng - 1) + offset) % 28) + 1;
-}
-
-/* const calcNextKotaMatches = async (ranges: number[][], refGrKey = "", currJd = 0, ayaKey = 'true_citra', dir = 0) => {
-  const nextMatches = [];
-  for (const range of ranges) {
-    const [start, end] = range;
-    const startMatch = await matchNextTransitAtLng(refGrKey, start, currJd, ayaKey);
-    nextMatches.push({ 
-      lng: start,
-      jd: startMatch.targetJd,
-      speed: startMatch.speed
-    });
-  }
-  return nextMatches;
-} */
-
 const flipEntryKey = (key: string) => {
   const flipkeys = ['exit', 'entry'];
   return flipkeys.includes(key)? key === 'entry' ? 'exit' : 'entry' : key;
@@ -1762,7 +1744,6 @@ export const matchKotaChakra = async (cond: Condition, chart: Chart) => {
   
   const nakIndex = nakshatra28(moon.longitude) - 1;
   const kotaOffset = ((27 - nakIndex + 28) % 28);
-  //const mercPos = calcKotaOffsetPos(merc.longitude, kotaOffset);
   const applySpeedMode = ['entry', 'exit'].includes(cond.c2Key);
   const flipDir = cond.context === 'retrograde';
   const alwaysNeg = ['ke', 'ra'].includes(refGrKey)
@@ -1787,6 +1768,45 @@ export const matchKotaChakra = async (cond: Condition, chart: Chart) => {
       })
     }
   }
+  const nextMatch = await matchNextTransitAtLngRanges(refGrKey, rangeSets, currJd, ayaKey);
+  const isBeforeMaxEndJd = nextMatch.targetJd <= maxJd;
+  const valid = nextMatch.valid && isBeforeMaxEndJd;
+  const start = valid ? nextMatch.targetJd : 0;
+  const items = [nextMatch];
+  return { valid, start, items };
+}
+
+const calcCellNum = (num = 1, sunOffset = 0) => {
+  return ((num - 1 - sunOffset + 28) % 28) + 1;
+}
+
+export const translateShulaChakraNums = (key = "") => {
+  const tridentCells = [1, 2, 4, 6, 7, 8, 20, 22, 23, 24, 26, 28];
+  const nearTridentCells = [3, 5, 19, 21, 25, 27];
+  const otherCells = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+  const baseKey = key.split('__').pop().toLowerCase();
+  switch (baseKey) {
+    case 'trident':
+      return tridentCells;
+    case 'next':
+    case 'next_trident':
+      return nearTridentCells;
+    default:
+      return otherCells;
+  }
+}
+
+export const matchShulaChakra = async (cond: Condition, chart: Chart) => {
+  const currJd = currentJulianDay();
+  const maxJd = currJd + (20 * 365.25);
+  chart.setAyanamshaItemByNum(27);
+  const ayaKey = 'true_citra';
+  const refGrKey = matchGrahaEquivalent(cond.object1, chart);
+  const sunOffset = chart.graha('su').nakshatra28 - 1;
+  const nums = translateShulaChakraNums(cond.context);
+  const rangeSets = numbersToNakshatraDegreeRanges(nums, sunOffset).map(rng => {
+    return new RangeSet(rng, 0);
+  });
   const nextMatch = await matchNextTransitAtLngRanges(refGrKey, rangeSets, currJd, ayaKey);
   const isBeforeMaxEndJd = nextMatch.targetJd <= maxJd;
   const valid = nextMatch.valid && isBeforeMaxEndJd;
