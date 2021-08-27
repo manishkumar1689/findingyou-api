@@ -433,6 +433,13 @@ export const matchCurrentDashaLord = (chart:Chart, refJd = 0) => {
   return span instanceof Object ? span.key : '';
 }
 
+export const matchCurrentBhuktiLord = (chart:Chart, refJd = 0) => {
+  const ds = calcDashaSetByKey('vimshottari', chart.graha('mo'), chart.jd);
+  const span = ds.dashas.find(row => refJd >= row.startJd && refJd < row.endJd);
+  console.log(span);
+  return span instanceof Object ? span.key : '';
+}
+
 export const mapBalanceSpan = (span: DashaSpanItem, yearLength = 365.25) => {
   const { key, startJd, endJd, age, nakNum } = span;
   const duration = endJd - startJd;

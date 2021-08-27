@@ -64,8 +64,9 @@ import {
 } from '../settings/graha-values';
 import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
 import { Kuta } from '../kuta';
-import { calcDashaSetByKey, matchCurrentDashaLord } from './dasha-set';
+import { calcDashaSetByKey, matchCurrentBhuktiLord, matchCurrentDashaLord } from './dasha-set';
 import { currentJulianDay } from '../julian-date';
+import { matchKotaPala } from '../settings/kota-values';
 
 
 export interface Subject {
@@ -445,6 +446,11 @@ export class Chart {
     const moonSign = this.graha('mo').signNum;
     const rashi = rashiValues.find(r => r.num === moonSign);
     return rashi instanceof Object ? rashi.ruler : '';
+  }
+
+  get kotaPala() {
+    const moonLng = this.graha('mo').longitude;
+    return matchKotaPala(moonLng);
   }
 
   get ayanamshaOffset() {
@@ -1405,8 +1411,15 @@ export const matchGrahaEquivalent = (obj: ObjectType, chart: Chart, ayanamshaNum
         case 'lord_dasha':
           matchedKey = matchCurrentDashaLord(chart, currJd);
           break;
+        case 'lord_bhukti':
+          matchedKey = matchCurrentBhuktiLord(chart, currJd);
+          break;
         case 'kota_svami':
           matchedKey = chart.kotaSvami;
+          break;
+        case 'kota_pala':
+        case 'kota_paala':
+          matchedKey = chart.kotaPala;
           break;
       }
     }
