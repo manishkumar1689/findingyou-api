@@ -9,7 +9,7 @@ import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
 import { calcInclusiveSignPositions, calcInclusiveTwelfths } from '../math-funcs';
 import { Chart, filterBmMatchRow, matchGrahaEquivalent, matchSignNums, PairedChart } from './chart';
 import { currentJulianDay } from '../julian-date';
-import { assignDashaBalances, DashaBalance } from './dasha-set';
+import { assignDashaBalances, DashaBalance, matchCurrentBhuktiLord, matchCurrentDashaLord } from './dasha-set';
 import { calcBodyPos, matchNextTransitAtLng, matchNextTransitAtLngRanges, RangeSet } from '../astro-motion';
 import { GeoPos } from '../../interfaces/geo-pos';
 import { calcNextAscendantLng } from '../calc-ascendant';
@@ -1738,7 +1738,21 @@ const flipEntryKey = (key: string) => {
 export const matchKotaChakra = async (cond: Condition, chart: Chart) => {
   chart.setAyanamshaItemByNum(27);
   const ayaKey = 'true_citra';
-  const refGrKey = matchGrahaEquivalent(cond.object1, chart);
+  let refGrKey = matchGrahaEquivalent(cond.object1, chart);
+  const currJd = currentJulianDay();
+  // set default max JD to years hence
+  let maxJd = currJd + (10 * 365.25);
+  if (refGrKey.length > 2) {
+    switch (cond.object1.key) {
+      case 'lord_dasha':
+      case 'lord_bhukti':
+        const depth = cond.c1Key.includes('bhukti')? 2 : 1;
+        const dsSpan = matchCurrentDashaLord(chart, currJd, depth);
+        refGrKey = dsSpan.key;
+        maxJd = dsSpan.endJd;
+        break;
+    }
+  }
   const moon = chart.graha('mo');
   
   const nakIndex = nakshatra28(moon.longitude) - 1;
@@ -1752,7 +1766,7 @@ export const matchKotaChakra = async (cond: Condition, chart: Chart) => {
   const dir1 = applySpeedMode? alwaysNeg? -1 : flipDir? -1 : 1 : 0;
   const dir2 = applySpeedMode? flipDir ? 1 : -1 : 0;
   const fetchMore = applySpeedMode && !alwaysNeg && !alwaysPos;
-  const currJd = currentJulianDay();
+  
   const nums = matchKotaCakraSection(filterKey);
   
   const rangeSets = numbersToNakshatraDegreeRanges(nums, kotaOffset).map(rng => {
@@ -1769,9 +1783,9 @@ export const matchKotaChakra = async (cond: Condition, chart: Chart) => {
     }
   }
   const nextMatch = await matchNextTransitAtLngRanges(refGrKey, rangeSets, currJd, ayaKey);
-  const valid = nextMatch.valid;
-  const start = nextMatch.targetJd;
+  const isBeforeMaxEndJd = nextMatch.targetJd <= maxJd;
+  const valid = nextMatch.valid && isBeforeMaxEndJd;
+  const start = valid ? nextMatch.targetJd : 0;
   const items = [nextMatch];
-  
   return { valid, start, items };
 }

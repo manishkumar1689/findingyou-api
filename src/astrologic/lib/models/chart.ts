@@ -1408,12 +1408,6 @@ export const matchGrahaEquivalent = (obj: ObjectType, chart: Chart, ayanamshaNum
       chart.setAyanamshaItemByNum(ayanamshaNum);
       const currJd = currentJulianDay();
       switch (matchedKey) {
-        case 'lord_dasha':
-          matchedKey = matchCurrentDashaLord(chart, currJd);
-          break;
-        case 'lord_bhukti':
-          matchedKey = matchCurrentBhuktiLord(chart, currJd);
-          break;
         case 'kota_svami':
           matchedKey = chart.kotaSvami;
           break;

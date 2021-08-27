@@ -427,17 +427,38 @@ export const filterByDashaContraints = (sp: DashaSpan, targetJd = -1, after = fa
   return hasRange ? filterDashaBetween(sp) : hasStart ? filterDashaAfterStart(sp) : true;
 }
 
-export const matchCurrentDashaLord = (chart:Chart, refJd = 0) => {
+export const matchCurrentDashaLord = (chart:Chart, refJd = 0, level = 1): DashaSpan => {
   const ds = calcDashaSetByKey('vimshottari', chart.graha('mo'), chart.jd);
-  const span = ds.dashas.find(row => refJd >= row.startJd && refJd < row.endJd);
-  return span instanceof Object ? span.key : '';
+  let obj = null;
+  if (level === 1) {
+    obj = ds.dashas.find(row => refJd >= row.startJd && refJd < row.endJd);
+  } else {
+      const dashaSpans = ds.dashas
+      .filter(row => filterByDashaContraints(row, refJd, false))
+      .map(span =>
+        mapDashaItem(
+          span,
+          chart.jd,
+          ds.set,
+          1,
+          2,
+          chart.tzOffset,
+          refJd,
+          false
+        )
+      );
+    if (dashaSpans.length > 0) {
+      const children = dashaSpans[0].children;
+      if (children.length > 0) {
+        obj = children[0];
+      }
+    }
+  }
+  return obj instanceof Object ? obj : new DashaSpan();
 }
 
 export const matchCurrentBhuktiLord = (chart:Chart, refJd = 0) => {
-  const ds = calcDashaSetByKey('vimshottari', chart.graha('mo'), chart.jd);
-  const span = ds.dashas.find(row => refJd >= row.startJd && refJd < row.endJd);
-  console.log(span);
-  return span instanceof Object ? span.key : '';
+  return matchCurrentDashaLord(chart, refJd, 2);
 }
 
 export const mapBalanceSpan = (span: DashaSpanItem, yearLength = 365.25) => {
