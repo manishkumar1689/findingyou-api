@@ -112,9 +112,6 @@ import ayanamshaValues from './lib/settings/ayanamsha-values';
 import { calcBavGraphData, calcBavSignSamples } from './lib/settings/ashtakavarga-values';
 import { GeoPos } from './interfaces/geo-pos';
 import { Model } from 'mongoose';
-import { currentJulianDay } from './lib/julian-date';
-import { calcDist360 } from './lib/helpers';
-import { settings } from 'cluster';
 
 @Controller('astrologic')
 export class AstrologicController {
