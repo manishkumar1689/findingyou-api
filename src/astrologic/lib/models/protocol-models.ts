@@ -3,21 +3,20 @@ import { inRange, isNumeric, notEmptyString } from '../../../lib/validators';
 import { smartCastFloat } from '../../../lib/converters';
 import { contextTypes } from '../settings/compatibility-sets';
 import { calcOrb, calcAllAspectRanges } from '../calc-orbs';
-import { subtractLng360, addLng360, calcDist360, nakshatra28Progress, nakshatra28, numbersToRanges, numbersToSpans, nakshatra28ToDegrees, numbersToNakshatraDegreeRanges } from '../helpers';
+import { subtractLng360, addLng360, calcDist360, nakshatra28, numbersToNakshatraDegreeRanges } from '../helpers';
 import ayanamshaValues from '../settings/ayanamsha-values';
 import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
 import { calcInclusiveSignPositions, calcInclusiveTwelfths } from '../math-funcs';
 import { Chart, filterBmMatchRow, matchGrahaEquivalent, matchSignNums, PairedChart } from './chart';
 import { currentJulianDay } from '../julian-date';
-import { assignDashaBalances, DashaBalance, matchCurrentBhuktiLord, matchCurrentDashaLord } from './dasha-set';
-import { calcBodyPos, matchNextTransitAtLng, matchNextTransitAtLngRanges, RangeSet } from '../astro-motion';
+import { assignDashaBalances, DashaBalance, matchCurrentDashaLord } from './dasha-set';
+import { matchNextTransitAtLng, matchNextTransitAtLngRanges, RangeSet } from '../astro-motion';
 import { GeoPos } from '../../interfaces/geo-pos';
 import { calcNextAscendantLng } from '../calc-ascendant';
 import { buildFunctionalBMMap, naturalBenefics, naturalMalefics } from '../settings/graha-values';
 import { coreIndianGrahaKeys } from './graha-set';
 import { mapRelationships } from '../map-relationships';
 import { matchKotaCakraSection } from '../settings/nakshatra-values';
-import { dir } from 'console';
 
 export interface KeyNumVal {
   key: string;

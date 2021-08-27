@@ -20,7 +20,6 @@ import {
   validISODateString,
   notEmptyString,
   isNumber,
-  inRange,
 } from '../lib/validators';
 import { latLngParamsToGeo, locStringToGeo } from './lib/converters';
 import { applyAscendantToSimpleChart, simplifyAstroChart, simplifyChart } from './lib/member-charts';
@@ -39,7 +38,6 @@ import {
   calcCompactChartData,
   calcAllAspects,
   calcBodyJd,
-  calcBodiesJd,
   calcAyanamsha,
   fetchHouseDataJd,
   calcCoreGrahaPositions,
@@ -51,7 +49,6 @@ import {
   toShortTzAbbr,
   jdToDateTime,
   utcDate,
-  julToDateFormat,
   julToISODate,
   currentISODate,
   durationStringToDays,
@@ -81,15 +78,13 @@ import {
   Record,
 } from '../lib/parse-astro-csv';
 import { Kuta } from './lib/kuta';
-import { Chart, matchGrahaEquivalent, PairedChart } from './lib/models/chart';
+import { Chart, PairedChart } from './lib/models/chart';
 import { AspectSet, calcOrb } from './lib/calc-orbs';
 import { AspectSetDTO } from './dto/aspect-set.dto';
 import {
   assessChart,
   compatibilityResultSetHasScores,
   Condition,
-  matchDrishtiCondition,
-  matchDrishtiConditionSignLngs,
   matchKotaChakra,
   matchOrbFromGrid,
   PredictiveRule,
@@ -97,7 +92,6 @@ import {
   processTransitDashaRuleSet,
   processTransitMatch,
   Protocol,
-  RuleSet,
 } from './lib/models/protocol-models';
 import { mapNestedKaranaTithiYoga, mapToponyms } from './lib/mappers';
 import { CreateSettingDTO } from '../setting/dto/create-setting.dto';
