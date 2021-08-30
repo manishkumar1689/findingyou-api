@@ -17,6 +17,7 @@ import { buildFunctionalBMMap, naturalBenefics, naturalMalefics } from '../setti
 import { coreIndianGrahaKeys } from './graha-set';
 import { mapRelationships } from '../map-relationships';
 import { matchKotaCakraSection } from '../settings/nakshatra-values';
+import { calcAyanamsha } from '../core';
 
 export interface KeyNumVal {
   key: string;
@@ -1722,7 +1723,7 @@ const flipEntryKey = (key: string) => {
   return flipkeys.includes(key)? key === 'entry' ? 'exit' : 'entry' : key;
 }
 
-export const matchKotaChakra = async (cond: Condition, chart: Chart) => {
+export const matchKotaChakra = async (cond: Condition, chart: Chart, geo: GeoPos = {lat: 0, lng: 0}) => {
   chart.setAyanamshaItemByNum(27);
   const ayaKey = 'true_citra';
   let refGrKey = matchGrahaEquivalent(cond.object1, chart);
@@ -1768,7 +1769,7 @@ export const matchKotaChakra = async (cond: Condition, chart: Chart) => {
       })
     }
   }
-  const nextMatch = await matchNextTransitAtLngRanges(refGrKey, rangeSets, currJd, ayaKey);
+  const nextMatch = await matchNextTransitAtLngRanges(refGrKey, rangeSets, currJd, geo, ayaKey);
   const isBeforeMaxEndJd = nextMatch.targetJd <= maxJd;
   const valid = nextMatch.valid && isBeforeMaxEndJd;
   const start = valid ? nextMatch.targetJd : 0;
@@ -1796,21 +1797,81 @@ export const translateShulaChakraNums = (key = "") => {
   }
 }
 
-export const matchShulaChakra = async (cond: Condition, chart: Chart) => {
+export const translateKalanalaChandraNums = (key = "") => {
+  const tridentCells = [1, 2, 3, 8, 9, 10, 15, 16, 17, 22, 23, 24];
+  const innerCircleCells = [4, 7, 11, 14, 18, 21, 26, 28];
+  const outerCircleCells = [5, 6, 12, 13, 19, 20, 26, 27];
+  const baseKey = key.split('__').pop().toLowerCase();
+  switch (baseKey) {
+    case 'trident':
+      return tridentCells;
+    case 'outside':
+      return outerCircleCells;
+    default:
+      return innerCircleCells;
+  }
+}
+
+
+export const translateChakraNums = (type = "shula", key = "") => {
+  switch (type) {
+    case "kalanala":
+    case 'chandra_kalanala':
+    case 'kalanala_chandra':
+      return translateKalanalaChandraNums(key);
+    default:
+      return translateShulaChakraNums(key);
+  }
+}
+
+const nakashatraGroupStartOffsetKey = (key: string): string => {
+  switch (key) {
+    case "shula":
+      return "su";
+    default:
+      return "";
+  }
+}
+
+const nakashatraGroupInnerOffsetKey = (key: string): string => {
+  switch (key) {
+    case 'kalanala':
+    case 'kalanala_candra':
+    case 'chandra':
+    case 'kanala':
+      return 'mo';
+    default:
+      return '';
+  }
+}
+
+export const matchNakshatraGroups = async (type = 'shula', cond: Condition, chart: Chart, geo: GeoPos = { lat: 0, lng: 0 } ) => {
   const currJd = currentJulianDay();
   const maxJd = currJd + (20 * 365.25);
-  chart.setAyanamshaItemByNum(27);
   const ayaKey = 'true_citra';
+  chart.setAyanamshaItemByKey(ayaKey);
   const refGrKey = matchGrahaEquivalent(cond.object1, chart);
-  const sunOffset = chart.graha('su').nakshatra28 - 1;
-  const nums = translateShulaChakraNums(cond.context);
-  const rangeSets = numbersToNakshatraDegreeRanges(nums, sunOffset).map(rng => {
+  const startOffsetKey = nakashatraGroupStartOffsetKey(type);
+  const startOffset = notEmptyString(startOffsetKey, 1)? chart.graha(startOffsetKey).nakshatra28 - 1 : 0;
+  const innerOffsetKey = nakashatraGroupInnerOffsetKey(type);
+  const nums = translateChakraNums(type, cond.context);
+  const rangeSets = numbersToNakshatraDegreeRanges(nums, startOffset).map(rng => {
     return new RangeSet(rng, 0);
   });
-  const nextMatch = await matchNextTransitAtLngRanges(refGrKey, rangeSets, currJd, ayaKey);
+  const nextMatch = await matchNextTransitAtLngRanges(refGrKey, rangeSets, currJd, geo, innerOffsetKey, ayaKey);
   const isBeforeMaxEndJd = nextMatch.targetJd <= maxJd;
   const valid = nextMatch.valid && isBeforeMaxEndJd;
   const start = valid ? nextMatch.targetJd : 0;
   const items = [nextMatch];
   return { valid, start, items };
+}
+
+
+
+export const matchShulaChakra = async (cond: Condition, chart: Chart) => {
+  return await matchNakshatraGroups("shula", cond, chart);
+}
+
+export const matchKalanalaChandra = async (cond: Condition, chart: Chart, geo: GeoPos) => {
+  return await matchNakshatraGroups("kalanala", cond, chart, geo);
 }

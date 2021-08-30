@@ -85,6 +85,7 @@ import {
   assessChart,
   compatibilityResultSetHasScores,
   Condition,
+  matchKalanalaChandra,
   matchKotaChakra,
   matchOrbFromGrid,
   matchShulaChakra,
@@ -140,7 +141,7 @@ export class AstrologicController {
   }
 
   @Get('swisseph/functions')
-  async showFunctions(@Res() res, @Param('isodate') isodate, @Query() query) {
+  async showFunctions(@Res() res) {
     const functions = getFuncNames();
     const data = {
       functions,
@@ -924,7 +925,7 @@ export class AstrologicController {
 
   async processPredictiveRuleSet(cond: Condition, ruleType = "", chart: Chart, geo: GeoPos, settings: ProtocolSettings) {
     const result: any = { valid: false, start: null, end: null, score: 0 };
-    
+    console.log(ruleType);
     switch (ruleType) {
       case 'transit':
         return await this.processTransitRuleSet(cond, chart, geo, settings);
@@ -932,6 +933,9 @@ export class AstrologicController {
         return matchKotaChakra(cond, chart);
       case 'shula':
         return matchShulaChakra(cond, chart);
+      case 'kalanala':
+      case 'chandra_kalanala':
+        return matchKalanalaChandra(cond, chart, geo);
       default:
         return result;
     }

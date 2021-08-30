@@ -6,10 +6,11 @@ import { inRange360, isNumber, isNumeric, notEmptyString, withinTolerance } from
 import { matchPlanetNum } from './settings/graha-values';
 import { calcAyanamsha, calcBodiesJd, fetchHouseDataJd } from './core';
 import { subtractLng360 } from './math-funcs';
-import { calcAscendantTimelineItems, calcOffsetAscendant } from './calc-ascendant';
+import { calcAscendantTimelineItems, calcNextAscendantLng, calcOffsetAscendant } from './calc-ascendant';
 import { LngLat } from './interfaces';
 import { currentJulianDay } from './julian-date';
-import { addLng360 } from './helpers';
+import { addLng360, nakshatra28, nakshatra28ToDegrees } from './helpers';
+import { GeoPos } from '../interfaces/geo-pos';
 
 export interface SignTimelineItem {
   sign?: number;
@@ -30,7 +31,7 @@ export interface SignTimelineSet {
   avg?: number;
 }
 
-export const calcBodySpeed = async (jd, num, callback) => {
+export const calcBodySpeed = async (jd: number, num: number, callback) => {
   const flag =
     swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SIDEREAL + swisseph.SEFLG_SPEED;
   let flip = false;
@@ -70,6 +71,11 @@ export const calcBodyPos = async (key = "", jd = 0, ayanamsha = "true_citra") =>
   }
   return { lng, speed, ayanamsha: 0 };
 };
+
+export const calcBodyLng = async (key = "", jd = 0, ayanamsha = "true_citra") => {
+  const result = await calcBodyPos(key, jd, ayanamsha);
+  return result.lng;
+}
 
 export const calcAcceleration = async (jd, body) => {
   const { num } = body;
@@ -407,23 +413,62 @@ export class RangeSet {
     return this.neutral || (retrograde && this.retrogradeOnly) || (!retrograde && this.directOnly);
   }
 
-  isValid(deg: 0, speed = 0) {
-    return inRange360(deg, this.range) && this.isValidDirection(speed);
+  isValid(deg = 0, speed = 0, startOffset = 0) {
+    const relRange = [subtractLng360(this.range[0], startOffset),subtractLng360(this.range[1], startOffset)];
+    return inRange360(deg, relRange) && this.isValidDirection(speed);
   }
 
 }
 
-export const matchNextTransitAtLngRanges = async (key = "su", rangeSets: RangeSet[] = [], jdFl = 0, ayanamsha = "true_citra") => {
+const toStartNakshatra28 = (deg: number) => {
+  const nakNum = nakshatra28(deg);
+  const [start, _] = nakshatra28ToDegrees(nakNum, 0);
+  return start;
+}
+
+const referenceBodyLng = async (key = "", jdFl = 0, ayanamsha = "true_citra", roundMode = 'none') => {
+  let lng = key.length === 2? await calcBodyLng(key, jdFl, ayanamsha) : 0;
+  if (roundMode === 'nakshatra28') {
+    lng = toStartNakshatra28(lng);
+  }
+  return lng;
+}
+
+const referenceBodyPos = async (key = "", jdFl = 0, geo: GeoPos = { lat: 0, lng: 0 }, ayanamshaVal = 0) => {
+  let speed = 0;
+  let lng = 0;
+  let jd = 0;
+  const isAsc = key === 'as';
+  if (isAsc) {
+    const body = grahaValues.find(b => b.key === key);
+    if (body instanceof Object) {
+      await calcBodySpeed(jdFl, body.num, (spdVal, lngDeg) => {
+        speed = spdVal;
+        lng = lngDeg;
+      });
+    }
+  } else {
+    lng = calcOffsetAscendant(geo.lat, geo.lng, jdFl, ayanamshaVal);
+  }
+  return { lng, jd, speed };
+}
+
+export const matchNextTransitAtLngRanges = async (key = "su", rangeSets: RangeSet[] = [], jdFl = 0, geo: GeoPos, refKey = '', ayanamsha = 'true_citra', roundMode = 'nakshatra28') => {
   const num = isNumeric(key)? parseInt(key) : matchPlanetNum(key);
-  const ayaKey = notEmptyString(ayanamsha)? ayanamsha : "true_citra";
-  const applyAyanamsha = ayaKey !== "tropical";
+  const ayaKey = notEmptyString(ayanamsha)? ayanamsha : 'true_citra';
+  const applyAyanamsha = ayaKey !== 'tropical';
   const spds = [];
   const aya = applyAyanamsha? await calcAyanamsha(jdFl, ayaKey) : 0;
-  await calcBodySpeed(jdFl, num, (speed, lng) => {
-    if (rangeSets.some(range => range.isValid(lng, speed))) {
+  let relOffset = await referenceBodyLng(refKey, jdFl, ayanamsha, roundMode);
+  /* await calcBodySpeed(jdFl, num, (speed, lng) => {
+    if (rangeSets.some(range => range.isValid(lng, speed, relOffset))) {
       spds.push({ speed, lng, jd: jdFl });
     }
-  });
+  }); */
+  const { lng, speed } = await referenceBodyPos(key, jdFl, geo, aya);
+  if (rangeSets.some(range => range.isValid(lng, speed, relOffset))) {
+    spds.push({ speed, lng, jd: jdFl });
+  }
   let refJd = jdFl;
   let i = 0;
   const step = matchProgressionJdStep(key) * 2;
@@ -431,28 +476,34 @@ export const matchNextTransitAtLngRanges = async (key = "su", rangeSets: RangeSe
   let matchedIndex = false;
   while (i < stopIndex) {
     refJd += step;
-    await calcBodySpeed(refJd, num, (speed, lng) => {
-      if (rangeSets.some(range => range.isValid(lng, speed))) {
+    relOffset = await referenceBodyLng(refKey, jdFl, ayanamsha, roundMode);
+    /* await calcBodySpeed(refJd, num, (speed, lng) => {
+      if (rangeSets.some(range => range.isValid(lng, speed, relOffset))) {
         spds.push({ speed, lng, jd: refJd });
         stopIndex = i;
         matchedIndex = true;
       }
-    });
+    }); */
+    const { lng, speed } = await referenceBodyPos(refKey, refJd, geo, aya);
+    if (rangeSets.some(range => range.isValid(lng, speed, relOffset))) {
+      spds.push({ speed, lng, jd: refJd });
+      stopIndex = i;
+      matchedIndex = true;
+    }
     if (matchedIndex) {
       break;
     }
     i++;
   }
-  //console.log(spds, stopIndex);
   const hasMatch = spds.length > 0;
   const firstMatch = hasMatch ? spds[0] : null;
   const targetJd = hasMatch? firstMatch.jd : 0;
-  let speed = 0;
+  let spdVal = 0;
   await calcBodySpeed(targetJd, num, (sp) => {
-    speed = sp;
+    spdVal = sp;
   });
   const targetLng = hasMatch? firstMatch.lng : 0;
-  return { valid: targetJd > 0, speed, targetJd, targetLng, num, ayanamsha: aya };
+  return { valid: targetJd > 0, speed: spdVal, targetJd, targetLng, num, ayanamsha: aya };
 }
 
 export const calcSignSwitchAvg = (items: SignTimelineItem[]) => {

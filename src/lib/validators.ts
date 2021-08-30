@@ -66,7 +66,7 @@ export const inRange = (num, range: number[]) => {
 
 export const inRange360 = (num, range: number[]) => {
   const [start, end] = range;
-  if (start < end) {
+  if (start <= end) {
     return inRange(num, range);
   } else {
     return [[start, 360], [0, end]].some(rng => inRange(num, rng));
