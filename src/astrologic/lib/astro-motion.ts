@@ -476,7 +476,7 @@ export const matchNextTransitAtLngRanges = async (key = "su", rangeSets: RangeSe
   let matchedIndex = false;
   while (i < stopIndex) {
     refJd += step;
-    relOffset = await referenceBodyLng(refKey, jdFl, ayanamsha, roundMode);
+    relOffset = await referenceBodyLng(refKey, refJd, ayanamsha, roundMode);
     /* await calcBodySpeed(refJd, num, (speed, lng) => {
       if (rangeSets.some(range => range.isValid(lng, speed, relOffset))) {
         spds.push({ speed, lng, jd: refJd });

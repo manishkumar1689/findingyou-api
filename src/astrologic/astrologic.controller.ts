@@ -925,7 +925,6 @@ export class AstrologicController {
 
   async processPredictiveRuleSet(cond: Condition, ruleType = "", chart: Chart, geo: GeoPos, settings: ProtocolSettings) {
     const result: any = { valid: false, start: null, end: null, score: 0 };
-    console.log(ruleType);
     switch (ruleType) {
       case 'transit':
         return await this.processTransitRuleSet(cond, chart, geo, settings);
