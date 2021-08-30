@@ -17,7 +17,6 @@ import { buildFunctionalBMMap, naturalBenefics, naturalMalefics } from '../setti
 import { coreIndianGrahaKeys } from './graha-set';
 import { mapRelationships } from '../map-relationships';
 import { matchKotaCakraSection } from '../settings/nakshatra-values';
-import { calcAyanamsha } from '../core';
 
 export interface KeyNumVal {
   key: string;

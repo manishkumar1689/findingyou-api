@@ -6,7 +6,7 @@ import { inRange360, isNumber, isNumeric, notEmptyString, withinTolerance } from
 import { matchPlanetNum } from './settings/graha-values';
 import { calcAyanamsha, calcBodiesJd, fetchHouseDataJd } from './core';
 import { subtractLng360 } from './math-funcs';
-import { calcAscendantTimelineItems, calcNextAscendantLng, calcOffsetAscendant } from './calc-ascendant';
+import { calcAscendantTimelineItems, calcOffsetAscendant } from './calc-ascendant';
 import { LngLat } from './interfaces';
 import { currentJulianDay } from './julian-date';
 import { addLng360, nakshatra28, nakshatra28ToDegrees } from './helpers';
