@@ -340,10 +340,11 @@ export const getAshtakavargaGridTotal = (bodies: KeyLng[] = [], refBodies: Map<s
 }
 
 export const getAshtakavargaBavItems = (bodies: KeyLng[] = [], refBodies: Map<string, number> = new Map()) => {
-  return getAshtakavargaGridTotal(bodies, refBodies).map(row => {
+  
+  return getAshtakavargaGridTotal(bodies, refBodies).map((row, ri) => {
     const { key, values, sign } = row;
     const value = values.reduce((a, b) => a + b, 0);
-    return { key, sign, value };
+    return { key, sign, lng: (sign - 1 ) * 30, value };
   });
 }
 
@@ -384,18 +385,18 @@ export const getAshtakavargaBavBMN = (bodies: KeyLng[] = [], refBodies: Map<stri
 
 const matchBavTimelineBodies = (data: SignTimelineSet[], jd = 0) => {
   const bds = data.map(rs => {
-    const { key, nextMatches} = rs;
+    const { key, longitude, nextMatches} = rs;
     const next = nextMatches.find(ri => ri.jd >= jd);
     return next instanceof Object? { 
       key,
       sign: next.sign,
       lng: next.lng
-    } : {key, lng: rs.longitude, sign: rs.sign };
+    } : {key, lng: Math.round(longitude), sign: Math.floor(longitude / 30) + 1 };
   })
   return bds;
 }
 
-export const calcBavSignSamples = (data: SignTimelineSet[] = [], startJd = 0, endJd = 0, stepsPerDay = 4) => {
+export const calcBavSignSamples = (data: SignTimelineSet[] = [], startJd = 0, endJd = 0, stepsPerDay = 4, refBodies: Map<string, number> = new Map()) => {
   let signSwitchJds = [];
 
   if (stepsPerDay  < 1) {
@@ -415,7 +416,8 @@ export const calcBavSignSamples = (data: SignTimelineSet[] = [], startJd = 0, en
     })
     signSwitchRows.sort((a, b) => a.jd - b.jd);
     signSwitchJds = signSwitchRows.map(row => {
-      const bodies = row.bodies.length > 0? row.bodies : matchBavTimelineBodies(data, row.jd)
+      const bodyRows = row.bodies.length > 0? row.bodies : matchBavTimelineBodies(data, row.jd)
+      const bodies = getAshtakavargaBavItems(bodyRows, refBodies);
       return {...row, dt: julToISODate(row.jd), bodies};
     })
   } else {
@@ -424,7 +426,8 @@ export const calcBavSignSamples = (data: SignTimelineSet[] = [], startJd = 0, en
     const frac = 1 / stepsPerDay;
     for (let i = 1; i <= steps; i++) {
       const sampleJd = startJd + (frac * i);
-      const bodies = matchBavTimelineBodies(data, sampleJd);
+      const bodyRows = matchBavTimelineBodies(data, sampleJd);
+      const bodies = getAshtakavargaBavItems(bodyRows, refBodies);
       signSwitchJds.push({ jd: sampleJd, dt: julToISODate(sampleJd), bodies });
     }
   }
@@ -432,9 +435,10 @@ export const calcBavSignSamples = (data: SignTimelineSet[] = [], startJd = 0, en
 }
 
 export const calcBavGraphData = (data: SignTimelineSet[] = [], refBodies: Map<string, number> = new Map(), startJd = 0, endJd = 0, stepsPerDay = 2) => {
+  
   const initBodies = data.map(row => {
-    const { key, sign} = row;
-    return { key, lng: row.longitude, sign };
+    const { key, longitude} = row;
+    return { key, lng: longitude, sign: Math.floor(row.longitude / 30) + 1 };
   });
   const initValues = getAshtakavargaBavBMN(initBodies, refBodies);
   const graphData = [{
@@ -444,7 +448,7 @@ export const calcBavGraphData = (data: SignTimelineSet[] = [], refBodies: Map<st
     ...initValues
   }];
   const signSwitchJds = calcBavSignSamples(data, startJd, endJd, stepsPerDay);
-  signSwitchJds.forEach(row => {
+  signSwitchJds.forEach((row, ri) => {
     const {jd, dt, bodies} = row;
     const items = getAshtakavargaBavBMN(bodies, refBodies);
     graphData.push({

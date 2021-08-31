@@ -572,6 +572,7 @@ export const calcAscendantKakshaSet = async (geo: LngLat, startJd = 0, endJd = 0
 export const calcAscendantIntervalTimelineSet = async (subDiv = 12, geo: LngLat, startJd = 0, endJd = 0, ayanamshaKey = "true_citra") => {
   const ayanamshaVal = await calcAyanamsha(startJd, ayanamshaKey);
   const ascendant = calcOffsetAscendant(geo.lat, geo.lng, startJd, ayanamshaVal);
+  
   const ascendantData = calcAscendantTimelineItems(subDiv, geo.lat, geo.lng, startJd, endJd, ayanamshaVal);
   const { items } = ascendantData;
   return { 

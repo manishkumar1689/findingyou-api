@@ -2721,7 +2721,7 @@ export class AstrologicController {
     const queryKeys = queryEntries.map(entry => entry[0]);
     const mode = queryKeys.includes('mode') ? query.mode : 'mid';
     const span = queryKeys.includes('span') ? query.span : 28;
-    const sample = queryKeys.includes('sample') ? query.span : 8;
+    const sample = queryKeys.includes('sample') ? query.sample : 8;
     const isMidMode = ['start', 'start-sample'].includes(mode) === false;
     const returnGrahaRefValues = ['start-sample','sample'].includes(mode);
     const { jd } = matchJdAndDatetime(dt, -1, true, isMidMode);
@@ -2737,7 +2737,7 @@ export class AstrologicController {
     const endJd = jd + + spanJd + offset;
     const sampleRate = smartCastInt(sample, 8);
     const data = await this.astrologicService.fetchBavTimeline(geo, startJd, endJd);
-    const graphData = returnGrahaRefValues? calcBavSignSamples(data, startJd, endJd, sampleRate) : calcBavGraphData(data, refBodies, startJd, endJd, sampleRate);
+    const graphData = returnGrahaRefValues? calcBavSignSamples(data, startJd, endJd, sampleRate, refBodies) : calcBavGraphData(data, refBodies, startJd, endJd, sampleRate);
     return res.status(HttpStatus.OK).json({ items: graphData, valid: graphData.length > 0 });
   }
 
