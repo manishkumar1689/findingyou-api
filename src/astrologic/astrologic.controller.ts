@@ -58,7 +58,7 @@ import {
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
 import { calcGrahaSignTimeline, calcRetroGrade, calcStation, matchNextTransitAtLng, matchNextTransitAtLngRanges, RangeSet } from './lib/astro-motion';
-import { toIndianTime, calcTransition } from './lib/transitions';
+import { toIndianTime, calcTransition, calcSunTransJd, TransitionData } from './lib/transitions';
 import { readEpheFiles } from './lib/files';
 import { ChartInputDTO } from './dto/chart-input.dto';
 import {
@@ -232,6 +232,18 @@ export class AstrologicController {
     if (validISODateString(dt) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const data = await calcAllTransitions(dt, geo);
+      const sunData = await calcSunTransJd(data.jd, geo);
+      
+      data.bodies = data.bodies.map(row => {
+        const { key, rise, set, mc, ic } = row;
+        const item: TransitionData = { key, rise, set, mc, ic };
+        if (key === 'su') {
+          item.prevRise = sunData.prevRise;
+          item.prevSet = sunData.prevSet
+          item.nextRise = sunData.nextRise;
+        }
+        return item;
+      });
       return res.status(HttpStatus.OK).json(data);
     } else {
       const result = {
@@ -2778,7 +2790,7 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('transitions-by-planet/:planet/:startYear?/:endYear?')
+  @Get('stations-by-planet/:planet/:startYear?/:endYear?')
   async transitionsByPlanet(
     @Res() res,
     @Param('planet') planet,

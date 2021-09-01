@@ -16,10 +16,14 @@ export interface TimeSet {
 export interface TransitionData {
   rise: TimeSet;
   set: TimeSet;
-  prevRise: TimeSet;
-  prevSet: TimeSet;
+  prevRise?: TimeSet;
+  prevSet?: TimeSet;
+  nextRise?: TimeSet;
+  ic?: TimeSet;
+  mc?: TimeSet;
   num?: number;
   body?: string;
+  key?: string;
   valid?: boolean;
 }
 

@@ -65,6 +65,7 @@ import { LngLat } from './lib/interfaces';
 import { simplifyChart } from './lib/member-charts';
 import { getAshtakavargaBodyGrid } from './lib/settings/ashtakavarga-values';
 import { GeoPos } from './interfaces/geo-pos';
+import { calcSunTransJd } from './lib/transitions';
 const { ObjectId } = Types;
 
 @Injectable()
