@@ -19,6 +19,7 @@ import { MatchedOption, PrefKeyValue } from './settings/preference-options';
 import { smartCastBool, smartCastFloat } from '../lib/converters';
 import { MediaItemDTO } from './dto/media-item.dto';
 import { PreferenceDTO } from './dto/preference.dto';
+import { type } from 'os';
 const userSelectPaths = [
   '_id',
   'fullName',
@@ -293,11 +294,16 @@ export class UserService {
     inData = null,
     isNew: boolean = false,
     roles: Array<Role> = [],
+    currentUser = null
   ) {
+    const hasCurrentUser = currentUser instanceof Object;
+    const userObj = hasCurrentUser ? currentUser.toObject() : {};
     const userData = new Map<string, any>();
     const dt = new Date();
     if (isNew) {
       userData.set('roles', ['active']);
+    } else if (hasCurrentUser) {
+      userData.set('status', userObj.status);
     }
 
     Object.entries(inData).forEach(entry => {
@@ -307,6 +313,15 @@ export class UserService {
           const tsSalt = dt.getTime() % 16;
           userData.set(key, bcrypt.hashSync(val, tsSalt));
           userData.set('mode', 'local');
+          break;
+        case 'role':
+          if (typeof val === 'string') {
+            const roles = hasCurrentUser ? userObj.roles : [];
+            if (roles.indexOf(val) < 0) {
+              roles.push(val);
+              userData.set('roles', roles);
+            }
+          }
           break;
         case 'roles':
           if (val instanceof Array) {
@@ -363,12 +378,19 @@ export class UserService {
   }
 
   // Edit User details
-  async updateUser(userID: string, createUserDTO: CreateUserDTO): Promise<User> {
-    const userObj = this.transformUserDTO(createUserDTO);
+  async updateUser(userID: string, createUserDTO: CreateUserDTO, roles: Role[] = []): Promise<User> {
+    const user = await this.userModel.findById(userID);
+    const userObj = this.transformUserDTO(createUserDTO, false, roles, user);
     const hasProfileText = Object.keys(createUserDTO).includes("publicProfileText") && notEmptyString(createUserDTO.publicProfileText, 2);
     if (hasProfileText) {
       const profile = { type: 'public', text: createUserDTO.publicProfileText} as ProfileDTO;
       await this.saveProfile(userID, profile);
+    }
+    const hasPreferences = Object.keys(createUserDTO).includes("preferences") && createUserDTO.preferences instanceof Array && createUserDTO.preferences.length > 0;
+    if (hasPreferences) {
+      const user = await this.userModel.findById(userID);
+      const prefs = this.mergePreferences(user, createUserDTO.preferences);
+      userObj.preferences = prefs;
     }
     const updatedUser = await this.userModel.findByIdAndUpdate(
       userID,
@@ -647,29 +669,7 @@ export class UserService {
       valid: false,
     };
     if (user instanceof Object && prefItems instanceof Array) {
-      const userData = user.toObject();
-      const { preferences } = userData;
-      const prefs = preferences instanceof Array ? preferences : [];
-      const filteredPreferences = prefItems.filter(pr => pr instanceof Object && pr.type !== 'user');
-      for (const prefItem of filteredPreferences) {
-        const pKeys = Object.keys(prefItem);
-        if (
-            pKeys.includes('key') &&
-            pKeys.includes('value') &&
-            pKeys.includes('type')
-          ) {
-          const key = prefItem.key.split('__').pop();
-          const edited = { ...prefItem, key};
-          const currPreferenceIndex = preferences.findIndex(
-            pr => pr.key === key,
-          );
-          if (currPreferenceIndex >= 0) {
-            prefs[currPreferenceIndex].value = prefItem.value;
-          } else {
-            prefs.push(edited);
-          }
-        }
-      }
+      const prefs = this.mergePreferences(user, prefItems);
       const dt = new Date();
       const editMap: Map<string, any> = new Map();
       editMap.set('preferences', prefs);
@@ -691,6 +691,22 @@ export class UserService {
           } 
         });
       }
+      const profileItem = prefItems.find(pr => pr instanceof Object && ['profileText', 'publicProfileText'].includes(pr.type));
+      if (profileItem instanceof Object) {
+        const profileType = ['private', 'protected'].includes(profileItem.type)? profileItem.type : 'public';
+        const pubProfile = { type: profileType, text: profileItem.value } as ProfileDTO;
+        const userObj = user.toObject();
+        const profiles = userObj.profiles instanceof Array ? userObj.profiles : [];
+        const currProfileIndex = profiles.findIndex(pr => pr.type === profileType);
+        const currProfile = currProfileIndex < 0 ? null : profiles[currProfileIndex];
+        const profile = this.updateProfile(pubProfile, currProfile, dt);
+        if (currProfileIndex < 0) {
+          profiles.unshift(profile);
+        } else {
+          profiles[currProfileIndex] = profile;
+        }
+        editMap.set('profiles', profiles);
+      }
       const edited = Object.fromEntries(editMap.entries());
       data.user = await this.userModel.findByIdAndUpdate(
         userID,
@@ -702,6 +718,33 @@ export class UserService {
       data.valid = true;
     }
     return data;
+  }
+
+  mergePreferences(user, prefItems:PreferenceDTO[] = []) {
+    const userData = user.toObject();
+    const { preferences } = userData;
+    const prefs = preferences instanceof Array ? preferences : [];
+    const filteredPreferences = prefItems.filter(pr => pr instanceof Object && pr.type !== 'user');
+    for (const prefItem of filteredPreferences) {
+      const pKeys = Object.keys(prefItem);
+      if (
+          pKeys.includes('key') &&
+          pKeys.includes('value') &&
+          pKeys.includes('type')
+        ) {
+        const key = prefItem.key.split('__').pop();
+        const edited = { ...prefItem, key};
+        const currPreferenceIndex = preferences.findIndex(
+          pr => pr.key === key,
+        );
+        if (currPreferenceIndex >= 0) {
+          prefs[currPreferenceIndex].value = prefItem.value;
+        } else {
+          prefs.push(edited);
+        }
+      }
+    }
+    return prefs;
   }
 
   async saveProfile(userID: string, profile: ProfileDTO) {

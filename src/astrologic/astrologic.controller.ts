@@ -227,23 +227,36 @@ export class AstrologicController {
     res.send(data);
   }
 
-  @Get('transitions/:loc/:dt')
-  async transitions(@Res() res, @Param('loc') loc, @Param('dt') dt) {
+  @Get('transitions/:loc/:dt/:modeRef?')
+  async transitions(@Res() res, @Param('loc') loc, @Param('dt') dt, @Param('modeRef') modeRef) {
     if (validISODateString(dt) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const data = await calcAllTransitions(dt, geo);
-      const sunData = await calcSunTransJd(data.jd, geo);
       
+      const mode = ["basic", "standard", "extended"].includes(modeRef)? modeRef : "standard";
+      const showSunData = ["standard", "extended"].includes(mode);
+      const showGeoData = ["extended"].includes(mode);
+      const sunData = showSunData? await calcSunTransJd(data.jd, geo) : null;
+
       data.bodies = data.bodies.map(row => {
         const { key, rise, set, mc, ic } = row;
         const item: TransitionData = { key, rise, set, mc, ic };
-        if (key === 'su') {
+        if (showGeoData && key === 'su') {
           item.prevRise = sunData.prevRise;
           item.prevSet = sunData.prevSet
           item.nextRise = sunData.nextRise;
         }
         return item;
       });
+      if (showGeoData) {
+        data.geo = await this.geoService.fetchGeoAndTimezone(
+          geo.lat,
+          geo.lng,
+          dt,
+          'compact'
+        );
+        
+      }
       return res.status(HttpStatus.OK).json(data);
     } else {
       const result = {

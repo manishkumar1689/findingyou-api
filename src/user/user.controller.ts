@@ -133,8 +133,7 @@ export class UserController {
     }
     if (!valid) {
       if (validEmail(createUserDTO.identifier)) {
-        const roles = await this.getRoles();
-        const user = await this.userService.addUser(createUserDTO, roles);
+        const user = await this.userService.addUser(createUserDTO);
         if (user) {
           msg = 'User has been created successfully';
           userData = extractSimplified(user, ['password']);
@@ -159,7 +158,8 @@ export class UserController {
     @Param('userID') userID,
     @Body() createUserDTO: CreateUserDTO,
   ) {
-    const user = await this.userService.updateUser(userID, createUserDTO);
+    const roles = await this.getRoles();
+    const user = await this.userService.updateUser(userID, createUserDTO, roles);
     return res.status(HttpStatus.OK).json({
       message: 'User has been updated successfully',
       user,

@@ -8,6 +8,7 @@ import {
 } from './settings/graha-values';
 import { Graha } from './models/graha-set';
 import { LngLat } from './interfaces';
+import { Placename } from '../../user/interfaces/placename.interface';
 
 export const extractString = (obj: any, key: string): string => {
   let str = '';
@@ -167,7 +168,8 @@ export const calcVargaValue = (lng: number, num: number) => (lng * num) % 360;
 export const subtractLng360 = (lng: number, offset = 0) =>
   (lng + 360 - offset) % 360;
 
-export const addLng360 = (lng: number, offset = 0) =>
+export const 
+addLng360 = (lng: number, offset = 0) =>
   (lng + 360 + offset) % 360;
 
 export const subtractSign = (sign1: number, sign2: number) =>
@@ -562,3 +564,24 @@ export const generateNameSearchRegex = (str: string): string => {
   });
   return str;
 };
+
+
+export const toLocationString = (toponyms: Placename[]) => {
+  const numParts = toponyms.length;
+  const lastIndex = numParts - 1;
+  const last2Index = numParts - 2;
+  const items = numParts > 4 ? [toponyms[lastIndex], toponyms[last2Index], toponyms[0]] : numParts > 1 ? [toponyms[lastIndex], toponyms[0]] : [];
+  const names = [];
+  items.forEach((item) => {
+    const { name } = item;
+    if (names.includes(name) === false) {
+      names.push(name);
+    }
+  });
+  return names.join(', ');
+}
+
+export const simplifyGeoData = (geoData = null) => {
+  const toponyms = geoData instanceof Object && Object.keys(geoData).includes("toponyms") && geoData.toponyms instanceof Array? geoData.toponyms : [];
+  return toLocationString(toponyms);
+}

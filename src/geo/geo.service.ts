@@ -22,8 +22,9 @@ import {
 import * as Redis from 'ioredis';
 import { RedisService } from 'nestjs-redis';
 import { GeoName } from './interfaces/geo-name.interface';
-import { generateNameSearchRegex } from '../astrologic/lib/helpers';
+import { generateNameSearchRegex, toLocationString } from '../astrologic/lib/helpers';
 import { Toponym } from '../astrologic/lib/interfaces';
+import { toShortTzAbbr } from '../astrologic/lib/date-funcs';
 
 @Injectable()
 export class GeoService {
@@ -186,10 +187,13 @@ export class GeoService {
     return places instanceof Array? places.filter(pl => pl instanceof Object).map(mapGooglePlace) : [];
   } */
 
-  async fetchGeoAndTimezone(lat: number, lng: number, datetime: string) {
+  async fetchGeoAndTimezone(lat: number, lng: number, datetime: string, mode = 'standard') {
     const data = await this.fetchGeoData(lat, lng);
     const offset = this.checkLocaleOffset(data.tz, datetime, data.toponyms);
-    return { ...data, offset };
+    const shortTz = toShortTzAbbr(datetime, data.tz);
+    const { countryName, cc, tz, toponyms	} = data;
+    const obj: any = mode === 'compact'? { countryName, cc, tz, location: toLocationString(toponyms)	} : { countryName, cc, tz, toponyms	};
+    return { ...obj, offset, shortTz };
   }
 
   checkLocaleOffset(timeZone: string, datetime: string, toponyms: Toponym[] = []) {

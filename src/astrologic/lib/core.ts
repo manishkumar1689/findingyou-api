@@ -265,6 +265,7 @@ export const calcAllTransitions = async (datetime: string, geo, jdOffset = 0) =>
   return {
     jd,
     bodies,
+    geo
   };
 };
 
