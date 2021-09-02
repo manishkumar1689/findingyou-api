@@ -397,6 +397,14 @@ export class UserService {
       userObj,
       { new: true },
     );
+    const editedUser = updatedUser instanceof Object ? updatedUser.toObject() : {};
+    const keys = Object.keys(editedUser);
+    if (keys.includes('password')) {
+      delete editedUser.password;
+    }
+    if (keys.includes('__v')) {
+      delete editedUser.__v;
+    }
     return updatedUser;
   }
 
@@ -664,6 +672,9 @@ export class UserService {
 
   async savePreferences(userID: string, prefItems:PreferenceDTO[] = []) {
     const user = await this.userModel.findById(userID);
+    const profileTextTypes = ['profileText', 'profile_text', 'publicProfileText', 'bio'];
+    const otherTypes = [...profileTextTypes, 'user'];
+    const stringFields = ['fullName', 'nickName'];
     const data = {
       user: null,
       valid: false,
@@ -674,7 +685,7 @@ export class UserService {
       const editMap: Map<string, any> = new Map();
       editMap.set('preferences', prefs);
       editMap.set('modifiedAt', dt);
-      const userOpts = prefItems.filter(pr => pr instanceof Object && pr.type === 'user');
+      const userOpts = prefItems.filter(pr => pr instanceof Object && otherTypes.includes(pr.type) === false);
       if (userOpts.length > 0) {
         userOpts.forEach(row => {
           const { key, value } = row;
@@ -688,10 +699,12 @@ export class UserService {
               editMap.set('geo', { lat, lng, alt});
               editMap.set('coords', [lng, lat]);
             }
-          } 
+          } else if (stringFields.includes(key)) {
+            editMap.set(key, value);
+          }
         });
       }
-      const profileItem = prefItems.find(pr => pr instanceof Object && ['profileText', 'publicProfileText'].includes(pr.type));
+      const profileItem = prefItems.find(pr => pr instanceof Object && profileTextTypes.includes(pr.type));
       if (profileItem instanceof Object) {
         const profileType = ['private', 'protected'].includes(profileItem.type)? profileItem.type : 'public';
         const pubProfile = { type: profileType, text: profileItem.value } as ProfileDTO;
@@ -930,7 +943,7 @@ export class UserService {
               data.deleted = true;
             }
           }
-        })
+        });
         data.user = userObj;
       }
     }
