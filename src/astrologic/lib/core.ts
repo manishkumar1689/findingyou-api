@@ -258,14 +258,15 @@ export const calcMrityubhagaValues = (
 export const calcAllTransitions = async (datetime: string, geo, jdOffset = 0) => {
   const jd = calcJulDate(datetime);
   const items = await calcAllTransitionsJd(jd, geo, jdOffset, true);
-  const bodies: TransitionData[] = items.map(row => {
+  const transitions: TransitionData[] = items.map(row => {
     const key = row.body.split('_').pop().substring(0,2).toLocaleLowerCase();
     return { ...row, key }
   })
   return {
     jd,
-    bodies,
-    geo
+    transitions,
+    geo,
+    chart: null
   };
 };
 

@@ -238,7 +238,7 @@ export class AstrologicController {
       const showGeoData = ["extended"].includes(mode);
       const sunData = showSunData? await calcSunTransJd(data.jd, geo) : null;
 
-      data.bodies = data.bodies.map(row => {
+      data.transitions = data.transitions.map(row => {
         const { key, rise, set, mc, ic } = row;
         const item: TransitionData = { key, rise, set, mc, ic };
         if (showGeoData && key === 'su') {
@@ -255,7 +255,7 @@ export class AstrologicController {
           dt,
           'compact'
         );
-        
+        data.chart = await this.fetchCompactChart(loc, dt, "top", "top", false, false);
       }
       return res.status(HttpStatus.OK).json(data);
     } else {
@@ -343,7 +343,7 @@ export class AstrologicController {
       const vd = await calcVargas(dtUtc, geo, sysRef);
 
       const td = await calcAllTransitions(dtUtc, data.bodies);
-      data.transitions = td.bodies;
+      data.transitions = td.transitions;
       data.vargas = vd.vargas;
       const pd = await calcPanchanga(dtUtc, geo);
       data.yoga = pd.yoga;
