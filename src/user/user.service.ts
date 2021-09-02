@@ -9,7 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { hashSalt } from '../.config';
 import { generateHash } from '../lib/hash';
 import * as moment from 'moment-timezone';
-import { inRange, isNumeric, notEmptyString } from '../lib/validators';
+import { inRange, isNumeric, notEmptyString, validISODateString } from '../lib/validators';
 import { Role } from './interfaces/role.interface';
 import { Payment } from './interfaces/payment.interface';
 import { PaymentOption } from './interfaces/payment-option.interface';
@@ -19,7 +19,7 @@ import { MatchedOption, PrefKeyValue } from './settings/preference-options';
 import { smartCastBool, smartCastFloat } from '../lib/converters';
 import { MediaItemDTO } from './dto/media-item.dto';
 import { PreferenceDTO } from './dto/preference.dto';
-import { type } from 'os';
+
 const userSelectPaths = [
   '_id',
   'fullName',
@@ -397,15 +397,8 @@ export class UserService {
       userObj,
       { new: true },
     );
-    const editedUser = updatedUser instanceof Object ? updatedUser.toObject() : {};
-    const keys = Object.keys(editedUser);
-    if (keys.includes('password')) {
-      delete editedUser.password;
-    }
-    if (keys.includes('__v')) {
-      delete editedUser.__v;
-    }
-    return updatedUser;
+    
+    return this.removeHiddenFields(updatedUser);
   }
 
   // Edit User password
@@ -675,17 +668,18 @@ export class UserService {
     const profileTextTypes = ['profileText', 'profile_text', 'publicProfileText', 'bio'];
     const otherTypes = [...profileTextTypes, 'user'];
     const stringFields = ['fullName', 'nickName'];
+    const dtFields = ['dob'];
     const data = {
       user: null,
       valid: false,
     };
     if (user instanceof Object && prefItems instanceof Array) {
-      const prefs = this.mergePreferences(user, prefItems);
+      const prefs = this.mergePreferences(user, prefItems.filter(pr => pr instanceof Object && otherTypes.includes(pr.type) === false));
       const dt = new Date();
       const editMap: Map<string, any> = new Map();
       editMap.set('preferences', prefs);
       editMap.set('modifiedAt', dt);
-      const userOpts = prefItems.filter(pr => pr instanceof Object && otherTypes.includes(pr.type) === false);
+      const userOpts = prefItems.filter(pr => pr instanceof Object && pr.type === 'user');
       if (userOpts.length > 0) {
         userOpts.forEach(row => {
           const { key, value } = row;
@@ -701,6 +695,10 @@ export class UserService {
             }
           } else if (stringFields.includes(key)) {
             editMap.set(key, value);
+          }  else if (dtFields.includes(key)) {
+            if (validISODateString(value)) {
+              editMap.set(key, value);
+            }
           }
         });
       }
@@ -721,16 +719,29 @@ export class UserService {
         editMap.set('profiles', profiles);
       }
       const edited = Object.fromEntries(editMap.entries());
-      data.user = await this.userModel.findByIdAndUpdate(
+      const savedUser = await this.userModel.findByIdAndUpdate(
         userID,
         edited,
         {
           new: true,
         },
       );
+      data.user = this.removeHiddenFields(savedUser);
       data.valid = true;
     }
     return data;
+  }
+
+  removeHiddenFields(user = null) {
+    const userObj = user instanceof Object ? user.toObject() : {};
+    const keys = Object.keys(userObj);
+    if (keys.includes('password')) {
+      delete userObj.password;
+    }
+    if (keys.includes('__v')) {
+      delete userObj.__v;
+    }
+    return userObj;
   }
 
   mergePreferences(user, prefItems:PreferenceDTO[] = []) {
