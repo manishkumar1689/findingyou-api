@@ -596,8 +596,12 @@ export class AstrologicController {
     const userRecord = await this.userService.getUser(user);
 
     if (userRecord instanceof Object) {
+      
+      const dob = userRecord.dob instanceof Date? utcDate(userRecord.dob) : "";
+      const useDob = !validISODateString(datetime) && validISODateString(dob);
+      const refDt = useDob ? dob : datetime;
       if (userRecord.active) {
-        if (validISODateString(datetime) && isNumeric(lat) && isNumeric(lng)) {
+        if (validISODateString(refDt) && isNumeric(lat) && isNumeric(lng)) {
           const geo = { lat, lng, alt };
           if (isDefaultBirthChart) {
             name = userRecord.nickName;
@@ -624,9 +628,9 @@ export class AstrologicController {
             placenames instanceof Array && placenames.length > 1;
           const geoInfo = await this.fetchGeoInfo(
             geo,
-            datetime,
+            refDt,
           );
-          const dtUtc = applyTzOffsetToDateString(datetime, geoInfo.offset);
+          const dtUtc = applyTzOffsetToDateString(refDt, geoInfo.offset);
           const topKeys = (!fetchFull && ayanamsha !== 'top')? [ayanamsha] : [];
           // always fetch chart data with tropical grahas, but apply ayanamsha(s)
           // for derived value sets. For member charts only fetch one set of ayanamsha variants 
@@ -646,7 +650,6 @@ export class AstrologicController {
             const userData = {
               dob: dtUtc,
             } as CreateUserDTO;
-            
             this.userService.updateUser(user, userData);
             const placenames = mapToponyms(geoInfo.toponyms, geo, locality);
 
