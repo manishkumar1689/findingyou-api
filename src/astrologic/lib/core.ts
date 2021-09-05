@@ -255,11 +255,21 @@ export const calcMrityubhagaValues = (
   return { ascendant, standardRange, altRange, bodies };
 };
 
+export const translateBodyConstant = (body: string) => {
+  const bodyBase = body.replace(/^SE_/, '').toLowerCase();
+  switch (bodyBase) {
+    case 'mean_node':
+      return 'ke';
+    default:
+      return bodyBase.substring(0,2).toLowerCase();
+  }
+}
+
 export const calcAllTransitions = async (datetime: string, geo, jdOffset = 0) => {
   const jd = calcJulDate(datetime);
   const items = await calcAllTransitionsJd(jd, geo, jdOffset, true);
   const transitions: TransitionData[] = items.map(row => {
-    const key = row.body.split('_').pop().substring(0,2).toLocaleLowerCase();
+    const key = translateBodyConstant(row.body);
     return { ...row, key }
   })
   return {
@@ -289,6 +299,7 @@ export const calcAllTransitionsJd = async (
     'SE_URANUS',
     'SE_NEPTUNE',
     'SE_PLUTO',
+    'SE_MEAN_NODE'
   ];
   const bodyKeys = fullSet? [...baseKeys, ...extraKeys] : baseKeys;
   const bodies: Array<TransitionData> = [];

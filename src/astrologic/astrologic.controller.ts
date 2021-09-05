@@ -2807,7 +2807,7 @@ export class AstrologicController {
   }
 
   @Get('stations-by-planet/:planet/:startYear?/:endYear?')
-  async transitionsByPlanet(
+  async stationsByPlanet(
     @Res() res,
     @Param('planet') planet,
     @Param('startYear') startYear,
