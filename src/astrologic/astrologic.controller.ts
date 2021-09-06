@@ -255,7 +255,7 @@ export class AstrologicController {
           dt,
           'compact'
         );
-        data.chart = await this.fetchCompactChart(loc, dt, "top", "top", false, false);
+        data.chart = await this.fetchCompactChart(loc, dt, "top", "top", false, true);
       }
       return res.status(HttpStatus.OK).json(data);
     } else {

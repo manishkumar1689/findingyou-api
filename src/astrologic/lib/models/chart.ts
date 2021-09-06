@@ -218,6 +218,7 @@ export class Chart {
   tz: string;
   tzOffset: number;
   ascendant: number;
+  ecliptic?: number;
   mc: number;
   vertex: number;
   grahas: Array<BaseGraha> = [];
@@ -279,6 +280,7 @@ export class Chart {
           case 'mc':
           case 'ascendant':
           case 'vertex':
+          case 'ecliptic':
           case 'tzOffset':
             if (typeof v === 'number') {
               this[k] = v;

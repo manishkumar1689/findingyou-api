@@ -77,6 +77,7 @@ export class Graha extends BaseObject {
   };
   distance: number = 1;
   declination?: number = null;
+  rectAscension?: number = null;
   lngSpeed: number = 0;
   latSpeed: number = 0;
   dstSpeed: number = 0;

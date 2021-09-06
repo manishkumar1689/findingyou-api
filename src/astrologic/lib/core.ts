@@ -6,6 +6,7 @@ import {
   fixstar2MagAsync,
   getHouses,
   getAyanamsa,
+  getColTrans,
 } from './sweph-async';
 import { calcJulDate, jdToDateTime } from './date-funcs';
 import { calcInclusiveTwelfths, subtractLng360 } from './math-funcs';
@@ -442,6 +443,19 @@ export const matchSideralMode = (mode: string) => {
   return iflag;
 };
 
+export const calcGrahaPos = async (jd, num, flag = 0) => {
+  let data: any = { valid: false };
+  const gFlag = swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SPEED + flag;
+  await calcUtAsync(jd, num, gFlag).catch(async result => {
+    if (result instanceof Object) {
+      if (!result.error) {
+        data = result;
+      }
+    }
+  });
+  return data;
+}
+
 export const fetchHouseDataJd = async (
   jd,
   geo,
@@ -458,7 +472,16 @@ export const fetchHouseDataJd = async (
       }
     }
   });
-  return new HouseSet(houseData);
+  const posData = await calcGrahaPos(jd, -1, 0);
+  /* const gFlag = swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SPEED;
+  await getColTrans(jd, swisseph.SE_ASC, gFlag).catch(async result => {
+    if (result instanceof Object) {
+      if (!result.error) {
+        console.log(pos, result);
+      }
+    }
+  }); */
+  return new HouseSet(houseData, posData);
 };
 
 export const fetchHouseData = async (
@@ -493,6 +516,7 @@ const addGrahaValues = async (data, applyTopo = false) => {
             enemies: body.enemies,
             ...result,
             declination: dV.value,
+            rectAscension: dV.ra
           });
           if (!data.valid) {
             data.valid = true;
@@ -528,6 +552,7 @@ const addGrahaValues = async (data, applyTopo = false) => {
 interface DeclinationResult {
   valid: boolean;
   value: number;
+  ra?: number;
 }
 
 const calcDeclination = async (
@@ -536,12 +561,12 @@ const calcDeclination = async (
 ): Promise<DeclinationResult> => {
   const flag =
     swisseph.SEFLG_SWIEPH | swisseph.SEFLG_SPEED | swisseph.SEFLG_EQUATORIAL;
-  let data = { valid: false, value: 0 };
+  let data = { valid: false, value: 0, ra: 0 };
   await calcUtAsync(jd, num, flag).catch(async result => {
     if (result instanceof Object) {
       if (!result.error) {
         if (result instanceof Object) {
-          data = { valid: true, value: result.declination };
+          data = { valid: true, value: result.declination, ra: result.rectAscension };
         }
       }
     }
@@ -811,6 +836,7 @@ export const calcCompactChartData = async (
     topKeys.length > 0 ? topKeys : ['true_citra', 'lahiri', 'krishnamurti'];
   // arudha and greek lots only available for this ayanamsha
   const extraDataAyanamshas = ['true_citra'];
+  const { ecliptic } = hdP;
   if (calcVariants) {
     let prevAyaVal = 0;
     coreAyanamshas.forEach(ak => {
@@ -860,6 +886,7 @@ export const calcCompactChartData = async (
       return cleanBodyObj(gr);
     }),
     ascendant,
+    ecliptic,
     mc,
     vertex,
     houses,
@@ -992,7 +1019,6 @@ const calcCompactVariantSet = (
     houses.unshift({ system: 'P', values: hdP.houses.slice(0, 6) });
   }
   const houseData = { ...hdP, houses };
-  
   const grahas = grahaSet.bodies.map(cleanGraha);
   const { sphutas, objects } = shouldCalcVariants? addSphutasAndBaseObjects(grahaSet, hdW, indianTimeData, upagrahas, sunAtSunRise) : { sphutas: [], objects: [] };
     
@@ -1643,6 +1669,7 @@ export const coreGrahaKeys = (fullMode = false) => {
     'lngSpeed',
     'topo',
     'declination',
+    'rectAscension'
   ];
   const extraKeys = fullMode
     ? [
