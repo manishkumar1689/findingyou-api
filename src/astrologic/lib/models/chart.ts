@@ -219,6 +219,7 @@ export class Chart {
   tzOffset: number;
   ascendant: number;
   ecliptic?: number;
+  ascDeclination?: number;
   mc: number;
   vertex: number;
   grahas: Array<BaseGraha> = [];

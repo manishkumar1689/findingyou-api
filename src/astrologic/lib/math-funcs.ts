@@ -29,6 +29,13 @@ export const mapSignToHouse = (sign: number, houses: Array<number>): number => {
   return hn;
 };
 
+export const limitValueToRange = (num = 0, min = 0, max = 360): number => {
+  const span = max - min;
+  const val = (num - min) % span;
+  const refVal = val > 0 ? val : span + val;
+  return refVal + min;
+}
+
 export const calcVargaValue = (lng, num) => (lng * num) % 360;
 
 export const subtractLng360 = (lng: number, offset: number = 0) =>
@@ -75,6 +82,27 @@ export const geoToRadians = (coords: GeoPos) => {
     lng: toRadians(coords.lng),
   };
 };
+
+export const calcDeclinationFromLngLatEcl = (lng = 0, lat = 0, ecliptic = 0): number => {
+	const sinD = Math.cos(toRadians(lat)) * Math.sin(toRadians(lng)) * Math.sin(toRadians(ecliptic)) + Math.sin(toRadians(lat)) * Math.cos(toRadians(ecliptic));
+	return toDegrees(Math.asin(sinD));
+}
+
+export const calcRectAscendant = (lng = 0, lat = 0, ecliptic = 0): number => {
+	const radians = Math.atan((Math.cos(toRadians(ecliptic))  * Math.sin(toRadians (lng)) - Math.sin(toRadians (ecliptic)) * Math.tan(toRadians(lat)) ) / Math.cos(toRadians (lng)) );
+	return toDegrees(radians);
+}
+
+export const altitudeForEquatorialPosition = (lat = 0, declination = 0, rightAscension = 0, raMC = 0) => {
+  const hourAngle = limitValueToRange(raMC - rightAscension, 0, 360);
+  const cosHourAngle = Math.cos(toRadians(hourAngle));
+  const sinGeoLat = Math.sin(toRadians(lat));
+  const cosGeoLat = Math.cos(toRadians(lat));
+  const sinDecl = Math.sin(toRadians(declination));
+  const cosDecl = Math.cos(toRadians(declination));
+  const sinAltitude = (sinGeoLat * sinDecl) + (cosGeoLat * cosDecl * cosHourAngle);
+  return limitValueToRange(toDegrees(Math.asin(sinAltitude)), -90, 90);
+}
 
 export const midPointSurface = (coord1: GeoPos, coord2: GeoPos) => {
   const c1 = geoToRadians(coord1);

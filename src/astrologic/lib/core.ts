@@ -9,7 +9,7 @@ import {
   getColTrans,
 } from './sweph-async';
 import { calcJulDate, jdToDateTime } from './date-funcs';
-import { calcInclusiveTwelfths, subtractLng360 } from './math-funcs';
+import { calcDeclinationFromLngLatEcl, calcInclusiveTwelfths, calcRectAscendant, subtractLng360 } from './math-funcs';
 import {
   calcTransitionJd,
   calcJyotishSunRise,
@@ -443,7 +443,7 @@ export const matchSideralMode = (mode: string) => {
   return iflag;
 };
 
-export const calcGrahaPos = async (jd, num, flag = 0) => {
+export const calcGrahaPos = async (jd = 0, num = 0, flag = 0) => {
   let data: any = { valid: false };
   const gFlag = swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SPEED + flag;
   await calcUtAsync(jd, num, gFlag).catch(async result => {
@@ -464,6 +464,7 @@ export const fetchHouseDataJd = async (
 ): Promise<HouseSet> => {
   let houseData: any = { jd };
   const iflag = matchSideralMode(mode);
+  
   await getHouses(jd, iflag, geo.lat, geo.lng, system).catch(res => {
     if (res instanceof Object) {
       if (res.house) {
@@ -472,16 +473,22 @@ export const fetchHouseDataJd = async (
       }
     }
   });
+  swisseph.swe_set_topo(geo.lng, geo.lat, geo.alt);
   const posData = await calcGrahaPos(jd, -1, 0);
-  /* const gFlag = swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SPEED;
-  await getColTrans(jd, swisseph.SE_ASC, gFlag).catch(async result => {
-    if (result instanceof Object) {
-      if (!result.error) {
-        console.log(pos, result);
-      }
-    }
-  }); */
-  return new HouseSet(houseData, posData);
+  let ascDeclination = 0;
+  let ecliptic = 0;
+  let ascRectAscension = 0;
+  let mcRectAscension = 0;
+  const hasEclipticData = posData instanceof Object;
+  const keys = hasEclipticData ? Object.keys(posData) : [];
+  if (hasEclipticData && keys.includes("longitude")) {
+    ecliptic = posData.longitude;
+    ascDeclination = calcDeclinationFromLngLatEcl(houseData.ascendant, 0, ecliptic);
+    ascRectAscension = calcRectAscendant(houseData.ascendant, 0, ecliptic);
+    mcRectAscension = calcRectAscendant(houseData.mc, 0, ecliptic);
+  }
+  const extraData = hasEclipticData ? { ascDeclination, ecliptic, ascRectAscension, mcRectAscension } : {};
+  return new HouseSet(houseData, extraData);
 };
 
 export const fetchHouseData = async (
@@ -836,7 +843,7 @@ export const calcCompactChartData = async (
     topKeys.length > 0 ? topKeys : ['true_citra', 'lahiri', 'krishnamurti'];
   // arudha and greek lots only available for this ayanamsha
   const extraDataAyanamshas = ['true_citra'];
-  const { ecliptic } = hdP;
+  const { ecliptic, ascDeclination, ascRectAscension, mcRectAscension } = hdP;
   if (calcVariants) {
     let prevAyaVal = 0;
     coreAyanamshas.forEach(ak => {
@@ -887,6 +894,9 @@ export const calcCompactChartData = async (
     }),
     ascendant,
     ecliptic,
+    ascDeclination,
+    ascRectAscension,
+    mcRectAscension,
     mc,
     vertex,
     houses,

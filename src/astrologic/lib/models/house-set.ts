@@ -5,12 +5,15 @@ export class HouseSet {
   mc = 0;
   vertex = 0;
   ecliptic = 0;
+  ascDeclination = 0;
+  ascRectAscension = 0;
+  mcRectAscension = 0;
   /* equatorialAscendant: number = 0;
   kochCoAscendant:number = 0;
   munkaseyCoAscendant:number = 0;
   munkaseyPolarAscendant:number = 0; */
 
-  constructor(houseData: any = null, posData = null) {
+  constructor(houseData: any = null, extraData = null) {
     if (houseData instanceof Object) {
       Object.entries(houseData).forEach(entry => {
         const [key, value] = entry;
@@ -32,10 +35,14 @@ export class HouseSet {
         }
       });
     }
-    if (posData instanceof Object) {
-      const posKeys = Object.keys(posData);
-      if (posKeys.includes("longitude")) {
-        this.ecliptic = posData.longitude;
+    if (extraData instanceof Object) {
+      const posKeys = Object.keys(extraData);
+      if (posKeys.includes("ecliptic") && posKeys.includes("ascDeclination")) {
+        const { ecliptic, ascDeclination, ascRectAscension, mcRectAscension } = extraData
+        this.ecliptic = ecliptic;
+        this.ascDeclination = ascDeclination;
+        this.ascRectAscension = ascRectAscension;
+        this.mcRectAscension = mcRectAscension;
       }
     }
   }

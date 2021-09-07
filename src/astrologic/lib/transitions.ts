@@ -66,13 +66,13 @@ export const matchTransData = async (
       data.valid = false;
     }
   });
-  let result = { jd: -1, after: false };
+  let result:TimeSet = { jd: -1, after: false };
   //const offset = Math.floor(jd) < Math.floor(data.transitTime) && transKey === 'set' ? 1 : 0;
   if (data.valid) {
     if (data.transitTime >= 0) {
       result = {
         jd: data.transitTime,
-        //dt: jdToDateTime(data.transitTime),
+        dt: jdToDateTime(data.transitTime),
         after: jd > data.transitTime,
       };
     }
