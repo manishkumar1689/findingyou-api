@@ -72,7 +72,7 @@ export const matchTransData = async (
     if (data.transitTime >= 0) {
       result = {
         jd: data.transitTime,
-        dt: jdToDateTime(data.transitTime),
+        //dt: jdToDateTime(data.transitTime),
         after: jd > data.transitTime,
       };
     }
