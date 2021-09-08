@@ -41,6 +41,7 @@ import {
   calcAyanamsha,
   fetchHouseDataJd,
   calcCoreGrahaPositions,
+  calcBaseObjects,
 } from './lib/core';
 import {
   calcJulianDate,
@@ -256,7 +257,44 @@ export class AstrologicController {
           'compact'
         );
         data.chart = await this.fetchCompactChart(loc, dt, "top", "top", false, true);
+
       }
+      return res.status(HttpStatus.OK).json(data);
+    } else {
+      const result = {
+        valid: false,
+        message: 'Invalid parameters',
+      };
+      return res.status(HttpStatus.BAD_REQUEST).json(result);
+    }
+  }
+
+  @Get('base-objects/:loc/:dt')
+  async basObjects(@Res() res, @Param('loc') loc, @Param('dt') dt) {
+    if (validISODateString(dt) && notEmptyString(loc, 3)) {
+      const geo = locStringToGeo(loc);
+      const { dtUtc, jd } = matchJdAndDatetime(dt);
+      const data = await calcBaseObjects(jd, geo);
+      /* const keys = [
+        'key',
+        'longitude',
+        'latitude',
+        'distance',
+        'longitudeSpeed',
+        'latitudeSpeed',
+        'distanceSpeed',
+        'declination',
+        'rectAscension',
+        'altitude'
+      ];
+      const rows = Object.entries(data).map(entry => {
+        const [k, obj] = entry;
+        return keys.map(k1 => {
+          const rks = Object.keys(obj);
+          const val = rks.includes(k1)? obj[k1] : k1 === 'key'? k : '-';
+          return val;
+        }).join(',');
+      }).join(`§`); */
       return res.status(HttpStatus.OK).json(data);
     } else {
       const result = {

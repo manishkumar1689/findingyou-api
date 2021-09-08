@@ -33,7 +33,8 @@ export const limitValueToRange = (num = 0, min = 0, max = 360): number => {
   const span = max - min;
   const val = (num - min) % span;
   const refVal = val > 0 ? val : span + val;
-  return refVal + min;
+  const outVal = refVal + min;
+  return (min < 0 && (val < 0 || num > max))? 0 - outVal: outVal;
 }
 
 export const calcVargaValue = (lng, num) => (lng * num) % 360;
@@ -88,16 +89,27 @@ export const calcDeclinationFromLngLatEcl = (lng = 0, lat = 0, ecliptic = 0): nu
 	return toDegrees(Math.asin(sinD));
 }
 
-export const calcRectAscendant = (lng = 0, lat = 0, ecliptic = 0): number => {
+export const calcRectAscension = (lng = 0, lat = 0, ecliptic = 0): number => {
 	const radians = Math.atan((Math.cos(toRadians(ecliptic))  * Math.sin(toRadians (lng)) - Math.sin(toRadians (ecliptic)) * Math.tan(toRadians(lat)) ) / Math.cos(toRadians (lng)) );
 	return toDegrees(radians);
 }
-
-export const altitudeForEquatorialPosition = (lat = 0, declination = 0, rightAscension = 0, raMC = 0) => {
+/*----------------------------------------------------------------
+public static double altitudeForEquatorialPosition(final double geoLat, final double declination, final double rightAscension, final double raMC) {
+    final double hourAngle = RangeUtil.limitValueToRange(raMC - rightAscension, 0, 360);
+    final double cosHourAngle = Math.cos(Math.toRadians(hourAngle));
+    final double sinGeoLat = Math.sin(Math.toRadians(geoLat));
+    final double cosGeoLat = Math.cos(Math.toRadians(geoLat));
+    final double sinDecl = Math.sin(Math.toRadians(declination));
+    final double cosDecl = Math.cos(Math.toRadians(declination));
+    final double sinAltitude = (sinGeoLat * sinDecl) + (cosGeoLat * cosDecl * cosHourAngle);
+    return RangeUtil.limitValueToRange(Math.toDegrees(Math.asin(sinAltitude)), -90, 90);
+}
+*/
+export const altitudeForEquatorialPosition = (geoLat = 0, declination = 0, rightAscension = 0, raMC = 0) => {
   const hourAngle = limitValueToRange(raMC - rightAscension, 0, 360);
   const cosHourAngle = Math.cos(toRadians(hourAngle));
-  const sinGeoLat = Math.sin(toRadians(lat));
-  const cosGeoLat = Math.cos(toRadians(lat));
+  const sinGeoLat = Math.sin(toRadians(geoLat));
+  const cosGeoLat = Math.cos(toRadians(geoLat));
   const sinDecl = Math.sin(toRadians(declination));
   const cosDecl = Math.cos(toRadians(declination));
   const sinAltitude = (sinGeoLat * sinDecl) + (cosGeoLat * cosDecl * cosHourAngle);

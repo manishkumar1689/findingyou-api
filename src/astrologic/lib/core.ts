@@ -7,9 +7,10 @@ import {
   getHouses,
   getAyanamsa,
   getColTrans,
+  getAzalt,
 } from './sweph-async';
-import { calcJulDate, jdToDateTime } from './date-funcs';
-import { calcDeclinationFromLngLatEcl, calcInclusiveTwelfths, calcRectAscendant, subtractLng360 } from './math-funcs';
+import { calcJulDate, jdToDateTime, julToISODate } from './date-funcs';
+import { altitudeForEquatorialPosition, calcDeclinationFromLngLatEcl, calcInclusiveTwelfths, calcRectAscension, subtractLng360 } from './math-funcs';
 import {
   calcTransitionJd,
   calcJyotishSunRise,
@@ -61,6 +62,7 @@ import {
 } from './models/chart';
 import { capitalize } from './helpers';
 import houseTypeData from './settings/house-type-data';
+import { async } from 'rxjs/internal/scheduler/async';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 
@@ -446,14 +448,86 @@ export const matchSideralMode = (mode: string) => {
 export const calcGrahaPos = async (jd = 0, num = 0, flag = 0) => {
   let data: any = { valid: false };
   const gFlag = swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SPEED + flag;
+  const dV = await calcDeclination(jd, num);
   await calcUtAsync(jd, num, gFlag).catch(async result => {
     if (result instanceof Object) {
       if (!result.error) {
-        data = result;
+        data = { ...result, declination: dV.value, rectAscension: dV.ra, valid: true};
       }
     }
   });
   return data;
+}
+
+export const calcBaseObjects = async(jd = 0, geo: GeoPos) => {
+  const grahaSet = {
+    su: swisseph.SE_SUN,
+    mo: swisseph.SE_MOON,
+    ra: swisseph.SE_MEAN_NODE
+  };
+  const resultMap: Map<string, any> = new Map();
+  const houseData = await fetchHouseDataJd(jd, geo);
+  const {
+    ascendant,
+    mc,
+    vertex,
+    ecliptic,
+    ascDeclination,
+    ascRectAscension,
+    mcRectAscension
+  } = houseData;
+  resultMap.set('as', {
+    longitude: ascendant,
+    latitude: 0,
+    declination: ascDeclination,
+    rectAscension: ascRectAscension,
+    altitude: await calcAltitudeSE(jd, geo, ascendant, vertex),
+    houseData
+  });
+  resultMap.set('ec', {
+    longitude: ecliptic,
+    latitude: ecliptic,
+  });
+  resultMap.set('mc', {
+    longitude:  mc,
+    latitude: 0,
+    declination: ascDeclination,
+    rectAscension: mcRectAscension
+  });
+  for (const pair of Object.entries(grahaSet)) {
+    const [key, num] = pair;
+    const result = await calcGrahaPos(jd, num);
+    //const altitude = altitudeForEquatorialPosition(geo.lat, result.declination, result.rectAscension, mcRectAscension);
+    const altitude = await calcAltitudeSE(jd, geo, result.longitude, result.latitude);
+    resultMap.set(key, {...result, altitude } );
+  }
+  const specialObjs = ["lotOfFortune", "lotOfSpirit", "brghuBindu", "yogi", "avaYogi"];
+  const sunLng = resultMap.get('su').longitude;
+  const moonLng = resultMap.get('mo').longitude;
+  const rahuLng = resultMap.get('ra').longitude;
+  
+  specialObjs.forEach(key => {
+    let val = 0;
+    switch (key) {
+      case "lotOfFortune":
+        val = (ascendant + (moonLng - sunLng) + 360) % 360;
+        break;
+      case "lotOfSpirit":
+        val = (ascendant + sunLng - moonLng + 360) % 360;
+        break;
+      case "brghuBindu":
+        val = ((moonLng + rahuLng) / 2) % 360;
+        break;
+      case "yogi":
+        val = (sunLng + moonLng + 93 + 1 / 3) % 360;
+        break;
+      case "avaYogi":
+        val = (((sunLng + moonLng + 93 + 1 / 3) % 360) + 560 / 3) % 360
+        break;
+    }
+    resultMap.set(key, { longitude: val} );
+  });
+  return Object.fromEntries(resultMap.entries());
 }
 
 export const fetchHouseDataJd = async (
@@ -484,8 +558,8 @@ export const fetchHouseDataJd = async (
   if (hasEclipticData && keys.includes("longitude")) {
     ecliptic = posData.longitude;
     ascDeclination = calcDeclinationFromLngLatEcl(houseData.ascendant, 0, ecliptic);
-    ascRectAscension = calcRectAscendant(houseData.ascendant, 0, ecliptic);
-    mcRectAscension = calcRectAscendant(houseData.mc, 0, ecliptic);
+    ascRectAscension = calcRectAscension(houseData.ascendant, 0, ecliptic);
+    mcRectAscension = calcRectAscension(houseData.mc, 0, ecliptic);
   }
   const extraData = hasEclipticData ? { ascDeclination, ecliptic, ascRectAscension, mcRectAscension } : {};
   return new HouseSet(houseData, extraData);
@@ -579,6 +653,26 @@ const calcDeclination = async (
     }
   });
   return data;
+};
+
+export const calcAltitudeSE = async (
+  jd: number,
+  geo: GeoPos,
+  lng: number,
+  lat: number,
+): Promise<number> => {
+  const flag = swisseph.SE_ECL2HOR;
+  let value = 0;
+  await getAzalt(jd, flag, geo.lng, geo.lat, geo.alt, 0, 0, lng, lat).catch(async result => {
+    if (result instanceof Object) {
+      if (!result.error) {
+        if (result instanceof Object) {
+          value = result.trueAltitude;
+        }
+      }
+    }
+  });
+  return value;
 };
 
 const addAsteroids = async data => {

@@ -206,6 +206,7 @@ export class UserController {
     gender: f/m
     age: comma-separated age range, e.g. 20,30
     near: [lat],[lng],[km] e.g. 77,28,5 => within a 5km radius of 77º E 28º N
+    baseurl/members/0/100?gender=f&age=30,40&near=19.2726,76.38363,50
    * @param res 
    * @param start 
    * @param limit 

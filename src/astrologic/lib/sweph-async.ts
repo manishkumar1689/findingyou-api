@@ -17,4 +17,6 @@ export const getHouses = util.promisify(swisseph.swe_houses_ex);
 
 export const getColTrans = util.promisify(swisseph.swe_cotrans);
 
+export const getAzalt = util.promisify(swisseph.swe_azalt);
+
 export const getAyanamsa = swisseph.swe_get_ayanamsa_ex_ut;
