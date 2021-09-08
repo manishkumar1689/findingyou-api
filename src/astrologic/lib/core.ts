@@ -481,8 +481,7 @@ export const calcBaseObjects = async(jd = 0, geo: GeoPos) => {
     latitude: 0,
     declination: ascDeclination,
     rectAscension: ascRectAscension,
-    altitude: await calcAltitudeSE(jd, geo, ascendant, vertex),
-    houseData
+    altitude: await calcAltitudeSE(jd, geo, ascendant, 0, true),
   });
   resultMap.set('ec', {
     longitude: ecliptic,
@@ -660,13 +659,14 @@ export const calcAltitudeSE = async (
   geo: GeoPos,
   lng: number,
   lat: number,
+  isEqual = false
 ): Promise<number> => {
-  const flag = swisseph.SE_ECL2HOR;
+  const flag = isEqual? swisseph.SE_EQU2HOR : swisseph.SE_ECL2HOR;
   let value = 0;
-  await getAzalt(jd, flag, geo.lng, geo.lat, geo.alt, 0, 0, lng, lat).catch(async result => {
+  await getAzalt(jd, flag, geo.lng, geo.lat, geo.alt, 0, 0, [lng, lat]).catch(async result => {
     if (result instanceof Object) {
       if (!result.error) {
-        if (result instanceof Object) {
+        if (Object.keys(result).includes("trueAltitude")) {
           value = result.trueAltitude;
         }
       }
