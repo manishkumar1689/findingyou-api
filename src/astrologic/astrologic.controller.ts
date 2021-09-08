@@ -42,6 +42,7 @@ import {
   fetchHouseDataJd,
   calcCoreGrahaPositions,
   calcBaseObjects,
+  sampleBaseObjects,
 } from './lib/core';
 import {
   calcJulianDate,
@@ -274,27 +275,8 @@ export class AstrologicController {
     if (validISODateString(dt) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const { dtUtc, jd } = matchJdAndDatetime(dt);
-      const data = await calcBaseObjects(jd, geo);
-      /* const keys = [
-        'key',
-        'longitude',
-        'latitude',
-        'distance',
-        'longitudeSpeed',
-        'latitudeSpeed',
-        'distanceSpeed',
-        'declination',
-        'rectAscension',
-        'altitude'
-      ];
-      const rows = Object.entries(data).map(entry => {
-        const [k, obj] = entry;
-        return keys.map(k1 => {
-          const rks = Object.keys(obj);
-          const val = rks.includes(k1)? obj[k1] : k1 === 'key'? k : '-';
-          return val;
-        }).join(',');
-      }).join(`§`); */
+      const data = await sampleBaseObjects(jd, geo);
+      
       return res.status(HttpStatus.OK).json(data);
     } else {
       const result = {

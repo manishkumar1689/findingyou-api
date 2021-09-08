@@ -10,7 +10,7 @@ import {
   getAzalt,
 } from './sweph-async';
 import { calcJulDate, jdToDateTime, julToISODate } from './date-funcs';
-import { altitudeForEquatorialPosition, calcDeclinationFromLngLatEcl, calcInclusiveTwelfths, calcRectAscension, subtractLng360 } from './math-funcs';
+import { altitudeForEquatorialPosition, calcDeclinationFromLngLatEcl, calcInclusiveTwelfths, calcRectAscension, limitValueToRange, subtractLng360 } from './math-funcs';
 import {
   calcTransitionJd,
   calcJyotishSunRise,
@@ -459,6 +459,8 @@ export const calcGrahaPos = async (jd = 0, num = 0, flag = 0) => {
   return data;
 }
 
+export const specialTransitKeys = ["lotOfFortune", "lotOfSpirit", "brghuBindu", "yogi", "avaYogi"];
+
 export const calcBaseObjects = async(jd = 0, geo: GeoPos) => {
   const grahaSet = {
     su: swisseph.SE_SUN,
@@ -500,33 +502,70 @@ export const calcBaseObjects = async(jd = 0, geo: GeoPos) => {
     const altitude = await calcAltitudeSE(jd, geo, result.longitude, result.latitude);
     resultMap.set(key, {...result, altitude } );
   }
-  const specialObjs = ["lotOfFortune", "lotOfSpirit", "brghuBindu", "yogi", "avaYogi"];
+  
   const sunLng = resultMap.get('su').longitude;
   const moonLng = resultMap.get('mo').longitude;
   const rahuLng = resultMap.get('ra').longitude;
+  const sunLat = resultMap.get('su').latitude;
+  const moonLat = resultMap.get('mo').latitude;
+  const rahuLat = resultMap.get('ra').latitude;
   
-  specialObjs.forEach(key => {
-    let val = 0;
+  for (const key of specialTransitKeys) {
+    let longitude = 0;
+    let latitude = 0;
     switch (key) {
       case "lotOfFortune":
-        val = (ascendant + (moonLng - sunLng) + 360) % 360;
+        longitude = (ascendant + (moonLng - sunLng) + 360) % 360;
         break;
       case "lotOfSpirit":
-        val = (ascendant + sunLng - moonLng + 360) % 360;
+        longitude = (ascendant + sunLng - moonLng + 360) % 360;
         break;
       case "brghuBindu":
-        val = ((moonLng + rahuLng) / 2) % 360;
+        longitude = ((moonLng + rahuLng) / 2) % 360;
         break;
       case "yogi":
-        val = (sunLng + moonLng + 93 + 1 / 3) % 360;
+        longitude = (sunLng + moonLng + 93 + 1 / 3) % 360;
         break;
       case "avaYogi":
-        val = (((sunLng + moonLng + 93 + 1 / 3) % 360) + 560 / 3) % 360
+        longitude = (((sunLng + moonLng + 93 + 1 / 3) % 360) + 560 / 3) % 360
+        //latitude = limitValueToRange(limitValueToRange(sunLng + moonLng + 93 + 1 / 3, -90, 90) + 560, -90, 90);
         break;
     }
-    resultMap.set(key, { longitude: val} );
-  });
+    const altitude = await calcAltitudeSE(jd, geo, longitude, latitude, true);
+    resultMap.set(key, { longitude, latitude, altitude } );
+  }
   return Object.fromEntries(resultMap.entries());
+}
+
+export const sampleBaseObjects = async (jd = 0, geo: GeoPos) => {
+  const refJd = jd + 0.5;
+  const startJd = Math.floor(refJd) - 0.5;
+  const numUnits = 24;
+  const unit = 1 / numUnits; 
+  const samples = [];
+  let currJd = startJd;
+  const transitMap: Map<string, any>  = new Map();
+  specialTransitKeys.forEach(key => {
+    transitMap.set(key, {rise: 0, set: 0, mc: 0, ic: 0, polarity: 0 });
+  });
+  for (let i = 0; i < numUnits; i++) {
+    currJd = startJd + (i * unit);
+    const sample = await calcBaseObjects(currJd, geo);
+    specialTransitKeys.forEach(key => {
+      const curr = transitMap.get(key);
+      const prevPolarity = curr.polarity;
+      curr.polarity = sample[key].altitude > 0 ? 1 : -1;
+      if (prevPolarity !== 0 && curr.polarity !== prevPolarity) {
+        if (prevPolarity < 0) {
+          curr.set = currJd;
+        } else {
+          curr.rise = currJd;
+        }
+      }
+    });
+    samples.push({ jd: currJd, dt: julToISODate(currJd), sample});
+  }
+  return {jd, transits: Object.fromEntries(transitMap.entries()), samples };
 }
 
 export const fetchHouseDataJd = async (
@@ -663,7 +702,7 @@ export const calcAltitudeSE = async (
 ): Promise<number> => {
   const flag = isEqual? swisseph.SE_EQU2HOR : swisseph.SE_ECL2HOR;
   let value = 0;
-  await getAzalt(jd, flag, geo.lng, geo.lat, geo.alt, 0, 0, [lng, lat]).catch(async result => {
+  await getAzalt(jd, flag, geo.lng, geo.lat, geo.alt, 0, 0, lng, lat).catch(async result => {
     if (result instanceof Object) {
       if (!result.error) {
         if (Object.keys(result).includes("trueAltitude")) {
