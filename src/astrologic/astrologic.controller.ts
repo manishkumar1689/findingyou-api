@@ -41,9 +41,8 @@ import {
   calcAyanamsha,
   fetchHouseDataJd,
   calcCoreGrahaPositions,
-  calcBaseObjects,
-  sampleBaseObjects,
 } from './lib/core';
+import { sampleBaseObjects } from './lib/custom-transits';
 import {
   calcJulianDate,
   calcJulDate,
