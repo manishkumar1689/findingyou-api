@@ -461,58 +461,60 @@ export const calcGrahaPos = async (jd = 0, num = 0, flag = 0) => {
 
 export const specialTransitKeys = ["lotOfFortune", "lotOfSpirit", "brghuBindu", "yogi", "avaYogi"];
 
-export const calcBaseObjects = async(jd = 0, geo: GeoPos) => {
+export const fetchTransitSampleResultSet = async (jd = 0, geo: GeoPos, includeKeys = ['as', 'su', 'mo', 'ra']) => {
   const grahaSet = {
     su: swisseph.SE_SUN,
     mo: swisseph.SE_MOON,
     ra: swisseph.SE_MEAN_NODE
   };
   const resultMap: Map<string, any> = new Map();
-  const houseData = await fetchHouseDataJd(jd, geo);
-  const {
-    ascendant,
-    mc,
-    vertex,
-    ecliptic,
-    ascDeclination,
-    ascRectAscension,
-    mcRectAscension
-  } = houseData;
-  resultMap.set('as', {
-    longitude: ascendant,
-    latitude: 0,
-    declination: ascDeclination,
-    rectAscension: ascRectAscension,
-    altitude: await calcAltitudeSE(jd, geo, ascendant, 0, true),
-  });
-  resultMap.set('ec', {
-    longitude: ecliptic,
-    latitude: ecliptic,
-  });
-  resultMap.set('mc', {
-    longitude:  mc,
-    latitude: 0,
-    declination: ascDeclination,
-    rectAscension: mcRectAscension
-  });
-  for (const pair of Object.entries(grahaSet)) {
+  let ascendant = 0;
+  let ecliptic = 0;
+  if (includeKeys.includes('as')) {
+    const houseData = await fetchHouseDataJd(jd, geo);
+    const {
+      mc,
+      ascDeclination,
+      ascRectAscension,
+      mcRectAscension
+    } = houseData;
+    ecliptic = houseData.ecliptic;
+    ascendant = houseData.ascendant;
+
+    resultMap.set('as', {
+      longitude: ascendant,
+      latitude: 0,
+      declination: ascDeclination,
+      rectAscension: ascRectAscension,
+      altitude: await calcAltitudeSE(jd, geo, ascendant, 0, true),
+    });
+    resultMap.set('ec', {
+      longitude: ecliptic,
+      latitude: ecliptic,
+    });
+    resultMap.set('mc', {
+      longitude:  mc,
+      latitude: 0,
+      declination: ascDeclination,
+      rectAscension: mcRectAscension
+    });
+  }
+  for (const pair of Object.entries(grahaSet).filter(entry => includeKeys.includes(entry[0]))) {
     const [key, num] = pair;
     const result = await calcGrahaPos(jd, num);
-    //const altitude = altitudeForEquatorialPosition(geo.lat, result.declination, result.rectAscension, mcRectAscension);
     const altitude = await calcAltitudeSE(jd, geo, result.longitude, result.latitude);
     resultMap.set(key, {...result, altitude } );
   }
   
   const sunLng = resultMap.get('su').longitude;
   const moonLng = resultMap.get('mo').longitude;
-  const rahuLng = resultMap.get('ra').longitude;
-  const sunLat = resultMap.get('su').latitude;
-  const moonLat = resultMap.get('mo').latitude;
-  const rahuLat = resultMap.get('ra').latitude;
-  
-  for (const key of specialTransitKeys) {
-    let longitude = 0;
-    let latitude = 0;
+  const rahuLng = resultMap.has('ra')? resultMap.get('ra').longitude : 0;
+  return { resultMap, ascendant, sunLng, moonLng, rahuLng, ecliptic };
+}
+
+const calcBaseObjectsAltitude = async (key = "", jd = 0, geo: GeoPos, ascendant = 0, sunLng = 0, moonLng = 0, rahuLng = 0) => {
+  let longitude = 0;
+    const latitude = 0;
     switch (key) {
       case "lotOfFortune":
         longitude = (ascendant + (moonLng - sunLng) + 360) % 360;
@@ -532,6 +534,15 @@ export const calcBaseObjects = async(jd = 0, geo: GeoPos) => {
         break;
     }
     const altitude = await calcAltitudeSE(jd, geo, longitude, latitude, true);
+    return { longitude, latitude, altitude };
+}
+
+export const calcBaseObjects = async(jd = 0, geo: GeoPos) => {
+  
+  const { resultMap, sunLng, moonLng, rahuLng, ascendant } = await fetchTransitSampleResultSet(jd, geo);
+  
+  for (const key of specialTransitKeys) {
+    const {longitude, latitude, altitude } = await calcBaseObjectsAltitude(key, jd, geo, ascendant, sunLng, moonLng, rahuLng);
     resultMap.set(key, { longitude, latitude, altitude } );
   }
   return Object.fromEntries(resultMap.entries());
@@ -612,6 +623,44 @@ class SampleTrackerGroup {
   }
 }
 
+const matchKeysForSampleTransit = (key = "") => {
+  switch (key) {
+    case 'lotOfFortune':
+    case 'lotOfSpirit':
+      return ['as', 'su', 'mo'];
+    case 'yogi':
+    case 'avaYogi':
+    case 'avayogi':
+      return ['su', 'mo'];
+    case 'brghuBindu':
+    case 'brighuBindu':
+    case 'brighubindu':
+      return ['su', 'mo', 'ra'];
+    default:
+      return ['as', 'su', 'mo', 'ra'];
+  }
+}
+
+const innerTransitLimit = async (key = "", geo: GeoPos, startJd = 0, endJd = 0, minMode = false) => {
+  const sampleNum = 48;
+  const sampleSpanNum = sampleNum * 2;
+  const jdStep = (endJd - startJd) / sampleNum;
+  const rows = [];
+  for (let i = 0; i <= sampleSpanNum; i++) {
+    const currJd = startJd + (i * jdStep);
+    const gKeys = matchKeysForSampleTransit(key);
+    const { sunLng, moonLng, rahuLng, ascendant } = await fetchTransitSampleResultSet(currJd, geo, gKeys);
+    const { altitude } = await calcBaseObjectsAltitude(key, currJd, geo, ascendant, sunLng, moonLng, rahuLng);
+    rows.push({ altitude, matchedJd: currJd});
+  }
+  const vals = rows.map(row => row.altitude);
+  const limitVal = minMode ? Math.min(...vals) : Math.max(...vals);
+  
+  const limitIndex = rows.findIndex(row => row.altitude === limitVal);
+  const midIndex = Math.ceil(sampleNum / 2);
+  return limitIndex >= 0 ? rows[limitIndex] : rows[midIndex];
+}
+
 export const sampleBaseObjects = async (jd = 0, geo: GeoPos) => {
   const refJd = jd + 0.5;
   const startJd = Math.floor(refJd) - 0.5;
@@ -647,10 +696,18 @@ export const sampleBaseObjects = async (jd = 0, geo: GeoPos) => {
     samples.push({ jd: currJd, dt: julToISODate(currJd), sample});
     prevJd = currJd + 0;
   }
-  specialTransitKeys.forEach(key => {
+  for (const key of specialTransitKeys) {
     const transitItem = transitMap.get(key);
+    for (const sk of ['mc', 'ic']) {
+      const minMode = sk === 'ic';
+      const startJd = minMode ? transitItem.ic.prevJd : transitItem.mc.prevJd;
+      const endJd = minMode ? transitItem.ic.jd: transitItem.mc.jd;
+      const { matchedJd, altitude } = await innerTransitLimit(key, geo, startJd, endJd, minMode);
+      transitItem[sk].jd = matchedJd;
+      transitItem[sk].val = altitude;
+    }
     transitItem.adjustJds();
-  });
+  };
   const entries = [...transitMap.entries()].map(entry => {
     const [k, trItem] = entry;
     return [k, trItem.toTransits()];
