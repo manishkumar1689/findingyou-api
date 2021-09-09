@@ -207,7 +207,7 @@ const innerTransitLimit = async (key = "", geo: GeoPos, startJd = 0, endJd = 0, 
 export const sampleBaseObjects = async (jd = 0, geo: GeoPos) => {
   const refJd = jd + 0.5;
   const startJd = Math.floor(refJd) - 0.5;
-  const numUnits = 192;
+  const numUnits = 144;
   const unit = 1 / numUnits;
   const samples = [];
   let currJd = startJd;
@@ -218,7 +218,7 @@ export const sampleBaseObjects = async (jd = 0, geo: GeoPos) => {
   });
   
   const startSampleIndex = -1;
-  const endSampleNum = numUnits + 1;
+  const endSampleNum = (numUnits * 1.25) + 1;
   let prevJd = startJd + (-1 * unit);
   const prevAlts: Map<string, number> = new Map();
   specialTransitKeys.forEach(key => {
@@ -227,6 +227,7 @@ export const sampleBaseObjects = async (jd = 0, geo: GeoPos) => {
   for (let i = startSampleIndex; i < endSampleNum; i++) {
     currJd = startJd + (i * unit);
     const sample = await calcBaseObjects(currJd, geo);
+    
     
     specialTransitKeys.forEach(key => {
       const curr = transitMap.get(key);
