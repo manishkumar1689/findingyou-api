@@ -250,6 +250,29 @@ export class AstrologicController {
         }
         return item;
       });
+
+      const toTimeSet = (jd = 0) => {
+        return { jd, after: false }; 
+      }
+
+      const toTransitSet = (key, tr = null) => {
+        const keys = tr instanceof Object ? Object.keys(tr) : [];
+        const values = ["rise", 'set', 'mc', 'ic'].map(k => {
+          const v = keys.includes(k) ? tr[k] : 0;
+          return [k, toTimeSet(v)];
+        })
+        return {key, ...Object.fromEntries(values)};
+      }
+
+      const extraTransitionData = await sampleBaseObjects(data.jd, geo);
+      if (extraTransitionData instanceof Object) {
+        Object.entries(extraTransitionData.transits).forEach(entry => {
+          const [k, tr] = entry;
+          if (tr instanceof Object) {
+            data.transitions.push(toTransitSet(k, tr));
+          }
+        })
+      }
       if (showGeoData) {
         data.geo = await this.geoService.fetchGeoAndTimezone(
           geo.lat,

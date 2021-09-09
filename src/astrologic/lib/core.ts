@@ -537,35 +537,125 @@ export const calcBaseObjects = async(jd = 0, geo: GeoPos) => {
   return Object.fromEntries(resultMap.entries());
 }
 
+class SampleTracker {
+  jd = 0;
+  val = 0;
+  prevJd = 0;
+  prevVal = 0;
+  polarity = 0;
+  prevPolarity = 0;
+
+  setIfRise(newJd = 0, newVal = 0, setMode = false, prevJd = 0, prevVal = 0) {
+    this.polarity = newVal < 0 ? -1 : 1;
+    if (this.prevPolarity !== 0 && this.polarity !== this.prevPolarity) {
+      if ((!setMode && this.prevPolarity < 0) || (setMode && this.prevPolarity > 0)) {
+        this.val = newVal;
+        this.jd = newJd;
+        this.prevJd = prevJd;
+        this.prevVal = prevVal;
+      }
+    }
+    
+    this.prevPolarity = newVal < 0 ? -1 : 1;
+  }
+
+  adjustRiseSet() {
+    const diff = this.val - this.prevVal;
+    const progress = Math.abs(this.val / diff);
+    const diffJd = (this.jd - this.prevJd) * progress;
+    this.jd = this.jd - diffJd;
+  }
+
+  setIfMaxMin(newJd = 0, newVal = 0, minMode = false, prevJd = 0, prevVal = 0) {
+    if ((!minMode && newVal > this.val) || (minMode && newVal < this.val)) {
+      this.jd = newJd;
+      this.val = newVal;
+      this.prevJd = prevJd;
+      this.prevVal = prevVal;
+    }
+  }
+
+  setIfMax(newJd = 0, newVal = 0, prevJd = 0, prevVal = 0) {
+    this.setIfMaxMin(newJd, newVal, false, prevJd, prevVal);
+  }
+
+  setIfMin(newJd = 0, newVal = 0, prevJd = 0, prevVal = 0) {
+    this.setIfMaxMin(newJd, newVal, true, prevJd, prevVal);
+  }
+}
+
+class SampleTrackerGroup {
+  rise = new SampleTracker();
+  set = new SampleTracker();
+  mc = new SampleTracker();
+  ic = new SampleTracker();
+
+  setSamplePoints(newJd = 0, newVal = 0, prevJd = 0, prevVal = 0) {
+    this.rise.setIfRise(newJd, newVal, false, prevJd, prevVal);
+    this.set.setIfRise(newJd, newVal, true, prevJd, prevVal);
+    this.mc.setIfMax(newJd, newVal, prevJd, prevVal);
+    this.ic.setIfMin(newJd, newVal, prevJd, prevVal);
+  }
+
+  adjustJds() {
+    this.rise.adjustRiseSet();
+    this.set.adjustRiseSet();
+  }
+
+  toTransits() {
+    return { 
+      rise: this.rise.jd,
+      set: this.set.jd,
+      mc: this.mc.jd,
+      ic: this.ic.jd
+    }
+  }
+}
+
 export const sampleBaseObjects = async (jd = 0, geo: GeoPos) => {
   const refJd = jd + 0.5;
   const startJd = Math.floor(refJd) - 0.5;
-  const numUnits = 24;
-  const unit = 1 / numUnits; 
+  const numUnits = 192;
+  const unit = 1 / numUnits;
   const samples = [];
   let currJd = startJd;
-  const transitMap: Map<string, any>  = new Map();
+  const transitMap: Map<string, SampleTrackerGroup>  = new Map();
+  
   specialTransitKeys.forEach(key => {
-    transitMap.set(key, {rise: 0, set: 0, mc: 0, ic: 0, polarity: 0 });
+    transitMap.set(key, new SampleTrackerGroup() );
   });
-  for (let i = 0; i < numUnits; i++) {
+  
+  const startSampleIndex = -1;
+  const endSampleNum = numUnits + 1;
+  let prevJd = startJd + (-1 * unit);
+  const prevAlts: Map<string, number> = new Map();
+  specialTransitKeys.forEach(key => {
+    prevAlts.set(key, 0);
+  });
+  for (let i = startSampleIndex; i < endSampleNum; i++) {
     currJd = startJd + (i * unit);
     const sample = await calcBaseObjects(currJd, geo);
+    
     specialTransitKeys.forEach(key => {
       const curr = transitMap.get(key);
-      const prevPolarity = curr.polarity;
-      curr.polarity = sample[key].altitude > 0 ? 1 : -1;
-      if (prevPolarity !== 0 && curr.polarity !== prevPolarity) {
-        if (prevPolarity < 0) {
-          curr.set = currJd;
-        } else {
-          curr.rise = currJd;
-        }
-      }
+      const prevAlt = prevAlts.get(key);
+      const currAlt = sample[key].altitude;
+      curr.setSamplePoints(currJd, currAlt, prevJd, prevAlt);
+      transitMap.set(key, curr);
+      prevAlts.set(key, currAlt);
     });
     samples.push({ jd: currJd, dt: julToISODate(currJd), sample});
+    prevJd = currJd + 0;
   }
-  return {jd, transits: Object.fromEntries(transitMap.entries()), samples };
+  specialTransitKeys.forEach(key => {
+    const transitItem = transitMap.get(key);
+    transitItem.adjustJds();
+  });
+  const entries = [...transitMap.entries()].map(entry => {
+    const [k, trItem] = entry;
+    return [k, trItem.toTransits()];
+  });
+  return {jd, transits: Object.fromEntries(entries) };
 }
 
 export const fetchHouseDataJd = async (
