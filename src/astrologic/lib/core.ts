@@ -263,7 +263,7 @@ export const translateBodyConstant = (body: string) => {
     case 'mean_node':
       return 'ra';
     default:
-      return bodyBase.substring(0,2).toLowerCase();
+      return bodyBase.substring(0, 2).toLowerCase();
   }
 }
 
