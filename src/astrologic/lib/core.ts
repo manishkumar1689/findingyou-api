@@ -320,6 +320,20 @@ export const calcAllTransitionsJd = async (
       ...bodyData,
     });
   }
+  if (bodyKeys.includes('SE_MEAN_NODE')) {
+    const keRow = bodies.find(row => row.num === swisseph.SE_MEAN_NODE);
+    if (keRow instanceof Object) {
+      const raRow = {
+        num: 102,
+        body: 'SE_RAHU',
+        rise: keRow.set,
+        set: keRow.rise,
+        mc: keRow.ic,
+        ic: keRow.mc,
+      }
+      bodies.push(raRow);
+    }
+  }
   return bodies;
 };
 
