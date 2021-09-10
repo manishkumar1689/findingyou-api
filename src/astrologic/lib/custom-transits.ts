@@ -1,10 +1,21 @@
 import * as swisseph from 'swisseph';
 import { GeoPos } from '../interfaces/geo-pos';
 import { calcAltitudeSE, calcGrahaPos, fetchHouseDataJd } from './core';
+import { julToISODate } from './date-funcs';
+import { calcDeclinationFromLngLatEcl } from './math-funcs';
 
 export const specialTransitKeys = ["lotOfFortune", "lotOfSpirit", "brghuBindu", "yogi", "avaYogi"];
 
-export const fetchTransitSampleResultSet = async (jd = 0, geo: GeoPos, includeKeys = ['as', 'su', 'mo', 'ra']) => {
+const extractRaFromResultMap = (resultMap: Map<string, any> = new Map()) => {
+  const sunRa = resultMap.has('su')? resultMap.get('su').rectAscension : 0;
+  const moonRa = resultMap.has('mo')? resultMap.get('mo').rectAscension : 0;
+  const rahuRa = resultMap.has('ra')? resultMap.get('ra').rectAscension : 0;
+  const ascRa = resultMap.has('as')? resultMap.get('as').rectAscension : 0;
+  const ecliptic = resultMap.has('ec')? resultMap.get('ec').rectAscension : 0;
+  return { ecliptic, ascRa, sunRa, moonRa, rahuRa };
+}
+
+export const fetchTransitSampleResultSet = async (jd = 0, geo: GeoPos, includeKeys = ['as', 'su', 'mo', 'ra']): Promise<Map<string, any>> => {
   const grahaSet = {
     su: swisseph.SE_SUN,
     mo: swisseph.SE_MOON,
@@ -52,40 +63,39 @@ export const fetchTransitSampleResultSet = async (jd = 0, geo: GeoPos, includeKe
   const sunLng = resultMap.get('su').longitude;
   const moonLng = resultMap.get('mo').longitude;
   const rahuLng = resultMap.has('ra')? resultMap.get('ra').longitude : 0;
-  return { resultMap, ascendant, sunLng, moonLng, rahuLng, ecliptic };
+  return resultMap;
 }
 
-const calcBaseObjectsAltitude = async (key = "", jd = 0, geo: GeoPos, ascendant = 0, sunLng = 0, moonLng = 0, rahuLng = 0) => {
-  let longitude = 0;
-    const latitude = 0;
+const calcBaseObjectsAltitude = async (key = "", jd = 0, geo: GeoPos, resultMap: Map<string,any> = new Map()) => {
+  const { ascRa, moonRa, sunRa, rahuRa, ecliptic } = extractRaFromResultMap(resultMap);
+  let ra = 0;
     switch (key) {
       case "lotOfFortune":
-        longitude = (ascendant + (moonLng - sunLng) + 360) % 360;
+        ra = (ascRa + (moonRa - sunRa) + 360) % 360;
         break;
       case "lotOfSpirit":
-        longitude = (ascendant + sunLng - moonLng + 360) % 360;
+        ra = (ascRa + sunRa - moonRa + 360) % 360;
         break;
       case "brghuBindu":
-        longitude = ((moonLng + rahuLng) / 2) % 360;
+        ra = ((moonRa + rahuRa) / 2) % 360;
         break;
       case "yogi":
-        longitude = (sunLng + moonLng + 93 + 1 / 3) % 360;
+        ra = (sunRa + moonRa + 93 + 1 / 3) % 360;
         break;
       case "avaYogi":
-        longitude = (((sunLng + moonLng + 93 + 1 / 3) % 360) + 560 / 3) % 360
-        //latitude = limitValueToRange(limitValueToRange(sunLng + moonLng + 93 + 1 / 3, -90, 90) + 560, -90, 90);
+        ra = (((sunRa + moonRa + 93 + 1 / 3) % 360) + 560 / 3) % 360
         break;
     }
-    const altitude = await calcAltitudeSE(jd, geo, longitude, latitude, true);
-    return { longitude, latitude, altitude };
+
+    const declination = calcDeclinationFromLngLatEcl(ra, 0, ecliptic);
+    const altitude = await calcAltitudeSE(jd, geo, ra, declination, true);
+    return { longitude: ra, latitude: declination, altitude };
 }
 
 export const calcBaseObjects = async(jd = 0, geo: GeoPos) => {
-  
-  const { resultMap, sunLng, moonLng, rahuLng, ascendant } = await fetchTransitSampleResultSet(jd, geo);
-  
+  const resultMap= await fetchTransitSampleResultSet(jd, geo);  
   for (const key of specialTransitKeys) {
-    const {longitude, latitude, altitude } = await calcBaseObjectsAltitude(key, jd, geo, ascendant, sunLng, moonLng, rahuLng);
+    const {longitude, latitude, altitude } = await calcBaseObjectsAltitude(key, jd, geo, resultMap );
     resultMap.set(key, { longitude, latitude, altitude } );
   }
   return Object.fromEntries(resultMap.entries());
@@ -170,11 +180,10 @@ const matchKeysForSampleTransit = (key = "") => {
   switch (key) {
     case 'lotOfFortune':
     case 'lotOfSpirit':
-      return ['as', 'su', 'mo'];
     case 'yogi':
     case 'avaYogi':
     case 'avayogi':
-      return ['su', 'mo'];
+      return ['as', 'su', 'mo'];
     case 'brghuBindu':
     case 'brighuBindu':
     case 'brighubindu':
@@ -192,8 +201,8 @@ const innerTransitLimit = async (key = "", geo: GeoPos, startJd = 0, endJd = 0, 
   for (let i = 0; i <= sampleSpanNum; i++) {
     const currJd = startJd + (i * jdStep);
     const gKeys = matchKeysForSampleTransit(key);
-    const { sunLng, moonLng, rahuLng, ascendant } = await fetchTransitSampleResultSet(currJd, geo, gKeys);
-    const { altitude } = await calcBaseObjectsAltitude(key, currJd, geo, ascendant, sunLng, moonLng, rahuLng);
+    const resultMap = await fetchTransitSampleResultSet(currJd, geo, gKeys);
+    const { altitude } = await calcBaseObjectsAltitude(key, currJd, geo, resultMap );
     rows.push({ altitude, matchedJd: currJd});
   }
   const vals = rows.map(row => row.altitude);
@@ -204,7 +213,7 @@ const innerTransitLimit = async (key = "", geo: GeoPos, startJd = 0, endJd = 0, 
   return limitIndex >= 0 ? rows[limitIndex] : rows[midIndex];
 }
 
-export const sampleBaseObjects = async (jd = 0, geo: GeoPos) => {
+export const sampleBaseObjects = async (jd = 0, geo: GeoPos, showSamples = false) => {
   const refJd = jd + 0.5;
   const startJd = Math.floor(refJd) - 0.5;
   const numUnits = 144;
@@ -256,5 +265,9 @@ export const sampleBaseObjects = async (jd = 0, geo: GeoPos) => {
     const [k, trItem] = entry;
     return [k, trItem.toTransits()];
   });
-  return {jd, transits: Object.fromEntries(entries) };
+  const sampleData = showSamples ? samples.map(row => {
+    const dt = julToISODate(row.jd);
+    return { dt, ...row };
+  }) : [];
+  return {jd, transits: Object.fromEntries(entries), sampleData};
 }

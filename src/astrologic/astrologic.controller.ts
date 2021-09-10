@@ -292,14 +292,14 @@ export class AstrologicController {
     }
   }
 
-  @Get('base-objects/:loc/:dt')
-  async basObjects(@Res() res, @Param('loc') loc, @Param('dt') dt) {
+  @Get('base-objects/:loc/:dt/:show?')
+  async basObjects(@Res() res, @Param('loc') loc, @Param('dt') dt, @Param('show') show) {
     if (validISODateString(dt) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
+      const showSamples = show === 'samples';
       const { dtUtc, jd } = matchJdAndDatetime(dt);
-      const data = await sampleBaseObjects(jd, geo);
-      
-      return res.status(HttpStatus.OK).json(data);
+      const data = await sampleBaseObjects(jd, geo, showSamples);
+      return res.status(HttpStatus.OK).json({dtUtc, ...data});
     } else {
       const result = {
         valid: false,

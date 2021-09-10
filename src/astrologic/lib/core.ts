@@ -588,11 +588,12 @@ export const calcAltitudeSE = async (
   geo: GeoPos,
   lng: number,
   lat: number,
-  isEqual = false
+  isEqual = false,
+  distance = null
 ): Promise<number> => {
   const flag = isEqual? swisseph.SE_EQU2HOR : swisseph.SE_ECL2HOR;
   let value = 0;
-  await getAzalt(jd, flag, geo.lng, geo.lat, geo.alt, 0, 0, lng, lat).catch(async result => {
+  await getAzalt(jd, flag, geo.lng, geo.lat, geo.alt, 0, 0, lng, lat, distance).catch(async result => {
     if (result instanceof Object) {
       if (!result.error) {
         if (Object.keys(result).includes("trueAltitude")) {
