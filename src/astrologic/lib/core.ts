@@ -261,19 +261,19 @@ export const translateBodyConstant = (body: string) => {
   const bodyBase = body.replace(/^SE_/, '').toLowerCase();
   switch (bodyBase) {
     case 'mean_node':
-      return 'ke';
+      return 'ra';
     default:
       return bodyBase.substring(0,2).toLowerCase();
   }
 }
 
-export const calcAllTransitions = async (datetime: string, geo, jdOffset = 0) => {
+export const calcAllTransitions = async (datetime: string, geo: GeoPos, jdOffset = 0, showLng = false) => {
   const jd = calcJulDate(datetime);
-  const items = await calcAllTransitionsJd(jd, geo, jdOffset, true);
+  const items = await calcAllTransitionsJd(jd, geo, jdOffset, true, showLng);
   const transitions: TransitionData[] = items.map(row => {
     const key = translateBodyConstant(row.body);
     return { ...row, key }
-  })
+  });
   return {
     jd,
     transitions,
@@ -286,7 +286,8 @@ export const calcAllTransitionsJd = async (
   jd: number,
   geo,
   jdOffset = 0,
-  fullSet = false
+  fullSet = false,
+  showLng = false
 ): Promise<Array<TransitionData>> => {
   const baseKeys = [
     'SE_SUN',
@@ -313,6 +314,7 @@ export const calcAllTransitionsJd = async (
       num,
       false,
       true,
+      showLng
     );
     bodies.push({
       num,
@@ -321,17 +323,17 @@ export const calcAllTransitionsJd = async (
     });
   }
   if (bodyKeys.includes('SE_MEAN_NODE')) {
-    const keRow = bodies.find(row => row.num === swisseph.SE_MEAN_NODE);
-    if (keRow instanceof Object) {
-      const raRow = {
+    const raRow = bodies.find(row => row.num === swisseph.SE_MEAN_NODE);
+    if (raRow instanceof Object) {
+      const keRow = {
         num: 102,
-        body: 'SE_RAHU',
-        rise: keRow.set,
-        set: keRow.rise,
-        mc: keRow.ic,
-        ic: keRow.mc,
+        body: 'SE_KETU',
+        rise: raRow.set,
+        set: raRow.rise,
+        mc: raRow.ic,
+        ic: raRow.mc,
       }
-      bodies.push(raRow);
+      bodies.push(keRow);
     }
   }
   return bodies;
@@ -470,6 +472,19 @@ export const calcGrahaPos = async (jd = 0, num = 0, flag = 0) => {
     }
   });
   return data;
+}
+
+export const calcGrahaLng = async (jd = 0, num = 0, flag = 0) => {
+  let lng = 0;
+  const gFlag = swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SPEED + flag;
+  await calcUtAsync(jd, num, gFlag).catch(async result => {
+    if (result instanceof Object) {
+      if (!result.error) {
+        lng = result.longitude;
+      }
+    }
+  });
+  return lng;
 }
 
 export const fetchHouseDataJd = async (

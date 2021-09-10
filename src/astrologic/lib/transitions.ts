@@ -1,15 +1,17 @@
 import * as swisseph from 'swisseph';
-import { calcJulDate, jdToDateTime } from './date-funcs';
+import { calcJulDate } from './date-funcs';
 import { JyotishDay } from './models/jyotish-day';
 import { IndianTime } from './models/indian-time';
 import { riseTransAsync } from './sweph-async';
 import { isNumeric } from '../../lib/validators';
 import { ephemerisDefaults } from '../../.config';
 import { GeoLoc } from './models/geo-loc';
+import { calcGrahaLng } from './core';
 
 export interface TimeSet {
   jd: number;
   dt?: string;
+  lng?: number;
   after: boolean;
 }
 
@@ -104,6 +106,7 @@ export const calcTransitionJd = async (
   planetNum,
   showInput = true,
   showIcMc = false,
+  showLng = false,
 ): Promise<TransitionData> => {
   let data = null;
   if (isNumeric(jd)) {
@@ -162,6 +165,12 @@ export const calcTransitionJd = async (
       data = { valid, rise, set, mc, ic };
     } else {
       data = { valid, rise, set };
+    }
+    if (showLng) {
+      const sKeys = showIcMc? ['rise', 'set', 'mc', 'ic'] : ['rise', 'set'];
+      for (const sk of sKeys) {
+        data[sk].lng = await calcGrahaLng(data[sk].jd, planetNum);
+      }
     }
   }
   return data;

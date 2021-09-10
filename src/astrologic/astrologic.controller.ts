@@ -232,8 +232,7 @@ export class AstrologicController {
   async transitions(@Res() res, @Param('loc') loc, @Param('dt') dt, @Param('modeRef') modeRef) {
     if (validISODateString(dt) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
-      const data = await calcAllTransitions(dt, geo);
-      
+      const data = await calcAllTransitions(dt, geo, 0, true);
       const mode = ["basic", "standard", "extended"].includes(modeRef)? modeRef : "standard";
       const showSunData = ["standard", "extended"].includes(mode);
       const showGeoData = ["extended"].includes(mode);
@@ -250,15 +249,11 @@ export class AstrologicController {
         return item;
       });
 
-      const toTimeSet = (jd = 0) => {
-        return { jd, after: false }; 
-      }
-
       const toTransitSet = (key, tr = null) => {
         const keys = tr instanceof Object ? Object.keys(tr) : [];
         const values = ["rise", 'set', 'mc', 'ic'].map(k => {
-          const v = keys.includes(k) ? tr[k] : 0;
-          return [k, toTimeSet(v)];
+          const v = keys.includes(k) ? tr[k] : { jd: 0, lng: 0, after: false };
+          return [k, v];
         })
         return {key, ...Object.fromEntries(values)};
       }

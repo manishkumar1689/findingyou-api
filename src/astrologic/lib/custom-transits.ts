@@ -11,8 +11,12 @@ const extractRaFromResultMap = (resultMap: Map<string, any> = new Map()) => {
   const moonRa = resultMap.has('mo')? resultMap.get('mo').rectAscension : 0;
   const rahuRa = resultMap.has('ra')? resultMap.get('ra').rectAscension : 0;
   const ascRa = resultMap.has('as')? resultMap.get('as').rectAscension : 0;
+  const sunLng = resultMap.has('su')? resultMap.get('su').longitude : 0;
+  const moonLng = resultMap.has('mo')? resultMap.get('mo').longitude : 0;
+  const rahuLng = resultMap.has('ra')? resultMap.get('ra').longitude : 0;
+  const ascLng = resultMap.has('as')? resultMap.get('as').longitude : 0;
   const ecliptic = resultMap.has('ec')? resultMap.get('ec').rectAscension : 0;
-  return { ecliptic, ascRa, sunRa, moonRa, rahuRa };
+  return { ecliptic, ascRa, sunRa, moonRa, rahuRa, ascLng, sunLng, moonLng, rahuLng };
 }
 
 export const fetchTransitSampleResultSet = async (jd = 0, geo: GeoPos, includeKeys = ['as', 'su', 'mo', 'ra']): Promise<Map<string, any>> => {
@@ -67,29 +71,35 @@ export const fetchTransitSampleResultSet = async (jd = 0, geo: GeoPos, includeKe
 }
 
 const calcBaseObjectsAltitude = async (key = "", jd = 0, geo: GeoPos, resultMap: Map<string,any> = new Map()) => {
-  const { ascRa, moonRa, sunRa, rahuRa, ecliptic } = extractRaFromResultMap(resultMap);
+  const { ascRa, moonRa, sunRa, rahuRa, ecliptic, ascLng, sunLng, moonLng, rahuLng} = extractRaFromResultMap(resultMap);
   let ra = 0;
+  let longitude = 0;
     switch (key) {
       case "lotOfFortune":
         ra = (ascRa + (moonRa - sunRa) + 360) % 360;
+        longitude = (ascLng + (moonLng - sunLng) + 360) % 360;
         break;
       case "lotOfSpirit":
         ra = (ascRa + sunRa - moonRa + 360) % 360;
+        longitude = (ascLng + sunLng - moonLng + 360) % 360;
         break;
       case "brghuBindu":
         ra = ((moonRa + rahuRa) / 2) % 360;
+        longitude = ((moonLng + rahuLng) / 2) % 360;
         break;
       case "yogi":
         ra = (sunRa + moonRa + 93 + 1 / 3) % 360;
+        longitude = (sunLng + moonLng + 93 + 1 / 3) % 360;
         break;
       case "avaYogi":
-        ra = (((sunRa + moonRa + 93 + 1 / 3) % 360) + 560 / 3) % 360
+        ra = (((sunRa + moonRa + 93 + 1 / 3) % 360) + 560 / 3) % 360;
+        longitude = (((sunLng + moonLng + 93 + 1 / 3) % 360) + 560 / 3) % 360;
         break;
     }
 
     const declination = calcDeclinationFromLngLatEcl(ra, 0, ecliptic);
     const altitude = await calcAltitudeSE(jd, geo, ra, declination, true);
-    return { longitude: ra, latitude: declination, altitude };
+    return { longitude, rectAscension: ra, latitude: declination, altitude };
 }
 
 export const calcBaseObjects = async(jd = 0, geo: GeoPos) => {
@@ -108,8 +118,10 @@ class SampleTracker {
   prevVal = 0;
   polarity = 0;
   prevPolarity = 0;
+  lng = 0;
+  prevLng = 0;
 
-  setIfRise(newJd = 0, newVal = 0, setMode = false, prevJd = 0, prevVal = 0) {
+  setIfRise(newJd = 0, newVal = 0, setMode = false, prevJd = 0, prevVal = 0, lng = 0, prevLng = 0) {
     this.polarity = newVal < 0 ? -1 : 1;
     if (this.prevPolarity !== 0 && this.polarity !== this.prevPolarity) {
       if ((!setMode && this.prevPolarity < 0) || (setMode && this.prevPolarity > 0)) {
@@ -117,6 +129,8 @@ class SampleTracker {
         this.jd = newJd;
         this.prevJd = prevJd;
         this.prevVal = prevVal;
+        this.lng = lng;
+        this.prevLng = prevLng;
       }
     }
     
@@ -128,23 +142,27 @@ class SampleTracker {
     const progress = Math.abs(this.val / diff);
     const diffJd = (this.jd - this.prevJd) * progress;
     this.jd = this.jd - diffJd;
+    const diffLng = (this.lng - this.prevLng) * progress;
+    this.lng = this.lng - diffLng
   }
 
-  setIfMaxMin(newJd = 0, newVal = 0, minMode = false, prevJd = 0, prevVal = 0) {
+  setIfMaxMin(newJd = 0, newVal = 0, minMode = false, prevJd = 0, prevVal = 0, lng = 0, prevLng = 0) {
     if ((!minMode && newVal > this.val) || (minMode && newVal < this.val)) {
       this.jd = newJd;
       this.val = newVal;
       this.prevJd = prevJd;
       this.prevVal = prevVal;
+      this.lng = lng;
+      this.prevLng = prevLng;
     }
   }
 
-  setIfMax(newJd = 0, newVal = 0, prevJd = 0, prevVal = 0) {
-    this.setIfMaxMin(newJd, newVal, false, prevJd, prevVal);
+  setIfMax(newJd = 0, newVal = 0, prevJd = 0, prevVal = 0, lng = 0, prevLng = 0) {
+    this.setIfMaxMin(newJd, newVal, false, prevJd, prevVal, lng, prevLng);
   }
 
-  setIfMin(newJd = 0, newVal = 0, prevJd = 0, prevVal = 0) {
-    this.setIfMaxMin(newJd, newVal, true, prevJd, prevVal);
+  setIfMin(newJd = 0, newVal = 0, prevJd = 0, prevVal = 0, lng = 0, prevLng = 0) {
+    this.setIfMaxMin(newJd, newVal, true, prevJd, prevVal, lng, prevLng);
   }
 }
 
@@ -154,11 +172,11 @@ class SampleTrackerGroup {
   mc = new SampleTracker();
   ic = new SampleTracker();
 
-  setSamplePoints(newJd = 0, newVal = 0, prevJd = 0, prevVal = 0) {
-    this.rise.setIfRise(newJd, newVal, false, prevJd, prevVal);
-    this.set.setIfRise(newJd, newVal, true, prevJd, prevVal);
-    this.mc.setIfMax(newJd, newVal, prevJd, prevVal);
-    this.ic.setIfMin(newJd, newVal, prevJd, prevVal);
+  setSamplePoints(newJd = 0, newVal = 0, prevJd = 0, prevVal = 0, lng = 0, prevLng = 0) {
+    this.rise.setIfRise(newJd, newVal, false, prevJd, prevVal, lng, prevLng);
+    this.set.setIfRise(newJd, newVal, true, prevJd, prevVal,lng, prevLng);
+    this.mc.setIfMax(newJd, newVal, prevJd, prevVal, lng, prevLng);
+    this.ic.setIfMin(newJd, newVal, prevJd, prevVal, lng, prevLng);
   }
 
   adjustJds() {
@@ -168,10 +186,26 @@ class SampleTrackerGroup {
 
   toTransits() {
     return { 
-      rise: this.rise.jd,
-      set: this.set.jd,
-      mc: this.mc.jd,
-      ic: this.ic.jd
+      rise: { 
+        jd: this.rise.jd,
+        lng: this.rise.lng,
+        after: false,
+      },
+      set: { 
+        jd: this.set.jd,
+        lng: this.set.lng,
+        after: false,
+      },
+      mc: {
+        jd: this.mc.jd,
+        lng: this.mc.lng,
+        after: false,
+      },
+      ic: {
+        jd: this.ic.jd,
+        lng: this.ic.lng,
+        after: false,
+      }
     }
   }
 }
@@ -229,22 +263,29 @@ export const sampleBaseObjects = async (jd = 0, geo: GeoPos, showSamples = false
   const startSampleIndex = -1;
   const endSampleNum = (numUnits * 1.25) + 1;
   let prevJd = startJd + (-1 * unit);
+  
   const prevAlts: Map<string, number> = new Map();
   specialTransitKeys.forEach(key => {
     prevAlts.set(key, 0);
+  });
+  const prevLngs: Map<string, number> = new Map();
+  specialTransitKeys.forEach(key => {
+    prevLngs.set(key, 0);
   });
   for (let i = startSampleIndex; i < endSampleNum; i++) {
     currJd = startJd + (i * unit);
     const sample = await calcBaseObjects(currJd, geo);
     
-    
     specialTransitKeys.forEach(key => {
       const curr = transitMap.get(key);
       const prevAlt = prevAlts.get(key);
+      const prevLng = prevLngs.get(key);
       const currAlt = sample[key].altitude;
-      curr.setSamplePoints(currJd, currAlt, prevJd, prevAlt);
+      const currLng = sample[key].longitude;
+      curr.setSamplePoints(currJd, currAlt, prevJd, prevAlt, currLng, prevLng);
       transitMap.set(key, curr);
       prevAlts.set(key, currAlt);
+      prevLngs.set(key, currLng);
     });
     samples.push({ jd: currJd, sample});
     prevJd = currJd + 0;
