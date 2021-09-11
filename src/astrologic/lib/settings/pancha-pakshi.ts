@@ -16,6 +16,49 @@ export const birdRelations = [
   ['F', 'E',	'E', 'F', 'S']
 ];
 
+export const birdActivitiesDirections = [
+  {
+    num: 1,
+    eating: 'E',
+    walking: 'S',
+    ruling: 'W',
+    sleeping: 'N',
+    dying: 'NE'
+  },
+  {
+    num: 2,
+    eating: 'S',
+    walking: 'W',
+    ruling: 'N',
+    sleeping: 'E',
+    dying: 'SW'
+  },
+  {
+    num: 3,
+    eating: 'W',
+    walking: 'N',
+    ruling: 'E',
+    sleeping: 'SW',
+    dying: 'SW'
+  },
+  {
+    num: 4,
+    eating: 'N',
+    walking: 'E',
+    ruling: 'S',
+    sleeping: 'SW',
+    dying: 'NW'
+  },
+  {
+    num: 5,
+    eating: 'N',
+    walking: 'S',
+    ruling: 'W',
+    sleeping: 'SW',
+    dying: 'E'
+  }
+];
+
 export const birdDayValues = [
   {
       num: 7,
@@ -219,6 +262,204 @@ export const birdDayValues = [
               dying: 4
           }
       }
+  }
+];
+
+export const strength = [
+  {
+    num: 3,
+    percent: 100,
+    ruling: { 
+      ruling: 1,
+      eating: 0.8,
+      walking: 0.6,
+      sleeping: 0.4,
+      dying: 0.2
+    },
+    eating: {
+      ruling: 0.8,
+      eating: 0.64,
+      walking: 0.48,
+      sleeping: 0.32,
+      dying: 0.16
+    },
+    walking: {
+      ruling: 0.6,
+      eating: 0.48,
+      walking: 0.36,
+      sleeping: 0.24,
+      dying: 0.12
+    },
+    sleeping: {
+      ruling: 0.4,
+      eating: 0.32,
+      walking: 0.24,
+      sleeping: 0.16,
+      dying: 0.08
+    },
+    dying: {
+      ruling: 0.2,
+      eating: 0.16,
+      walking: 0.12,
+      sleeping: 0.08,
+      dying: 0.04
+    }
+  },
+  {
+    num: 1,
+    percent: 75,
+    ruling: {
+      ruling: 0.75,
+      eating: 0.6,
+      walking: 0.45,
+      sleeping: 0.3,
+      dying: 0.15
+    },
+    eating: {
+      ruling: 0.6,
+      eating: 0.48,
+      walking: 0.36,
+      sleeping: 0.24,
+      dying: 0.12
+    },
+    walking: {
+      ruling: 0.45,
+      eating: 0.36,
+      walking: 0.27,
+      sleeping: 0.18,
+      dying: 0.09
+    },
+    sleeping: {
+      ruling: 0.3,
+      eating: 0.24,
+      walking: 0.18,
+      sleeping: 0.12,
+      dying: 0.06
+    },
+    dying: {
+      ruling: 0.15,
+      eating: 0.12,
+      walking: 0.09,
+      sleeping: 0.06,
+      dying: 0.03
+    }
+  },
+  {
+    num: 2,
+    percent: 50,
+    ruling: {
+      ruling: 0.25,
+      eating: 0.2,
+      walking: 0.15,
+      sleeping: 0.1,
+      dying: 0.05
+    },
+    eating: {
+      ruling: 0.2,
+      eating: 0.16,
+      walking: 0.12,
+      sleeping: 0.08,
+      dying: 0.04
+    },
+    walking: {
+      ruling: 0.15,
+      eating: 0.12,
+      walking: 0.09,
+      sleeping: 0.06,
+      dying: 0.03
+    },
+    sleeping: {
+      ruling: 0.1,
+      eating: 0.08,
+      walking: 0.06,
+      sleeping: 0.04,
+      dying: 0.02
+    },
+    dying: {
+      ruling: 0.05,
+      eating: 0.04,
+      walking: 0.03,
+      sleeping: 0.02,
+      dying: 0.01
+    }
+  },
+  {
+    num: 4,
+    percent: 25,
+    ruling: {
+      ruling: 0.5,
+      eating: 0.4,
+      walking: 0.3,
+      sleeping: 0.2,
+      dying: 0.1
+    },
+    eating: {
+      ruling: 0.4,
+      eating: 0.32,
+      walking: 0.24,
+      sleeping: 0.16,
+      dying: 0.08
+    },
+    walking: {
+      ruling: 0.3,
+      eating: 0.24,
+      walking: 0.18,
+      sleeping: 0.12,
+      dying: 0.06
+    },
+    sleeping: {
+      ruling: 0.2,
+      eating: 0.16,
+      walking: 0.12,
+      sleeping: 0.08,
+      dying: 0.04
+    },
+    dying: {
+      ruling: 0.1,
+      eating: 0.08,
+      walking: 0.06,
+      sleeping: 0.04,
+      dying: 0.02
+    }
+  },
+  {
+    num: 5,
+    percent: 12.5,
+    ruling: {
+      ruling: 0.125,
+      eating: 0.1,
+      walking: 0.075,
+      sleeping: 0.05,
+      dying: 0.025
+    },
+    eating: {
+      ruling: 0.1,
+      eating: 0.08,
+      walking: 0.06,
+      sleeping: 0.04,
+      dying: 0.02
+    },
+    walking: {
+      ruling: 0.075,
+      eating: 0.06,
+      walking: 0.045,
+      sleeping: 0.03,
+      dying: 0.015
+    },
+    sleeping: {
+      ruling: 0.05,
+      eating: 0.04,
+      walking: 0.03,
+      sleeping: 0.02,
+      dying: 0.1
+    },
+    dying: {
+      ruling: 0.025,
+      eating: 0.02,
+      walking: 0.015,
+      sleeping: 0.1,
+      dying: 0.005
+    }
   }
 ];
 
@@ -565,4 +806,16 @@ export const matchBirdActivity = (birdNum = 0, dayNum = 0, waxing = false, isNig
 export const matchBirdActivityByKey = (birdKey = "", dayNum = 0, waxing = false, isNight = false) => {
   const num = Object.values(birdMap).indexOf(birdKey) + 1;
   return matchBirdActivity(num, dayNum, waxing, isNight);
+}
+
+export const matchBirdDirectionByActivity = (birdNum = 0, activity = ""): number => {
+  const row = birdActivitiesDirections.find(row => row.num === birdNum);
+  const rowIsMatched = row instanceof Object;
+  const activityKeys = rowIsMatched ? Object.keys(row) : [];
+  return activityKeys.includes(activity)? row[activity] : "";
+}
+
+export const matchBirdKeyDirectionByActivity = (birdKey = "", activity = ""): number => {
+  const birdNum = Object.values(birdMap).indexOf(birdKey) + 1;
+  return matchBirdDirectionByActivity(birdNum, activity);
 }
