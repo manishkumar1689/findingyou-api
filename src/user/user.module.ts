@@ -15,9 +15,12 @@ import { PairedChartSchema } from '../astrologic/schemas/paired-chart.schema';
 import { SnippetSchema } from '../snippet/schemas/snippet.schema';
 import { TranslatedItemSchema } from '../snippet/schemas/translated-item.schema';
 import { SnippetService } from '../snippet/snippet.service';
+import { FeedbackService } from '../feedback/feedback.service';
 import { ProtocolSchema } from '../setting/schemas/protocol.schema';
 import { GeoNameSchema } from '../geo/schemas/geo-name.schema';
 import { PredictiveRuleSetSchema } from '../setting/schemas/predictive-rule-set.schema';
+import { FeedbackSchema } from '../feedback/schemas/feedback.schema';
+import { FlagSchema } from '../feedback/schemas/flag.schema';
 
 @Global()
 @Module({
@@ -35,6 +38,8 @@ import { PredictiveRuleSetSchema } from '../setting/schemas/predictive-rule-set.
       { name: 'PairedChart', schema: PairedChartSchema },
       { name: 'Protocol', schema: ProtocolSchema },
       { name: 'PredictiveRuleSet', schema: PredictiveRuleSetSchema },
+      { name: 'Feedback', schema: FeedbackSchema },
+      { name: 'Flag', schema: FlagSchema },
     ]),
   ],
   providers: [
@@ -44,6 +49,7 @@ import { PredictiveRuleSetSchema } from '../setting/schemas/predictive-rule-set.
     SnippetService,
     AstrologicService,
     GeoService,
+    FeedbackService,
   ],
   controllers: [UserController],
 })

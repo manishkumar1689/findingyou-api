@@ -15,6 +15,7 @@ import { FeedbackService } from './feedback.service';
 import { UserService } from '../user/user.service';
 import { SettingService } from '../setting/setting.service';
 import { CreateFlagDTO } from './dto/create-flag.dto';
+import * as admin from "firebase-admin";
 
 @Controller('feedback')
 export class FeedbackController {
@@ -36,6 +37,17 @@ export class FeedbackController {
       user,
       key,
       query,
+    );
+    return res.json(data);
+  }
+
+  @Get('flags-by-user/:user?')
+  async getAllFlagsByUser(
+    @Res() res,
+    @Param('user') user
+  ) {
+    const data = await this.feedbackService.getAllUserInteractions(
+      user
     );
     return res.json(data);
   }
@@ -64,20 +76,37 @@ export class FeedbackController {
     let type = 'boolean';
     let isRating = false;
     let data: any = { valid: false };
-    if (flag) {
+    const isValidValue = (value = null, type = "") => {
+      switch (type) {
+        case 'boolean':
+        case 'bool':
+          return value === true || value === false;
+        case 'double':
+        case 'bool':
+          return typeof value === 'number' && isNaN(value) === false;
+        default:
+          return false;
+      }
+    }
+    if (flag instanceof Object) {
       type = flag.type;
       isRating = flag.isRating === true;
-      await this.feedbackService.saveFlag({
-        user,
-        targetUser,
-        key,
-        value,
-        type,
-        isRating,
-      });
-      data = await this.feedbackService.getByTargetUserOrKey(targetUser, key, {
-        uid: user,
-      });
+      const isEmpty = value === null || value === undefined;
+      const assignedValue = isEmpty ? flag.defaultValue : value;
+      const isValid = isValidValue(assignedValue, type);
+      if (isValid) {
+        data = await this.feedbackService.saveFlag({
+          user,
+          targetUser,
+          key,
+          value: assignedValue,
+          type,
+          isRating,
+        });
+        if (data instanceof Object) {
+          data.valid = true;
+        }
+      }
     }
     return res.json(data);
   }

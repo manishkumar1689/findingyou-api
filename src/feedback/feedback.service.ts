@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { extractDocId } from '../lib/entities';
+import { extractDocId, extractSimplified } from '../lib/entities';
 import { notEmptyString } from '../lib/validators';
 import { CreateFlagDTO } from './dto/create-flag.dto';
 import { Feedback } from './interfaces/feedback.interface';
@@ -40,6 +40,19 @@ export class FeedbackService {
   async getAllbyTargetUser(user: string) {
     const criteria = this.buildFilterCriteria(user, '');
     return await this.flagModel.find(criteria);
+  }
+
+
+  async getAllUserInteractions(user: string) {
+    const criteria = { $or: [{user: user}, {targetUser: user}], active: true };
+    const rows = await this.flagModel.find(criteria).select({ _id: 0, __v: 0, isRating: 0, options: 0, active: 0 });
+    const hasRows = rows instanceof Array && rows.length > 0;
+    const userID = user.toString();
+    return {
+      userId: user.toString(),
+      from: hasRows? rows.filter(row => row.user.toString() === userID).map(row => extractSimplified(row, ['user'])) : [],
+      to: hasRows? rows.filter(row => row.targetUser.toString() === userID).map(row => extractSimplified(row, ['targetUser'])) : [],
+    }
   }
 
   async getMemberSet(user: string, uid: string) {
@@ -141,7 +154,7 @@ export class FeedbackService {
       const newFB = new this.flagModel(fields);
       data = await newFB.save();
     }
-    return data;
+    return data instanceof Object? extractSimplified(data, ['_id', '__v', 'active']) : { valid: false};
   }
 
   async activateUser(user: string, active = true) {

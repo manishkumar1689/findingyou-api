@@ -16,6 +16,11 @@ export const birdRelations = [
   ['F', 'E',	'E', 'F', 'S']
 ];
 
+export interface Yama {
+  value: number;
+  sub: number;
+}
+
 export const birdActivitiesDirections = [
   {
     num: 1,
@@ -753,6 +758,66 @@ export const birdActivities = [
   }
 ];
 
+
+// expressed in 24ths. Multiply by 5 to scale as minutes of 2:24m (144 minutes);
+export const yamaSubdivisions = [
+  { 
+    key: 'eating',
+    waxing: {
+      day: 5,
+      night: 5,
+    },
+    waning: {
+      day: 8,
+      night: 7,
+    }
+  },
+  { 
+    key: 'walking',
+    waxing: {
+      day: 6,
+      night: 5,
+    },
+    waning: {
+      day: 6,
+      night: 7,
+    }
+  },
+  { 
+    key: 'ruling',
+    waxing: {
+      day: 8,
+      night: 4,
+    },
+    waning: {
+      day: 3,
+      night: 3,
+    }
+  },
+  { 
+    key: 'sleeping',
+    waxing: {
+      day: 3,
+      night: 4,
+    },
+    waning: {
+      day: 2,
+      night: 3,
+    }
+  },
+  { 
+    key: 'dying',
+    waxing: {
+      day: 2,
+      night: 6,
+    },
+    waning: {
+      day: 5,
+      night: 4,
+    }
+  }
+];
+
 export const matchBird = (moonLng = 0, waxing = false) => {
   const nakNum = Math.floor(moonLng / (360/27)) + 1;
   const row = birdNakshatraRanges.find(row =>  nakNum >= row.range[0] && nakNum <= row.range[1]);
@@ -818,4 +883,42 @@ export const matchBirdDirectionByActivity = (birdNum = 0, activity = ""): number
 export const matchBirdKeyDirectionByActivity = (birdKey = "", activity = ""): number => {
   const birdNum = Object.values(birdMap).indexOf(birdKey) + 1;
   return matchBirdDirectionByActivity(birdNum, activity);
+}
+
+export const calcYama = (jd = 0, startJd = 0, endJd = 0, isWaxing = true, isDayTime = false) => {
+  const lengthJd = endJd - startJd;
+  const progressJd = jd - startJd;
+  const progress = progressJd / lengthJd;
+  const subProgress = (progress % 0.2) * 5;
+  const waneWax = isWaxing? 'waxing' : 'waning';
+  const dayNight = isDayTime? 'day' : 'night';
+  const periods = yamaSubdivisions.map(ys => {
+    const div = ys[waneWax][dayNight];
+    const { key } = ys;
+    return {
+      key,
+      value: (div / 24)
+    }
+  });
+  const yama = (Math.floor(progress * 5) % 5) + 1;
+  let startProgress = 0;
+  let endProgress = 0;
+  let sub = 0;
+  for (let i = 0; i < 5; i++) {
+    const { key, value } = periods[i];
+    endProgress += value;
+    if (subProgress >= startProgress && subProgress < endProgress) {
+      sub = (i + 1);
+      break;
+    }
+    startProgress += value;
+  };
+  const key = sub > 0? yamaSubdivisions[(sub - 1)].key : "";
+  return {
+    progress,
+    subProgress,
+    key,
+    yama,
+    sub
+  };
 }

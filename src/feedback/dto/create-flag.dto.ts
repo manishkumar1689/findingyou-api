@@ -11,13 +11,13 @@ export class CreateFlagDTO {
   readonly key: string;
 
   @ApiProperty()
-  readonly active: boolean;
+  readonly active?: boolean;
 
   @ApiProperty()
   readonly type?: string;
 
   @ApiProperty()
-  readonly value: any;
+  readonly value?: any;
 
   @ApiProperty()
   readonly isRating?: boolean;

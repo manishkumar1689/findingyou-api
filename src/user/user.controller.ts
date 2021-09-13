@@ -48,6 +48,7 @@ import { PreferenceOption } from './interfaces/preference-option.interface';
 import { AstrologicService } from '../astrologic/astrologic.service';
 import { SurveyItem } from './interfaces/survey-item';
 import { SnippetService } from '../snippet/snippet.service';
+import { FeedbackService } from '../feedback/feedback.service';
 import { ProfileDTO } from './dto/profile.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { generateFileName, mediaPath, readRawFile, uploadMediaFile } from '../lib/files';
@@ -56,7 +57,6 @@ import { SampleDataDTO } from './dto/sample-data.dto';
 import { SampleRecordDTO } from './dto/sample-record.dto';
 import { simplifyChart } from '../astrologic/lib/member-charts';
 import { MediaItemDTO } from './dto/media-item.dto';
-import { Options } from '@nestjs/common';
 
 @Controller('user')
 export class UserController {
@@ -67,6 +67,7 @@ export class UserController {
     private snippetService: SnippetService,
     private astrologicService: AstrologicService,
     private geoService: GeoService,
+    private feedbackService: FeedbackService,
   ) {}
 
   // add a user
@@ -123,12 +124,15 @@ export class UserController {
       const charts = await this.astrologicService.getChartsByUser(
         userID,
         0,
-        10,
+        1,
         true,
       );
       if (charts.length > 0) {
         ud.set('chart', simplifyChart(charts[0]));
       }
+      const flagItems = await this.feedbackService.getAllbySourceUser(userID);
+      const flags = flagItems instanceof Object ? flagItems : [];
+      ud.set('flags', flags);
       userData = hashMapToObject(ud);
     }
     if (!valid) {
