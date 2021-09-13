@@ -849,6 +849,7 @@ export class UserService {
     return data;
   }
 
+  // aux. method to assign extra profile data
   assignProfile(user: User, profileRef = null, mediaItemRef = null) {
     const userData = user.toObject();
     let profile: any = {};
