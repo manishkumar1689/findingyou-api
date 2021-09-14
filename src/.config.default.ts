@@ -49,6 +49,8 @@ export const googleTranslate = {
   projectId: 'snippets-319613',
 };
 
+export const googleFCMKeyPath = '/Users/neil/apps/findingyou/files/findingyou-1ef9a-firebase-adminsdk-8otfv-1e2b882c10.json';
+
 export const hashSalt = '4jyddhd-90';
 
 export const maxResetMinutes = 180;

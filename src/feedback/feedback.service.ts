@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { yearsAgoString } from '../astrologic/lib/date-funcs';
 import { extractDocId, extractSimplified } from '../lib/entities';
-import { notEmptyString } from '../lib/validators';
+import { notEmptyString, validISODateString } from '../lib/validators';
 import { CreateFlagDTO } from './dto/create-flag.dto';
 import { Feedback } from './interfaces/feedback.interface';
 import { Flag, SimpleFlag } from './interfaces/flag.interface';
@@ -42,14 +43,13 @@ export class FeedbackService {
     return await this.flagModel.find(criteria);
   }
 
-
-  async getAllUserInteractions(user: string) {
-    const criteria = { $or: [{user: user}, {targetUser: user}], active: true };
+  async getAllUserInteractions(user: string, startDate = null) {
+    const dt = validISODateString(startDate)? startDate : typeof startDate === 'number' ? yearsAgoString(startDate) : yearsAgoString(1);
+    const criteria = { $or: [{user: user}, {targetUser: user}], active: true, modifiedAt: { $gte: dt } };
     const rows = await this.flagModel.find(criteria).select({ _id: 0, __v: 0, isRating: 0, options: 0, active: 0 });
     const hasRows = rows instanceof Array && rows.length > 0;
     const userID = user.toString();
     return {
-      userId: user.toString(),
       from: hasRows? rows.filter(row => row.user.toString() === userID).map(row => extractSimplified(row, ['user'])) : [],
       to: hasRows? rows.filter(row => row.targetUser.toString() === userID).map(row => extractSimplified(row, ['targetUser'])) : [],
     }

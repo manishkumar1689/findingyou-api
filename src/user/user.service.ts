@@ -556,13 +556,13 @@ export class UserService {
     }
   }
 
-  async registerLogin(userID: string): Promise<string> {
-    const loginDt = new Date().toISOString();
-    const user = await this.userModel.findByIdAndUpdate(userID, {
-      login: loginDt,
-    });
+  async registerLogin(userID: string, deviceToken = ""): Promise<string> {
+    const login = new Date().toISOString();
+    const hasDeviceToken = notEmptyString(deviceToken, 5);
+    const edited = hasDeviceToken ? { login, deviceToken } : { login };
+    const user = await this.userModel.findByIdAndUpdate(userID, edited);
     if (user) {
-      return loginDt;
+      return login;
     } else {
       return '-';
     }

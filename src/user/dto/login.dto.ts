@@ -6,4 +6,7 @@ export class LoginDTO {
 
   @ApiProperty()
   readonly password: string;
+
+  @ApiProperty()
+  readonly deviceToken?: string;
 }

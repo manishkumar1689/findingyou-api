@@ -114,11 +114,13 @@ export class UserController {
       createUserDTO.identifier,
       false,
     );
+    const { deviceToken } = createUserDTO;
+    console.log(deviceToken);
     if (existing) {
       const userID = extractDocId(existing);
-      const loginDt = await this.userService.registerLogin(userID);
+      const loginDt = await this.userService.registerLogin(userID, deviceToken);
       valid = existing.active;
-      const user = extractSimplified(existing, ['password']);
+      const user = extractSimplified(existing, ['password', '__v']);
       const ud: Map<string, any> = new Map(Object.entries(user));
       ud.set('login', loginDt);
       const charts = await this.astrologicService.getChartsByUser(
@@ -130,7 +132,7 @@ export class UserController {
       if (charts.length > 0) {
         ud.set('chart', simplifyChart(charts[0]));
       }
-      const flagItems = await this.feedbackService.getAllbySourceUser(userID);
+      const flagItems = await this.feedbackService.getAllUserInteractions(userID, 3/12);
       const flags = flagItems instanceof Object ? flagItems : [];
       ud.set('flags', flags);
       userData = hashMapToObject(ud);
@@ -537,9 +539,15 @@ export class UserController {
       if (valid) {
         extractObjectAndMerge(user, userData, ['password', 'status', 'token']);
         const userID = extractDocId(user);
-        const loginDt = await this.userService.registerLogin(userID);
+        const { deviceToken } = loginDTO;
+        const loginDt = await this.userService.registerLogin(userID, deviceToken);
         userData.set('login', loginDt);
-
+        if (notEmptyString(deviceToken, 5)) {
+          userData.set('deviceToken', deviceToken);
+        }
+        const flagItems = await this.feedbackService.getAllUserInteractions(userID, 3/12);
+        const flags = flagItems instanceof Object ? flagItems : [];
+        userData.set('flags', flags);
         const chart = await this.astrologicService.getUserBirthChart(userID);
         if (chart instanceof Object) {
           const chartObj = isMemberLogin? simplifyChart(chart) : chart;

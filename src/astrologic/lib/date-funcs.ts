@@ -260,6 +260,26 @@ export const applyTzOffsetToDateString = (dt, offsetSecs: number) => {
     .shift();
 };
 
+export const yearsAgoString = (years = 1): string => {
+  const dt = new Date();
+  const yr = dt.getFullYear();
+  const wholeYears = Math.floor(years);
+  const remainder = years % 1;
+  const months = Math.floor(remainder * 12)
+  let newYear = yr - wholeYears;
+  if (months > 0) {
+    const m = dt.getMonth();
+    const subM = m - months;
+    const newM = (subM + 12) % 12;
+    dt.setMonth(newM);
+    if (subM < 0) {
+      newYear--;
+    }
+  }
+  dt.setFullYear(newYear);
+  return dt.toISOString().split('.').shift();
+}
+
 export const utcDate = (dt: Date | string) => {
   return moment.utc(dt);
 };

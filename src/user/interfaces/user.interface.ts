@@ -25,6 +25,7 @@ export interface User extends Document {
   readonly profiles: Profile[];
   readonly preview: string;
   readonly dob: Date;
+  readonly deviceToken: string;
   readonly token: string;
   readonly login: Date;
   readonly createdAt: Date;

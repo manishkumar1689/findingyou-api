@@ -15,7 +15,6 @@ import { FeedbackService } from './feedback.service';
 import { UserService } from '../user/user.service';
 import { SettingService } from '../setting/setting.service';
 import { CreateFlagDTO } from './dto/create-flag.dto';
-import * as admin from "firebase-admin";
 
 @Controller('feedback')
 export class FeedbackController {

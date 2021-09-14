@@ -65,6 +65,9 @@ export class CreateUserDTO {
   readonly token: string;
 
   @ApiProperty()
+  readonly deviceToken?: string;
+
+  @ApiProperty()
   readonly login: Date;
 
   @ApiProperty()

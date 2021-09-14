@@ -73,6 +73,7 @@ export const UserSchema = new mongoose.Schema({
   active: Boolean,
   test: Boolean,
   status: [StatusSchema],
+  deviceToken: String,
   token: String,
   login: { type: Date, default: null, required: false },
   createdAt: { type: Date, default: Date.now },
