@@ -59,7 +59,7 @@ import {
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
 import { calcGrahaSignTimeline, calcRetroGrade, calcStation, matchNextTransitAtLng, matchNextTransitAtLngRanges, RangeSet } from './lib/astro-motion';
-import { toIndianTime, calcTransition, calcSunTransJd, TransitionData } from './lib/transitions';
+import { toIndianTime, calcTransition, calcSunTransJd, TransitionData, toIndianTimeJd } from './lib/transitions';
 import { readEpheFiles } from './lib/files';
 import { ChartInputDTO } from './dto/chart-input.dto';
 import {
@@ -115,6 +115,10 @@ import ayanamshaValues from './lib/settings/ayanamsha-values';
 import { calcBavGraphData, calcBavSignSamples } from './lib/settings/ashtakavarga-values';
 import { GeoPos } from './interfaces/geo-pos';
 import { Model } from 'mongoose';
+import { JyotishDay } from './lib/models/jyotish-day';
+import { IndianTime } from './lib/models/indian-time';
+import { nakshatra27 } from './lib/helpers';
+import { calcYama, matchBirdByNak } from './lib/settings/pancha-pakshi';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -302,6 +306,46 @@ export class AstrologicController {
       };
       return res.status(HttpStatus.BAD_REQUEST).json(result);
     }
+  }
+
+  @Get('panksha-pancha/:chartID/:loc/:dt?')
+  async pankshaPanchaDaya(@Res() res, @Param('chartID') chartID, @Param('loc') loc, @Param('dt') dt) {
+    let status = HttpStatus.BAD_REQUEST;
+    let data: any = { jd: 0, valid: false, moon: null, bird: null, yama: null, indianTime: null  };
+    if (notEmptyString(chartID) && notEmptyString(loc, 3)) {
+      const geo = locStringToGeo(loc);
+      const { dtUtc, jd } = matchJdAndDatetime(dt);
+      data.jd = jd;
+      const chartData = await this.astrologicService.getChart(chartID);
+      const hasChart = chartData instanceof Model;
+      data.valid = hasChart && chartData.grahas.length > 1;
+      if (data.valid) {
+        const chartObj = hasChart ? chartData.toObject() : {};
+        const iTime = await toIndianTimeJd(jd, geo);
+        data.indianTime = iTime;
+        const periodStart = iTime.dayBefore ? iTime.prevSet.jd : iTime.rise.jd;
+        const periodEnd = iTime.dayBefore ? iTime.rise.jd : iTime.set.jd;
+        const chart = new Chart(chartObj);
+        chart.setAyanamshaItemByNum(27);
+        const moon = chart.graha('mo');
+        data.moon = { 
+          lng: moon.longitude,
+          nakshatra27: moon.nakshatra27,
+          waxing: chart.moonWaxing
+        }
+        data.bird = matchBirdByNak(moon.nakshatra27, chart.moonWaxing);
+        data.yama = calcYama(jd, periodStart, periodEnd, chart.moonWaxing, iTime.isDayTime);
+      }
+      status = HttpStatus.OK;
+      return res.status(HttpStatus.OK).json(data);
+    } else {
+      const result = {
+        valid: false,
+        message: 'Invalid parameters',
+      };
+      
+    }
+    return res.status(status).json(data);
   }
 
   @Get('houses/:loc/:dt/:system?')

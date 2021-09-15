@@ -835,11 +835,21 @@ export const yamaSubdivisions = [
   }
 ];
 
-export const matchBird = (moonLng = 0, waxing = false) => {
-  const nakNum = Math.floor(moonLng / (360/27)) + 1;
+export const matchBirdByNak = (nakNum = 0, waxing = false) => {
   const row = birdNakshatraRanges.find(row =>  nakNum >= row.range[0] && nakNum <= row.range[1]);
   const num = row instanceof Object ? waxing ? row.waxing : row.waning : 0;
   const key = num > 0 && num <= 5? birdMap[num] : "";
+  return { num, key };
+}
+
+export const matchBirdByLng = (moonLng = 0, waxing = false) => {
+  const nakNum = Math.floor(moonLng / (360/27)) + 1;
+  return matchBirdByNak(nakNum, waxing);
+}
+
+export const matchBirdByNum = (num = 0) => {
+  const keys = Object.values(birdMap); 
+  const key = num > 0 && num < keys.length? keys[(num - 1)] : "";
   return { num, key };
 }
 
@@ -867,8 +877,8 @@ export const matchBirdDayValue = (dayNum = 0, waxing = false, isNight = false) =
 export const matchBirdDayRuler = (dayNum = 0, waxing = false, isNight = false) => {
   const item = matchBirdDayValue(dayNum, waxing, isNight);
   return { 
-    ruling: matchBird(item.ruling),
-    dying: matchBird(item.dying)
+    ruling: matchBirdByNum(item.ruling),
+    dying: matchBirdByNum(item.dying)
   }
 }
 

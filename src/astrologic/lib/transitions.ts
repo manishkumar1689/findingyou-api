@@ -7,6 +7,7 @@ import { isNumeric } from '../../lib/validators';
 import { ephemerisDefaults } from '../../.config';
 import { GeoLoc } from './models/geo-loc';
 import { calcGrahaLng } from './core';
+import { GeoPos } from '../interfaces/geo-pos';
 
 export interface TimeSet {
   jd: number;
@@ -176,7 +177,7 @@ export const calcTransitionJd = async (
   return data;
 };
 
-export const calcSunTrans = async (datetime, geo, tzOffset = 0) => {
+export const calcSunTrans = async (datetime, geo: GeoPos, tzOffset = 0) => {
   const jd = calcJulDate(datetime);
   const transData = await calcSunTransJd(jd, geo);
   return { ...transData, datetime, tzOffset };
@@ -200,22 +201,29 @@ export const calcSunTransJd = async (
   };
 };
 
-export const calcJyotishDay = async (datetime, geo, tzOffset = 0) => {
+export const calcJyotishDay = async (datetime, geo: GeoPos, tzOffset = 0) => {
   const sunData = await calcSunTrans(datetime, geo, tzOffset);
   return new JyotishDay(sunData);
 };
 
-export const calcJyotishSunRise = async (datetime, geo) => {
+export const calcJyotishSunRise = async (datetime, geo: GeoPos) => {
   const jyotishDay = await calcJyotishDay(datetime, geo);
   return jyotishDay.toObject();
 };
 
-export const fetchIndianTimeData = async (datetime, geo, tzOffset = 0) => {
+export const fetchIndianTimeData = async (datetime, geo: GeoPos, tzOffset = 0) => {
   const jyotishDay = await calcJyotishDay(datetime, geo, tzOffset);
   return new IndianTime(jyotishDay);
 };
 
-export const toIndianTime = async (datetime, geo) => {
+export const toIndianTime = async (datetime, geo: GeoPos) => {
   const iTime = await fetchIndianTimeData(datetime, geo);
   return iTime.toObject();
 };
+
+export const toIndianTimeJd = async (jd = 0, geo: GeoPos) => {
+  const sunData = await calcSunTransJd(jd, geo);
+  const jyotishDay = new JyotishDay(sunData);
+  const iTime = new IndianTime(jyotishDay);
+  return iTime.toObject();
+}
