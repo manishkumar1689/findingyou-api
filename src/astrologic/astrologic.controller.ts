@@ -631,12 +631,14 @@ export class AstrologicController {
     } = inData;
     let { name, type, gender, eventType, roddenValue } = inData;
     const userRecord = await this.userService.getUser(user);
-
+    // If user record is matched, proceed
     if (userRecord instanceof Object) {
-      
-      const dob = userRecord.dob instanceof Date? utcDate(userRecord.dob) : "";
-      const useDob = !validISODateString(datetime) && validISODateString(dob);
-      const refDt = useDob ? dob : datetime;
+      const dob = userRecord.dob instanceof Date? utcDate(userRecord.dob) : null;
+      const dobDtStr = dob instanceof Object ? dob.toISOString() : "";
+      const hasValidDatetime = validISODateString(datetime);
+      const useDob = !hasValidDatetime && validISODateString(dobDtStr);
+      const refDt = useDob ? dobDtStr : datetime;
+      // User must be active
       if (userRecord.active) {
         if (validISODateString(refDt) && isNumeric(lat) && isNumeric(lng)) {
           const geo = { lat, lng, alt };
@@ -684,10 +686,12 @@ export class AstrologicController {
           if (chartData instanceof Object) {
             data.shortTz = toShortTzAbbr(dtUtc, geoInfo.tz);
             // Update DOB field in the user table
-            const userData = {
-              dob: dtUtc,
-            } as CreateUserDTO;
-            this.userService.updateUser(user, userData);
+            if (hasValidDatetime) {
+              const userData = {
+                dob: utcDate(datetime),
+              } as CreateUserDTO;
+              this.userService.updateUser(user, userData);
+            }
             const placenames = mapToponyms(geoInfo.toponyms, geo, locality);
 
             data.chart = {

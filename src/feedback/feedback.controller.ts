@@ -15,6 +15,8 @@ import { FeedbackService } from './feedback.service';
 import { UserService } from '../user/user.service';
 import { SettingService } from '../setting/setting.service';
 import { CreateFlagDTO } from './dto/create-flag.dto';
+import { pushFlag } from '../lib/notifications';
+import { notEmptyString } from '../lib/validators';
 
 @Controller('feedback')
 export class FeedbackController {
@@ -105,6 +107,17 @@ export class FeedbackController {
         if (data instanceof Object) {
           data.valid = true;
         }
+      }
+      const targetDeviceToken = await this.userService.getUserDeviceToken(createFlagDTO.targetUser);
+      
+      if (notEmptyString(targetDeviceToken, 5)) {
+        data.fcm = await pushFlag(targetDeviceToken, {
+          key,
+          type,
+          value,
+          user,
+          targetUser,
+        });
       }
     }
     return res.json(data);

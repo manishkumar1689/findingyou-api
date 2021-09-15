@@ -3,10 +3,12 @@ import { googleFCMKeyPath } from '../.config'
 
 const initApp = () => {
   admin.initializeApp({
-    credential: admin.credential.applicationDefault(),
-    databaseURL: 'https://flags.firebaseio.com'
-});
+      credential: admin.credential.applicationDefault(),
+      databaseURL: 'https://flags.firebaseio.com'
+  });
 }
+
+initApp();
 
 export interface IFlag {
   key: string;
@@ -26,7 +28,7 @@ const castValueToString = (val: any, type: string): string => {
   }
 }
 
-export const pushFlag = (token: string, flag: IFlag) => {
+export const pushFlag = async (token: string, flag: IFlag) => {
   const entries = flag instanceof Object? Object.entries(flag) : [];
   const hasType = entries.some(entry => entry[0] === 'type');
   const type = hasType ? flag.type : '';
@@ -43,9 +45,16 @@ export const pushFlag = (token: string, flag: IFlag) => {
     data,
     token,
   };
-
-  admin.messaging().send(message)
-  .then((response) => {
-    console.log(response);
-  });
+  const result: any = { valid: false, error: null, data: null };
+  try {
+    await admin.messaging().send(message)
+    .then((response) => {
+      result.data = response;
+    }).catch(e => {
+      result.error = e;
+    });
+  } catch (e) {
+    result.error = e;
+  }
+  return result;
 }

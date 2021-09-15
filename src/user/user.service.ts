@@ -166,12 +166,19 @@ export class UserService {
   };
 
   // Get a single User
-  async getUser(userID: string): Promise<User> {
+  async getUser(userID: string, overrideSelectPaths = []): Promise<User> {
+    const fields = (overrideSelectPaths instanceof Array && overrideSelectPaths.length > 0)? overrideSelectPaths : userSelectPaths;
     const user = await this.userModel
       .findById(userID)
-      .select(userSelectPaths.join(' '))
+      .select(fields.join(' '))
       .exec();
     return user;
+  }
+
+  async getUserDeviceToken(userID: string): Promise<string> {
+    const tokenData = await this.getUser(userID, ['deviceToken']);
+    const tokenRef = tokenData instanceof Object ? tokenData.deviceToken : '';
+    return notEmptyString(tokenRef, 5)? tokenRef : '';
   }
 
   // Get a single User

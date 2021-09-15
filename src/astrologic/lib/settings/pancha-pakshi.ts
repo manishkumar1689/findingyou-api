@@ -270,9 +270,12 @@ export const birdDayValues = [
   }
 ];
 
-export const strength = [
+export const panchaStrengthBaseValues = [
   {
-    num: 3,
+    nums: {
+      waxing: 3,
+      waning: 3
+    },
     percent: 100,
     ruling: { 
       ruling: 1,
@@ -311,7 +314,10 @@ export const strength = [
     }
   },
   {
-    num: 1,
+    num: {
+      waxing: 1,
+      waning: 1,
+    },
     percent: 75,
     ruling: {
       ruling: 0.75,
@@ -350,7 +356,10 @@ export const strength = [
     }
   },
   {
-    num: 2,
+    num: {
+      waxing: 2,
+      waning: 4,
+    },
     percent: 50,
     ruling: {
       ruling: 0.25,
@@ -389,7 +398,10 @@ export const strength = [
     }
   },
   {
-    num: 4,
+    num: {
+      waxing: 4,
+      waning: 2,
+    },
     percent: 25,
     ruling: {
       ruling: 0.5,
@@ -428,7 +440,10 @@ export const strength = [
     }
   },
   {
-    num: 5,
+    num: {
+      waxing: 5,
+      waning: 5,
+    },
     percent: 12.5,
     ruling: {
       ruling: 0.125,
@@ -467,6 +482,8 @@ export const strength = [
     }
   }
 ];
+
+
 
 export const birdActivities = [
   {
@@ -921,4 +938,19 @@ export const calcYama = (jd = 0, startJd = 0, endJd = 0, isWaxing = true, isDayT
     yama,
     sub
   };
+}
+
+export const calcPanchaPakshiStrength = (birdNum = 0, activityKey = "", subKey = "", waxing = true) => {
+  const waxWaneKey = waxing ? 'waxing' : 'waning';
+  const row = panchaStrengthBaseValues.find(row => row.nums[waxWaneKey] === birdNum);
+  const matched = row instanceof Object;
+  const keys = matched ? Object.keys(row) : [];
+  let score = 0;
+  const percent = matched && keys.includes('percent') ? row.percent : 0;
+  if (keys.includes(activityKey) && row[activityKey] instanceof Object) {
+    const subKeys = Object.keys(row[activityKey]);
+    const multiplier = subKeys.includes(subKey)? row[activityKey][subKey] : 0;
+    score = (percent / 100) * multiplier;
+  }
+  return score;
 }

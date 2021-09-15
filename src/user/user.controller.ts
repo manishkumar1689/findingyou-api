@@ -115,7 +115,6 @@ export class UserController {
       false,
     );
     const { deviceToken } = createUserDTO;
-    console.log(deviceToken);
     if (existing) {
       const userID = extractDocId(existing);
       const loginDt = await this.userService.registerLogin(userID, deviceToken);
