@@ -43,10 +43,18 @@ export class FeedbackService {
     return await this.flagModel.find(criteria);
   }
 
-  async getAllUserInteractions(user: string, startDate = null) {
+  async getAllUserInteractions(user: string, startDate = null, otherUserIds = []) {
     const dt = validISODateString(startDate)? startDate : typeof startDate === 'number' ? yearsAgoString(startDate) : yearsAgoString(1);
-    const criteria = { $or: [{user: user}, {targetUser: user}], active: true, modifiedAt: { $gte: dt } };
-    const rows = await this.flagModel.find(criteria).select({ _id: 0, __v: 0, isRating: 0, options: 0, active: 0 });
+    const criteria: Map<string, any> = new Map();
+    if (otherUserIds.length > 0) {
+      criteria.set('$or', [{user: user, targetUser: { $in: otherUserIds }}, {targetUser: user, user: { $in: otherUserIds } }]);
+    } else {
+      criteria.set('$or', [{user: user}, {targetUser: user}]);
+    }
+    criteria.set('active', true);
+    criteria.set('modifiedAt', { $gte: dt });
+    const criteriaObj = Object.fromEntries(criteria.entries());
+    const rows = await this.flagModel.find(criteriaObj).select({ _id: 0, __v: 0, isRating: 0, options: 0, active: 0 });
     const hasRows = rows instanceof Array && rows.length > 0;
     const userID = user.toString();
     return {

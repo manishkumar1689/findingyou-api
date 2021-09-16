@@ -718,6 +718,23 @@ export const calcBodiesJd = async (jd: number, keys: string[] = []) => {
 const calcSunJd = async (jd: number, sideralMode = true) =>
   calcBodyJd(jd, 'su', sideralMode);
 
+
+export const calcMoonDataJd = async (jd: number, ayanamshaKey = 'true_citra') => {
+    const moon = await calcBodyJd(jd, 'mo', true);
+    const sun = await calcBodyJd(jd, 'su', true);
+    const ayanamsha = await calcAyanamsha(jd, ayanamshaKey);
+    const angle = (moon.lng + 360 - sun.lng) % 360;
+    const waxing = angle <= 180;
+    return {
+      moon: moon.lng, 
+      sun: sun.lng,
+      ayanamsha,
+      angle,
+      waxing
+    }
+  }
+  
+
 export const calcSphutaData = async (datetime: string, geo) => {
   const grahaSet = await calcGrahaSet(datetime);
   const houseData = await fetchHouseData(datetime, geo);

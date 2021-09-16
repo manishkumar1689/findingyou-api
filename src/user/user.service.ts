@@ -125,7 +125,7 @@ export class UserService {
     return hashMapToObject(filter);
   };
 
-  buildMemberCriteria = (criteria: object): object => {
+  buildMemberCriteria = (criteria: object, excludedIds: string[] = []): object => {
     const filter = new Map<string, any>();
     if (criteria instanceof Object) {
       const keys = Object.keys(criteria);
@@ -162,6 +162,9 @@ export class UserService {
     }
     filter.set('active', true);
     filter.set('roles', { $nin: ['superadmin', 'admin', 'blocked', 'editor']});
+    if (excludedIds.length > 1) {
+      filter.set('_id', { $nin: excludedIds });
+    }
     return hashMapToObject(filter);
   };
 
@@ -589,8 +592,8 @@ export class UserService {
     return false;
   }
 
-  async members(start = 0, limit = 100, criteria = null) {
-    const matchCriteria = this.buildMemberCriteria(criteria);
+  async members(start = 0, limit = 100, criteria = null, excludedIds: string[] = []) {
+    const matchCriteria = this.buildMemberCriteria(criteria, excludedIds);
     let nearStage = null;
     if (Object.keys(criteria).includes('near')) {
       const geoMatch = this.buildNearQuery(criteria.near);
@@ -1168,6 +1171,7 @@ export class UserService {
     query = null,
     prefOpts = [],
     matchByDefault = true,
+    exludedIds = []
   ) {
     if (query instanceof Object) {
       const excludeKeys = ['age', 'near', 'gender'];

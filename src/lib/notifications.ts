@@ -12,10 +12,12 @@ initApp();
 
 export interface IFlag {
   key: string;
-  user: string;
-  targetUser: string;
+  user?: string;
+  targetUser?: string;
   value: any;
   type: string;
+  modifiedAt?: string;
+  createdAt?: string;
 }
 
 const castValueToString = (val: any, type: string): string => {

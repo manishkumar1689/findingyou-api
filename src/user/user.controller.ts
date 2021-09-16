@@ -57,6 +57,7 @@ import { SampleDataDTO } from './dto/sample-data.dto';
 import { SampleRecordDTO } from './dto/sample-record.dto';
 import { simplifyChart } from '../astrologic/lib/member-charts';
 import { MediaItemDTO } from './dto/media-item.dto';
+import { IFlag } from 'src/lib/notifications';
 
 @Controller('user')
 export class UserController {
@@ -247,14 +248,36 @@ export class UserController {
           break;
       }
     }
-    const data = await this.userService.members(startInt, limitInt, query);
+    const hasUser = (queryKeys.includes("user") && notEmptyString(query.user, 16));
+    const userId = hasUser ? query.user : '';
+    const hasNotFlags = queryKeys.includes("nf") && notEmptyString(query.nf);
+    const hasTrueFlags = queryKeys.includes("tf") && notEmptyString(query.tf);
+    const notFlags = hasNotFlags ? query.nf.split(',') : [];
+    const trueFlags = hasTrueFlags ? query.tf.split(',') : [];
+    const preFetchFlags = notFlags.length > 0 || trueFlags.length > 0;
+    const mapFlag = (flag: IFlag) => {
+      return {
+        key: flag.key,
+        value: flag.value,
+        modifiedAt: flag.modifiedAt,
+      }
+    }
     const prefOptions = await this.settingService.getPreferences();
+    const userFlags = preFetchFlags? await this.feedbackService.getAllUserInteractions(userId, 1) : { to: [], from: [] };
+    const excludedIds = preFetchFlags? userFlags.from.filter(flag => notFlags.includes(flag.key)).map(flag => flag.targetUser) : [];
+    
+    const data = await this.userService.members(startInt, limitInt, query, excludedIds);
+    
+    
     const users = this.userService.filterByPreferences(
       data,
       query,
-      prefOptions,
+      prefOptions
     );
+    const otherUserIds = preFetchFlags ? users.map(u => u._id) : [];
     const items = [];
+    
+    const flags = (hasUser && !preFetchFlags)? await this.feedbackService.getAllUserInteractions(userId, 1, otherUserIds) : userFlags;
     for (const user of users) {
       const chartObj = await this.astrologicService.getUserBirthChart(user._id);
       const hasChart = chartObj instanceof Object;
@@ -263,7 +286,12 @@ export class UserController {
       if (user.preferences instanceof Array && user.preferences.length > 0) {
           preferences = await this.settingService.processPreferences(user.preferences);
       }
-      items.push({...user, preferences, chart, hasChart});
+     const filteredFlags = hasUser? { 
+        from: flags.from.filter(fl => fl.targetUser.toString() === user._id.toString()).map(mapFlag),
+        to: flags.to.filter(fl => fl.user.toString() === user._id.toString()).map(mapFlag)
+      } : {};
+
+      items.push({...user, preferences, chart, hasChart, flags: filteredFlags});
     }
     items.sort((a,b) => b.hasChart ? 1 : -1);
     return res.json(items);

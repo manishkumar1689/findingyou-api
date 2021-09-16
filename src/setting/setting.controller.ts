@@ -317,6 +317,19 @@ export class SettingController {
     return res.send(result);
   }
 
+  @Get('protocol/single/:itemID')
+  async getRulesCollection(
+    @Res() res,
+    @Param('itemID') itemID
+  ) {
+    const item = await this.settingService.getProtocol(itemID);
+    const result: any = { valid: false, item: null, itemID };
+    if (item instanceof Object) {
+      result.item = item;
+    }
+    return res.send(result);
+  }
+
   @Post('predictive/save')
   async savePredictiveRule(@Res() res, @Body() ruleSetDTO: PredictiveRuleSetDTO) {
     const data = await this.settingService.savePredictiveRuleSet(ruleSetDTO);

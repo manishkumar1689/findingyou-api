@@ -41,6 +41,7 @@ import {
   calcAyanamsha,
   fetchHouseDataJd,
   calcCoreGrahaPositions,
+  calcMoonDataJd,
 } from './lib/core';
 import { sampleBaseObjects } from './lib/custom-transits';
 import {
@@ -115,9 +116,6 @@ import ayanamshaValues from './lib/settings/ayanamsha-values';
 import { calcBavGraphData, calcBavSignSamples } from './lib/settings/ashtakavarga-values';
 import { GeoPos } from './interfaces/geo-pos';
 import { Model } from 'mongoose';
-import { JyotishDay } from './lib/models/jyotish-day';
-import { IndianTime } from './lib/models/indian-time';
-import { nakshatra27 } from './lib/helpers';
 import { calcYama, matchBirdByNak } from './lib/settings/pancha-pakshi';
 
 @Controller('astrologic')
@@ -311,7 +309,7 @@ export class AstrologicController {
   @Get('panksha-pancha/:chartID/:loc/:dt?')
   async pankshaPanchaDaya(@Res() res, @Param('chartID') chartID, @Param('loc') loc, @Param('dt') dt) {
     let status = HttpStatus.BAD_REQUEST;
-    let data: any = { jd: 0, valid: false, moon: null, bird: null, yama: null, indianTime: null  };
+    let data: any = { jd: 0, valid: false, moon: null, current: null, bird: null, yama: null, indianTime: null  };
     if (notEmptyString(chartID) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const { dtUtc, jd } = matchJdAndDatetime(dt);
@@ -328,13 +326,15 @@ export class AstrologicController {
         const chart = new Chart(chartObj);
         chart.setAyanamshaItemByNum(27);
         const moon = chart.graha('mo');
+        const current = await calcMoonDataJd(jd);
+        data.current = current;
         data.moon = { 
           lng: moon.longitude,
           nakshatra27: moon.nakshatra27,
           waxing: chart.moonWaxing
         }
         data.bird = matchBirdByNak(moon.nakshatra27, chart.moonWaxing);
-        data.yama = calcYama(jd, periodStart, periodEnd, chart.moonWaxing, iTime.isDayTime);
+        data.yama = calcYama(jd, periodStart, periodEnd, current.waxing, iTime.isDayTime, data.bird.num);
       }
       status = HttpStatus.OK;
       return res.status(HttpStatus.OK).json(data);

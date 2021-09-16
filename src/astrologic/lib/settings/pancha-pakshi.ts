@@ -1,4 +1,7 @@
 const birdMap = { 1: 'vulture', 2: 'owl', 3: 'crow', 4: 'cock', 5: 'peacock' };
+// vul-owl-cro-coc-pec
+// vul-coc-owl-pec-cro 1, 4, 2, 5, 3
+// owl-pec-cro-vul-coc 2, 5, 3, 1, 4
 
 export const birdNakshatraRanges = [
   { range: [1, 5], waxing: 1, waning: 5 },
@@ -8,13 +11,23 @@ export const birdNakshatraRanges = [
   { range: [22, 27], waxing: 5, waning: 1 },
 ];
 
-export const birdRelations = [
-  ['S', 'E',	'F', 'E', 'F'],
-  ['E', 'S',	'F', 'F', 'E'],
-  ['F', 'F',	'S', 'E', 'E'],
-  ['E', 'E',	'F', 'S', 'F'],
-  ['F', 'E',	'E', 'F', 'S']
-];
+export const birdRelations = {
+  day: [
+    ['S', 	'F', 	'E', 	'E', 	'F'],
+    ['F', 	'S', 	'F', 	'E', 	'E'],
+    ['E', 	'F', 	'S', 	'F', 	'E'],
+    ['E', 	'E', 	'F', 	'S', 	'F'],
+    ['F', 	'E', 	'E', 	'F', 	'S']
+  ],
+  night: [
+    ['S', 	'E', 	'F', 	'E', 	'F'],
+    ['E', 	'S', 	'F', 	'F', 	'E'],
+    ['F', 	'F', 	'S', 	'E', 	'E'],
+    ['E', 	'E', 	'F', 	'S', 	'F'],
+    ['F', 	'E', 	'E', 	'F', 	'S'],
+  ]
+};
+
 
 export interface Yama {
   value: number;
@@ -912,7 +925,35 @@ export const matchBirdKeyDirectionByActivity = (birdKey = "", activity = ""): nu
   return matchBirdDirectionByActivity(birdNum, activity);
 }
 
-export const calcYama = (jd = 0, startJd = 0, endJd = 0, isWaxing = true, isDayTime = false) => {
+export const calcTimeBirds = (birthBirdNum = 0, isWaxing = true, isNight = false) => {
+  const items = Object.entries(birdMap).map(entry => {
+    const [num, key] = entry;
+    return { num: parseInt(num, 10), key: key}
+  });
+  const first = items.find(item => item.num === birthBirdNum);
+  const moreThan = items.filter(item => item.num > birthBirdNum);
+  const lessThan = items.filter(item => item.num < birthBirdNum);
+  let others = [...moreThan, ...lessThan];
+  if (isNight) {
+    others.reverse();
+  } else if (!isWaxing && !isNight) {
+    others = [
+      others[2],
+      others[0],
+      others[3],
+      others[1]
+    ]
+  }
+  return [first, ...others];  
+}
+
+export const calcTimeBird = (birthBirdNum = 0, yama = 0, isWaxing = true, isNight = false) => {
+  const birds = calcTimeBirds(birthBirdNum, isWaxing, isNight);
+  const yamaIndex = yama > 0? yama <= 5 ? yama -1 : 4 : 0;
+  return birds[yamaIndex];
+}
+
+export const calcYama = (jd = 0, startJd = 0, endJd = 0, isWaxing = true, isDayTime = false, birthBirdNum = 0) => {
   const lengthJd = endJd - startJd;
   const progressJd = jd - startJd;
   const progress = progressJd / lengthJd;
@@ -946,7 +987,8 @@ export const calcYama = (jd = 0, startJd = 0, endJd = 0, isWaxing = true, isDayT
     subProgress,
     key,
     yama,
-    sub
+    sub,
+    birds: calcTimeBirds(birthBirdNum, isWaxing, !isDayTime),
   };
 }
 
