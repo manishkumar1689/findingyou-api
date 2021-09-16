@@ -12,14 +12,14 @@ export const birdNakshatraRanges = [
 ];
 
 export const birdRelations = {
-  day: [
+  waxing: [
     ['S', 	'F', 	'E', 	'E', 	'F'],
     ['F', 	'S', 	'F', 	'E', 	'E'],
     ['E', 	'F', 	'S', 	'F', 	'E'],
     ['E', 	'E', 	'F', 	'S', 	'F'],
     ['F', 	'E', 	'E', 	'F', 	'S']
   ],
-  night: [
+  waning: [
     ['S', 	'E', 	'F', 	'E', 	'F'],
     ['E', 	'S', 	'F', 	'F', 	'E'],
     ['F', 	'F', 	'S', 	'E', 	'E'],
@@ -960,6 +960,13 @@ export const calcYama = (jd = 0, startJd = 0, endJd = 0, isWaxing = true, isDayT
   const subProgress = (progress % 0.2) * 5;
   const waneWax = isWaxing? 'waxing' : 'waning';
   const dayNight = isDayTime? 'day' : 'night';
+  const yamas = [1, 2, 3, 4, 5].map((num, index) => {
+    return {
+      num,
+      start: (startJd + (lengthJd / 5 * index) ),
+      end: (startJd + (lengthJd / 5 * num) )
+    }
+  });
   const periods = yamaSubdivisions.map(ys => {
     const div = ys[waneWax][dayNight];
     const { key } = ys;
@@ -986,6 +993,7 @@ export const calcYama = (jd = 0, startJd = 0, endJd = 0, isWaxing = true, isDayT
     progress,
     subProgress,
     key,
+    yamas,
     yama,
     sub,
     birds: calcTimeBirds(birthBirdNum, isWaxing, !isDayTime),
