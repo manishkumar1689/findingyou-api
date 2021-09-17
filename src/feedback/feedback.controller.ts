@@ -17,6 +17,7 @@ import { SettingService } from '../setting/setting.service';
 import { CreateFlagDTO } from './dto/create-flag.dto';
 import { pushFlag } from '../lib/notifications';
 import { notEmptyString } from '../lib/validators';
+import { SwipeDTO } from './dto/swipe.dto';
 
 @Controller('feedback')
 export class FeedbackController {
@@ -108,19 +109,44 @@ export class FeedbackController {
           data.valid = true;
         }
       }
-      const targetDeviceToken = await this.userService.getUserDeviceToken(createFlagDTO.targetUser);
-      
-      if (notEmptyString(targetDeviceToken, 5)) {
-        data.fcm = await pushFlag(targetDeviceToken, {
-          key,
-          type,
-          value,
-          user,
-          targetUser,
-        });
-      }
+      data.fcm = this.sendNotification(createFlagDTO);
     }
     return res.json(data);
+  }
+
+  async sendNotification(createFlagDTO: CreateFlagDTO) {
+    const targetDeviceToken = await this.userService.getUserDeviceToken(createFlagDTO.targetUser);
+    let fcm: any = { valid: false, reason: 'missing device token' };
+    const {key, type, value, user, targetUser} = createFlagDTO;
+    if (notEmptyString(targetDeviceToken, 5)) {
+      fcm = await pushFlag(targetDeviceToken, {
+        key,
+        type,
+        value,
+        user,
+        targetUser,
+      });
+    }
+    return fcm;
+  }
+
+  // Fetch a particular user using ID
+  @Post('swipe')
+  async saveSwipe(@Res() res, @Body() swipeDTO: SwipeDTO) {
+    const {to, from, value} = swipeDTO;
+    const flagData = {
+      user: from,
+      targetUser: to,
+      key: 'likeability',
+      type: 'double',
+      isRating: true,
+      value
+    } as CreateFlagDTO;
+    const data = { 
+      flag: await this.feedbackService.saveFlag(flagData),
+      fcm: await this.sendNotification(flagData)
+    }
+    return res.status(HttpStatus.OK).json(data);
   }
 
   @Get('deactivate/:user?/?')

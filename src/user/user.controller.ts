@@ -35,9 +35,7 @@ import {
 import roleValues from './settings/roles';
 import paymentValues from './settings/payments-options';
 import countryValues from './settings/countries';
-import getDefaultPreferences, { buildSurveyOptions, translateItemKey } from './settings/preference-options';
 import surveyList from './settings/survey-list';
-import multipleKeyScales from './settings/multiscales';
 import permissionValues from './settings/permissions';
 import { Role } from './interfaces/role.interface';
 import { EditStatusDTO } from './dto/edit-status.dto';
@@ -57,7 +55,7 @@ import { SampleDataDTO } from './dto/sample-data.dto';
 import { SampleRecordDTO } from './dto/sample-record.dto';
 import { simplifyChart } from '../astrologic/lib/member-charts';
 import { MediaItemDTO } from './dto/media-item.dto';
-import { IFlag } from 'src/lib/notifications';
+import { IFlag } from '../lib/notifications';
 
 @Controller('user')
 export class UserController {
