@@ -7,6 +7,7 @@ import { notEmptyString, validISODateString } from '../lib/validators';
 import { CreateFlagDTO } from './dto/create-flag.dto';
 import { Feedback } from './interfaces/feedback.interface';
 import { Flag, SimpleFlag } from './interfaces/flag.interface';
+import { IFlag } from '../lib/notifications';
 
 @Injectable()
 export class FeedbackService {
@@ -57,10 +58,55 @@ export class FeedbackService {
     const rows = await this.flagModel.find(criteriaObj).select({ _id: 0, __v: 0, isRating: 0, options: 0, active: 0 });
     const hasRows = rows instanceof Array && rows.length > 0;
     const userID = user.toString();
-    return {
-      from: hasRows? rows.filter(row => row.user.toString() === userID).map(row => extractSimplified(row, ['user'])) : [],
-      to: hasRows? rows.filter(row => row.targetUser.toString() === userID).map(row => extractSimplified(row, ['targetUser'])) : [],
+    const likeKey = 'likeability';
+    const excludeKeys = [likeKey];
+    const likeRows = rows.filter(row => row.key === likeKey);
+    const hasLikeRows = likeRows.length > 0;
+    const mapUserFlag = (item, toMode = false, likeMode = false): IFlag => {
+      if (item instanceof Object) {
+        const { key, value, type, user, targetUser, modifiedAt } = item;
+        const refUser = toMode? user : targetUser;
+        return likeMode? { value, user: refUser, modifiedAt } : { key, type, value, user: refUser, modifiedAt };
+      } else {
+        return { value: 0, user: '' };
+      }
     }
+    const likeability = { 
+      from: hasLikeRows? likeRows.filter(row => row.user.toString() === userID).map(row => mapUserFlag(row, false, true)) : [],
+      to: hasLikeRows? likeRows.filter(row => row.targetUser.toString() === userID).map(row => mapUserFlag(row, true, true)) : [],
+    }
+    return {
+      from: hasRows? rows.filter(row => row.user.toString() === userID && excludeKeys.includes(row.key) === false).map(row => mapUserFlag(row)) : [],
+      to: hasRows? rows.filter(row => row.targetUser.toString() === userID && excludeKeys.includes(row.key) === false).map(row => mapUserFlag(row, true)) : [],
+      likeability
+    }
+  }
+
+  async fetchFilteredUserInteractions(userId = "", notFlags = [], preFetchFlags = false) {
+    const userFlags = preFetchFlags? await this.getAllUserInteractions(userId, 1) : { to: [], from: [], likeability: { to: [], from: [] } };
+
+    const notFlagItems = notFlags.map(flagKey => {
+      switch (flagKey) {
+        case 'like':
+          return { key: 'likeability', value: 1};
+        case 'superlike':
+          return { key: 'likeability', value: 2};
+        case 'pass':
+        case 'not_interested':
+          return { key: 'likeability', value: 0};
+        default:
+          return { key: flagKey, value: true};
+      }
+    });
+
+    
+    const { from, likeability } = userFlags;
+    const fromLikeFlags = likeability.from.map(fi => {
+      return {...fi, key: 'likeability' }
+    });
+    const fromFlags = preFetchFlags? [...fromLikeFlags, ...from] : [];
+    const excludedIds = preFetchFlags? fromFlags.filter(flag => notFlagItems.some(fi => fi.key === flag.key && fi.value === flag.value)).map(flag => flag.user) : [];
+    return { userFlags, excludedIds };
   }
 
   async getMemberSet(user: string, uid: string) {

@@ -131,8 +131,16 @@ export class UserController {
         ud.set('chart', simplifyChart(charts[0]));
       }
       const flagItems = await this.feedbackService.getAllUserInteractions(userID, 3/12);
-      const flags = flagItems instanceof Object ? flagItems : [];
-      ud.set('flags', flags);
+      const flags = flagItems instanceof Object ? flagItems : { to: [], from: [], likeability: { to: [], from: [] } };
+      const { to, from, likeability } = flags;
+      ud.set('flags', {
+        to,
+        from
+      });
+      ud.set('likeability', {
+        to: likeability.to,
+        from: likeability.from
+      });
       userData = hashMapToObject(ud);
     }
     if (!valid) {
@@ -246,6 +254,9 @@ export class UserController {
           break;
       }
     }
+    const filterFlagsByUser = (item: IFlag, userId = "") => {
+      return item.user.toString() === userId
+    }
     const hasUser = (queryKeys.includes("user") && notEmptyString(query.user, 16));
     const userId = hasUser ? query.user : '';
     const hasNotFlags = queryKeys.includes("nf") && notEmptyString(query.nf);
@@ -253,20 +264,9 @@ export class UserController {
     const notFlags = hasNotFlags ? query.nf.split(',') : [];
     const trueFlags = hasTrueFlags ? query.tf.split(',') : [];
     const preFetchFlags = notFlags.length > 0 || trueFlags.length > 0;
-    const mapFlag = (flag: IFlag) => {
-      return {
-        key: flag.key,
-        value: flag.value,
-        modifiedAt: flag.modifiedAt,
-      }
-    }
     const prefOptions = await this.settingService.getPreferences();
-    const userFlags = preFetchFlags? await this.feedbackService.getAllUserInteractions(userId, 1) : { to: [], from: [] };
-    const excludedIds = preFetchFlags? userFlags.from.filter(flag => notFlags.includes(flag.key)).map(flag => flag.targetUser) : [];
-    
-    const data = await this.userService.members(startInt, limitInt, query, excludedIds);
-    
-    
+    const { userFlags, excludedIds } = await this.feedbackService.fetchFilteredUserInteractions(userId, notFlags, preFetchFlags);
+    const data = await this.userService.members(startInt, limitInt, query, excludedIds);    
     const users = this.userService.filterByPreferences(
       data,
       query,
@@ -276,20 +276,26 @@ export class UserController {
     const items = [];
     
     const flags = (hasUser && !preFetchFlags)? await this.feedbackService.getAllUserInteractions(userId, 1, otherUserIds) : userFlags;
+    
     for (const user of users) {
       const chartObj = await this.astrologicService.getUserBirthChart(user._id);
       const hasChart = chartObj instanceof Object;
       const chart = hasChart ? simplifyChart(chartObj, ayanamshaKey, simpleMode) : {};
+      const refUserId = user._id.toString();
       let preferences = [];
       if (user.preferences instanceof Array && user.preferences.length > 0) {
           preferences = await this.settingService.processPreferences(user.preferences);
       }
      const filteredFlags = hasUser? { 
-        from: flags.from.filter(fl => fl.targetUser.toString() === user._id.toString()).map(mapFlag),
-        to: flags.to.filter(fl => fl.user.toString() === user._id.toString()).map(mapFlag)
+        from: flags.from.filter(fl => filterFlagsByUser(fl, refUserId)),
+        to: flags.to.filter(fl => filterFlagsByUser(fl, refUserId))
+      } : {};
+      const filteredLikes = hasUser? { 
+        from: flags.likeability.from.filter(fl => filterFlagsByUser(fl, refUserId)),
+        to: flags.likeability.to.filter(fl => filterFlagsByUser(fl, refUserId))
       } : {};
 
-      items.push({...user, preferences, chart, hasChart, flags: filteredFlags});
+      items.push({...user, preferences, chart, hasChart, flags: filteredFlags, likeability: filteredLikes });
     }
     items.sort((a,b) => b.hasChart ? 1 : -1);
     return res.json(items);

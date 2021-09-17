@@ -162,7 +162,7 @@ export class UserService {
     }
     filter.set('active', true);
     filter.set('roles', { $nin: ['superadmin', 'admin', 'blocked', 'editor']});
-    if (excludedIds.length > 1) {
+    if (excludedIds.length > 0) {
       filter.set('_id', { $nin: excludedIds });
     }
     return hashMapToObject(filter);

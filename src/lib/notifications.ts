@@ -11,11 +11,11 @@ const initApp = () => {
 initApp();
 
 export interface IFlag {
-  key: string;
-  user?: string;
+  key?: string;
+  user: string;
   targetUser?: string;
   value: any;
-  type: string;
+  type?: string;
   modifiedAt?: string;
   createdAt?: string;
 }
