@@ -138,7 +138,7 @@ export class FeedbackController {
       user: from,
       targetUser: to,
       key: 'likeability',
-      type: 'double',
+      type: 'int',
       isRating: true,
       value
     } as CreateFlagDTO;
