@@ -183,14 +183,22 @@ export const calcSunTrans = async (datetime, geo: GeoPos, tzOffset = 0) => {
   return { ...transData, datetime, tzOffset };
 };
 
+export const offsetToMidNight = (jd = 0, geoLat = 0): number => {
+	const offset = geoLat / 360;
+	const utcMN = Math.floor(jd + 0.5) - 0.5;
+	return utcMN - offset;
+}
+
 export const calcSunTransJd = async (
   jd,
   geo,
-  jdOffset = 0,
+  offsetToPrevMidNight = true
 ): Promise<SunTransitionData> => {
-  const curr = await calcTransitionJd(jd, geo, 0, false, false);
-  const prev = await calcTransitionJd(jd - 1, geo, 0, false, false);
-  const next = await calcTransitionJd(jd + 1, geo, 0, false, false);
+  const offset = geo.lat / 360;
+  const offsetJd = offsetToPrevMidNight ? offsetToMidNight(jd, geo.lat) : jd;
+  const curr = await calcTransitionJd(offsetJd, geo, 0, false, false);
+  const prev = await calcTransitionJd(offsetJd - 1, geo, 0, false, false);
+  const next = await calcTransitionJd(offsetJd + 1, geo, 0, false, false);
   return {
     jd,
     geo,
@@ -222,7 +230,7 @@ export const toIndianTime = async (datetime, geo: GeoPos) => {
 };
 
 export const toIndianTimeJd = async (jd = 0, geo: GeoPos) => {
-  const sunData = await calcSunTransJd(jd, geo);
+  const sunData = await calcSunTransJd((jd), geo);
   const jyotishDay = new JyotishDay(sunData);
   const iTime = new IndianTime(jyotishDay);
   return iTime.toObject();

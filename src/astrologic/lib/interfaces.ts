@@ -37,6 +37,11 @@ export interface KeyLng {
   sign?: number;
 }
 
+export interface KeyNum {
+  key: string;
+  num: number;
+}
+
 export interface SurfaceTSData {
   geo: LngLat;
   ascendant: number;

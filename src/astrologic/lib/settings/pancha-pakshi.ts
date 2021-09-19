@@ -1,7 +1,18 @@
+import { KeyNum, KeyNumValue } from "../interfaces";
+
 const birdMap = { 1: 'vulture', 2: 'owl', 3: 'crow', 4: 'cock', 5: 'peacock' };
 // vul-owl-cro-coc-pec
 // vul-coc-owl-pec-cro 1, 4, 2, 5, 3
 // owl-pec-cro-vul-coc 2, 5, 3, 1, 4
+
+const waxWaneKey = (isWaxing = true): string => isWaxing ? 'waxing' : 'waning';
+
+const dayNightKey = (isDayTime = true): string => isDayTime ? 'day' : 'night';
+
+interface RuleDeath {
+  ruling: number;
+  dying: number;
+}
 
 export const birdNakshatraRanges = [
   { range: [1, 5], waxing: 1, waning: 5 },
@@ -37,43 +48,88 @@ export interface Yama {
 export const birdActivitiesDirections = [
   {
     num: 1,
-    eating: 'E',
-    walking: 'S',
-    ruling: 'W',
-    sleeping: 'N',
-    dying: 'NE'
+    waxing: {
+      eating: 'E',
+      walking: 'S',
+      ruling: 'W',
+      sleeping: 'N',
+      dying: 'NE'
+    },
+    waning: {
+      eating: 'N',
+      walking: 'SW',
+      ruling: 'SW',
+      sleeping: 'NW',
+      dying: 'NE'
+    }
   },
   {
     num: 2,
-    eating: 'S',
-    walking: 'W',
-    ruling: 'N',
-    sleeping: 'E',
-    dying: 'SW'
+    waxing: {
+      eating: 'S',
+      walking: 'W',
+      ruling: 'N',
+      sleeping: 'E',
+      dying: 'SW'
+    },
+    waning: {
+      eating: 'N',
+      walking: 'SE',
+      ruling: 'SW',
+      sleeping: 'NW',
+      dying: 'NE'
+    },
   },
   {
     num: 3,
-    eating: 'W',
-    walking: 'N',
-    ruling: 'E',
-    sleeping: 'SW',
-    dying: 'SW'
+    waxing: {
+      eating: 'W',
+      walking: 'N',
+      ruling: 'E',
+      sleeping: 'SW',
+      dying: 'SW'
+    },
+    waning: {
+      eating: 'E',
+      walking: 'SE',
+      ruling: 'W',
+      sleeping: 'NW',
+      dying: 'NE'
+    }
   },
   {
     num: 4,
-    eating: 'N',
-    walking: 'E',
-    ruling: 'S',
-    sleeping: 'SW',
-    dying: 'NW'
+    waxing: {
+      eating: 'N',
+      walking: 'E',
+      ruling: 'S',
+      sleeping: 'SW',
+      dying: 'NW'
+    },
+    waning: {
+      eating: 'S',
+      walking: 'SW',
+      ruling: 'N',
+      sleeping: 'E',
+      dying: 'SE'
+    }
   },
   {
     num: 5,
-    eating: 'N',
-    walking: 'S',
-    ruling: 'W',
-    sleeping: 'SW',
-    dying: 'E'
+    waxing: {
+      eating: 'N',
+      walking: 'S',
+      ruling: 'W',
+      sleeping: 'SW',
+      dying: 'E'
+    },
+    waning: {
+      eating: 'W',
+      walking: 'N',
+      ruling: 'E',
+      sleeping: 'S',
+      dying: 'SW'
+    }
   }
 ];
 
@@ -496,7 +552,13 @@ export const panchaStrengthBaseValues = [
   }
 ];
 
-
+export const birdRulers = [
+	{ num: 1, death: ['ju', 'sa'], day: ['su', 'ma'], night: ['ve'] },
+	{ num: 5, death: ['me'], day: ['sa'], night: ['ju'] },
+	{ num: 2, death: ['su', 've'], day: ['mo', 'me'], night: ['sa'] },
+	{ num: 4, death: ['ma'], day: ['ve'], night: ['mo', 'me'] },
+	{ num: 3, death: ['mo'], day: ['ju'], night: ['su', 'ma'] },
+];
 
 export const birdActivities = [
   {
@@ -866,12 +928,17 @@ export const matchBirdByNum = (num = 0) => {
   return { num, key };
 }
 
-export const matchBirdRelations = (bird1 = 0, bird2 = 0) => {
+export const matchBirdRelations = (bird1 = 0, bird2 = 0, waxing = true) => {
   let letter = 'N';
   if (bird1 > 0 && bird2 > 0 && bird1 <= 5 && bird2 <= 5) {
-    letter = birdRelations[(bird1 - 1)][(bird2 - 1)];
+    letter = birdRelations[waxWaneKey(waxing)][(bird1 - 1)][(bird2 - 1)];
   }
   return letter;
+}
+
+export const matchBirdRulers = (birdNum = 0, isDayTime = false, activity = ""): string[] => {
+  const row = birdRulers.find(row => row.num === birdNum);
+  return row instanceof Object ? activity === 'dying'? row.death : isDayTime ? row.day : row.night : [];
 }
 
 export const matchBirdRelationsKeys = (bird1 = "", bird2 = "") => {
@@ -895,10 +962,10 @@ export const matchBirdDayRuler = (dayNum = 0, waxing = false, isNight = false) =
   }
 }
 
-export const matchBirdActivity = (birdNum = 0, dayNum = 0, waxing = false, isNight = false) => {
+export const matchBirdActivity = (birdNum = 0, dayNum = 0, waxing = true, isDayTime) => {
   const row = birdActivities.find(row => row.num === dayNum);
   const itemSet = row instanceof Object ? waxing ? row.waxing : row.waning : null;
-  const actKeys = itemSet instanceof Object ? isNight ? itemSet.night : itemSet.day : [];
+  const actKeys = itemSet instanceof Object ? isDayTime ? itemSet.day : itemSet.night : [];
   const birdIndex = birdNum - 1;
   const key = birdNum <= 5 && birdNum > 0 ? birdMap[birdNum] : "";
   const activity = birdIndex > 0 && birdIndex < actKeys.length? actKeys[birdIndex] : "";
@@ -908,16 +975,21 @@ export const matchBirdActivity = (birdNum = 0, dayNum = 0, waxing = false, isNig
   }
 }
 
+export const matchBirdActivityKey = (birdNum = 0, dayNum = 0, waxing = false, isDayTime = false): string => {
+  return matchBirdActivity(birdNum, dayNum, waxing, isDayTime).activity;
+}
+
 export const matchBirdActivityByKey = (birdKey = "", dayNum = 0, waxing = false, isNight = false) => {
   const num = Object.values(birdMap).indexOf(birdKey) + 1;
   return matchBirdActivity(num, dayNum, waxing, isNight);
 }
 
-export const matchBirdDirectionByActivity = (birdNum = 0, activity = ""): number => {
+export const matchBirdDirectionByActivity = (birdNum = 0, activity = "", waxing = true): number => {
   const row = birdActivitiesDirections.find(row => row.num === birdNum);
   const rowIsMatched = row instanceof Object;
-  const activityKeys = rowIsMatched ? Object.keys(row) : [];
-  return activityKeys.includes(activity)? row[activity] : "";
+  const subSec = rowIsMatched ? row[waxWaneKey(waxing)] : null;
+  const activityKeys = subSec instanceof Object? Object.keys(subSec) : [];
+  return activityKeys.includes(activity)? subSec[activity] : "";
 }
 
 export const matchBirdKeyDirectionByActivity = (birdKey = "", activity = ""): number => {
@@ -953,13 +1025,44 @@ export const calcTimeBird = (birthBirdNum = 0, yama = 0, isWaxing = true, isNigh
   return birds[yamaIndex];
 }
 
-export const calcYama = (jd = 0, startJd = 0, endJd = 0, isWaxing = true, isDayTime = false, birthBirdNum = 0) => {
+export const matchSubPeriods = (isWaxing = true, isDayTime = true) => {
+  return yamaSubdivisions.map(ys => {
+    const div = ys[waxWaneKey(isWaxing)][dayNightKey(isDayTime)];
+    const { key } = ys;
+    const value = (div / 24);
+    return {
+      key,
+      value
+    }
+  });
+}
+
+export const calcSubPeriods = (subPeriods: KeyNumValue[], birds: KeyNum[], birthBirdNum = 0, startJd = 0, endJd = 0, refJd = 0, waxing = true, isDayTime = true, dayActivity: string) => {
+  const lengthJd = endJd - startJd;
+  const numBirds = birds.length;
+  let prevJd = startJd;
+  return subPeriods.map((period, index) => {
+    const startSubJd = prevJd;
+    const endSubJd = prevJd + (lengthJd * period.value); 
+    prevJd = endSubJd;
+    const current = refJd >= startSubJd && refJd < endSubJd;
+    const birdItem = index < numBirds? birds[index] : null;
+    const birdMatched = birdItem instanceof Object;
+    const bird = birdMatched ? birdItem.key : "";
+    const birdNum = birdMatched ? birdItem.num : 0;
+    const direction = matchBirdDirectionByActivity(birdNum, period.key, waxing);
+    const rulers = matchBirdRulers(birdNum, isDayTime, period.key);
+    const relation = matchBirdRelations(birthBirdNum, birdNum, waxing);
+    const score = calcPanchaPakshiStrength(birthBirdNum, dayActivity, period.key, waxing);
+    return { bird, ...period, start: startSubJd, end: endSubJd, current, direction, rulers, relation, score };
+  });
+}
+
+export const calcYamaSets = (jd = 0, startJd = 0, endJd = 0, isWaxing = true, isDayTime = false, birthBirdNum = 0, dayNum = 0) => {
   const lengthJd = endJd - startJd;
   const progressJd = jd - startJd;
   const progress = progressJd / lengthJd;
   const subProgress = (progress % 0.2) * 5;
-  const waneWax = isWaxing? 'waxing' : 'waning';
-  const dayNight = isDayTime? 'day' : 'night';
   const yamas = [1, 2, 3, 4, 5].map((num, index) => {
     return {
       num,
@@ -967,46 +1070,30 @@ export const calcYama = (jd = 0, startJd = 0, endJd = 0, isWaxing = true, isDayT
       end: (startJd + (lengthJd / 5 * num) )
     }
   });
-  const periods = yamaSubdivisions.map(ys => {
-    const div = ys[waneWax][dayNight];
-    const { key } = ys;
-    return {
-      key,
-      value: (div / 24)
-    }
-  });
+  
   const yama = (Math.floor(progress * 5) % 5) + 1;
-  let startProgress = 0;
-  let endProgress = 0;
-  let sub = 0;
-  for (let i = 0; i < 5; i++) {
-    const { key, value } = periods[i];
-    endProgress += value;
-    if (subProgress >= startProgress && subProgress < endProgress) {
-      sub = (i + 1);
-      break;
-    }
-    startProgress += value;
-  };
-  const key = sub > 0? yamaSubdivisions[(sub - 1)].key : "";
+  const subPeriods = matchSubPeriods(isWaxing, isDayTime);
+  const birds = calcTimeBirds(birthBirdNum, isWaxing, !isDayTime);
+  const dayActivity = matchBirdActivityKey(birthBirdNum, dayNum, isWaxing, !isDayTime);
+  const yamaSets = yamas.map(yama => {
+    const subs = calcSubPeriods(subPeriods, birds, birthBirdNum, yama.start, yama.end, jd, isWaxing, isDayTime, dayActivity);
+    return { ...yama, subs }
+  })
   return {
+    lengthJd,
     progress,
     subProgress,
-    key,
-    yamas,
-    yama,
-    sub,
-    birds: calcTimeBirds(birthBirdNum, isWaxing, !isDayTime),
+    yamas: yamaSets,
   };
 }
 
 export const calcPanchaPakshiStrength = (birdNum = 0, activityKey = "", subKey = "", waxing = true) => {
-  const waxWaneKey = waxing ? 'waxing' : 'waning';
-  const row = panchaStrengthBaseValues.find(row => row.nums[waxWaneKey] === birdNum);
+  const row = panchaStrengthBaseValues.find(row => row.nums[waxWaneKey(waxing)] === birdNum);
   const matched = row instanceof Object;
   const keys = matched ? Object.keys(row) : [];
   let score = 0;
   const percent = matched && keys.includes('percent') ? row.percent : 0;
+  
   if (keys.includes(activityKey) && row[activityKey] instanceof Object) {
     const subKeys = Object.keys(row[activityKey]);
     const multiplier = subKeys.includes(subKey)? row[activityKey][subKey] : 0;

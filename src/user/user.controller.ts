@@ -42,7 +42,6 @@ import { EditStatusDTO } from './dto/edit-status.dto';
 import { PaymentOption } from './interfaces/payment-option.interface';
 import { RemoveStatusDTO } from './dto/remove-status.dto';
 import { CountryOption } from './interfaces/country-option.interface';
-import { PreferenceOption } from './interfaces/preference-option.interface';
 import { AstrologicService } from '../astrologic/astrologic.service';
 import { SurveyItem } from './interfaces/survey-item';
 import { SnippetService } from '../snippet/snippet.service';
