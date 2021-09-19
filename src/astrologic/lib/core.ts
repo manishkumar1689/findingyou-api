@@ -725,9 +725,12 @@ export const calcMoonDataJd = async (jd: number, ayanamshaKey = 'true_citra') =>
     const ayanamsha = await calcAyanamsha(jd, ayanamshaKey);
     const angle = (moon.lng + 360 - sun.lng) % 360;
     const waxing = angle <= 180;
+    const lng = subtractLng360(moon.lng, ayanamsha);
     return {
       moon: moon.lng, 
       sun: sun.lng,
+      lng,
+      nakshatra27: Math.floor(lng / (360/27)) + 1,
       ayanamsha,
       angle,
       waxing
