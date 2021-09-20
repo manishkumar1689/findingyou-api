@@ -34,7 +34,6 @@ export const birdRelations = {
   ]
 };
 
-
 export interface Yama {
   value: number;
   sub: number;
@@ -845,6 +844,96 @@ export const birdActivities = [
   }
 ];
 
+export const dayBirdMatches = [ 
+  {
+    num: 1,
+    waxing: {
+      day: 1,
+      night: 3,
+      dying: 2
+    },
+    waning: {
+      day: 4,
+      night: 1,
+      dying: 3
+    }
+  },
+  { num: 2,
+    waxing: {
+      day: 2,
+      night: 4,
+      dying: 3
+    },
+    waning: {
+      day: 5,
+      night: 4,
+      dying: 2
+    }
+  },
+  { 
+    num: 3,
+    waxing: {
+      day: 1,
+      night: 3,
+      dying: 4
+    },
+    waning: {
+      day: 4,
+      night: 1,
+      dying: 1
+    }
+  },
+{ num: 4,
+  waxing: {
+    day: 2,
+    night: 4,
+    dying: 5
+  },
+  waning: {
+    day: 3,
+    night: 2,
+    dying: 5
+  }
+},
+{ num: 5,
+  waxing: {
+    day: 3,
+    night: 5,
+    dying: 1
+  },
+  waning: {
+    day: 2,
+    night: 3,
+    dying: 4
+  }
+},
+{ 
+  num: 6,
+  waxing: {
+    day: 4,
+    night: 1,
+    dying: 2
+  },
+  waning: {
+    day: 1,
+    night: 5,
+    dying: 5
+  }
+},
+{
+  num: 7,
+  waxing: {
+    day: 5,
+    night: 2,
+    dying: 1
+  },
+  waning: {
+    day: 5,
+    night: 4,
+    dying: 4
+    }
+  }
+];
 
 // expressed in 24ths. Multiply by 5 to scale as minutes of 2:24m (144 minutes);
 export const yamaSubdivisions = [
@@ -904,6 +993,10 @@ export const yamaSubdivisions = [
     }
   }
 ];
+
+const matchBirdKeyByNum = (num = 0) => {
+  return (num >= 1 && num <= 5)? birdMap[num] : "";
+}
 
 export const matchBirdByNak = (nakNum = 0, waxing = false) => {
   const row = birdNakshatraRanges.find(row =>  nakNum >= row.range[0] && nakNum <= row.range[1]);
@@ -969,6 +1062,20 @@ export const matchBirdActivity = (birdNum = 0, dayNum = 0, waxing = true, isDayT
     key,
     activity,
   }
+}
+
+export const matchDayBirds = (dayNum = 0, isWaxing = true, isDayTime = true) => {
+  const row = dayBirdMatches.find(row => row.num === dayNum);
+  const isMatched = row instanceof Object;
+  const ruling = isMatched? row[waxWaneKey(isWaxing)][dayNightKey(isDayTime)] : 0;
+  const dying = isMatched? row[waxWaneKey(isWaxing)].dying : 0;
+  return { ruling, dying };
+}
+
+export const matchDayBirdKeys = (dayNum = 0, isWaxing = true, isDayTime = true) => {
+  const { ruling, dying } = matchDayBirds(dayNum, isWaxing, isDayTime);
+  
+  return { ruling: matchBirdKeyByNum(ruling), dying: matchBirdKeyByNum(dying) };
 }
 
 export const matchBirdActivityKey = (birdNum = 0, dayNum = 0, waxing = false, isDayTime = false): string => {

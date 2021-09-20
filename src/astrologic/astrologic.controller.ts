@@ -116,7 +116,7 @@ import ayanamshaValues from './lib/settings/ayanamsha-values';
 import { calcBavGraphData, calcBavSignSamples } from './lib/settings/ashtakavarga-values';
 import { GeoPos } from './interfaces/geo-pos';
 import { Model } from 'mongoose';
-import { calcYamaSets, matchBirdByNak } from './lib/settings/pancha-pakshi';
+import { calcYamaSets, matchBirdByNak, matchDayBirdKeys } from './lib/settings/pancha-pakshi';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -341,7 +341,12 @@ export class AstrologicController {
           current
         });
         const bird = matchBirdByNak(moon.nakshatra27, chart.moonWaxing);
-        data.set('bird', bird);
+
+        const currentBirds = matchDayBirdKeys(iTime.weekDayNum, current.waxing, iTime.isDayTime); 
+        data.set('bird', {
+          birth: bird.key,
+          current: currentBirds
+        });
         const yamaData = calcYamaSets(jd, periodStart, periodEnd, current.waxing, iTime.isDayTime, bird.num, iTime.weekDayNum);
         Object.entries(yamaData).forEach(entry => {
           const [key, val] = entry;
