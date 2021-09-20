@@ -383,7 +383,7 @@ export const panchaStrengthBaseValues = [
     }
   },
   {
-    num: {
+    nums: {
       waxing: 1,
       waning: 1,
     },
@@ -425,7 +425,7 @@ export const panchaStrengthBaseValues = [
     }
   },
   {
-    num: {
+    nums: {
       waxing: 2,
       waning: 4,
     },
@@ -467,7 +467,7 @@ export const panchaStrengthBaseValues = [
     }
   },
   {
-    num: {
+    nums: {
       waxing: 4,
       waning: 2,
     },
@@ -509,7 +509,7 @@ export const panchaStrengthBaseValues = [
     }
   },
   {
-    num: {
+    nums: {
       waxing: 5,
       waning: 5,
     },
@@ -1083,6 +1083,7 @@ export const calcYamaSets = (jd = 0, startJd = 0, endJd = 0, isWaxing = true, is
     lengthJd,
     progress,
     subProgress,
+    yama,
     yamas: yamaSets,
   };
 }

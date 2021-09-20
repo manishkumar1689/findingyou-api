@@ -309,7 +309,7 @@ export class AstrologicController {
   @Get('panksha-pancha/:chartID/:loc/:dt?')
   async pankshaPanchaDaya(@Res() res, @Param('chartID') chartID, @Param('loc') loc, @Param('dt') dt) {
     let status = HttpStatus.BAD_REQUEST;
-    let data: Map<string, any> = new Map(Object.entries({ jd: 0, valid: false, moon: null, current: null, bird: null }));
+    let data: Map<string, any> = new Map(Object.entries({ jd: 0, valid: false, geo: null, moon: null, bird: null, yamas: [] }));
     if (notEmptyString(chartID) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const { dtUtc, jd } = matchJdAndDatetime(dt);
@@ -328,12 +328,18 @@ export class AstrologicController {
         chart.setAyanamshaItemByNum(27);
         const moon = chart.graha('mo');
         const current = await calcMoonDataJd(jd);
-        data.set('current', current);
-        data.set('moon', { 
-          lng: moon.longitude,
-          nakshatra27: moon.nakshatra27,
-          waxing: chart.moonWaxing
-        })
+        data.set('geo', {
+          birth: chart.geo,
+          current: geo
+        });
+        data.set('moon', {
+          birth: { 
+            lng: moon.longitude,
+            nakshatra27: moon.nakshatra27,
+            waxing: chart.moonWaxing
+          },
+          current
+        });
         const bird = matchBirdByNak(moon.nakshatra27, chart.moonWaxing);
         data.set('bird', bird);
         const yamaData = calcYamaSets(jd, periodStart, periodEnd, current.waxing, iTime.isDayTime, bird.num, iTime.weekDayNum);
