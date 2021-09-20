@@ -557,7 +557,7 @@ export const birdRulers = [
 
 export const birdActivities = [
   {
-      num: 7,
+      num: 1,
       waxing:
       {
           day:
@@ -594,47 +594,6 @@ export const birdActivities = [
               "dying",
               "walking",
               "sleeping"
-          ]
-      }
-  },
-  {
-      num: 1,
-      waxing:
-      {
-          day:
-          [
-              "dying",
-              "eating",
-              "walking",
-              "ruling",
-              "sleeping"
-          ],
-          night:
-          [
-              "walking",
-              "dying",
-              "ruling",
-              "eating",
-              "sleeping"
-          ]
-      },
-      waning:
-      {
-          day:
-          [
-              "sleeping",
-              "walking",
-              "dying",
-              "ruling",
-              "eating"
-          ],
-          night:
-          [
-              "dying",
-              "walking",
-              "sleeping",
-              "eating",
-              "ruling"
           ]
       }
   },
@@ -644,38 +603,38 @@ export const birdActivities = [
       {
           day:
           [
+              "dying",
               "eating",
               "walking",
               "ruling",
-              "sleeping",
-              "dying"
+              "sleeping"
           ],
           night:
           [
+              "walking",
               "dying",
               "ruling",
               "eating",
-              "sleeping",
-              "walking"
+              "sleeping"
           ]
       },
       waning:
       {
           day:
           [
+              "sleeping",
               "walking",
               "dying",
               "ruling",
-              "eating",
-              "sleeping"
+              "eating"
           ],
           night:
           [
-              "eating",
-              "ruling",
               "dying",
               "walking",
-              "sleeping"
+              "sleeping",
+              "eating",
+              "ruling"
           ]
       }
   },
@@ -685,38 +644,38 @@ export const birdActivities = [
       {
           day:
           [
-              "dying",
               "eating",
               "walking",
               "ruling",
-              "sleeping"
+              "sleeping",
+              "dying"
           ],
           night:
           [
-              "walking",
               "dying",
               "ruling",
               "eating",
-              "sleeping"
+              "sleeping",
+              "walking"
           ]
       },
       waning:
       {
           day:
           [
+              "walking",
               "dying",
               "ruling",
               "eating",
-              "sleeping",
-              "walking"
+              "sleeping"
           ],
           night:
           [
-              "sleeping",
               "eating",
               "ruling",
               "dying",
-              "walking"
+              "walking",
+              "sleeping"
           ]
       }
   },
@@ -726,6 +685,47 @@ export const birdActivities = [
       {
           day:
           [
+              "dying",
+              "eating",
+              "walking",
+              "ruling",
+              "sleeping"
+          ],
+          night:
+          [
+              "walking",
+              "dying",
+              "ruling",
+              "eating",
+              "sleeping"
+          ]
+      },
+      waning:
+      {
+          day:
+          [
+              "dying",
+              "ruling",
+              "eating",
+              "sleeping",
+              "walking"
+          ],
+          night:
+          [
+              "sleeping",
+              "eating",
+              "ruling",
+              "dying",
+              "walking"
+          ]
+      }
+  },
+  {
+      num: 5,
+      waxing:
+      {
+          day:
+          [
               "sleeping",
               "dying",
               "eating",
@@ -762,7 +762,7 @@ export const birdActivities = [
       }
   },
   {
-      num: 5,
+      num: 6,
       waxing:
       {
           day:
@@ -803,7 +803,7 @@ export const birdActivities = [
       }
   },
   {
-      num: 6,
+      num: 7,
       waxing:
       {
           day:
@@ -993,7 +993,7 @@ export const matchBirdKeyDirectionByActivity = (birdKey = "", activity = ""): nu
   return matchBirdDirectionByActivity(birdNum, activity);
 }
 
-export const calcTimeBirds = (birthBirdNum = 0, isWaxing = true, isNight = false) => {
+export const calcTimeBirds = (birthBirdNum = 0, isWaxing = true, isDayTime = true) => {
   const items = Object.entries(birdMap).map(entry => {
     const [num, key] = entry;
     return { num: parseInt(num, 10), key: key}
@@ -1002,9 +1002,9 @@ export const calcTimeBirds = (birthBirdNum = 0, isWaxing = true, isNight = false
   const moreThan = items.filter(item => item.num > birthBirdNum);
   const lessThan = items.filter(item => item.num < birthBirdNum);
   let others = [...moreThan, ...lessThan];
-  if (isNight) {
+  if (!isDayTime) {
     others.reverse();
-  } else if (!isWaxing && !isNight) {
+  } else if (!isWaxing && isDayTime) {
     others = [
       others[2],
       others[0],
@@ -1015,20 +1015,30 @@ export const calcTimeBirds = (birthBirdNum = 0, isWaxing = true, isNight = false
   return [first, ...others];  
 }
 
-export const calcTimeBird = (birthBirdNum = 0, yama = 0, isWaxing = true, isNight = false) => {
-  const birds = calcTimeBirds(birthBirdNum, isWaxing, isNight);
+export const calcTimeBird = (birthBirdNum = 0, yama = 0, isWaxing = true, isDayTime = true) => {
+  const birds = calcTimeBirds(birthBirdNum, isWaxing, isDayTime);
   const yamaIndex = yama > 0? yama <= 5 ? yama -1 : 4 : 0;
   return birds[yamaIndex];
 }
 
-export const matchSubPeriods = (isWaxing = true, isDayTime = true) => {
-  return yamaSubdivisions.map(ys => {
-    const div = ys[waxWaneKey(isWaxing)][dayNightKey(isDayTime)];
-    const { key } = ys;
-    const value = (div / 24);
-    return {
-      key,
-      value
+export const matchSubPeriods = (dayNum = 0, isWaxing = true, isDayTime = true) => {
+  const row = birdActivities.find(row => row.num === dayNum);
+  const activityKeys: string[] = row instanceof Object ? row[waxWaneKey(isWaxing)][dayNightKey(isDayTime)] : [];
+  return activityKeys.map(ak => {
+    const ys = yamaSubdivisions.find(ya => ya.key === ak);
+    if (ys instanceof Object) {
+      const div = ys[waxWaneKey(isWaxing)][dayNightKey(isDayTime)];
+      const { key } = ys;
+      const value = (div / 24);
+      return {
+        key,
+        value
+      }
+    } else {
+      return {
+        key: "",
+        value: 0,
+      }
     }
   });
 }
@@ -1068,9 +1078,9 @@ export const calcYamaSets = (jd = 0, startJd = 0, endJd = 0, isWaxing = true, is
   });
   
   const yama = (Math.floor(progress * 5) % 5) + 1;
-  const subPeriods = matchSubPeriods(isWaxing, isDayTime);
-  const birds = calcTimeBirds(birthBirdNum, isWaxing, !isDayTime);
-  const dayActivity = matchBirdActivityKey(birthBirdNum, dayNum, isWaxing, !isDayTime);
+  const subPeriods = matchSubPeriods(dayNum, isWaxing, isDayTime);
+  const birds = calcTimeBirds(birthBirdNum, isWaxing, isDayTime);
+  const dayActivity = matchBirdActivityKey(birthBirdNum, dayNum, isWaxing, isDayTime);
   const yamaSets = yamas.map(yama => {
     const subs = calcSubPeriods(subPeriods, birds, birthBirdNum, yama.start, yama.end, jd, isWaxing, isDayTime, dayActivity);
     return { ...yama, subs }
