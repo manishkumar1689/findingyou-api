@@ -1,5 +1,6 @@
 import { isNumeric } from '../../lib/validators';
 import { ephemerisDefaults } from '../../.config';
+import { GeoLoc } from './models/geo-loc';
 
 interface degreesMinutesSeconds {
   deg: number;
@@ -13,7 +14,7 @@ export const locStringToGeo = (loc: string) => {
     .filter(isNumeric)
     .map(parseFloat);
   const alt = isNumeric(altV) ? altV : ephemerisDefaults.altitude;
-  return { lat, lng, alt };
+  return new GeoLoc({ lat, lng, alt });
 };
 
 export const latLngParamsToGeo = (latStr: string, lngStr: string, altStr = "") => {

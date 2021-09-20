@@ -1,5 +1,5 @@
 import * as swisseph from 'swisseph';
-import { calcJulDate } from './date-funcs';
+import { calcJulDate, julToISODate } from './date-funcs';
 import { JyotishDay } from './models/jyotish-day';
 import { IndianTime } from './models/indian-time';
 import { riseTransAsync } from './sweph-async';
@@ -179,7 +179,7 @@ export const calcTransitionJd = async (
 
 export const calcSunTrans = async (datetime, geo: GeoPos, tzOffset = 0) => {
   const jd = calcJulDate(datetime);
-  const transData = await calcSunTransJd(jd, geo);
+  const transData = await calcSunTransJd(jd, new GeoLoc(geo));
   return { ...transData, datetime, tzOffset };
 };
 
@@ -191,16 +191,16 @@ export const offsetToMidNight = (jd = 0, geoLat = 0): number => {
 
 export const calcSunTransJd = async (
   jd,
-  geo,
+  geo: GeoLoc,
   offsetToPrevMidNight = true
 ): Promise<SunTransitionData> => {
-  const offset = geo.lat / 360;
   const offsetJd = offsetToPrevMidNight ? offsetToMidNight(jd, geo.lat) : jd;
   const curr = await calcTransitionJd(offsetJd, geo, 0, false, false);
   const prev = await calcTransitionJd(offsetJd - 1, geo, 0, false, false);
   const next = await calcTransitionJd(offsetJd + 1, geo, 0, false, false);
   return {
     jd,
+    datetime: new Date(julToISODate(jd)),
     geo,
     ...curr,
     prevRise: prev.rise,
@@ -230,7 +230,7 @@ export const toIndianTime = async (datetime, geo: GeoPos) => {
 };
 
 export const toIndianTimeJd = async (jd = 0, geo: GeoPos) => {
-  const sunData = await calcSunTransJd((jd), geo);
+  const sunData = await calcSunTransJd(jd, new GeoLoc(geo));
   const jyotishDay = new JyotishDay(sunData);
   const iTime = new IndianTime(jyotishDay);
   return iTime.toObject();

@@ -9,11 +9,6 @@ const waxWaneKey = (isWaxing = true): string => isWaxing ? 'waxing' : 'waning';
 
 const dayNightKey = (isDayTime = true): string => isDayTime ? 'day' : 'night';
 
-interface RuleDeath {
-  ruling: number;
-  dying: number;
-}
-
 export const birdNakshatraRanges = [
   { range: [1, 5], waxing: 1, waning: 5 },
   { range: [6, 11], waxing: 2, waning: 4 },
@@ -135,7 +130,7 @@ export const birdActivitiesDirections = [
 
 export const birdDayValues = [
   {
-      num: 7,
+      num: 1,
       waxing:
       {
           day:
@@ -160,35 +155,6 @@ export const birdDayValues = [
           {
               ruling: 1,
               dying: 3
-          }
-      }
-  },
-  {
-      num: 1,
-      waxing:
-      {
-          day:
-          {
-              ruling: 2,
-              dying: 3
-          },
-          night:
-          {
-              ruling: 4,
-              dying: 3
-          }
-      },
-      waning:
-      {
-          day:
-          {
-              ruling: 5,
-              dying: 2
-          },
-          night:
-          {
-              ruling: 4,
-              dying: 2
           }
       }
   },
@@ -198,26 +164,26 @@ export const birdDayValues = [
       {
           day:
           {
-              ruling: 1,
-              dying: 4
+              ruling: 2,
+              dying: 3
           },
           night:
           {
-              ruling: 3,
-              dying: 4
+              ruling: 4,
+              dying: 3
           }
       },
       waning:
       {
           day:
           {
-              ruling: 4,
-              dying: 1
+              ruling: 5,
+              dying: 2
           },
           night:
           {
-              ruling: 1,
-              dying: 1
+              ruling: 4,
+              dying: 2
           }
       }
   },
@@ -227,26 +193,26 @@ export const birdDayValues = [
       {
           day:
           {
-              ruling: 2,
-              dying: 5
+              ruling: 1,
+              dying: 4
           },
           night:
           {
-              ruling: 4,
-              dying: 5
+              ruling: 3,
+              dying: 4
           }
       },
       waning:
       {
           day:
           {
-              ruling: 3,
-              dying: 5
+              ruling: 4,
+              dying: 1
           },
           night:
           {
-              ruling: 2,
-              dying: 5
+              ruling: 1,
+              dying: 1
           }
       }
   },
@@ -256,6 +222,35 @@ export const birdDayValues = [
       {
           day:
           {
+              ruling: 2,
+              dying: 5
+          },
+          night:
+          {
+              ruling: 4,
+              dying: 5
+          }
+      },
+      waning:
+      {
+          day:
+          {
+              ruling: 3,
+              dying: 5
+          },
+          night:
+          {
+              ruling: 2,
+              dying: 5
+          }
+      }
+  },
+  {
+      num: 5,
+      waxing:
+      {
+          day:
+          {
               ruling: 3,
               dying: 1
           },
@@ -280,7 +275,7 @@ export const birdDayValues = [
       }
   },
   {
-      num: 5,
+      num: 6,
       waxing:
       {
           day:
@@ -309,7 +304,7 @@ export const birdDayValues = [
       }
   },
   {
-      num: 6,
+      num: 7,
       waxing:
       {
           day:
@@ -962,13 +957,14 @@ export const matchBirdDayRuler = (dayNum = 0, waxing = false, isNight = false) =
   }
 }
 
-export const matchBirdActivity = (birdNum = 0, dayNum = 0, waxing = true, isDayTime) => {
+export const matchBirdActivity = (birdNum = 0, dayNum = 0, waxing = true, isDayTime = true) => {
   const row = birdActivities.find(row => row.num === dayNum);
   const itemSet = row instanceof Object ? waxing ? row.waxing : row.waning : null;
   const actKeys = itemSet instanceof Object ? isDayTime ? itemSet.day : itemSet.night : [];
+  
   const birdIndex = birdNum - 1;
   const key = birdNum <= 5 && birdNum > 0 ? birdMap[birdNum] : "";
-  const activity = birdIndex > 0 && birdIndex < actKeys.length? actKeys[birdIndex] : "";
+  const activity = birdIndex >= 0 && birdIndex < actKeys.length? actKeys[birdIndex] : "";
   return { 
     key,
     activity,
@@ -1094,7 +1090,6 @@ export const calcPanchaPakshiStrength = (birdNum = 0, activityKey = "", subKey =
   const keys = matched ? Object.keys(row) : [];
   let score = 0;
   const percent = matched && keys.includes('percent') ? row.percent : 0;
-  
   if (keys.includes(activityKey) && row[activityKey] instanceof Object) {
     const subKeys = Object.keys(row[activityKey]);
     const multiplier = subKeys.includes(subKey)? row[activityKey][subKey] : 0;

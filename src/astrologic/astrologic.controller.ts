@@ -309,11 +309,12 @@ export class AstrologicController {
   @Get('panksha-pancha/:chartID/:loc/:dt?')
   async pankshaPanchaDaya(@Res() res, @Param('chartID') chartID, @Param('loc') loc, @Param('dt') dt) {
     let status = HttpStatus.BAD_REQUEST;
-    let data: Map<string, any> = new Map(Object.entries({ jd: 0, valid: false, geo: null, moon: null, bird: null, yamas: [] }));
+    let data: Map<string, any> = new Map(Object.entries({ jd: 0, dtUtc: '', valid: false, geo: null, moon: null, bird: null, yamas: [] }));
     if (notEmptyString(chartID) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const { dtUtc, jd } = matchJdAndDatetime(dt);
       data.set('jd', jd);
+      data.set('dtUtc', dtUtc);
       const chartData = await this.astrologicService.getChart(chartID);
       const hasChart = chartData instanceof Model;
       const valid = hasChart && chartData.grahas.length > 1;
@@ -321,7 +322,6 @@ export class AstrologicController {
       if (valid) {
         const chartObj = hasChart ? chartData.toObject() : {};
         const iTime = await toIndianTimeJd(jd, geo);
-        
         const periodStart = iTime.dayBefore ? iTime.prevSet.jd : iTime.rise.jd;
         const periodEnd = iTime.dayBefore ? iTime.rise.jd : iTime.set.jd;
         const chart = new Chart(chartObj);
