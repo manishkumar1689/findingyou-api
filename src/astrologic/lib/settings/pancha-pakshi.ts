@@ -1084,7 +1084,7 @@ export const calcYamaSets = (jd = 0, startJd = 0, endJd = 0, isWaxing = true, is
   const yamaSets = yamas.map(yama => {
     const subs = calcSubPeriods(subPeriods, birds, birthBirdNum, yama.start, yama.end, jd, isWaxing, isDayTime, dayActivity);
     return { ...yama, subs }
-  })
+  });
   return {
     lengthJd,
     progress,

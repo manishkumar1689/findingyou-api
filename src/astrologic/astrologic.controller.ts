@@ -306,7 +306,7 @@ export class AstrologicController {
     }
   }
 
-  @Get('panksha-pancha/:chartID/:loc/:dt?')
+  @Get('pancha-pakshi/:chartID/:loc/:dt?')
   async pankshaPanchaDaya(@Res() res, @Param('chartID') chartID, @Param('loc') loc, @Param('dt') dt) {
     let status = HttpStatus.BAD_REQUEST;
     let data: Map<string, any> = new Map(Object.entries({ jd: 0, dtUtc: '', valid: false, geo: null, moon: null, bird: null, yamas: [] }));
