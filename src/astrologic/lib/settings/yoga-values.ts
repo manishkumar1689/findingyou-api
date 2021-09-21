@@ -4,6 +4,8 @@ dict key: yoga__ + num
 bm:  + bm
 */
 
+import { relativeAngle } from "../core";
+
 const yogaValues = [
   { num: 1, ruler: 'sa', bm: 'm' },
   { num: 2, ruler: 'me', bm: 'b' },
@@ -33,5 +35,22 @@ const yogaValues = [
   { num: 26, ruler: 'ra', bm: 'b' },
   { num: 27, ruler: 'ju', bm: 'm' },
 ];
+
+export const calcYoga = (sunLng = 0, moonLng = 0) => {
+  const numYogas = yogaValues.length;
+    const yogaDeg = 360 / numYogas;
+    const yogaVal = relativeAngle(sunLng, moonLng) / yogaDeg;
+    const index = Math.floor(yogaVal) % numYogas;
+    let yogaRow: any = {};
+    if (index < numYogas) {
+      yogaRow = yogaValues[index];
+    }
+    const percent = (yogaVal % 1) * 100;
+    return {
+      ...yogaRow,
+      index,
+      percent,
+    };
+}
 
 export default yogaValues;

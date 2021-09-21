@@ -23,11 +23,11 @@ import {
 import muhurtaValues from './../settings/muhurta-values';
 import caughadiaData from './../settings/caughadia-data';
 import kalamData from './../settings/kalam-data';
-import karanaData from './../settings/karana-data';
+import { calcKarana } from './../settings/karana-data';
 import horaValues from './../settings/hora-values';
 import tithiValues from './../settings/tithi-values';
 import varaValues from './../settings/vara-values';
-import yogaValues from './../settings/yoga-values';
+import { calcYoga } from './../settings/yoga-values';
 import houseTypeData from './../settings/house-type-data';
 import { KaranaSet } from './karana-set';
 import { MuhurtaSet, MuhurtaItem } from './muhurta-set';
@@ -64,6 +64,7 @@ import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
 import { Kuta } from '../kuta';
 import { currentJulianDay } from '../julian-date';
 import { matchKotaPala } from '../settings/kota-values';
+import { calcTithi } from 'sample-data/tithi-values';
 
 
 export interface Subject {
@@ -898,20 +899,8 @@ export class Chart {
   }
 
   get tithi() {
-    const tithiVal = this.sunMoonAngle / (360 / 30);
-    const sn = (this.moon.longitude + 360 - this.sun.longitude) % 360;
     if (this.hasIndianTime) {
-      const tithiPercent = (tithiVal % 1) * 100;
-      const tithiNum = Math.floor(tithiVal) + 1;
-      const tithiRow = tithiValues.find(t => t.num === tithiNum);
-      return {
-        ...tithiRow,
-        value: tithiVal,
-        percent: tithiPercent,
-        waxing: this.moonWaxing,
-        overHalfLight: this.overHalfLight,
-        phase: this.moonPhase,
-      };
+      return calcTithi(this.sun.longitude, this.moon.longitude)
     } else {
       return {
         num: 0,
@@ -926,32 +915,11 @@ export class Chart {
   }
 
   get yoga() {
-    const numYogas = yogaValues.length;
-    const yogaDeg = 360 / numYogas;
-    const yogaVal = (this.sun.longitude + this.moon.longitude) / yogaDeg;
-    const index = Math.floor(yogaVal) % numYogas;
-    let yogaRow: any = {};
-    if (index < numYogas) {
-      yogaRow = yogaValues[index];
-    }
-    const percent = (yogaVal % 1) * 100;
-    return {
-      ...yogaRow,
-      index,
-      percent,
-    };
+    return calcYoga(this.sun.longitude, this.moon.longitude);
   }
 
   get karana(): KaranaSet {
-    const karanaVal = this.sunMoonAngle / (360 / 60);
-    const percent = (karanaVal % 1) * 100;
-    const num = Math.ceil(karanaVal);
-    const row = karanaData.karanas.find(r => r.locations.includes(num));
-    return new KaranaSet({
-      num,
-      ...row,
-      percent,
-    });
+    return calcKarana(this.sun.longitude, this.moon.longitude);
   }
 
   matchHouseSignRuler = (houseNum: number) => {

@@ -116,7 +116,7 @@ import ayanamshaValues from './lib/settings/ayanamsha-values';
 import { calcBavGraphData, calcBavSignSamples } from './lib/settings/ashtakavarga-values';
 import { GeoPos } from './interfaces/geo-pos';
 import { Model } from 'mongoose';
-import { calcYamaSets, matchBirdByNak, matchDayBirdKeys } from './lib/settings/pancha-pakshi';
+import { calcYamaSets, matchBirdByNak, matchBirdRulers, matchDayBirdKeys } from './lib/settings/pancha-pakshi';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -318,6 +318,7 @@ export class AstrologicController {
       const chartData = await this.astrologicService.getChart(chartID);
       const hasChart = chartData instanceof Model;
       const valid = hasChart && chartData.grahas.length > 1;
+      
       data.set('valid', valid);
       if (valid) {
         const chartObj = hasChart ? chartData.toObject() : {};

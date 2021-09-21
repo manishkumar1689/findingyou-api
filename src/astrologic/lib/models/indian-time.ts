@@ -3,6 +3,7 @@ import { BaseObject } from './base-object';
 import { JyotishDay } from './jyotish-day';
 import { hashMapToObject } from '../../../lib/entities';
 import { BodyTransition } from '../../interfaces/body-transition';
+import varaValues from '../settings/vara-values';
 
 export class IndianTime extends BaseObject {
   /*
@@ -74,11 +75,11 @@ export class IndianTime extends BaseObject {
 
   ghatiVal = () => this.progress() * 60;
 
+  ghati = () => Math.floor(this.ghatiVal());
+
   muhurtaVal = () => this.progress() * 30;
 
   muhurta = () => Math.floor(this.muhurtaVal());
-
-  ghati = () => Math.floor(this.ghatiVal());
 
   vighatiVal = () => {
     const remainder = this.ghatiVal() % 1;
@@ -92,8 +93,22 @@ export class IndianTime extends BaseObject {
     return remainder * 60;
   };
 
+  vara = () => {
+    const percent = ((this._jDay.jd - this.dayStart()) / this.dayLength()) * 100;
+    const weekDayIndex = this.weekDayNum() - 1;
+    if (weekDayIndex >= 0 && weekDayIndex < 7) {
+      const varaRow = varaValues[weekDayIndex];
+      return {
+        ...varaRow,
+        dayLength: this.dayLength(),
+        percent,
+      };
+    }
+  }
+
   sunData() {
     const keys = ['prevRise', 'prevSet', 'rise', 'set', 'nextRise'];
+    
     const items: Array<BodyTransition> = keys.map(type => {
       const tr = this[type]();
       return {

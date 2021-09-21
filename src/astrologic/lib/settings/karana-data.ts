@@ -6,6 +6,9 @@ type: karana
 deity: devata
 */
 
+import { relativeAngle } from "../core";
+import { KaranaSet } from "../models/karana-set";
+
 const karanaData = {
   karanas: [
     {
@@ -109,5 +112,18 @@ const karanaData = {
     { ruler: 'ke', '5th': 'me', '6th': 'ju' },
   ],
 };
+
+export const calcKarana = (sunLng, moonLng) => { 
+  const sunMoonAngle = relativeAngle(sunLng, moonLng);
+  const karanaVal = sunMoonAngle / (360 / 60);
+  const percent = (karanaVal % 1) * 100;
+  const num = Math.ceil(karanaVal);
+  const row = karanaData.karanas.find(r => r.locations.includes(num));
+  return new KaranaSet({
+    num,
+    ...row,
+    percent,
+  });
+}
 
 export default karanaData;
