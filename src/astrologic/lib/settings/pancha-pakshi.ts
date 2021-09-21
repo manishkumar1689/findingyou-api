@@ -1074,7 +1074,6 @@ export const matchDayBirds = (dayNum = 0, isWaxing = true, isDayTime = true) => 
 
 export const matchDayBirdKeys = (dayNum = 0, isWaxing = true, isDayTime = true) => {
   const { ruling, dying } = matchDayBirds(dayNum, isWaxing, isDayTime);
-  
   return { ruling: matchBirdKeyByNum(ruling), dying: matchBirdKeyByNum(dying) };
 }
 
@@ -1092,7 +1091,7 @@ export const matchBirdDirectionByActivity = (birdNum = 0, activity = "", waxing 
   const rowIsMatched = row instanceof Object;
   const subSec = rowIsMatched ? row[waxWaneKey(waxing)] : null;
   const activityKeys = subSec instanceof Object? Object.keys(subSec) : [];
-  return activityKeys.includes(activity)? subSec[activity] : "";
+  return activityKeys.includes(activity) ? subSec[activity] : "";
 }
 
 export const matchBirdKeyDirectionByActivity = (birdKey = "", activity = ""): number => {
@@ -1150,10 +1149,14 @@ export const matchSubPeriods = (dayNum = 0, isWaxing = true, isDayTime = true) =
   });
 }
 
-export const calcSubPeriods = (subPeriods: KeyNumValue[], birds: KeyNum[], birthBirdNum = 0, startJd = 0, endJd = 0, refJd = 0, waxing = true, isDayTime = true, dayActivity: string) => {
+export const calcSubPeriods = (subPeriods: KeyNumValue[], birds: KeyNum[], birthBirdNum = 0, startJd = 0, endJd = 0, refJd = 0, waxing = true, isDayTime = true, dayActivity: string, yamaIndex = 0) => {
   const lengthJd = endJd - startJd;
   const numBirds = birds.length;
   let prevJd = startJd;
+  const activityKeys = subPeriods.map((period, index) => {
+    const birdItem = index < numBirds? birds[index] : { key: "", num: 0 };
+    return matchBirdDirectionByActivity(birdItem.num, period.key, waxing);
+  })
   return subPeriods.map((period, index) => {
     const startSubJd = prevJd;
     const endSubJd = prevJd + (lengthJd * period.value); 
@@ -1163,7 +1166,8 @@ export const calcSubPeriods = (subPeriods: KeyNumValue[], birds: KeyNum[], birth
     const birdMatched = birdItem instanceof Object;
     const bird = birdMatched ? birdItem.key : "";
     const birdNum = birdMatched ? birdItem.num : 0;
-    const direction = matchBirdDirectionByActivity(birdNum, period.key, waxing);
+    const shiftIndex = (index + yamaIndex) % 5;
+    const direction = activityKeys[shiftIndex];
     const rulers = matchBirdRulers(birdNum, isDayTime, period.key);
     const relation = matchBirdRelations(birthBirdNum, birdNum, waxing);
     const score = calcPanchaPakshiStrength(birthBirdNum, dayActivity, period.key, waxing);
@@ -1188,8 +1192,8 @@ export const calcYamaSets = (jd = 0, startJd = 0, endJd = 0, isWaxing = true, is
   const subPeriods = matchSubPeriods(dayNum, isWaxing, isDayTime);
   const birds = calcTimeBirds(birthBirdNum, isWaxing, isDayTime);
   const dayActivity = matchBirdActivityKey(birthBirdNum, dayNum, isWaxing, isDayTime);
-  const yamaSets = yamas.map(yama => {
-    const subs = calcSubPeriods(subPeriods, birds, birthBirdNum, yama.start, yama.end, jd, isWaxing, isDayTime, dayActivity);
+  const yamaSets = yamas.map((yama, index) => {
+    const subs = calcSubPeriods(subPeriods, birds, birthBirdNum, yama.start, yama.end, jd, isWaxing, isDayTime, dayActivity, index);
     return { ...yama, subs }
   });
   return {
