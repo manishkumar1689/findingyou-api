@@ -25,7 +25,7 @@ import caughadiaData from './../settings/caughadia-data';
 import kalamData from './../settings/kalam-data';
 import { calcKarana } from './../settings/karana-data';
 import horaValues from './../settings/hora-values';
-import tithiValues from './../settings/tithi-values';
+import { calcTithi } from './../settings/tithi-values';
 import varaValues from './../settings/vara-values';
 import { calcYoga } from './../settings/yoga-values';
 import houseTypeData from './../settings/house-type-data';
@@ -64,7 +64,6 @@ import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
 import { Kuta } from '../kuta';
 import { currentJulianDay } from '../julian-date';
 import { matchKotaPala } from '../settings/kota-values';
-import { calcTithi } from 'sample-data/tithi-values';
 
 
 export interface Subject {

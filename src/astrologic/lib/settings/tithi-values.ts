@@ -1,12 +1,12 @@
 /*
-prefixex:
-
+prefixes:
 tithi key: tithi__ + num
 div: tithi_type_ + div
-
 */
 
-const values = [
+import { relativeAngle } from "../core";
+
+const tithiValues = [
   { num: 1, lord: 'su', div: 1 },
   { num: 2, lord: 'mo', div: 2 },
   { num: 3, lord: 'ma', div: 3 },
@@ -39,4 +39,24 @@ const values = [
   { num: 30, lord: 'ra', div: 5 },
 ];
 
-export default values;
+
+
+export const calcTithi = (sunLng = 0, moonLng = 0) => {
+  const sunMoonAngle = relativeAngle(sunLng, moonLng);
+  const tithiVal = sunMoonAngle / (360 / 30);
+  const sn = (moonLng + 360 - sunLng) % 360;
+  const tithiPercent = (tithiVal % 1) * 100;
+  const tithiNum = Math.floor(tithiVal) + 1;
+  const tithiRow = tithiValues.find(t => t.num === tithiNum);
+  const phase = Math.floor(sunMoonAngle / 90) + 1;
+  return {
+  ...tithiRow,
+  value: tithiVal,
+  percent: tithiPercent,
+  waxing: sunMoonAngle > 180,
+  overHalfLight: [2,3].includes(phase),
+  phase,
+  };
+}
+
+export default tithiValues;
