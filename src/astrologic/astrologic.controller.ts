@@ -366,7 +366,7 @@ export class AstrologicController {
           const period2Start = iTime.set.jd;
           const period2End = iTime.nextRise.jd;
           const yamaData2 = calcYamaSets(jd2, period2Start, period2End, next.waxing, false, bird.num, iTime2.weekDayNum);
-          data.set('yama2', yamaData2.yamas);
+          data.set('yamas2', yamaData2.yamas);
           data.set('lengthJd2', yamaData2.lengthJd);
           const mn = data.get('moon');
           data.set('moon', {...mn, next});
