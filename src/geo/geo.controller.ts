@@ -12,6 +12,7 @@ import {
 import { GeoService } from './geo.service';
 import { isNumeric, validISODateString } from '../lib/validators';
 import { locStringToGeo } from '../astrologic/lib/converters';
+import { currentISODate } from 'src/astrologic/lib/date-funcs';
 
 @Controller('geo')
 export class GeoController {
@@ -117,14 +118,16 @@ export class GeoController {
     return res.send(data);
   }
 
-  @Get('timezonedb/:loc/:dt')
+  @Get('timezonedb/:loc/:dt?')
   async timezoneDb(@Res() res, @Param('loc') loc, @Param('dt') dt) {
-    const data = { valid: false, result: {} };
-    if (validISODateString(dt)) {
+    const data = { valid: false, result: {}, refDt: '' };
+    const refDt = validISODateString(dt)? dt : currentISODate();
+    if (validISODateString(refDt)) {
       const geo = locStringToGeo(loc);
-      const result = await this.geoService.fetchTimezoneOffset(geo, dt);
+      const result = await this.geoService.fetchTimezoneOffset(geo, refDt);
       if (result instanceof Object) {
         data.result = result;
+        data.refDt = refDt;
         data.valid = true;
       }
     }

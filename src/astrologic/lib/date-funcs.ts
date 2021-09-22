@@ -352,7 +352,8 @@ export const decimalYear = (strDate = '') => {
 
 
 export const currentISODate = (fromDayStart = false) => {
-  return moment.utc().format();
+  const dt = moment.utc().format();
+  return fromDayStart ? dt.split('T').shift() + 'T00:00:00' : dt;
 }
 
 export const julRangeToAge = (

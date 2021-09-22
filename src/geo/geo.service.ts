@@ -233,6 +233,10 @@ export class GeoService {
         }
       }
     }
+    const keys = Object.keys(tz);
+    if (keys.includes('timezoneId') === false) {
+      tzOffset = Math.floor((coords.lng + 7.5) / 15) * 3600;
+    }
     return {
       tz: tz.timezoneId,
       tzOffset,
@@ -282,12 +286,18 @@ export class GeoService {
         if (data instanceof Array) {
           result = { valid: true, values: data };
         } else if (data instanceof Object) {
+          const endTs = data.dstEnd > 1000 ? data.dstEnd * 1000 : new Date().getTime() + (100 * 365.25 * 24 * 60 * 60 * 1000);
+          if (data.status === 'FAILED') {
+            if (zoneRef instanceof Object) {
+              data.gmtOffset = Math.floor((zoneRef.lng + 7.5) / 15) * 3600;
+            }
+          }
           result = {
             valid: true,
             offset: data.gmtOffset,
             zone: data.zoneName,
             start: moment(data.dstStart * 1000),
-            end: moment(data.dstEnd * 1000),
+            end: moment(endTs),
             dt: data.formatted,
           };
         }

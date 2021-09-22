@@ -2672,11 +2672,12 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('tzdata/:loc/:dt')
+  @Get('tzdata/:loc/:dt?')
   async timeZoneByGeo(@Res() res, @Param('loc') loc, @Param('dt') dt) {
-    if (notEmptyString(dt, 6) && notEmptyString(loc, 3)) {
+    const refDt = validISODateString(dt)? dt : currentISODate();
+    if (notEmptyString(refDt, 6) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
-      const data = await this.geoService.fetchTzData(geo, dt);
+      const data = await this.geoService.fetchTzData(geo, refDt);
       if (data.valid) {
         const shortTz = toShortTzAbbr(dt, data.tz);
         return res.status(HttpStatus.OK).json({ ...data, shortTz });
