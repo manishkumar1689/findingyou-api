@@ -42,6 +42,7 @@ import {
   fetchHouseDataJd,
   calcCoreGrahaPositions,
   calcMoonDataJd,
+  getSunMoonSpecialValues,
 } from './lib/core';
 import { sampleBaseObjects } from './lib/custom-transits';
 import {
@@ -354,10 +355,14 @@ export class AstrologicController {
           birth: bird.key,
           current: currentBirds
         });
-        const yamaData = calcYamaSets(jd, periodStart, periodEnd, current.waxing, iTime.isDayTime, bird.num, iTime.weekDayNum);
+        const yamaData = calcYamaSets(jd, periodStart, periodEnd, current.waxing, isDayTime, bird.num, iTime.weekDayNum);
         data.set('yamas', yamaData.yamas);
         data.set('lengthJd', yamaData.lengthJd);
-        data.set('period', iTime.isDayTime ? 'day' : 'night');
+        data.set('period', isDayTime ? 'day' : 'night');
+        const special: any = {
+          day: getSunMoonSpecialValues(moonJd, iTime, current.sunLng, current.lng)
+        }
+        
         if (fetchNightAndDay) {
           const jd2 = jd + 0.5;
           const iTime2 = await toIndianTimeJd(jd2, geo);
@@ -365,13 +370,20 @@ export class AstrologicController {
           const next = await calcMoonDataJd(moon2Jd);
           const period2Start = iTime.set.jd;
           const period2End = iTime.nextRise.jd;
-          const yamaData2 = calcYamaSets(jd2, period2Start, period2End, next.waxing, false, bird.num, iTime2.weekDayNum);
+          const isDayTime2 = !isDayTime;
+          const yamaData2 = calcYamaSets(jd2, period2Start, period2End, next.waxing, isDayTime2, bird.num, iTime2.weekDayNum);
           data.set('yamas2', yamaData2.yamas);
           data.set('lengthJd2', yamaData2.lengthJd);
           const mn = data.get('moon');
           data.set('moon', {...mn, next});
-          data.set('period2', iTime2.isDayTime ? 'day' : 'night');
+          const bd = data.get('bird');
+          const nextBirds = matchDayBirdKeys(iTime2.weekDayNum, next.waxing, iTime2.isDayTime); 
+          data.set('bird', { ...bd, next: nextBirds })
+          data.set('period2', isDayTime2 ? 'day' : 'night');
+          special.night = getSunMoonSpecialValues(moon2Jd, iTime2, next.sunLng, next.lng);
         }
+
+        data.set('special', special);
       }
       status = HttpStatus.OK;
     } else {

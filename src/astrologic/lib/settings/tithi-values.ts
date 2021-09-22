@@ -51,6 +51,7 @@ export const calcTithi = (sunLng = 0, moonLng = 0) => {
   const phase = Math.floor(sunMoonAngle / 90) + 1;
   return {
   ...tithiRow,
+  ruler: tithiRow.lord,
   value: tithiVal,
   percent: tithiPercent,
   waxing: sunMoonAngle > 180,

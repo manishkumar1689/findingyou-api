@@ -23,10 +23,10 @@ import grahaValues from './settings/graha-values';
 import nakshatraValues from './settings/nakshatra-values';
 import aprakasaValues from './settings/aprakasa-values';
 import upagrahaData from './settings/upagraha-data';
-import tithiValues from './settings/tithi-values';
-import yogaValues from './settings/yoga-values';
-import karanaData from './settings/karana-data';
-import varaValues from './settings/vara-values';
+import tithiValues, { calcTithi } from './settings/tithi-values';
+import yogaValues, { calcYoga } from './settings/yoga-values';
+import karanaData, { calcKarana } from './settings/karana-data';
+import varaValues, { calcVara } from './settings/vara-values';
 import horaValues from './settings/hora-values';
 import ghatiValues from './settings/ghati-values';
 import caughadiaData from './settings/caughadia-data';
@@ -58,6 +58,7 @@ import {
   ObjectMatchSet,
   RashiItemSet,
   NumValueSet,
+  ITime,
 } from './models/chart';
 import { capitalize } from './helpers';
 import houseTypeData from './settings/house-type-data';
@@ -726,10 +727,12 @@ export const calcMoonDataJd = async (jd: number, ayanamshaKey = 'true_citra') =>
     const angle = (moon.lng + 360 - sun.lng) % 360;
     const waxing = angle <= 180;
     const lng = subtractLng360(moon.lng, ayanamsha);
+    const sunLng = subtractLng360(sun.lng, ayanamsha);
     return {
       moon: moon.lng, 
       sun: sun.lng,
       lng,
+      sunLng,
       nakshatra27: Math.floor(lng / (360/27)) + 1,
       ayanamsha,
       angle,
@@ -1819,3 +1822,18 @@ export const fetchAllSettings = (filters: Array<string> = []) => {
     return { valid: true, ...settings };
   }
 };
+
+
+export const getSunMoonSpecialValues = (jd = 0, iTime: ITime, sunLng = 0, moonLng = 0) => {
+  const nakIndex = Math.floor(moonLng / (360 / 27)) % 27;
+  const nakshatra = nakshatraValues[nakIndex];
+  const data = { 
+    karana: calcKarana(sunLng, moonLng),
+    tithi: calcTithi(sunLng, moonLng),
+    yoga: calcYoga(sunLng, moonLng),
+    vara: calcVara(jd, iTime),
+    nakshatra
+  }
+  const rulers = Object.fromEntries(Object.entries(data).filter(entry => entry[1] instanceof Object).map(entry => [entry[0], entry[1].ruler]));
+  return { rulers, ...data };
+}

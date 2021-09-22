@@ -26,7 +26,7 @@ import kalamData from './../settings/kalam-data';
 import { calcKarana } from './../settings/karana-data';
 import horaValues from './../settings/hora-values';
 import { calcTithi } from './../settings/tithi-values';
-import varaValues from './../settings/vara-values';
+import varaValues, { calcVara } from './../settings/vara-values';
 import { calcYoga } from './../settings/yoga-values';
 import houseTypeData from './../settings/house-type-data';
 import { KaranaSet } from './karana-set';
@@ -151,7 +151,7 @@ export interface ObjectMatchSet {
   items: Array<ObjectMatch>;
 }
 
-interface IndianTime {
+export interface ITime {
   year: number;
   dayNum: number;
   progress: number;
@@ -224,7 +224,7 @@ export class Chart {
   vertex: number;
   grahas: Array<BaseGraha> = [];
   houses: Array<HouseSystem> = [];
-  indianTime: IndianTime;
+  indianTime: ITime;
   ayanamshas: Array<KeyNumValue> = [];
   upagrahas: Array<KeyNumValue> = [];
   sphutas: Array<VariantSet> = [];
@@ -262,7 +262,7 @@ export class Chart {
             break;
           case 'indianTime':
             if (v instanceof Object) {
-              this[k] = v as IndianTime;
+              this[k] = v as ITime;
             }
             break;
           case 'geo':
@@ -1069,21 +1069,7 @@ export class Chart {
 
   getVara() {
     if (this.hasIndianTime) {
-      const { dayStart, dayLength, dayBefore } = this.indianTime;
-      const percent = ((this.jd - dayStart) / dayLength) * 100;
-      const weekDay = weekDayNum(this.datetime, dayBefore);
-      const weekDayIndex = weekDay % varaValues.length;
-      if (weekDayIndex >= 0) {
-        const varaRow = varaValues[weekDayIndex];
-        if (varaRow) {
-          return {
-            ...varaRow,
-            sunRise: this.sunRise,
-            dayLength,
-            percent,
-          };
-        }
-      }
+      return calcVara(this.jd, this.indianTime, this.sunRise);
     }
   }
 

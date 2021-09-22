@@ -38,19 +38,16 @@ const yogaValues = [
 
 export const calcYoga = (sunLng = 0, moonLng = 0) => {
   const numYogas = yogaValues.length;
-    const yogaDeg = 360 / numYogas;
-    const yogaVal = relativeAngle(sunLng, moonLng) / yogaDeg;
-    const index = Math.floor(yogaVal) % numYogas;
-    let yogaRow: any = {};
-    if (index < numYogas) {
-      yogaRow = yogaValues[index];
-    }
-    const percent = (yogaVal % 1) * 100;
-    return {
-      ...yogaRow,
-      index,
-      percent,
-    };
+  const yogaDeg = 360 / numYogas;
+  const yogaVal = relativeAngle(sunLng, moonLng) / yogaDeg;
+  const index = Math.floor(yogaVal) % numYogas;
+  const yogaRow = yogaValues[index];
+  const percent = (yogaVal % 1) * 100;
+  return {
+    ...yogaRow,
+    index,
+    percent,
+  };
 }
 
 export default yogaValues;
