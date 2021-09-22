@@ -306,10 +306,11 @@ export class AstrologicController {
     }
   }
 
-  @Get('pancha-pakshi/:chartID/:loc/:dt?')
-  async pankshaPanchaDaya(@Res() res, @Param('chartID') chartID, @Param('loc') loc, @Param('dt') dt) {
+  @Get('pancha-pakshi/:chartID/:loc/:dt?/:mode?')
+  async pankshaPanchaDaya(@Res() res, @Param('chartID') chartID, @Param('loc') loc, @Param('dt') dt, @Param('mode') mode) {
     let status = HttpStatus.BAD_REQUEST;
-    let data: Map<string, any> = new Map(Object.entries({ jd: 0, dtUtc: '', valid: false, geo: null, moon: null, bird: null, yamas: [] }));
+    let data: Map<string, any> = new Map(Object.entries({ jd: 0, dtUtc: '', valid: false, geo: null, rise: 0, set: 0, moon: null, bird: null, yamas: [] }));
+    const fetchNightAndDay = mode === 'dual';
     if (notEmptyString(chartID) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const { dtUtc, jd } = matchJdAndDatetime(dt);
@@ -323,12 +324,16 @@ export class AstrologicController {
       if (valid) {
         const chartObj = hasChart ? chartData.toObject() : {};
         const iTime = await toIndianTimeJd(jd, geo);
-        const periodStart = iTime.dayBefore ? iTime.prevSet.jd : iTime.rise.jd;
-        const periodEnd = iTime.dayBefore ? iTime.rise.jd : iTime.set.jd;
+        const dayBefore = fetchNightAndDay ? false : iTime.dayBefore;
+        const periodStart = dayBefore ? iTime.prevSet.jd : iTime.rise.jd;
+        const periodEnd = dayBefore ? iTime.rise.jd : iTime.set.jd;
+        data.set('rise', iTime.rise.jd);
+        data.set('set', iTime.set.jd);
         const chart = new Chart(chartObj);
         chart.setAyanamshaItemByNum(27);
         const moon = chart.graha('mo');
-        const current = await calcMoonDataJd(jd);
+        const moonJd = fetchNightAndDay ? iTime.rise.jd : jd;
+        const current = await calcMoonDataJd(moonJd);
         data.set('geo', {
           birth: chart.geo,
           current: geo
@@ -341,19 +346,32 @@ export class AstrologicController {
           },
           current
         });
+        const isDayTime = fetchNightAndDay ? true : iTime.isDayTime;
         const bird = matchBirdByNak(moon.nakshatra27, chart.moonWaxing);
 
-        const currentBirds = matchDayBirdKeys(iTime.weekDayNum, current.waxing, iTime.isDayTime); 
+        const currentBirds = matchDayBirdKeys(iTime.weekDayNum, current.waxing, isDayTime); 
         data.set('bird', {
           birth: bird.key,
           current: currentBirds
         });
         const yamaData = calcYamaSets(jd, periodStart, periodEnd, current.waxing, iTime.isDayTime, bird.num, iTime.weekDayNum);
-        Object.entries(yamaData).forEach(entry => {
-          const [key, val] = entry;
-          data.set(key, val);
-        });
-        data.set('indianTime', iTime);
+        data.set('yamas', yamaData.yamas);
+        data.set('lengthJd', yamaData.lengthJd);
+        data.set('period', iTime.isDayTime ? 'day' : 'night');
+        if (fetchNightAndDay) {
+          const jd2 = jd + 0.5;
+          const iTime2 = await toIndianTimeJd(jd2, geo);
+          const moon2Jd = iTime.set.jd;
+          const next = await calcMoonDataJd(moon2Jd);
+          const period2Start = iTime.set.jd;
+          const period2End = iTime.nextRise.jd;
+          const yamaData2 = calcYamaSets(jd2, period2Start, period2End, next.waxing, false, bird.num, iTime2.weekDayNum);
+          data.set('yama2', yamaData2.yamas);
+          data.set('lengthJd2', yamaData2.lengthJd);
+          const mn = data.get('moon');
+          data.set('moon', {...mn, next});
+          data.set('period2', iTime2.isDayTime ? 'day' : 'night');
+        }
       }
       status = HttpStatus.OK;
     } else {
