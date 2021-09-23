@@ -12,7 +12,7 @@ import {
 import { GeoService } from './geo.service';
 import { isNumeric, validISODateString } from '../lib/validators';
 import { locStringToGeo } from '../astrologic/lib/converters';
-import { currentISODate } from 'src/astrologic/lib/date-funcs';
+import { currentISODate } from '../astrologic/lib/date-funcs';
 
 @Controller('geo')
 export class GeoController {
