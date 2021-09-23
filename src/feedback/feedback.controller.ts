@@ -142,9 +142,11 @@ export class FeedbackController {
       isRating: true,
       value
     } as CreateFlagDTO;
+    const numSwipes = await this.feedbackService.countRecentLikeability(from, value);
     const data = { 
       flag: await this.feedbackService.saveFlag(flagData),
-      fcm: await this.sendNotification(flagData)
+      fcm: await this.sendNotification(flagData),
+      count: numSwipes,
     }
     return res.status(HttpStatus.OK).json(data);
   }

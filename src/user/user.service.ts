@@ -460,7 +460,7 @@ export class UserService {
       );
       let newPayments: Array<Payment> = [];
       if (payment instanceof Object) {
-        if (currIndex < 0) {
+        if (currIndex >= 0) {
           const prevPayments = statuses[currIndex].payments;
           if (prevPayments instanceof Array) {
             newPayments = [...prevPayments, payment];

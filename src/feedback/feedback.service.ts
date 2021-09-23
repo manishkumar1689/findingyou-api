@@ -211,6 +211,32 @@ export class FeedbackService {
     return data instanceof Object? extractSimplified(data, ['_id', '__v', 'active']) : { valid: false};
   }
 
+  async countRecentLikeability(userId: string, refNum = 1) {
+    const nowTs = new Date().getTime();
+    const oneDayAgo = new Date(nowTs - (24 * 60 * 60 * 1000));
+    const criteria = {
+      key: 'likeability',
+      user: userId,
+      value: refNum,
+      modifiedAt: { $gte: oneDayAgo }
+    };
+    return await this.flagModel.count(criteria);
+  }
+
+  matchLikeabilityKey(keyRef = 'like') {
+    const key = keyRef.toLowerCase();
+    switch (key) {
+      case 'like':
+        return 1;
+      case 'superlike':
+        return 2;
+      case 'pass':
+        return 0;
+      default:
+        return -5;
+    }
+  }
+
   async activateUser(user: string, active = true) {
     const criteria = this.buildFilterCriteria(user, '');
     return await this.flagModel.updateMany(criteria, {
