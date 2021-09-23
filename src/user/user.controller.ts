@@ -55,6 +55,7 @@ import { SampleRecordDTO } from './dto/sample-record.dto';
 import { simplifyChart } from '../astrologic/lib/member-charts';
 import { MediaItemDTO } from './dto/media-item.dto';
 import { IFlag } from '../lib/notifications';
+import { Model } from 'mongoose';
 
 @Controller('user')
 export class UserController {
@@ -340,22 +341,45 @@ export class UserController {
   }
 
   // Fetch a particular user using ID
-  @Get('item/:userID')
-  async getUser(@Res() res, @Param('userID') userID) {
-    const user = await this.userService.getUser(userID);
-    if (!user) {
-      throw new NotFoundException('User does not exist!');
+  @Get('item/:userID/:mode?')
+  async getUser(@Res() res, @Param('userID') userID, @Param('mode') mode) {
+    const result: Map<string, any> = new Map();
+    result.set('user', null);
+    const validUserId =  userID.length === 24 && /^[0-9a-f]+$/i.test(userID);
+    const user = validUserId ? await this.userService.getUser(userID) : null;
+    let errorMsg = '';
+    const valid = user instanceof Model;
+    if (!valid) {
+      errorMsg = 'User does not exist!';
     }
+    const userObj: any = user instanceof Model ? user.toObject() : {};
+    result.set('valid', valid);
+    const strMode = notEmptyString(mode,1)? mode : "";
+    const postProcessPreferences = ['full','detailed'].includes(strMode);
+    const addUserChart = ['member','chart', 'full'].includes(strMode);
     let preferences: any[] = [];
-    if (user instanceof Object) {
+    if (postProcessPreferences && user instanceof Object) {
       if (user.preferences instanceof Array && user.preferences.length > 0) {
         if (user.constructor.name === "model") {
           const userObj = user.toObject();
           preferences = await this.settingService.processPreferences(userObj.preferences);
+          result.set('preferences', user);
         }
       }
     }
-    return res.status(HttpStatus.OK).json({user, preferences});
+    if (valid && addUserChart) {
+      const chart = await this.astrologicService.getUserBirthChart(userID);
+      if (chart instanceof Object) {
+        const chartObj = simplifyChart(chart);
+        userObj.chart = chartObj;
+      }
+    }
+    result.set('user', userObj);
+    if (notEmptyString(errorMsg)) {
+      result.set('msg', errorMsg);
+    }
+    const status = valid ? HttpStatus.OK : HttpStatus.NOT_FOUND;
+    return res.status(status).json(Object.fromEntries(result.entries()));
   }
 
   // Fetch preference options
