@@ -1,9 +1,29 @@
 import { KeyNum, KeyNumValue } from "../interfaces";
 
 const birdMap = { 1: 'vulture', 2: 'owl', 3: 'crow', 4: 'cock', 5: 'peacock' };
-// vul-owl-cro-coc-pec
-// vul-coc-owl-pec-cro 1, 4, 2, 5, 3
-// owl-pec-cro-vul-coc 2, 5, 3, 1, 4
+
+const birdAttributes = [
+  {
+    waxing: { color: 'white', directions: ['E']},
+    waning: { color: 'black', directions: ['E']}
+  },
+  {
+    waxing: { color: 'yellow', directions: ['S']},
+    waning: { color: 'red', directions: ['N']}
+  },
+  {
+    waxing: { color: 'red', directions: ['W','NW']},
+    waning: { color: 'yellow', directions: ['S'] }
+  },
+  {
+    waxing: { color: 'green', directions: ['N','NE']},
+    waning: { color: 'white', directions: ['M']}
+  },
+  {
+    waxing: { color: 'black', directions: ['M']},
+    waning: { color: 'green', directions: ['W']}
+  }
+];
 
 const waxWaneKey = (isWaxing = true): string => isWaxing ? 'waxing' : 'waning';
 
@@ -1074,7 +1094,9 @@ export const matchDayBirds = (dayNum = 0, isWaxing = true, isDayTime = true) => 
 
 export const matchDayBirdKeys = (dayNum = 0, isWaxing = true, isDayTime = true) => {
   const { ruling, dying } = matchDayBirds(dayNum, isWaxing, isDayTime);
-  return { ruling: matchBirdKeyByNum(ruling), dying: matchBirdKeyByNum(dying) };
+  const rulingB = expandBirdAttributes(ruling);
+  const dyingB = expandBirdAttributes(dying);
+  return { ruling: rulingB, dying: dyingB };
 }
 
 export const matchBirdActivityKey = (birdNum = 0, dayNum = 0, waxing = false, isDayTime = false): string => {
@@ -1153,10 +1175,13 @@ export const calcSubPeriods = (subPeriods: KeyNumValue[], birds: KeyNum[], birth
   const lengthJd = endJd - startJd;
   const numBirds = birds.length;
   let prevJd = startJd;
-  const activityKeys = subPeriods.map((period, index) => {
+  const dirKeys = subPeriods.map((period, index) => {
     const birdItem = index < numBirds? birds[index] : { key: "", num: 0 };
     return matchBirdDirectionByActivity(birdItem.num, period.key, waxing);
   })
+  const activityKeys = subPeriods.map(period => {
+    return period.key;
+  });
   return subPeriods.map((period, index) => {
     const startSubJd = prevJd;
     const endSubJd = prevJd + (lengthJd * period.value); 
@@ -1167,11 +1192,12 @@ export const calcSubPeriods = (subPeriods: KeyNumValue[], birds: KeyNum[], birth
     const bird = birdMatched ? birdItem.key : "";
     const birdNum = birdMatched ? birdItem.num : 0;
     const shiftIndex = (index - yamaIndex + 5) % 5;
-    const direction = activityKeys[shiftIndex];
+    const direction = dirKeys[shiftIndex];
     const rulers = matchBirdRulers(birdNum, isDayTime, period.key);
     const relation = matchBirdRelations(birthBirdNum, birdNum, waxing);
+    const actKey = activityKeys[shiftIndex];
     const score = calcPanchaPakshiStrength(birthBirdNum, dayActivity, period.key, waxing);
-    return { bird, ...period, start: startSubJd, end: endSubJd, current, direction, rulers, relation, score };
+    return { bird, ...period, key: actKey, start: startSubJd, end: endSubJd, current, direction, rulers, relation, score };
   });
 }
 
@@ -1217,4 +1243,10 @@ export const calcPanchaPakshiStrength = (birdNum = 0, activityKey = "", subKey =
     score = (percent / 100) * multiplier;
   }
   return score;
+}
+
+export const expandBirdAttributes = (birdNum = 0, isWaxing = true) => {
+  const birdIndex = birdNum > 0 && birdNum <= 5? birdNum - 1 : 0;
+  const attrs = birdAttributes[birdIndex][waxWaneKey(isWaxing)];
+  return { key: birdMap[birdNum], ...attrs };
 }
