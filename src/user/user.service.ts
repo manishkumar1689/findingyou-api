@@ -184,6 +184,11 @@ export class UserService {
     return notEmptyString(tokenRef, 5)? tokenRef : '';
   }
 
+  async getUserStatus(userID: string): Promise<any> {
+    const statusData = await this.getUser(userID, ['active', 'roles','status']);
+    return statusData instanceof Model ? statusData.toObject() : {};
+  }
+
   // Get a single User
   async findOneByToken(token): Promise<User> {
     return await this.userModel.findOne({ token }).exec();

@@ -643,6 +643,19 @@ export class UserController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+
+  @Get('member-status/:userID/:mode?')
+  async memberStatus(@Res() res, @Param('userID') userID, @Param('mode') mode) {
+    const data = await this.userService.getUserStatus(userID);
+    const keys = Object.keys(data);
+    const statusItems = keys.includes('status') && data.status instanceof Array? data.status : [];
+    const nowTs = new Date().getTime();
+    const status = statusItems.filter(st => {
+      return st.current;
+    });
+    return res.status(HttpStatus.OK).json({...data, status});
+  }
+
   // Fetch a particular user using ID
   @Post('remove-status')
   async removeStatus(@Res() res, @Body() removeStatusDTO: RemoveStatusDTO) {

@@ -32,6 +32,14 @@ const permissionValues = [
     name: 'May upload up to 15 images per profile type',
   },
   {
+    key: 'like_25_plus',
+    name: 'May like more than 25 people in 24 hours',
+  },
+  {
+    key: 'superlike_1_plus',
+    name: 'May super-like more than 1 person in 24 hours',
+  },
+  {
     key: 'contact_other_members',
     name: 'Contact other members',
   },
