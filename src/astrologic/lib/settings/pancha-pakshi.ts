@@ -1193,10 +1193,10 @@ export const calcSubPeriods = (subPeriods: KeyNumValue[], birds: KeyNum[], birth
     const birdNum = birdMatched ? birdItem.num : 0;
     const shiftIndex = (index - yamaIndex + 5) % 5;
     const direction = dirKeys[shiftIndex];
-    const rulers = matchBirdRulers(birdNum, isDayTime, period.key);
-    const relation = matchBirdRelations(birthBirdNum, birdNum, waxing);
     const actKey = activityKeys[shiftIndex];
-    const score = calcPanchaPakshiStrength(birthBirdNum, dayActivity, period.key, waxing);
+    const rulers = matchBirdRulers(birdNum, isDayTime, actKey);
+    const relation = matchBirdRelations(birthBirdNum, birdNum, waxing);
+    const score = calcPanchaPakshiStrength(birthBirdNum, dayActivity, actKey, waxing);
     return { bird, ...period, key: actKey, start: startSubJd, end: endSubJd, current, direction, rulers, relation, score };
   });
 }
