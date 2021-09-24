@@ -18,6 +18,7 @@ import { CreateFlagDTO } from './dto/create-flag.dto';
 import { pushFlag } from '../lib/notifications';
 import { notEmptyString } from '../lib/validators';
 import { SwipeDTO } from './dto/swipe.dto';
+import { smartCastInt } from '../lib/converters';
 
 @Controller('feedback')
 export class FeedbackController {
@@ -140,7 +141,7 @@ export class FeedbackController {
       key: 'likeability',
       type: 'int',
       isRating: true,
-      value
+      value: smartCastInt(value, 0)
     } as CreateFlagDTO;
     const numSwipes = await this.feedbackService.countRecentLikeability(from, value);
     const data = { 
