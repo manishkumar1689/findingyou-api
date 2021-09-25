@@ -310,7 +310,7 @@ export class AstrologicController {
   @Get('pancha-pakshi/:chartID/:loc/:dt?/:mode?')
   async pankshaPanchaDaya(@Res() res, @Param('chartID') chartID, @Param('loc') loc, @Param('dt') dt, @Param('mode') mode) {
     let status = HttpStatus.BAD_REQUEST;
-    let data: Map<string, any> = new Map(Object.entries({ jd: 0, dtUtc: '', valid: false, geo: null, rise: 0, set: 0, moon: null, bird: null, yamas: [] }));
+    let data: Map<string, any> = new Map(Object.entries({ jd: 0, dtUtc: '', valid: false, geo: null, rise: 0, set: 0, nextRise: 0, riseDt: '', setDt: '', nextRiseDt: '', moon: null, bird: null, yamas: [] }));
     const fetchNightAndDay = mode === 'dual';
     if (notEmptyString(chartID) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
@@ -329,8 +329,15 @@ export class AstrologicController {
         const dayBefore = fetchNightAndDay ? false : iTime.dayBefore;
         const periodStart = dayBefore ? iTime.prevSet.jd : iTime.rise.jd;
         const periodEnd = dayBefore ? iTime.rise.jd : setBefore? iTime.nextSet.jd : iTime.set.jd;
-        data.set('rise', iTime.rise.jd);
-        data.set('set', iTime.set.jd);
+        const riseJd = setBefore ? periodStart : iTime.rise.jd;
+        const setJd = setBefore ? periodEnd : iTime.set.jd;
+        data.set('rise', riseJd);
+        data.set('set', setJd);
+        data.set('nextRise', iTime.nextRise.jd);
+        data.set('riseDt', julToISODate(riseJd));
+        data.set('setDt', julToISODate(setJd));
+        data.set('nextRiseDt', julToISODate(iTime.nextRise.jd));
+
         const chart = new Chart(chartObj);
         chart.setAyanamshaItemByNum(27);
         const moon = chart.graha('mo');
