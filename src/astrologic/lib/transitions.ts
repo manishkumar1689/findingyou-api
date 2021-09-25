@@ -39,6 +39,7 @@ export interface SunTransitionData {
   prevRise: TimeSet;
   prevSet: TimeSet;
   nextRise: TimeSet;
+  nextSet?: TimeSet;
 }
 
 interface TransitionInput {
@@ -206,6 +207,7 @@ export const calcSunTransJd = async (
     prevRise: prev.rise,
     prevSet: prev.set,
     nextRise: next.rise,
+    nextSet: next.set,
   };
 };
 

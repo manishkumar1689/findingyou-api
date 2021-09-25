@@ -67,6 +67,8 @@ export class IndianTime extends BaseObject {
 
   nextRise = () => this._sunData.nextRise;
 
+  nextSet = () => this._sunData.nextSet;
+
   isDayTime = () => this._jDay.isDayTime();
 
   dayBefore = () => this._jDay.dayBefore();
@@ -107,7 +109,7 @@ export class IndianTime extends BaseObject {
   }
 
   sunData() {
-    const keys = ['prevRise', 'prevSet', 'rise', 'set', 'nextRise'];
+    const keys = ['prevRise', 'prevSet', 'rise', 'set', 'nextRise','nextSet'];
     
     const items: Array<BodyTransition> = keys.map(type => {
       const tr = this[type]();

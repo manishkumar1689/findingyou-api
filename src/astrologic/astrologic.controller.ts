@@ -325,9 +325,10 @@ export class AstrologicController {
       if (valid) {
         const chartObj = hasChart ? chartData.toObject() : {};
         const iTime = await toIndianTimeJd(jd, geo);
+        const setBefore = fetchNightAndDay ? iTime.rise.jd > iTime.set.jd : false;
         const dayBefore = fetchNightAndDay ? false : iTime.dayBefore;
         const periodStart = dayBefore ? iTime.prevSet.jd : iTime.rise.jd;
-        const periodEnd = dayBefore ? iTime.rise.jd : iTime.set.jd;
+        const periodEnd = dayBefore ? iTime.rise.jd : setBefore? iTime.nextSet.jd : iTime.set.jd;
         data.set('rise', iTime.rise.jd);
         data.set('set', iTime.set.jd);
         const chart = new Chart(chartObj);
@@ -368,7 +369,7 @@ export class AstrologicController {
           const iTime2 = await toIndianTimeJd(jd2, geo);
           const moon2Jd = iTime.set.jd;
           const next = await calcMoonDataJd(moon2Jd);
-          const period2Start = iTime.set.jd;
+          const period2Start = periodEnd;
           const period2End = iTime.nextRise.jd;
           const isDayTime2 = !isDayTime;
           const yamaData2 = calcYamaSets(jd2, period2Start, period2End, next.waxing, isDayTime2, bird.num, iTime2.weekDayNum);
