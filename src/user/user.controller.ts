@@ -613,7 +613,7 @@ export class UserController {
     return hashMapToObject(userData);
   }
 
-  // Fetch a particular user using ID
+  // Edit user status to update role with optional payment data
   @Post('edit-status')
   async editStatus(@Res() res, @Body() editStatusDTO: EditStatusDTO) {
     const roles = await this.getRoles();
@@ -634,12 +634,17 @@ export class UserController {
         payment,
         expiryDt,
       );
-      data = {
-        valid: true,
-        userData,
-      };
+      let userObj = userData instanceof Model ? userData.toObject() : {};
+      const keys = Object.keys(userObj);
+      if (keys.includes("password")) {
+        userObj = extractSimplified(userObj, ['coords','password', 'preferences', 'profiles', 'contacts', 'placenames']);
+        delete userObj.geo._id;
+      }
+      data = { 
+        valid: keys.length > 3,
+        ...userObj
+      }
     }
-
     return res.status(HttpStatus.OK).json(data);
   }
 
