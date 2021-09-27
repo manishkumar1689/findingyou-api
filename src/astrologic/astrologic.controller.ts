@@ -363,6 +363,7 @@ export class AstrologicController {
           birth: bird.key,
           current: currentBirds
         });
+        console.log({isDayTime});
         const yamaData = calcYamaSets(jd, periodStart, periodEnd, current.waxing, isDayTime, bird.num, iTime.weekDayNum);
         data.set('yamas', yamaData.yamas);
         data.set('lengthJd', yamaData.lengthJd);

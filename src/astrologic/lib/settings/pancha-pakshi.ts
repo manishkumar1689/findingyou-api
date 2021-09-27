@@ -864,6 +864,17 @@ export const birdActivities = [
   }
 ];
 
+export const birdActivityYamaCycle = {
+  waxing: {
+    day: ['eating', 'walking', 'ruling', 'sleeping', 'dying'],
+    night: ['dying', 'walking', 'sleeping', 'eating', 'ruling']
+  },
+  waning: {
+    day: ['walking', 'eating', 'dying', 'sleeping', 'ruling'],
+    night: ['eating', 'sleeping', 'walking', 'dying', 'ruling'],
+  }
+}
+
 export const dayBirdMatches = [ 
   {
     num: 1,
@@ -1072,9 +1083,8 @@ export const matchBirdDayRuler = (dayNum = 0, waxing = false, isNight = false) =
 
 export const matchBirdActivity = (birdNum = 0, dayNum = 0, waxing = true, isDayTime = true) => {
   const row = birdActivities.find(row => row.num === dayNum);
-  const itemSet = row instanceof Object ? waxing ? row.waxing : row.waning : null;
+  const itemSet = row instanceof Object ? row[waxWaneKey(waxing)] : null;
   const actKeys = itemSet instanceof Object ? isDayTime ? itemSet.day : itemSet.night : [];
-  
   const birdIndex = birdNum - 1;
   const key = birdNum <= 5 && birdNum > 0 ? birdMap[birdNum] : "";
   const activity = birdIndex >= 0 && birdIndex < actKeys.length? actKeys[birdIndex] : "";
@@ -1149,9 +1159,13 @@ export const calcTimeBird = (birthBirdNum = 0, yama = 0, isWaxing = true, isDayT
   return birds[yamaIndex];
 }
 
-export const matchSubPeriods = (dayNum = 0, isWaxing = true, isDayTime = true) => {
+export const matchSubPeriods = (birdNum = 0, dayNum = 0, isWaxing = true, isDayTime = true) => {
   const row = birdActivities.find(row => row.num === dayNum);
-  const activityKeys: string[] = row instanceof Object ? row[waxWaneKey(isWaxing)][dayNightKey(isDayTime)] : [];
+  const birdIndex = birdNum > 0? birdNum - 1 : 0;
+  const startAct: string[] = row instanceof Object ? row[waxWaneKey(isWaxing)][dayNightKey(isDayTime)][birdIndex] : [];
+  const sequence = birdActivityYamaCycle[waxWaneKey(isWaxing)][dayNightKey(isDayTime)];
+  const startIndex = sequence.indexOf(startAct)
+  const activityKeys = [0, 1, 2, 3, 4].map(ki => sequence[(ki + startIndex) % 5]);
   return activityKeys.map(ak => {
     const ys = yamaSubdivisions.find(ya => ya.key === ak);
     if (ys instanceof Object) {
@@ -1215,7 +1229,7 @@ export const calcYamaSets = (jd = 0, startJd = 0, endJd = 0, isWaxing = true, is
   });
   
   const yama = (Math.floor(progress * 5) % 5) + 1;
-  const subPeriods = matchSubPeriods(dayNum, isWaxing, isDayTime);
+  const subPeriods = matchSubPeriods(birthBirdNum, dayNum, isWaxing, isDayTime);
   const birds = calcTimeBirds(birthBirdNum, isWaxing, isDayTime);
   const dayActivity = matchBirdActivityKey(birthBirdNum, dayNum, isWaxing, isDayTime);
   const yamaSets = yamas.map((yama, index) => {
