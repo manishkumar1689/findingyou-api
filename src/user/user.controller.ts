@@ -56,6 +56,7 @@ import { simplifyChart } from '../astrologic/lib/member-charts';
 import { MediaItemDTO } from './dto/media-item.dto';
 import { IFlag } from '../lib/notifications';
 import { Model } from 'mongoose';
+import { ActiveStatusDTO } from './dto/active-status.dto';
 
 @Controller('user')
 export class UserController {
@@ -646,6 +647,36 @@ export class UserController {
       }
     }
     return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Put('toggle-active/:userID')
+  async toggleActive(@Res() res, @Param('userID') userID, @Body() activeStatusDTO: ActiveStatusDTO) {
+    const { active, reason, expiryDate  } = activeStatusDTO;
+    let expiryDt = null;
+    let HStatus = HttpStatus.NOT_ACCEPTABLE;
+    if (expiryDate) {
+      expiryDt = new Date(expiryDate);
+    }
+    const userData = await this.userService.updateActive(
+      userID,
+      active,
+      reason,
+      expiryDate,
+    );
+    if (userData instanceof Object) {
+      HStatus = HttpStatus.OK;
+    }
+    const keys = Object.keys(userData);
+    let userObj: any = {};
+    if (keys.length > 0) {
+      userObj = extractSimplified(userData, ['coords','password', 'preferences', 'profiles', 'contacts', 'placenames']);
+      delete userObj.geo._id;
+    }
+    const data = { 
+      valid: keys.length > 3,
+      ...userObj
+    }
+    return res.status(HStatus).json(data);
   }
 
 

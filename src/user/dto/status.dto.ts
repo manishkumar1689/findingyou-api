@@ -12,6 +12,9 @@ export class StatusDTO {
   readonly payments: PaymentDTO[];
 
   @ApiProperty()
+  readonly reason?: string;
+
+  @ApiProperty()
   readonly expiresAt?: Date;
 
   @ApiProperty()

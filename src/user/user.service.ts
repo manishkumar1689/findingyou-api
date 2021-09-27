@@ -527,6 +527,58 @@ export class UserService {
     }
   }
 
+  async updateActive(userID = "", active = false, reason = "", expiryDate = null, removeLastBlock = false) {
+    const user = await this.userModel.findById(userID);
+    if (user instanceof Model) {
+      let userObj = user.toObject();
+      const { status } = userObj;
+      const statusItems = status instanceof Array ? status : [];
+      const numItems = statusItems.length;
+      const reverseBlockIndex = statusItems.map(st => st).reverse().findIndex(st => st.role === "block");
+      const lastBlockIndex = reverseBlockIndex >= 0? (numItems - 1) - reverseBlockIndex : -1;
+      const dt = new Date();
+      const expiresAt = expiryDate instanceof Date ? expiryDate : validISODateString(expiryDate)? new Date(expiryDate) : new Date(dt.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const block = lastBlockIndex >= 0 ? statusItems[lastBlockIndex] : {
+        role: "block",
+        current: active,
+        expiresAt,
+        createdAt: dt,
+        modifiedAt: dt
+      }
+      if (notEmptyString(reason)) {
+        block.reason = reason;
+      }
+      if (active) {
+        if (lastBlockIndex >= 0) {
+          block.current = false;
+          block.expiresAt = new Date(dt.getTime() - (3600 * 1000))
+          block.reason = "unblocked";
+        }
+      } else {
+        if (lastBlockIndex >= 0) {
+          if (!removeLastBlock) {
+            block.expiresAt = expiresAt;
+            block.modifiedAt = dt;
+          } else {
+            statusItems.splice(lastBlockIndex, 1);
+          }
+        }
+      }
+      if (lastBlockIndex < 0 && !active) {
+        statusItems.push(block)
+      } else {
+        statusItems[lastBlockIndex] = block;
+      }
+      const editedUser = await this.userModel.findByIdAndUpdate(userID, {
+        active,
+        status: statusItems,
+        modifiedAt: dt
+      });
+      return {...userObj, active, status: statusItems, modifiedAt: dt};
+    }
+    return {};
+  }
+
   async removeStatus(userID, statusKey: string): Promise<User> {
     const user = await this.userModel.findById(userID);
     if (user) {
