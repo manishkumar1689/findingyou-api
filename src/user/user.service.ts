@@ -550,26 +550,28 @@ export class UserService {
       }
       if (active) {
         if (lastBlockIndex >= 0) {
-          block.current = false;
-          block.expiresAt = new Date(dt.getTime() - (3600 * 1000))
-          block.reason = "unblocked";
+          if (removeLastBlock) {
+            statusItems.splice(lastBlockIndex, 1);
+          } else {
+            block.current = false;
+            block.expiresAt = new Date(dt.getTime() - (3600 * 1000))
+            block.reason = "unblocked";
+          }
         }
       } else {
         if (lastBlockIndex >= 0) {
           if (!removeLastBlock) {
             block.expiresAt = expiresAt;
             block.modifiedAt = dt;
-          } else {
-            statusItems.splice(lastBlockIndex, 1);
           }
         }
       }
       if (lastBlockIndex < 0 && !active) {
         statusItems.push(block)
-      } else {
+      } else if (!removeLastBlock) {
         statusItems[lastBlockIndex] = block;
       }
-      const editedUser = await this.userModel.findByIdAndUpdate(userID, {
+      await this.userModel.findByIdAndUpdate(userID, {
         active,
         status: statusItems,
         modifiedAt: dt

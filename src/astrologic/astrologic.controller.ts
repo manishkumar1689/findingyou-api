@@ -363,7 +363,7 @@ export class AstrologicController {
           birth: bird.key,
           current: currentBirds
         });
-        console.log({isDayTime});
+        //console.log({isDayTime, wx: current.waxing, current});
         const yamaData = calcYamaSets(jd, periodStart, periodEnd, current.waxing, isDayTime, bird.num, iTime.weekDayNum);
         data.set('yamas', yamaData.yamas);
         data.set('lengthJd', yamaData.lengthJd);
@@ -380,14 +380,14 @@ export class AstrologicController {
           const period2Start = periodEnd;
           const period2End = iTime.nextRise.jd;
           const isDayTime2 = !isDayTime;
-          const yamaData2 = calcYamaSets(jd2, period2Start, period2End, next.waxing, isDayTime2, bird.num, iTime2.weekDayNum);
+          const yamaData2 = calcYamaSets(jd2, period2Start, period2End, next.waxing, isDayTime2, bird.num, iTime.weekDayNum);
           data.set('yamas2', yamaData2.yamas);
           data.set('lengthJd2', yamaData2.lengthJd);
           const mn = data.get('moon');
           data.set('moon', {...mn, next});
           const bd = data.get('bird');
-          const nextBirds = matchDayBirdKeys(iTime2.weekDayNum, next.waxing, iTime2.isDayTime); 
-          data.set('bird', { ...bd, next: nextBirds })
+          const nextBirds = matchDayBirdKeys(iTime.weekDayNum, next.waxing, isDayTime2);
+          data.set('bird', { ...bd, next: nextBirds });
           data.set('period2', isDayTime2 ? 'day' : 'night');
           special.night = getSunMoonSpecialValues(moon2Jd, iTime2, next.sunLng, next.lng);
         }

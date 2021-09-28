@@ -651,7 +651,7 @@ export class UserController {
 
   @Put('toggle-active/:userID')
   async toggleActive(@Res() res, @Param('userID') userID, @Body() activeStatusDTO: ActiveStatusDTO) {
-    const { active, reason, expiryDate  } = activeStatusDTO;
+    const { active, reason, expiryDate, removeBlockHistory  } = activeStatusDTO;
     let expiryDt = null;
     let HStatus = HttpStatus.NOT_ACCEPTABLE;
     if (expiryDate) {
@@ -661,7 +661,8 @@ export class UserController {
       userID,
       active,
       reason,
-      expiryDate,
+      expiryDt,
+      removeBlockHistory === true
     );
     if (userData instanceof Object) {
       HStatus = HttpStatus.OK;
