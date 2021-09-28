@@ -896,14 +896,14 @@ export class UserService {
     }
   }
 
-  async saveProfileImage(userID: string, type: string, fileRef = null) {
+  async saveProfileImage(userID: string, type: string, fileRef = null, mediaRef = '') {
     const user = await this.userModel.findById(userID);
     const data = {
       user: null,
       valid: false,
     };
     if (user instanceof Object) {
-      const userData = this.assignProfile(user, type, fileRef);
+      const userData = this.assignProfile(user, type, fileRef, mediaRef);
       const dt = new Date();
       data.user = await this.userModel.findByIdAndUpdate(
         userID,
@@ -919,7 +919,7 @@ export class UserService {
   }
 
   // aux. method to assign extra profile data
-  assignProfile(user: User, profileRef = null, mediaItemRef = null) {
+  assignProfile(user: User, profileRef = null, mediaItemRef = null, mediaRef = '') {
     const userData = user.toObject();
     let profile: any = {};
     let hasProfileData = false;

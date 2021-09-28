@@ -962,23 +962,20 @@ export class UserController {
     return res.json(data);
   }
 
-  @Post('profile-upload/:userID/:type/:name?/:title?')
+  @Post('profile-upload/:userID/:type/:mediaRef?/:title?')
   @UseInterceptors(FileInterceptor('file'))
   async upload(
     @Res() res,
     @Param('userID') userID,
     @Param('type') type,
-    @Param('name') name = '',
+    @Param('mediaRef') mediaRef = '',
     @Param('title') title = '',
     @UploadedFile() file,
   ) {
     let data: any = { valid: false, fileData: null };
     if (file instanceof Object) {
       const { originalname, mimetype, size, buffer } = file;
-      const fn = notEmptyString(name, 5)
-        ? name
-        : generateFileName(userID, originalname);
-
+      const fn = generateFileName(userID, originalname);
       const fileData = {
         filename: fn,
         mime: mimetype,

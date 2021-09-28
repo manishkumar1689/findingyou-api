@@ -30,7 +30,6 @@ export const PreferenceSchema = new mongoose.Schema({
       'range_number', // numeric range e.g 18-40 stored as [18,40]
       'array_float',
       'multiple_key_scales', // multiple scales defined by rules
-      'text', // user entered text
     ],
     default: 'string',
     required: true,
