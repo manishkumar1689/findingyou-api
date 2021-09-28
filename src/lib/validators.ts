@@ -131,3 +131,7 @@ export const validEmail = (email: string) => {
   const rgx = /^(([^<>()\[\]\.,;:\s@\"]+(\.[^<>()\[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i;
   return email.length > 5 && rgx.test(email);
 };
+
+export const isSystemFileName = (str = null) => {
+  return typeof str === 'string' && /^[0-9a-f]{20,32}-\d+(\.\w{3,6})$/i.test(str);
+}

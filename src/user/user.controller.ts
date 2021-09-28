@@ -1003,6 +1003,7 @@ export class UserController {
           userID,
           type,
           fileData,
+          mediaRef
         );
         if (savedSub.valid) {
           data.user = savedSub.user;

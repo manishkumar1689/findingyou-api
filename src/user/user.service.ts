@@ -9,7 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { hashSalt } from '../.config';
 import { generateHash } from '../lib/hash';
 import * as moment from 'moment-timezone';
-import { inRange, isNumeric, notEmptyString, validISODateString } from '../lib/validators';
+import { inRange, isNumeric, isSystemFileName, notEmptyString, validISODateString } from '../lib/validators';
 import { Role } from './interfaces/role.interface';
 import { Payment } from './interfaces/payment.interface';
 import { PaymentOption } from './interfaces/payment-option.interface';
@@ -918,7 +918,13 @@ export class UserService {
     return data;
   }
 
-  // aux. method to assign extra profile data
+  /** 
+   * aux. method to assign extra profile data
+   * @param user User,
+   * profileRef Object | string either the profile type or profile object
+   * mediaItemRef Object
+   * mediaRef string name of file to be replaced 
+  */
   assignProfile(user: User, profileRef = null, mediaItemRef = null, mediaRef = '') {
     const userData = user.toObject();
     let profile: any = {};
@@ -967,8 +973,9 @@ export class UserService {
             let items = editedProfile.get('mediaItems');
             let itemIndex = -1;
             if (items instanceof Array) {
+              const fileName = isSystemFileName(mediaRef) ? mediaRef : mediaItem.filename;
               itemIndex = items.findIndex(
-                mi => mi.filename === mediaItem.filename,
+                mi => mi.filename === fileName,
               );
             } else {
               items = [];
