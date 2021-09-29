@@ -9,14 +9,14 @@ import * as bcrypt from 'bcrypt';
 import { hashSalt } from '../.config';
 import { generateHash } from '../lib/hash';
 import * as moment from 'moment-timezone';
-import { inRange, isNumeric, isSystemFileName, notEmptyString, validISODateString } from '../lib/validators';
+import { inRange, isNumeric, isSystemFileName, notEmptyString, validISODateString, validUri } from '../lib/validators';
 import { Role } from './interfaces/role.interface';
 import { Payment } from './interfaces/payment.interface';
 import { PaymentOption } from './interfaces/payment-option.interface';
 import { PaymentDTO } from './dto/payment.dto';
 import { ProfileDTO } from './dto/profile.dto';
 import { MatchedOption, PrefKeyValue } from './settings/preference-options';
-import { smartCastBool, smartCastFloat } from '../lib/converters';
+import { smartCastBool, smartCastFloat, smartCastInt } from '../lib/converters';
 import { MediaItemDTO } from './dto/media-item.dto';
 import { PreferenceDTO } from './dto/preference.dto';
 
@@ -156,6 +156,12 @@ export class UserService {
             break;
           case 'age':
             filter.set('dob', this.translateAgeRange(val));
+            break;
+          case 'genders':
+            filter.set('preferences', this.translateTargetGenders(val))
+            break;
+          case 'age_range':
+            filter.set('preferences', this.translateAgeRangeWithin(val))
             break;
         }
       }
@@ -573,6 +579,7 @@ export class UserService {
       }
       await this.userModel.findByIdAndUpdate(userID, {
         active,
+        roles: statusItems.filter(st => st.current).map(st => st.role),
         status: statusItems,
         modifiedAt: dt
       });
@@ -973,7 +980,7 @@ export class UserService {
             let items = editedProfile.get('mediaItems');
             let itemIndex = -1;
             if (items instanceof Array) {
-              const fileName = isSystemFileName(mediaRef) ? mediaRef : mediaItem.filename;
+              const fileName = isSystemFileName(mediaRef) || validUri(mediaRef) ? mediaRef : mediaItem.filename;
               itemIndex = items.findIndex(
                 mi => mi.filename === fileName,
               );
@@ -1217,6 +1224,44 @@ export class UserService {
     };
   }
 
+  translateTargetGenders(val = null) {
+    const availableKeys = ['f', 'm', 'nb'];
+    const opts = typeof val === 'string' ? val.split(',') : val instanceof Array ? val.filter(s => typeof s === 'string') : [];
+    const matchedOpts = opts.filter(k => availableKeys.includes(k))
+    const optList: string[][] = [matchedOpts];
+    if (matchedOpts.length > 1) {
+      optList.push([matchedOpts[0]]);
+      optList.push([matchedOpts[1]]);
+      optList.push([matchedOpts[1], matchedOpts[0]]);
+    }
+    if (matchedOpts.length === 3) {
+      optList.push([matchedOpts[2]]);
+      optList.push([matchedOpts[1], matchedOpts[2]]);
+      optList.push([matchedOpts[2], matchedOpts[1]]);
+      optList.push([matchedOpts[2], matchedOpts[1], matchedOpts[0]]);
+      optList.push([matchedOpts[2], matchedOpts[0], matchedOpts[1]]);
+      optList.push([matchedOpts[1], matchedOpts[0], matchedOpts[2]]);
+      optList.push([matchedOpts[1], matchedOpts[2], matchedOpts[0]]);
+      optList.push([matchedOpts[0], matchedOpts[2], matchedOpts[1]]);
+    }
+    return {
+      $elemMatch: {
+        "key": { $in: ["gender", "genders"]},
+        "value": { $in: optList }
+        }
+    }
+  }
+
+  translateAgeRangeWithin(val = null) {
+    const age = smartCastInt(val, 0);
+    return  {
+      $elemMatch: {
+        key: "age_range",
+        value: { $gte: age, $lte: age } 
+    }
+}
+  }
+
   mapPreferenceKey(key: string) {
     const machineName = key.toLowerCase();
     switch (machineName) {
@@ -1240,7 +1285,7 @@ export class UserService {
     exludedIds = []
   ) {
     if (query instanceof Object) {
-      const excludeKeys = ['age', 'near', 'gender'];
+      const excludeKeys = ['age', 'near', 'gender','genders', 'age_range'];
       const matchedOptions: MatchedOption[] = Object.entries(query)
         .filter(entry => excludeKeys.includes(entry[0]) == false)
         .map(entry => {

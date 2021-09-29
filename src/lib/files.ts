@@ -217,7 +217,7 @@ export const generateFileName = (userID: string, originalname: string) => {
     let ts = new Date().getTime() % 1000000;
     filename = buildFileName(userID, ts, extension);
     if (mediaFileExists(filename)) {
-      ts = new Date().getTime() % 999888;
+      ts = new Date().getTime() % 999888 + Math.floor(Math.random() * 111);
       filename = buildFileName(userID, ts, extension);
     }
   }
