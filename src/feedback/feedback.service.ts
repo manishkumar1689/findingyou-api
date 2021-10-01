@@ -7,7 +7,7 @@ import { notEmptyString, validISODateString } from '../lib/validators';
 import { CreateFlagDTO } from './dto/create-flag.dto';
 import { Feedback } from './interfaces/feedback.interface';
 import { Flag, SimpleFlag } from './interfaces/flag.interface';
-import { IFlag, mapLikeabilityRelations, mapUserFlag } from '../lib/notifications';
+import { IFlag } from '../lib/notifications';
 
 @Injectable()
 export class FeedbackService {
