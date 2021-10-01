@@ -163,6 +163,11 @@ export class UserService {
           case 'age_range':
             filter.set('preferences', this.translateAgeRangeWithin(val))
             break;
+          case 'ids':
+            if (val instanceof Array) {
+              filter.set('_id', { $in: val });
+            }
+            break;
         }
       }
     }
@@ -317,6 +322,7 @@ export class UserService {
     roles: Array<Role> = [],
     currentUser = null
   ) {
+    
     const hasCurrentUser = currentUser instanceof Object;
     const userObj = hasCurrentUser ? currentUser.toObject() : {};
     const userData = new Map<string, any>();
@@ -399,7 +405,7 @@ export class UserService {
   }
 
   // Edit User details
-  async updateUser(userID: string, createUserDTO: CreateUserDTO, roles: Role[] = []): Promise<User> {
+  async updateUser(userID: string, createUserDTO: CreateUserDTO, roles: Role[] = []): Promise<{user: User, keys: string[]}> {
     const user = await this.userModel.findById(userID);
     const userObj = this.transformUserDTO(createUserDTO, false, roles, user);
     const hasProfileText = Object.keys(createUserDTO).includes("publicProfileText") && notEmptyString(createUserDTO.publicProfileText, 2);
@@ -419,7 +425,12 @@ export class UserService {
       { new: true },
     );
     
-    return this.removeHiddenFields(updatedUser);
+    return { 
+      keys: Object.keys(userObj).filter(k => {
+        return k === 'status'? userObj[k].length > 0 : true
+      }),
+      user: this.removeHiddenFields(updatedUser)
+    };
   }
 
   // Edit User password
@@ -811,12 +822,12 @@ export class UserService {
   removeHiddenFields(user = null) {
     const userObj = user instanceof Object ? user.toObject() : {};
     const keys = Object.keys(userObj);
-    if (keys.includes('password')) {
-      delete userObj.password;
-    }
-    if (keys.includes('__v')) {
-      delete userObj.__v;
-    }
+    const hiddenKeys = ['password', 'coords', '__v'];
+    hiddenKeys.forEach(key => {
+      if (keys.includes(key)) {
+        delete userObj[key];
+      }
+    });
     return userObj;
   }
 
@@ -1353,7 +1364,7 @@ export class UserService {
         const edited = { preferences } as CreateUserDTO;
         const ud = await this.updateUser(_id, edited);
         if (ud instanceof Object) {
-          updatedUsers.push(ud);
+          updatedUsers.push(ud.user);
         }
         //updatedUsers.push(test,gender, preferences.find(po => po.key === 'gender'));
       }

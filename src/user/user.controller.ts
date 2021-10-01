@@ -20,7 +20,7 @@ import { SettingService } from '../setting/setting.service';
 import { GeoService } from '../geo/geo.service';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { LoginDTO } from './dto/login.dto';
-import { validEmail, notEmptyString } from '../lib/validators';
+import { validEmail, notEmptyString, isNumeric } from '../lib/validators';
 import { smartCastInt } from '../lib/converters';
 import { Request } from 'express';
 import { fromBase64, toBase64 } from '../lib/hash';
@@ -54,7 +54,7 @@ import { SampleDataDTO } from './dto/sample-data.dto';
 import { SampleRecordDTO } from './dto/sample-record.dto';
 import { simplifyChart } from '../astrologic/lib/member-charts';
 import { MediaItemDTO } from './dto/media-item.dto';
-import { IFlag } from '../lib/notifications';
+import { IFlag, mapLikeabilityRelations } from '../lib/notifications';
 import { Model } from 'mongoose';
 import { ActiveStatusDTO } from './dto/active-status.dto';
 
@@ -172,10 +172,11 @@ export class UserController {
     @Body() createUserDTO: CreateUserDTO,
   ) {
     const roles = await this.getRoles();
-    const user = await this.userService.updateUser(userID, createUserDTO, roles);
+    const {user, keys } = await this.userService.updateUser(userID, createUserDTO, roles);
     return res.status(HttpStatus.OK).json({
       message: 'User has been updated successfully',
       user,
+      editedKeys: keys
     });
   }
 
@@ -234,6 +235,12 @@ export class UserController {
     @Req() request: Request,
   ) {
     const { query } = request;
+    const items = await this.fetchMembers(start, limit, query);
+    return res.json(items);
+  }
+
+  async fetchMembers(start = 0, limit = 100, queryRef = null) {
+    const query: any = queryRef instanceof Object ? queryRef : {};
     const startInt = smartCastInt(start, 0);
     const limitInt = smartCastInt(limit, 100);
     let simpleMode = 'basic';
@@ -288,17 +295,28 @@ export class UserController {
           preferences = await this.settingService.processPreferences(user.preferences);
       }
      const filteredFlags = hasUser? { 
-        from: flags.from.filter(fl => filterFlagsByUser(fl, refUserId)),
-        to: flags.to.filter(fl => filterFlagsByUser(fl, refUserId))
+        from: flags.from.filter(fl => filterFlagsByUser(fl, refUserId)).map(fl => extractSimplified(fl, ['user'])),
+        to: flags.to.filter(fl => filterFlagsByUser(fl, refUserId)).map(fl => extractSimplified(fl, ['user']))
       } : {};
       const filteredLikes = hasUser? { 
-        from: flags.likeability.from.filter(fl => filterFlagsByUser(fl, refUserId)),
-        to: flags.likeability.to.filter(fl => filterFlagsByUser(fl, refUserId))
+        from: mapLikeabilityRelations(flags.likeability.from, refUserId),
+        to: mapLikeabilityRelations(flags.likeability.to, refUserId)
       } : {};
-
       items.push({...user, preferences, chart, hasChart, flags: filteredFlags, likeability: filteredLikes });
     }
     items.sort((a,b) => b.hasChart ? 1 : -1);
+    return items;
+  }
+
+  @Get('likes/:userID/:startRef?')
+  async getLikesToUser(@Res() res, @Param('userID') userID, @Param('startRef') startRef) {
+    const monthRef = /^\d+m$/i;
+    const startDate = isNumeric(startRef) ? parseFloat(startRef) : monthRef.test(startRef) ? parseInt(startRef.replace(/[^0-9]\./, ''), 10) / 12 : startRef;
+    const flags = await this.feedbackService.fetchLikes(userID, startDate);
+    const items = await this.fetchMembers(0, flags.length, {
+      ids: flags.map(f => f.user),
+      user: userID
+    });
     return res.json(items);
   }
 

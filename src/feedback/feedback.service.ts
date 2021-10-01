@@ -7,7 +7,7 @@ import { notEmptyString, validISODateString } from '../lib/validators';
 import { CreateFlagDTO } from './dto/create-flag.dto';
 import { Feedback } from './interfaces/feedback.interface';
 import { Flag, SimpleFlag } from './interfaces/flag.interface';
-import { IFlag } from '../lib/notifications';
+import { IFlag, mapLikeabilityRelations, mapUserFlag } from '../lib/notifications';
 
 @Injectable()
 export class FeedbackService {
@@ -80,6 +80,18 @@ export class FeedbackService {
       to: hasRows? rows.filter(row => row.targetUser.toString() === userID && excludeKeys.includes(row.key) === false).map(row => mapUserFlag(row, true)) : [],
       likeability
     }
+  }
+
+  async fetchLikes(userId = '', startDate = null) {
+    const dt = validISODateString(startDate)? startDate : typeof startDate === 'number' ? yearsAgoString(startDate) : yearsAgoString(1);
+    const criteriaObj = {
+      key: 'likeability',
+      value: { $gt: 0 },
+      targetUser: userId,
+      modifiedAt: { $gte: dt }
+    };
+    const rows = await this.flagModel.find(criteriaObj).select({ _id: 0, __v: 0, type: 0, isRating: 0, options: 0, active: 0, targetUser: 0 });
+    return rows;
   }
 
   async fetchFilteredUserInteractions(userId = "", notFlags = [], preFetchFlags = false) {

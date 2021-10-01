@@ -20,6 +20,57 @@ export interface IFlag {
   createdAt?: string;
 }
 
+export interface FlagVal {
+  key?: string;
+  value: any;
+  type?: string;
+  modifiedAt?: string;
+}
+
+export const mapUserFlag = (item, toMode = false): FlagVal => {
+  if (item instanceof Object) {
+    const { key, value, type, user, targetUser, modifiedAt } = item;
+    const refUser = toMode? user : targetUser;
+    return { key, type, value, modifiedAt };
+  } else {
+    return { value: 0, key: '' };
+  }
+}
+
+export const mapLikeability = (value = -1) => {
+  switch (value) {
+    case 2:
+      return 'superlike';
+    case 1:
+      return 'like';
+    case 0:
+      return 'pass';
+    default:
+      return '';
+  }
+}
+
+const filterLike = (row = null, userID = '') => {
+  const keys = row instanceof Object ? Object.keys(row) : [];
+  const user = keys.includes('user') ? row.user : '';
+  return user.toString() === userID;
+}
+
+export const mapLikeabilityRelations = (rows: any[] = [], userID = '') => {
+  const items = rows.filter(row => filterLike(row, userID)).map(row => mapLikeabilityRelation(row));
+  return items.length > 0 ? items[0] : { value: ''};
+}
+
+export const mapLikeabilityRelation = (item = null): FlagVal => {
+  if (item instanceof Object) {
+    const { value, modifiedAt } = item;
+    const keyVal = mapLikeability(value);
+    return { value: keyVal, modifiedAt };
+  } else {
+    return { value: '' };
+  }
+}
+
 const castValueToString = (val: any, type: string): string => {
   switch (type) {
     case 'boolean':
