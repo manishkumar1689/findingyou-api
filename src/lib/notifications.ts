@@ -20,6 +20,23 @@ export interface IFlag {
   createdAt?: string;
 }
 
+export interface FlagVal {
+  key?: string;
+  value: any;
+  type?: string;
+  modifiedAt?: string;
+}
+
+export const mapUserFlag = (item, toMode = false, likeMode = false): IFlag => {
+  if (item instanceof Object) {
+    const { key, value, type, user, targetUser, modifiedAt } = item;
+    const refUser = toMode? user : targetUser;
+    return likeMode? { value, user: refUser, modifiedAt } : { key, type, value, user: refUser, modifiedAt };
+  } else {
+    return { value: 0, user: '' };
+  }
+}
+
 export const mapLikeability = (value = -1) => {
   switch (value) {
     case 2:

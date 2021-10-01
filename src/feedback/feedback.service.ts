@@ -7,7 +7,7 @@ import { notEmptyString, validISODateString } from '../lib/validators';
 import { CreateFlagDTO } from './dto/create-flag.dto';
 import { Feedback } from './interfaces/feedback.interface';
 import { Flag, SimpleFlag } from './interfaces/flag.interface';
-import { IFlag } from '../lib/notifications';
+import { mapUserFlag } from '../lib/notifications';
 
 @Injectable()
 export class FeedbackService {
@@ -62,15 +62,7 @@ export class FeedbackService {
     const excludeKeys = [likeKey];
     const likeRows = rows.filter(row => row.key === likeKey);
     const hasLikeRows = likeRows.length > 0;
-    const mapUserFlag = (item, toMode = false, likeMode = false): IFlag => {
-      if (item instanceof Object) {
-        const { key, value, type, user, targetUser, modifiedAt } = item;
-        const refUser = toMode? user : targetUser;
-        return likeMode? { value, user: refUser, modifiedAt } : { key, type, value, user: refUser, modifiedAt };
-      } else {
-        return { value: 0, user: '' };
-      }
-    }
+    
     const likeability = { 
       from: hasLikeRows? likeRows.filter(row => row.user.toString() === userID).map(row => mapUserFlag(row, false, true)) : [],
       to: hasLikeRows? likeRows.filter(row => row.targetUser.toString() === userID).map(row => mapUserFlag(row, true, true)) : [],
