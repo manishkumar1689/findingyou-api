@@ -244,6 +244,10 @@ export class JulDate {
     return ((this.refDayNum + epoch.weekDay - 1) % 7) + 1;
   }
 
+  get weekDaySun() {
+    return ((this.refDayNum + epoch.weekDay) % 7) + 1;
+  }
+
   offsetDisplay(padded = false, alwaysShowMinutes = false) {
     const mins = Math.abs(this.tzOffset) / 60;
     const hours = Math.floor(mins / 60);

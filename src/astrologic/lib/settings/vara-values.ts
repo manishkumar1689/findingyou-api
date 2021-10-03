@@ -18,7 +18,7 @@ const varaValues = [
 export const calcVara = (jd = 0, iTime: ITime, sunRise = null) => {
   const { dayLength, dayStart, weekDayNum } = iTime;
   const percent = ((jd - dayStart ) / dayLength) * 100;
-  const weekDayIndex = (weekDayNum + varaValues.length) % varaValues.length;
+  const weekDayIndex = (weekDayNum + varaValues.length - 1) % varaValues.length;
   const varaRow = varaValues[weekDayIndex];
   if (varaRow) {
     return {

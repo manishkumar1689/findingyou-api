@@ -8,7 +8,7 @@ import {
   getAyanamsa,
   getAzalt,
 } from './sweph-async';
-import { calcJulDate, jdToDateTime } from './date-funcs';
+import { calcJulDate, jdToDateTime, julToISODate } from './date-funcs';
 import { calcDeclinationFromLngLatEcl, calcInclusiveTwelfths, calcRectAscension, subtractLng360 } from './math-funcs';
 import {
   calcTransitionJd,
@@ -63,6 +63,7 @@ import {
 import { capitalize } from './helpers';
 import houseTypeData from './settings/house-type-data';
 import { async } from 'rxjs/internal/scheduler/async';
+import { julToDateParts } from './julian-date';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 

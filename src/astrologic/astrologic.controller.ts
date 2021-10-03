@@ -389,7 +389,7 @@ export class AstrologicController {
           const nextBirds = matchDayBirdKeys(iTime.weekDayNum, next.waxing, isDayTime2);
           data.set('bird', { ...bd, next: nextBirds });
           data.set('period2', isDayTime2 ? 'day' : 'night');
-          special.night = getSunMoonSpecialValues(moon2Jd, iTime2, next.sunLng, next.lng);
+          special.night = getSunMoonSpecialValues(moon2Jd, iTime, next.sunLng, next.lng);
         }
 
         data.set('special', special);
