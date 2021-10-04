@@ -1,3 +1,5 @@
+import { isNumeric } from "./validators";
+
 export const objectToQueryString = (obj: any): string => {
   let str = '';
   if (obj instanceof Object) {
@@ -125,3 +127,9 @@ export const roundNumber = (num: number, places = 6) => {
     return 0;
   }
 };
+
+
+export const toStartRef = (startRef = null) => {
+  const monthRef = /^\d+m$/i;
+  return isNumeric(startRef) ? parseFloat(startRef) : monthRef.test(startRef) ? parseInt(startRef.replace(/[^0-9]\./, ''), 10) / 12 : startRef;
+}

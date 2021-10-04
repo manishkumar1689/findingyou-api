@@ -21,7 +21,7 @@ import { GeoService } from '../geo/geo.service';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { LoginDTO } from './dto/login.dto';
 import { validEmail, notEmptyString, isNumeric } from '../lib/validators';
-import { smartCastInt } from '../lib/converters';
+import { smartCastInt, toStartRef } from '../lib/converters';
 import { Request } from 'express';
 import { fromBase64, toBase64 } from '../lib/hash';
 import { maxResetMinutes } from '../.config';
@@ -246,6 +246,13 @@ export class UserController {
     let simpleMode = 'basic';
     let ayanamshaKey = 'true_citra';
     const queryKeys = Object.keys(query);
+    let filterIds = [];
+    // filter ids by members who have liked or superliked the referenced user
+    if (queryKeys.includes('liked') && queryKeys.includes('user')) {
+      const startDate = toStartRef(query.liked);
+      const flags = await this.feedbackService.fetchLikes(query.user, startDate);
+      filterIds = flags instanceof Array ? flags.map(fl => fl.user) : [];
+    }
     if (queryKeys.includes("mode") && notEmptyString(query.mode)) {
       switch (query.mode) {
         case 'simple':
@@ -274,7 +281,8 @@ export class UserController {
     const preFetchFlags = notFlags.length > 0 || trueFlags.length > 0;
     const prefOptions = await this.settingService.getPreferences();
     const { userFlags, excludedIds } = await this.feedbackService.fetchFilteredUserInteractions(userId, notFlags, preFetchFlags);
-    const data = await this.userService.members(startInt, limitInt, query, excludedIds);    
+    const queryParams = filterIds.length > 0 ? { query, ids: filterIds } : query;
+    const data = await this.userService.members(startInt, limitInt, queryParams, excludedIds);    
     const users = this.userService.filterByPreferences(
       data,
       query,
@@ -308,16 +316,21 @@ export class UserController {
     return items;
   }
 
-  @Get('likes/:userID/:startRef?')
-  async getLikesToUser(@Res() res, @Param('userID') userID, @Param('startRef') startRef) {
+  @Get('likes/:userID/:startRef?/:mode?')
+  async getLikesToUser(@Res() res, @Param('userID') userID, @Param('startRef') startRef, @Param('mode') mode) {
     const monthRef = /^\d+m$/i;
     const startDate = isNumeric(startRef) ? parseFloat(startRef) : monthRef.test(startRef) ? parseInt(startRef.replace(/[^0-9]\./, ''), 10) / 12 : startRef;
+    const fullMode = mode === 'full';
     const flags = await this.feedbackService.fetchLikes(userID, startDate);
-    const items = await this.fetchMembers(0, flags.length, {
-      ids: flags.map(f => f.user),
-      user: userID
-    });
-    return res.json(items);
+    if (!fullMode) {
+      return res.status(HttpStatus.OK).json(flags)
+    } else {
+      const items = await this.fetchMembers(0, flags.length, {
+        ids: flags.map(f => f.user),
+        user: userID
+      });
+      return res.json(items);
+    }
   }
 
   // Fetch a particular user using ID
