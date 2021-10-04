@@ -274,10 +274,10 @@ export class UserController {
     }
     const hasUser = (queryKeys.includes("user") && notEmptyString(query.user, 16));
     const userId = hasUser ? query.user : '';
-    const hasNotFlags = queryKeys.includes("nf") && notEmptyString(query.nf);
-    const hasTrueFlags = queryKeys.includes("tf") && notEmptyString(query.tf);
-    const notFlags = hasNotFlags ? query.nf.split(',') : [];
-    const trueFlags = hasTrueFlags ? query.tf.split(',') : [];
+    const notFlagStr = queryKeys.includes("nf") ? query.nf : queryKeys.includes("not")? query.not : "";
+    const trueFlagStr = queryKeys.includes("tf") ? query.tf : queryKeys.includes("flags")? query.not : "";
+    const notFlags = notEmptyString(notFlagStr) ? notFlagStr.split(',') : [];
+    const trueFlags = notEmptyString(trueFlagStr) ? trueFlagStr.split(',') : [];
     const preFetchFlags = notFlags.length > 0 || trueFlags.length > 0;
     const prefOptions = await this.settingService.getPreferences();
     const { userFlags, excludedIds } = await this.feedbackService.fetchFilteredUserInteractions(userId, notFlags, preFetchFlags);
