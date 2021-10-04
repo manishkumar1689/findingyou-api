@@ -189,6 +189,16 @@ export class UserService {
     return user;
   }
 
+   // Get a single User
+   async maxLikes(userID: string): Promise<User> {
+    const fields = ['roles'];
+    const user = await this.userModel
+      .findById(userID)
+      .select(fields.join(' '))
+      .exec();
+    return user;
+  }
+
   async getUserDeviceToken(userID: string): Promise<string> {
     const tokenData = await this.getUser(userID, ['deviceToken']);
     const tokenRef = tokenData instanceof Object ? tokenData.deviceToken : '';
