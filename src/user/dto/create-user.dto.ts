@@ -20,6 +20,9 @@ export class CreateUserDTO {
   readonly password: string;
 
   @ApiProperty()
+  readonly oldPassword?: string;
+
+  @ApiProperty()
   readonly mode: string;
 
   @ApiProperty()
@@ -75,4 +78,8 @@ export class CreateUserDTO {
 
   @ApiProperty()
   readonly modifiedAt: Date;
+
+  /* admin user id */
+  @ApiProperty()
+  readonly admin?: string;
 }

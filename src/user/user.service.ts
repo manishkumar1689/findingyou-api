@@ -330,26 +330,29 @@ export class UserService {
     inData = null,
     isNew: boolean = false,
     roles: Array<Role> = [],
-    currentUser = null
+    currentUser = null,
+    mayEditPassword = false
   ) {
     
     const hasCurrentUser = currentUser instanceof Object;
     const userObj = hasCurrentUser ? currentUser.toObject() : {};
     const userData = new Map<string, any>();
     const dt = new Date();
+    const userKeys = Object.keys(userObj);
     if (isNew) {
       userData.set('roles', ['active']);
     } else if (hasCurrentUser) {
       userData.set('status', userObj.status);
     }
-
     Object.entries(inData).forEach(entry => {
       const [key, val] = entry;
       switch (key) {
         case 'password':
-          const tsSalt = dt.getTime() % 16;
-          userData.set(key, bcrypt.hashSync(val, tsSalt));
-          userData.set('mode', 'local');
+          if (mayEditPassword) {
+            const tsSalt = dt.getTime() % 16;
+            userData.set(key, bcrypt.hashSync(val, tsSalt));
+            userData.set('mode', 'local');
+          }
           break;
         case 'role':
           if (typeof val === 'string') {
@@ -383,7 +386,9 @@ export class UserService {
           }
           break;
         default:
-          userData.set(key, val);
+          if (userKeys.includes(key)) {
+            userData.set(key, val);
+          }
           break;
       }
     });
@@ -415,9 +420,25 @@ export class UserService {
   }
 
   // Edit User details
-  async updateUser(userID: string, createUserDTO: CreateUserDTO, roles: Role[] = []): Promise<{user: User, keys: string[]}> {
+  async updateUser(userID: string, createUserDTO: CreateUserDTO, roles: Role[] = []): Promise<{user: User, keys: string[], message: string}> {
     const user = await this.userModel.findById(userID);
-    const userObj = this.transformUserDTO(createUserDTO, false, roles, user);
+    let message = 'User has been updated successfully';
+    const hasPassword = notEmptyString(createUserDTO.password);
+    let hasOldPassword = false;
+    let mayEditPassword = user instanceof Object && notEmptyString(user.password);
+    if (hasPassword) {
+      hasOldPassword = notEmptyString(createUserDTO.oldPassword, 6);
+      if (hasOldPassword) {
+        mayEditPassword = bcrypt.compareSync(createUserDTO.oldPassword, user.password);
+      } else {
+        const hasAdmin = notEmptyString(createUserDTO.admin, 12);
+        mayEditPassword = hasAdmin? await this.isAdminUser(createUserDTO.admin) : false;
+      }
+    }
+    if (hasPassword && !mayEditPassword) {
+      message = hasOldPassword? `May not edit password as the old password could not be matched` : `Not authorised to edit the password`;
+    }
+    const userObj = this.transformUserDTO(createUserDTO, false, roles, user, mayEditPassword);
     const hasProfileText = Object.keys(createUserDTO).includes("publicProfileText") && notEmptyString(createUserDTO.publicProfileText, 2);
     if (hasProfileText) {
       const profile = { type: 'public', text: createUserDTO.publicProfileText} as ProfileDTO;
@@ -439,7 +460,8 @@ export class UserService {
       keys: Object.keys(userObj).filter(k => {
         return k === 'status'? userObj[k].length > 0 : true
       }),
-      user: this.removeHiddenFields(updatedUser)
+      user: this.removeHiddenFields(updatedUser),
+      message
     };
   }
 

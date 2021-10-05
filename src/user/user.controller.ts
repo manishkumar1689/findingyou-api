@@ -36,7 +36,7 @@ import roleValues from './settings/roles';
 import paymentValues from './settings/payments-options';
 import countryValues from './settings/countries';
 import surveyList from './settings/survey-list';
-import permissionValues from './settings/permissions';
+import permissionValues, { limitPermissions } from './settings/permissions';
 import { Role } from './interfaces/role.interface';
 import { EditStatusDTO } from './dto/edit-status.dto';
 import { PaymentOption } from './interfaces/payment-option.interface';
@@ -172,9 +172,11 @@ export class UserController {
     @Body() createUserDTO: CreateUserDTO,
   ) {
     const roles = await this.getRoles();
-    const {user, keys } = await this.userService.updateUser(userID, createUserDTO, roles);
-    return res.status(HttpStatus.OK).json({
-      message: 'User has been updated successfully',
+    const {user, keys, message } = await this.userService.updateUser(userID, createUserDTO, roles);
+    let status = user instanceof Object && keys.length > 0 ? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
+    
+    return res.status(status).json({
+      message,
       user,
       editedKeys: keys
     });
@@ -365,9 +367,12 @@ export class UserController {
 
   @Get('permissions')
   async listPermissions(@Res() res) {
+    const storedLimits = await this.settingService.getByKey('permission_limits');
+    const limits = storedLimits instanceof Array ? storedLimits : limitPermissions;
     const data = {
       valid: permissionValues instanceof Array,
       items: permissionValues,
+      limits
     };
     return res.status(HttpStatus.OK).json(data);
   }
