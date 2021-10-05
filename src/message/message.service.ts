@@ -6,7 +6,7 @@ import { Message } from './interfaces/message.interface';
 import { MailerService, mail } from '@nest-modules/mailer';
 import { CreateMessageDTO } from './dto/create-message.dto';
 import { mailDetails, mailService, webBaseUrl } from '../.config';
-import { isNumeric } from 'src/lib/validators';
+import { isNumeric } from '../lib/validators';
 //import { logMail, logMailError } from '../lib/logger';
 //import { sendElasticMail } from '../lib/elasticmail';
 
