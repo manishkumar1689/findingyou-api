@@ -23,7 +23,7 @@ import { LoginDTO } from './dto/login.dto';
 import { validEmail, notEmptyString, isNumeric } from '../lib/validators';
 import { smartCastInt, toStartRef } from '../lib/converters';
 import { Request } from 'express';
-import { fromBase64, toBase64 } from '../lib/hash';
+import { fromBase64, match6DigitsToken, toBase64, tokenTo6Digits } from '../lib/hash';
 import { maxResetMinutes } from '../.config';
 import * as bcrypt from 'bcrypt';
 import {
@@ -742,10 +742,21 @@ export class UserController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  async matchUserByHash(hash: string) {
-    const idStr = fromBase64(hash);
+  async matchUserByHash(hash: string, email = "") {
+    let idStr = fromBase64(hash);
     let user = null;
     let matched = false;
+    // digit mode is for use with the mobile app
+    const digitMode = isNumeric(hash) && validEmail(email);
+    if (digitMode) {
+      user =  await this.userService.findOneByEmail(email);
+      if (user instanceof Object) {
+        const tokenMatches = match6DigitsToken(user.token, hash);
+        if (tokenMatches) {
+          idStr = [user._id, user.token].join('__');
+        }
+      }
+    }
     if (idStr.includes('__')) {
       const [userID, tsStr] = idStr.split('__');
       const ts = Math.floor(parseFloat(tsStr));
@@ -753,10 +764,14 @@ export class UserController {
       const tsAgo = currTs - ts;
       const maxTs = maxResetMinutes * 60 * 1000;
       if (tsAgo <= maxTs) {
-        user = await this.userService.findOneByToken(tsStr);
-        if (user) {
-          const matchedUserId = extractDocId(user);
-          matched = matchedUserId === userID;
+        if (digitMode) {
+          matched = true;
+        } else {
+          user = await this.userService.findOneByToken(tsStr);
+          if (user) {
+            const matchedUserId = extractDocId(user);
+            matched = matchedUserId === userID;
+          }
         }
       }
     }
@@ -793,7 +808,7 @@ export class UserController {
     @Param('hash') hash,
     @Body() loginDTO: LoginDTO,
   ) {
-    let { user, matched } = await this.matchUserByHash(hash);
+    let { user, matched } = await this.matchUserByHash(hash, loginDTO.email);
     const userData = new Map<string, any>();
     let valid = false;
     if (!user) {
@@ -820,26 +835,33 @@ export class UserController {
         }
       }
       if (valid) {
-        extractObjectAndMerge(user, userData, ['password', 'status']);
+        extractObjectAndMerge(user, userData, ['password', 'status','preferences', 'coords']);
       }
     }
     userData.set('valid', valid);
     return res.status(HttpStatus.OK).json(hashMapToObject(userData));
   }
 
-  async triggerResetRequest(userID: string, @Res() res) {
+  async triggerResetRequest(userID: string, @Res() res, webMode = false) {
     const user = await this.userService.requestReset(userID, 'forgotten');
     const data = new Map<string, any>();
     data.set('valid', false);
     if (user) {
-      if (user.token) {
-        const resetLink = '/#reset/' + toBase64(userID + '__' + user.token);
+      if (notEmptyString(user.token, 6)) {
+        const resetLink = '/user/reset/' + toBase64(userID + '__' + user.token);
         data.set('token', user.token);
-        data.set('reset', true);
-        data.set('link', resetLink);
+        const resetNumber = tokenTo6Digits(user.token);
+        data.set('number', resetNumber);
+        
+        if (webMode) {
+          data.set('link', resetLink);
+        } else {
+          data.set('reset', true);
+        }
+        const resetHash = webMode ? resetLink : resetNumber;
         data.set('valid', true);
         const userName = [user.fullName, user.nickName].join(' ');
-        this.messageService.resetMail(user.identifier, userName, resetLink);
+        this.messageService.resetMail(user.identifier, userName, resetHash);
       }
     }
     return res.status(HttpStatus.OK).json(hashMapToObject(data));

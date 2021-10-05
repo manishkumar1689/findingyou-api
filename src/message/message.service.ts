@@ -6,6 +6,7 @@ import { Message } from './interfaces/message.interface';
 import { MailerService, mail } from '@nest-modules/mailer';
 import { CreateMessageDTO } from './dto/create-message.dto';
 import { mailDetails, mailService, webBaseUrl } from '../.config';
+import { isNumeric } from 'src/lib/validators';
 //import { logMail, logMailError } from '../lib/logger';
 //import { sendElasticMail } from '../lib/elasticmail';
 
@@ -64,8 +65,8 @@ export class MessageService {
     link: string = '',
   ): Promise<void> {
     const message = await this.messageModel.findOne({ key: 'password_reset' });
-
-    const sendParams = this.transformMailParams(message, email, toName, link);
+    const mode = isNumeric(link) ? 'number' : 'web';
+    const sendParams = this.transformMailParams(message, email, toName, link, mode);
 
     this.sendMail(sendParams, 'password_reset');
   }
@@ -111,6 +112,7 @@ export class MessageService {
     email: string,
     toName: string,
     resetLink: string = '',
+    mode = 'web'
   ) {
     let params = {
       to: email,
@@ -130,13 +132,19 @@ export class MessageService {
         .replace('%email', email);
       if (resetLink) {
         const fullLink = webBaseUrl + resetLink;
-        body = body.replace('%reset_link', fullLink);
+        if (mode === 'web') {
+          body = body.replace('%reset_link', fullLink);
+        } else {
+          body = body.replace('%reset_link', resetLink);
+        }
       }
       if (body.indexOf('%access_link') > 0) {
-        const fullAccessUrl = webBaseUrl + '/#login';
-        const linkTag =
-          '<a href="' + fullAccessUrl + '">' + fullAccessUrl + '</a>';
-        body = body.replace('%access_link', linkTag);
+        if (mode === 'web') {
+          const fullAccessUrl = webBaseUrl + '/user/login';
+          const linkTag =
+            '<a href="' + fullAccessUrl + '">' + fullAccessUrl + '</a>';
+          body = body.replace('%access_link', linkTag);
+        }
       }
       body = body.replace(/<p[^>]*?>\s*<br[^>]*?>\s*<\/p>/gi, '<p></p>');
       params.html = body;

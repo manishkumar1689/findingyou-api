@@ -467,10 +467,11 @@ export class UserService {
 
   // Edit User password
   async updatePassword(userID, password: string): Promise<User> {
+    const tsSalt = new Date().getTime() % 16;
     const updatedUser = await this.userModel.findByIdAndUpdate(
       userID,
       {
-        password: bcrypt.hashSync(password, hashSalt),
+        password: bcrypt.hashSync(password, tsSalt),
         token: '',
       },
       { new: true },
