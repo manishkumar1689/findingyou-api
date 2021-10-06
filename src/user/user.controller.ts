@@ -119,7 +119,7 @@ export class UserController {
       const userID = extractDocId(existing);
       const loginDt = await this.userService.registerLogin(userID, deviceToken);
       valid = existing.active;
-      const user = extractSimplified(existing, ['password', '__v']);
+      const user = extractSimplified(existing, ['password', '__v', 'coords']);
       const ud: Map<string, any> = new Map(Object.entries(user));
       ud.set('login', loginDt);
       const charts = await this.astrologicService.getChartsByUser(
@@ -149,7 +149,7 @@ export class UserController {
         const user = await this.userService.addUser(createUserDTO);
         if (user) {
           msg = 'User has been created successfully';
-          userData = extractSimplified(user, ['password']);
+          userData = extractSimplified(user, ['password', 'coords']);
           valid = true;
         } else {
           msg = 'Could not create a new user';

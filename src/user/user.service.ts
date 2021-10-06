@@ -20,8 +20,7 @@ import { smartCastBool, smartCastFloat, smartCastInt } from '../lib/converters';
 import { MediaItemDTO } from './dto/media-item.dto';
 import { PreferenceDTO } from './dto/preference.dto';
 
-const userSelectPaths = [
-  '_id',
+const userEditPaths = [
   'fullName',
   'nickName',
   'identifier',
@@ -33,12 +32,17 @@ const userSelectPaths = [
   'test',
   'geo',
   'placenames',
-  'status',
-  'profiles',
-  'preferences',
   'preview',
   'login',
   'preview',
+];
+
+const userSelectPaths = [
+  '_id',
+  ...userEditPaths,
+  'status',
+  'profiles',
+  'preferences',
   'createdAt',
   'modifiedAt',
 ];
@@ -389,7 +393,7 @@ export class UserService {
           }
           break;
         default:
-          if (userKeys.includes(key)) {
+          if (userEditPaths.includes(key)) {
             userData.set(key, val);
           }
           break;
