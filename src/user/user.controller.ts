@@ -32,7 +32,7 @@ import {
   extractObjectAndMerge,
   hashMapToObject,
 } from '../lib/entities';
-import roleValues from './settings/roles';
+import roleValues, { filterLikeabilityKey } from './settings/roles';
 import paymentValues from './settings/payments-options';
 import countryValues from './settings/countries';
 import surveyList from './settings/survey-list';
@@ -250,10 +250,17 @@ export class UserController {
     const queryKeys = Object.keys(query);
     let filterIds = [];
     // filter ids by members who have liked or superliked the referenced user
-    if (queryKeys.includes('liked') && queryKeys.includes('user')) {
-      const startDate = toStartRef(query.liked);
-      const flags = await this.feedbackService.fetchLikes(query.user, startDate);
-      filterIds = flags instanceof Array ? flags.map(fl => fl.user) : [];
+    const likeabilityKeys = ['liked', 'liked1','liked2','passed', 'likeability', 'likability'];
+    if (queryKeys.includes('user') && queryKeys.some(k => likeabilityKeys.includes(k))) {
+      const matchedKey = queryKeys.find(k => likeabilityKeys.includes(k));
+      const filterByLikeability = notEmptyString(matchedKey);
+      if (filterByLikeability) {
+        const {refNum, gte } = filterLikeabilityKey(matchedKey);
+        const startDate = toStartRef(query[matchedKey]);
+        const mutual = queryKeys.includes("mutual") && parseInt(query.mutual, 10) > 0;
+        const flags = await this.feedbackService.fetchByLikeability(query.user, startDate, refNum, gte, mutual);
+        filterIds = flags instanceof Array ? flags.filter(fl => !mutual || fl.isMutual).map(fl => fl.user) : [];
+      }
     }
     if (queryKeys.includes("mode") && notEmptyString(query.mode)) {
       switch (query.mode) {
@@ -318,13 +325,14 @@ export class UserController {
     return items;
   }
 
-  @Get('likes/:userID/:startRef?/:mode?')
-  async getLikesToUser(@Res() res, @Param('userID') userID, @Param('startRef') startRef, @Param('mode') mode) {
+  @Get('likes/:userID/:startRef?/:mode?/:fullMode')
+  async getLikesToUser(@Res() res, @Param('userID') userID, @Param('startRef') startRef, @Param('mode') mode, @Param('fullMode') fullMode) {
     const monthRef = /^\d+m$/i;
     const startDate = isNumeric(startRef) ? parseFloat(startRef) : monthRef.test(startRef) ? parseInt(startRef.replace(/[^0-9]\./, ''), 10) / 12 : startRef;
-    const fullMode = mode === 'full';
-    const flags = await this.feedbackService.fetchLikes(userID, startDate);
-    if (!fullMode) {
+    const returnFullObjects = fullMode === 'full';
+    const { refNum, gte} = filterLikeabilityKey(mode);
+    const flags = await this.feedbackService.fetchByLikeability(userID, startDate, refNum, gte);
+    if (!returnFullObjects) {
       return res.status(HttpStatus.OK).json(flags)
     } else {
       const items = await this.fetchMembers(0, flags.length, {

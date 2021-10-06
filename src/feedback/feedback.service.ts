@@ -74,16 +74,31 @@ export class FeedbackService {
     }
   }
 
-  async fetchLikes(userId = '', startDate = null) {
+  async fetchByLikeability(userId = '', startDate = null, refNum = 1, gte = false, mutual = false) {
+    const valueFilter = gte ? { $gte: refNum } : refNum;
     const dt = validISODateString(startDate)? startDate : typeof startDate === 'number' ? yearsAgoString(startDate) : yearsAgoString(1);
     const criteriaObj = {
       key: 'likeability',
-      value: { $gt: 0 },
-      targetUser: userId,
+      value: valueFilter,
       modifiedAt: { $gte: dt }
     };
-    const rows = await this.flagModel.find(criteriaObj).select({ _id: 0, __v: 0, type: 0, isRating: 0, options: 0, active: 0, targetUser: 0 });
-    return rows;
+    const criteriaObj1 = {...criteriaObj, targetUser: userId };
+    const rows = await this.flagModel.find(criteriaObj1).select({ _id: 0, __v: 0, type: 0, isRating: 0, options: 0, active: 0, targetUser: 0 });
+    
+    if (mutual) {
+      const mutualRows = await this.flagModel.find({
+        targetUser: { $in: rows.map(r => r.user )},
+        user: userId,
+        value: valueFilter
+      }).select({_id: 0, __v: 0, key: 0, type: 0, isRating: 0, options: 0, active: 0 });
+      const mutualIds = mutualRows.map(r => r.targetUser.toString());
+      return rows.map(r => {
+        const isMutual = mutualIds.includes(r.user.toString());
+        return { ...r.toObject(), isMutual }
+      });
+    } else {
+      return rows
+    };
   }
 
   async fetchFilteredUserInteractions(userId = "", notFlags = [], preFetchFlags = false) {

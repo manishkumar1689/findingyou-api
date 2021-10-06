@@ -313,7 +313,6 @@ export class UserService {
     roles: Array<Role> = [],
   ): Promise<User> {
     const userObj = this.transformUserDTO(createUserDTO, true, roles);
-
     const newUser = new this.userModel(userObj);
     return newUser.save();
   }
@@ -374,6 +373,10 @@ export class UserService {
         case 'mode':
           userData.set(key, val);
           break;
+          case 'identifier':
+          case 'email':
+            userData.set('identifier', val);
+            break;
         case 'geo':
           if (val instanceof Object) {
             const map = new Map(Object.entries(val));

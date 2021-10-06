@@ -14,6 +14,9 @@ const roleValues = [
     adminAccess: true,
     appAccess: false, // would have to use a separate account
     permissions: ['astrologic_testing', 'member_admin', 'dictionary_admin'],
+    likes: {
+
+    }
   },
   {
     key: 'blocked',
@@ -33,8 +36,8 @@ const roleValues = [
     permissions: ['basic_search', 'basic_matching'],
   },
   {
-    key: 'bronze',
-    name: 'Bronze member',
+    key: 'member_pearl',
+    name: 'Pearl member',
     overrides: [],
     adminAccess: false,
     appAccess: true,
@@ -42,8 +45,8 @@ const roleValues = [
     permissions: ['advanced_search', 'advanced_matching'],
   },
   {
-    key: 'silver',
-    name: 'Silver member',
+    key: 'member_ruby',
+    name: 'Ruby Member',
     overrides: [],
     adminAccess: false,
     appAccess: true,
@@ -52,23 +55,47 @@ const roleValues = [
   },
 
   {
-    key: 'star',
-    name: 'Star member',
+    key: 'member_diamond',
+    name: 'Diamond Member',
     overrides: [],
     adminAccess: false,
     appAccess: true,
     inherits: ['active', 'bronze'],
-    permissions: ['astrologic_charting'],
-  },
-  {
-    key: 'gold',
-    name: 'Gold member',
-    overrides: [],
-    adminAccess: false,
-    appAccess: true,
-    inherits: ['active', 'bronze', 'silver'],
-    permissions: ['personal_astrologer', 'personal_matchmaker'],
+    permissions: ['unlimited'],
   },
 ];
+
+export const filterLikeabilityKey = (key = "") => {
+  switch (key) {
+    case 'liked1':
+      return { 
+        refNum: 1,
+        gte: false
+      };
+    case 'liked2':
+    case 'superliked':
+    case 'superstarred':
+      return { 
+        refNum: 2, 
+        gte: false
+      };
+    case 'passed':
+      return { 
+        refNum: 0, 
+        gte: false
+      };
+    case 'likeability':
+    case 'likability':
+      return { 
+        refNum: 0, 
+        gte: true
+      };
+    default:
+      return { 
+        refNum: 1, 
+        gte: true
+      };
+  }
+}
 
 export default roleValues;
