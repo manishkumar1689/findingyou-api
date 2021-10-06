@@ -24,6 +24,7 @@ export const UserSchema = new mongoose.Schema({
   mode: {
     type: String,
     enum: ['local', 'google', 'facebook', 'astro-databank'],
+    default: 'local'
   },
   password: {
     type: String,
