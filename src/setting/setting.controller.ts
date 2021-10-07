@@ -95,10 +95,8 @@ export class SettingController {
           message = 'Setting has been updated successfully';
         }
       } else {
-        const type = 
         const settingDTO = {
           ...createSettingDTO,
-          type,
           key,
         };
         setting = await this.settingService.addSetting(settingDTO);
