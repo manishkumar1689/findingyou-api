@@ -20,8 +20,9 @@ import {
   validISODateString,
   notEmptyString,
   isNumber,
+  isLocationString,
 } from '../lib/validators';
-import { latLngParamsToGeo, locStringToGeo } from './lib/converters';
+import { correctDatetime, latLngParamsToGeo, locStringToGeo } from './lib/converters';
 import { applyAscendantToSimpleChart, simplifyAstroChart, simplifyChart } from './lib/member-charts';
 import {
   calcAllTransitions,
@@ -452,6 +453,39 @@ export class AstrologicController {
       data = await calcCoreGrahaPositions(dt, geo, ayanamshaKey);
     }
     return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('position-data/:loc?/:dt?/:user?/:ayanamsha?')
+  async corePositionsAndPredictions(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Param('user') user,
+    @Param('ayanamsha') ayanamsha,
+  ) {
+    const dtStr = validISODateString(dt)? dt : currentISODate();
+    const datetime = correctDatetime(dtStr);
+    const geo = isLocationString(loc)? locStringToGeo(loc) : null;
+    const hasGeo = geo instanceof Object;
+    const ayanamshaKey = notEmptyString(ayanamsha) ? ayanamsha : 'true_citra';
+    const result = await this.astrologicService.getGrahaPositions(datetime, geo, hasGeo, ayanamshaKey);
+    const grahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 'sa', 'ra', 'ke', 'ur', 'ne', 'pl'];
+    if (hasGeo) {
+      grahaKeys.unshift('as');
+    }
+    const lngEntries = result.valid? grahaKeys.map(gk => {
+      const row = result.items.find(g => g.key === gk);
+      const lng = row instanceof Object ? row.lng : 0;
+      return [gk, lng];
+    }) : [];
+    const longitudes = Object.fromEntries(lngEntries);
+    return res.status(HttpStatus.OK).json({
+      longitudes,
+      geo: result.geo,
+      datetime: result.datetime,
+      ayanamsha: result.ayanamsha,
+      tz: 'UTC'
+    });
   }
 
   @Get('all/:loc/:dt/:system?')

@@ -23,6 +23,7 @@ import {
   calcJulDate,
   calcJulDateFromParts,
   julToISODateObj,
+  zero2Pad,
 } from './lib/date-funcs';
 import {
   emptyString,
@@ -50,7 +51,7 @@ import {
   SlugNameVocab,
   matchVocabKey,
 } from './lib/settings/vocab-values';
-import { calcAllAspects, calcAyanamsha, calcCompactChartData } from './lib/core';
+import { calcAllAspects, calcAyanamsha, calcCompactChartData, calcCoreGrahaPositions } from './lib/core';
 import { Chart as ChartClass } from './lib/models/chart';
 import { Kuta } from './lib/kuta';
 import { AspectSet, buildDegreeRange, buildLngRange } from './lib/calc-orbs';
@@ -65,7 +66,6 @@ import { LngLat } from './lib/interfaces';
 import { simplifyChart } from './lib/member-charts';
 import { getAshtakavargaBodyGrid } from './lib/settings/ashtakavarga-values';
 import { GeoPos } from './interfaces/geo-pos';
-import { calcSunTransJd } from './lib/transitions';
 const { ObjectId } = Types;
 
 @Injectable()
@@ -672,6 +672,42 @@ export class AstrologicService {
       comboSteps.push({ $limit: limit });
     }
     return await this.pairedChartModel.aggregate(comboSteps);
+  }
+
+  async getGrahaPositions(dt = '', geo = null, addLagna = false, ayanamsha = 'true_citra') {
+    const dateParts = dt.split('.').shift().split(':');
+    const geoKeys = geo instanceof Object? Object.keys(geo) : [];
+    const hasGeo = geoKeys.includes('lat') && geoKeys.includes('lng');
+    const geoPos = hasGeo ? geo : {lat: 25, lng: 75, alt: 20 };
+    let datetime = '';
+    if (dateParts.length === 3) {
+      dateParts.pop();
+      const minutes = Math.floor(parseInt(dateParts[1]) / 5) * 5;
+      const dateKey = dateParts[0].split('-').join('').split('T').join('_') + zero2Pad(minutes);
+      const { lat, lng } = geoPos;
+      const geoKey = [lat, lng].map(v => Math.round(v * 100) / 100 ).join('_');
+      const lagnaKey = addLagna ? 'asc' : 'core';
+      const ayanamshaKey = notEmptyString(ayanamsha) ? ayanamsha : 'true_citra';
+      const key = ['grahapositions_', dateKey, geoKey, lagnaKey, ayanamshaKey].join('_');
+      datetime = [dateParts[0], zero2Pad(minutes), '00'].join(':');
+      const stored = await this.redisGet(key);
+      if (stored instanceof Object) {
+        const {bodies, ayanamsha} = stored;
+        if (bodies instanceof Array) {
+          return { items: bodies, key, geo: geoPos, ayanamsha, datetime, valid: true, cached: true };
+        }
+      } else {
+        const data = await calcCoreGrahaPositions(dt, geoPos, ayanamshaKey, addLagna);
+        if (data instanceof Object) {
+          const {bodies, ayanamsha} = data;
+          if (bodies instanceof Array) {
+            this.redisSet(key, data);
+            return { items: bodies, key, geo: geoPos, ayanamsha, datetime, valid: true, cached: false };
+          }
+        }
+      }
+    }
+    return { items: [], key: '', geo, valid: false, cached: false };
   }
 
   async findAspectMatch(

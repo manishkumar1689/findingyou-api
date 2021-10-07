@@ -143,3 +143,7 @@ export const validUri = (uri = null) => {
   const rgx = /^\w+:\/\/\w+[^ ]+$/i;
   return notEmptyString(uri, 5) && rgx.test(uri);
 }
+
+export const isLocationString = (loc = null) => {
+  return typeof loc === 'string' && /^-?\d+(\.\d+)?,-?\d+(\.\d+)?(,-?\d+)?/.test(loc.trim());
+}

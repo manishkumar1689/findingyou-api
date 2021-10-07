@@ -83,3 +83,17 @@ export const degAsDms = (flDeg, mode = 'raw', precision = 0) => {
   const sec3dec = precision >= 0 ? ' ' + dms.sec.toFixed(precision) : '';
   return `${degrees}º ${dms.min}'${sec3dec}"${suffix}`;
 };
+
+
+export const correctDatetime = (dtStr: string): string => {
+  const [date,time] = dtStr.replace(/[a-z]$/i, '').split('.').shift().split('T');
+  let timeStr = '12:00:00';
+  if (typeof time === 'string' && /^\d+/.test(time)) {
+    const parts = time.split(':');
+    const timeParts = [0, 1, 2].map(ti => {
+      return ti < parts.length? parts[ti] : '00';
+    })
+    timeStr = timeParts.join(':');
+  }
+  return [date, timeStr].join('T');
+}
