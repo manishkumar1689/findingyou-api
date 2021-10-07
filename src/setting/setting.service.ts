@@ -20,9 +20,8 @@ import { PreferenceOption } from '../user/interfaces/preference-option.interface
 import { RedisService } from 'nestjs-redis';
 import * as Redis from 'ioredis';
 import { ProtocolSettings } from '../astrologic/lib/models/protocol-models';
-import fi from 'date-fns/esm/locale/fi/index.js';
-import { smartCastInt } from 'src/lib/converters';
-import permissionValues from 'src/user/settings/permissions';
+import { smartCastInt } from '../lib/converters';
+import permissionValues from '../user/settings/permissions';
 
 @Injectable()
 export class SettingService {
