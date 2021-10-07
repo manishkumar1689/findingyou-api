@@ -317,7 +317,7 @@ export class UserService {
     createUserDTO: CreateUserDTO,
     roles: Array<Role> = [],
   ): Promise<User> {
-    const userObj = this.transformUserDTO(createUserDTO, true, roles);
+    const userObj = this.transformUserDTO(createUserDTO, true, roles, null, true);
     const newUser = new this.userModel(userObj);
     return newUser.save();
   }
