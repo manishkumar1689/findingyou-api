@@ -249,6 +249,7 @@ export class UserController {
     let ayanamshaKey = 'true_citra';
     const queryKeys = Object.keys(query);
     let filterIds = [];
+    let hasFilterIds = false;
     // filter ids by members who have liked or superliked the referenced user
     const likeabilityKeys = ['liked', 'liked1','liked2','passed', 'likeability', 'likability'];
     if (queryKeys.includes('user') && queryKeys.some(k => likeabilityKeys.includes(k))) {
@@ -260,6 +261,7 @@ export class UserController {
         const mutual = queryKeys.includes("mutual") && parseInt(query.mutual, 10) > 0;
         const flags = await this.feedbackService.fetchByLikeability(query.user, startDate, refNum, gte, mutual);
         filterIds = flags instanceof Array ? flags.filter(fl => !mutual || fl.isMutual).map(fl => fl.user) : [];
+        hasFilterIds = true;
       }
     }
     if (queryKeys.includes("mode") && notEmptyString(query.mode)) {
@@ -290,7 +292,8 @@ export class UserController {
     const preFetchFlags = notFlags.length > 0 || trueFlags.length > 0;
     const prefOptions = await this.settingService.getPreferences();
     const { userFlags, excludedIds } = await this.feedbackService.fetchFilteredUserInteractions(userId, notFlags, preFetchFlags);
-    const queryParams = filterIds.length > 0 ? { query, ids: filterIds } : query;
+    const queryParams = hasFilterIds ? { query, ids: filterIds } : query;
+    
     const data = await this.userService.members(startInt, limitInt, queryParams, excludedIds);    
     const users = this.userService.filterByPreferences(
       data,

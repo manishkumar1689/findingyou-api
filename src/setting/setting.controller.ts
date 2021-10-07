@@ -85,7 +85,8 @@ export class SettingController {
     let message = 'Invalid key or user ID';
     if (notEmptyString(userID, 9)) {
       const matchedSetting = await this.settingService.getByKey(key);
-      if (matchedSetting) {
+      const exists = matchedSetting instanceof Object && Object.keys(matchedSetting).includes('key');
+      if (exists) {
         setting = await this.settingService.updateSetting(
           extractDocId(matchedSetting),
           createSettingDTO,

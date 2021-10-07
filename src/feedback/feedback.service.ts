@@ -83,6 +83,7 @@ export class FeedbackService {
       modifiedAt: { $gte: dt }
     };
     const criteriaObj1 = {...criteriaObj, targetUser: userId };
+    
     const rows = await this.flagModel.find(criteriaObj1).select({ _id: 0, __v: 0, type: 0, isRating: 0, options: 0, active: 0, targetUser: 0 });
     
     if (mutual) {

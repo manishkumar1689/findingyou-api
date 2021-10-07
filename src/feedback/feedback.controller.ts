@@ -144,11 +144,14 @@ export class FeedbackController {
       value: smartCastInt(value, 0)
     } as CreateFlagDTO;
     const numSwipes = await this.feedbackService.countRecentLikeability(from, value);
-    const maxLikes = await this.userService.maxLikes(flagData.user);
+    const roles = await this.userService.memberRoles(flagData.user);
+    const perms = await this .settingService.getPermissions(roles);
     const data = { 
       flag: await this.feedbackService.saveFlag(flagData),
       fcm: await this.sendNotification(flagData),
       count: numSwipes,
+      roles,
+      perms
     }
     return res.status(HttpStatus.OK).json(data);
   }

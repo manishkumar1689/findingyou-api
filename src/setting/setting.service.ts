@@ -20,6 +20,9 @@ import { PreferenceOption } from '../user/interfaces/preference-option.interface
 import { RedisService } from 'nestjs-redis';
 import * as Redis from 'ioredis';
 import { ProtocolSettings } from '../astrologic/lib/models/protocol-models';
+import fi from 'date-fns/esm/locale/fi/index.js';
+import { smartCastInt } from 'src/lib/converters';
+import permissionValues from 'src/user/settings/permissions';
 
 @Injectable()
 export class SettingService {
@@ -105,6 +108,7 @@ export class SettingService {
           break;
         default:
           newValue = data.value;
+          break;
       }
     }
     return { ...result, value: newValue };
@@ -263,6 +267,98 @@ export class SettingService {
       return { ...item, options: valueOpts};
     });
     return dataWithOptions;
+  }
+
+
+
+  async getPermissionData(skipCache = false) {
+    const key = 'permissions';
+    const stored = skipCache ? null : await this.redisGet(key);
+    if (stored instanceof Object) {
+      return stored;
+    } else {
+      const roleData = await this.getByKey('roles');
+      const roles = roleData.value instanceof Array ? roleData.value : [];
+      const limitData = await this.getByKey('permission_limits');
+      const limits = limitData.value instanceof Array ? limitData.value : [];
+      const data = { roles, limits };
+      this.redisSet(key, data);
+      return data;
+    }
+  }
+
+  async getPermissions(roleKeys: string[] = [], skipCache = false) {
+    const data = await this.getPermissionData(skipCache);
+    const permKeys = [];
+    if (roleKeys instanceof Array) {
+      roleKeys.forEach(roleKey => {
+        this.filterOverrides(permKeys, data, roleKey);
+      });
+    }
+    const entries = permKeys.map(key => {
+      const limitRow = data.limits.find(lm => lm.key === key);
+      const value = limitRow instanceof Object? smartCastInt(limitRow.value, 0) : true;
+      return [key, value];
+    });
+    const otherKeys = permissionValues.map(pm => pm.key).filter(k => permKeys.includes(k) === false).map(k => {
+      const limitRow = data.limits.find(lm => lm.key === k);
+      const value = limitRow instanceof Object? 0 : false;
+      return [k, value];
+    });
+    const rgx = /^(basic|extended|premium)_/;
+    const coreEntries = [...entries, ...otherKeys].filter(([k,v]) => {
+       return rgx.test(k) === false && typeof v === 'boolean';
+    });
+    const limitEntries = [...entries, ...otherKeys].filter(([k,v]) => {
+      return rgx.test(k) && typeof v === 'number';
+   });
+     const limitRows:any[][] = [];
+     limitEntries.forEach(([k,v]) => {
+       const key = k.replace(rgx, '');
+       const mIndex = limitRows.findIndex(([k,v]) => k === key);
+       if (mIndex >= 0) {
+         if (limitRows[mIndex][1] < v) {
+          limitRows[mIndex][1] = v;
+         }
+       } else {
+        limitRows.push([key, v]);
+      }
+     })
+    return Object.fromEntries([...limitRows, ...coreEntries]);
+  }
+
+  filterOverrides(permKeys: string[] = [], permData = null, roleKey = "") {
+    if (permData instanceof Object) {
+      const excludeKeys = ['all'];
+      const { roles, limits } = permData;
+      const current = roles.find(r => r.key === roleKey);
+      if (current instanceof Object) {
+        const { overrides, permissions, appAccess, adminAccess } = current;
+        if (permissions instanceof Array) {
+          if (appAccess) {
+            if (!permKeys.includes('app_access')) {
+              permKeys.push('app_access',)
+            }
+          }
+          if (adminAccess) {
+            if (!permKeys.includes('admin_access')) {
+              permKeys.push('admin_access');
+            }
+          }
+          permissions.forEach(pk => {
+            if (permKeys.includes(pk) === false && excludeKeys.includes(pk) === false) {
+              permKeys.push(pk);
+            }
+          })
+        }
+        if (overrides instanceof Array) {
+          overrides.forEach(rk => {
+            this.filterOverrides(permKeys, permData, rk);
+          })
+        }
+      }
+    }
+    return permKeys;
   }
 
   async saveRelationshipType(newType: KeyName) {
