@@ -1621,11 +1621,15 @@ export const processTransitMatch = async (cond: Condition, chart: Chart, geo: Ge
   g1.setAyanamshaItem(ayaItem);
   let nextMatches = [];
   const ct = matchContextType(cond.context);
+  let addEnd = false;
   if (ct.isAspect) {
     const ranges = matchAspectRanges(cond.context, gkBirth, gkTransit);
     const targetRanges = ranges.map(range => range.map(num => addLng360(num,g1.longitude)));
     nextMatches = await matchGrahaInTargetRanges(targetRanges, startJd, gkTransit, geo);
-    nextMatches = await matchGrahaInTargetRanges(targetRanges, startJd, gkTransit, geo);
+    if (nextMatches.length > 1) {
+      const diff = Math.abs(nextMatches[1] - nextMatches[0]);
+      addEnd = diff < 30;
+    }
   } else if (ct.isDrishtiAspect) {
     const ranges = matchDrishtiConditionSignLngs(cond, chart, gkBirth, gkTransit, settings).map(deg => [deg, deg + 30]);
     nextMatches = await matchGrahaInTargetRanges(ranges, startJd, gkTransit, geo);
@@ -1633,7 +1637,7 @@ export const processTransitMatch = async (cond: Condition, chart: Chart, geo: Ge
   nextMatches.sort((a, b) => a - b);
   const valid = nextMatches.length > 0;
   const start = nextMatches.length > 0 ? nextMatches[0] : 0;
-  const end = start;
+  const end = addEnd && nextMatches.length > 1? nextMatches[1] : start;
   return {valid, start, end };
 }
 

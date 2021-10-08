@@ -58,6 +58,7 @@ import {
   durationStringToDays,
   matchJdAndDatetime,
   matchEndJdAndDatetime,
+  julToUnixTime,
 } from './lib/date-funcs';
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
@@ -489,7 +490,8 @@ export class AstrologicController {
         for (const rs of predictionSets) {
           const pr = await this.fetchPredictions(rs, chart, geo);
           const { conditionRefs, operator } = rs.conditionSet;
-          const condItems = simplifyConditions(conditionRefs);
+          const conditions = simplifyConditions(conditionRefs);
+          /* 
           const conditions = condItems.map(c => {
             let orb = 0;
             if (c.isAspect && c.objects instanceof Array) {
@@ -499,8 +501,21 @@ export class AstrologicController {
               }
             }
             return {...c, orb };
+          }) */
+          const toTimes = (jd = 0) => {
+            return {
+              jd,
+              ts: Math.floor(julToUnixTime(jd)),
+              dt: julToISODate(jd)
+            }
+          }
+          const items = pr.items.filter(pr => pr.valid).map(item => {
+            return {
+              start: toTimes(item.start),
+              end: toTimes(item.end)
+            }
           })
-          predictions.push({name: rs.name, text: rs.text, ...pr, conditions, operator });
+          predictions.push({name: rs.name, text: rs.text, ...pr, items, conditions, operator });
         }
       }
     }
@@ -510,7 +525,6 @@ export class AstrologicController {
       datetime: result.datetime,
       ayanamsha: result.ayanamsha,
       tz: 'UTC',
-      adminIds,
       predictions
     });
   }
