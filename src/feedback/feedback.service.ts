@@ -74,7 +74,7 @@ export class FeedbackService {
     }
   }
 
-  async fetchByLikeability(userId = '', startDate = null, refNum = 1, gte = false, mutual = false) {
+  async fetchByLikeability(userId = '', startDate = null, refNum = 1, gte = false, mutualMode = 0) {
     const valueFilter = gte ? { $gte: refNum } : refNum;
     const dt = validISODateString(startDate)? startDate : typeof startDate === 'number' ? yearsAgoString(startDate) : yearsAgoString(1);
     const criteriaObj = {
@@ -85,12 +85,13 @@ export class FeedbackService {
     const criteriaObj1 = {...criteriaObj, targetUser: userId };
     
     const rows = await this.flagModel.find(criteriaObj1).select({ _id: 0, __v: 0, type: 0, isRating: 0, options: 0, active: 0, targetUser: 0 });
-    
-    if (mutual) {
+    const filterMutual = mutualMode !== 0;
+    if (filterMutual) {
+      const mutualValueFilter = mutualMode > 0 ? valueFilter : { $gte: -5 };
       const mutualRows = await this.flagModel.find({
         targetUser: { $in: rows.map(r => r.user )},
         user: userId,
-        value: valueFilter
+        value: mutualValueFilter
       }).select({_id: 0, __v: 0, key: 0, type: 0, isRating: 0, options: 0, active: 0 });
       const mutualIds = mutualRows.map(r => r.targetUser.toString());
       return rows.map(r => {

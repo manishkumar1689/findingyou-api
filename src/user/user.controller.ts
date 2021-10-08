@@ -259,8 +259,11 @@ export class UserController {
         const {refNum, gte } = filterLikeabilityKey(matchedKey);
         const startDate = toStartRef(query[matchedKey]);
         const mutual = queryKeys.includes("mutual") && parseInt(query.mutual, 10) > 0;
-        const flags = await this.feedbackService.fetchByLikeability(query.user, startDate, refNum, gte, mutual);
-        filterIds = flags instanceof Array ? flags.filter(fl => !mutual || fl.isMutual).map(fl => fl.user) : [];
+        const unrated = !mutual && queryKeys.includes("unrated") && parseInt(query.unrated, 10) > 0;
+        const mutualMode = mutual? 1 : unrated ? -1 : 0;
+        const flags = await this.feedbackService.fetchByLikeability(query.user, startDate, refNum, gte, mutualMode);
+        const skipMutuality = !mutual && !unrated;
+        filterIds = flags instanceof Array ? flags.filter(fl => skipMutuality || (mutual && fl.isMutual) || (unrated && !fl.isMutual)).map(fl => fl.user) : [];
         hasFilterIds = true;
       }
     }
