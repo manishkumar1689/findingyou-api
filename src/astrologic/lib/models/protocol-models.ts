@@ -1625,6 +1625,7 @@ export const processTransitMatch = async (cond: Condition, chart: Chart, geo: Ge
     const ranges = matchAspectRanges(cond.context, gkBirth, gkTransit);
     const targetRanges = ranges.map(range => range.map(num => addLng360(num,g1.longitude)));
     nextMatches = await matchGrahaInTargetRanges(targetRanges, startJd, gkTransit, geo);
+    nextMatches = await matchGrahaInTargetRanges(targetRanges, startJd, gkTransit, geo);
   } else if (ct.isDrishtiAspect) {
     const ranges = matchDrishtiConditionSignLngs(cond, chart, gkBirth, gkTransit, settings).map(deg => [deg, deg + 30]);
     nextMatches = await matchGrahaInTargetRanges(ranges, startJd, gkTransit, geo);

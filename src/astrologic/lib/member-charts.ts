@@ -5,6 +5,7 @@ import { KeyValue } from '../interfaces/key-value';
 import { calcOffsetAscendant } from './calc-ascendant';
 import { subtractLng360 } from './helpers';
 import { HouseSystem } from './models/chart';
+import { Condition } from './models/protocol-models';
 import { matchAyanamshaNum } from './settings/ayanamsha-values';
 
 /*
@@ -211,4 +212,19 @@ export const applyAscendantToSimpleChart = (chart = null, geo: GeoPos, ayanamsha
   } else {
     return Object.assign({}, chart);
   }
+}
+
+export const simplifyCondition = (conditionRef = null) => {
+  const condition = new Condition(conditionRef);
+  return {
+    direction: [condition.fromMode, condition.toMode],
+    context: condition.context,
+    isAspect: condition.contextType.isAspect,
+    objects: [condition.object1, condition.object2],
+    vargas: [condition.varga1, condition.varga2],
+  }
+}
+
+export const simplifyConditions = (conditionRefs: any[] = []) => {
+  return conditionRefs.filter(cr => cr instanceof Object && Object.keys(cr).includes('fromMode')).map(cr => simplifyCondition(cr));
 }

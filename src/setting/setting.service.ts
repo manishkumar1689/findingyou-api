@@ -650,9 +650,19 @@ export class SettingService {
     return result;
   }
 
-  async getRuleSets(userID = "") {
-    const byUser = notEmptyString(userID, 16);
-    const criteria = byUser? { user: userID } : {};
+  async getRuleSets(userRef = null, activeOnly = false) {
+    const byUsers = userRef instanceof Array;
+    const byUser = !byUsers && notEmptyString(userRef, 16);
+    const filter: Map<string, any> = new Map();
+    if (byUsers) {
+      filter.set('user', { $in: userRef });
+    } else if (byUser) {
+      filter.set('user', userRef );
+    }
+    if (activeOnly) {
+      filter.set('active', true);
+    }
+    const criteria = Object.fromEntries(filter);
     const items = await this.predictiveRuleSetModel.find(criteria)
     return items;
   }

@@ -23,7 +23,7 @@ import {
   isLocationString,
 } from '../lib/validators';
 import { correctDatetime, latLngParamsToGeo, locStringToGeo } from './lib/converters';
-import { applyAscendantToSimpleChart, simplifyAstroChart, simplifyChart } from './lib/member-charts';
+import { applyAscendantToSimpleChart, simplifyAstroChart, simplifyChart, simplifyConditions } from './lib/member-charts';
 import {
   calcAllTransitions,
   fetchHouseData,
@@ -479,12 +479,39 @@ export class AstrologicController {
       return [gk, lng];
     }) : [];
     const longitudes = Object.fromEntries(lngEntries);
+    const adminIds = await this.userService.getAdminIds();
+    const predictionSets = await this.settingService.getRuleSets(adminIds, true);
+    const predictions = [];
+    if (notEmptyString(user, 20)) {
+      const chartData = await this.astrologicService.getUserBirthChart(user);
+      if (chartData instanceof Model) {
+        const chart = new Chart(chartData.toObject());
+        for (const rs of predictionSets) {
+          const pr = await this.fetchPredictions(rs, chart, geo);
+          const { conditionRefs, operator } = rs.conditionSet;
+          const condItems = simplifyConditions(conditionRefs);
+          const conditions = condItems.map(c => {
+            let orb = 0;
+            if (c.isAspect && c.objects instanceof Array) {
+              const orbData = calcOrb(c.context, c.objects[0].key, c.objects[1].key)
+              if (orbData.key === c.context) {
+                orb = orbData.orb;
+              }
+            }
+            return {...c, orb };
+          })
+          predictions.push({name: rs.name, text: rs.text, ...pr, conditions, operator });
+        }
+      }
+    }
     return res.status(HttpStatus.OK).json({
       longitudes,
       geo: result.geo,
       datetime: result.datetime,
       ayanamsha: result.ayanamsha,
-      tz: 'UTC'
+      tz: 'UTC',
+      adminIds,
+      predictions
     });
   }
 
@@ -1096,22 +1123,34 @@ export class AstrologicController {
     const geo = locStringToGeo(loc);
     const lngFl = smartCastFloat(lng, 0)
     const data = await calcNextAscendantLng(lngFl, geo.lat, geo.lng, jd, "true_citra")
-    
     return res.json({data});
   }
 
   @Get('predictive-rule-check/:ruleID/:chartID/:loc?')
   async checkRulesetForChart(@Res() res, @Param('ruleID') ruleID, @Param('chartID') chartID, @Param('loc') loc) {
     const ruleData = await this.settingService.getRuleSet(ruleID);
+    const result = { valid: false , matches: false, items: [] };
     const hasRuleData = ruleData instanceof Model;
-    const rule = new PredictiveRule(ruleData);
-    const settings = await this.settingService.getProtocolSettings();
     const chartRecord = await this.astrologicService.getChart(chartID);
     const hasChart = chartRecord instanceof Model;
+    if (hasChart && hasRuleData) {
+      const chartData = hasChart? chartRecord.toObject() : {};
+      const chart = new Chart(chartData);
+      const geo = isLocationString(loc)? locStringToGeo(loc) : chart.geo;
+      const data = await this.fetchPredictions(ruleData, chart, geo);
+      if (data.valid) {
+        result.matches = data.matches;
+        result.items = data.items;
+      }
+    }
+    return res.json(result);
+  }
+
+  async fetchPredictions(ruleData = null, chart: Chart, geo: GeoPos) {
+    const rule = new PredictiveRule(ruleData);
+    const settings = await this.settingService.getProtocolSettings();
+    
     const andMode = rule.conditionSet.operator  !== "or";
-    const chartData = hasChart? chartRecord.toObject() : {};
-    const chart = new Chart(chartData);
-    const geo = typeof loc === 'string' && /^\d(\.\d),d(\.\d),\d?$/.test(loc)? locStringToGeo(loc) : chart.geo;
     const outerConditions = rule.conditionSet.conditionRefs.filter(cr => !cr.isSet);
     const outerItems = [];
     for (const cond of outerConditions) {
@@ -1120,10 +1159,10 @@ export class AstrologicController {
         outerItems.push(newOuterItem);
       }
     }
-    const valid = hasRuleData &&  hasChart;
+    const valid = chart.grahas.length > 6;
     const numOuterValid = outerItems.filter(oi => oi.valid).length;
     const matches = andMode ? numOuterValid === outerItems.length : numOuterValid > 0;
-    return res.json({ valid , matches, items: outerItems });
+    return { valid , matches, items: outerItems }
   }
 
   async processPredictiveRuleSet(cond: Condition, ruleType = "", chart: Chart, geo: GeoPos, settings: ProtocolSettings) {

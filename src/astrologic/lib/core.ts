@@ -1397,9 +1397,7 @@ export const calcCoreGrahaPositions = async (datetime = null, geo: GeoPos, ayana
     ayaVal = ayanamsa;
   }
   const ayanamshaItem = {
-    num: ayanamshaNum,
     value: ayaVal,
-    name: ayaRow.name,
     key: ayaRow.key,
   };
   const bodies = grahaSet.bodies.map(b => {

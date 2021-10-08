@@ -19,6 +19,7 @@ import { MatchedOption, PrefKeyValue } from './settings/preference-options';
 import { smartCastBool, smartCastFloat, smartCastInt } from '../lib/converters';
 import { MediaItemDTO } from './dto/media-item.dto';
 import { PreferenceDTO } from './dto/preference.dto';
+import roles from './settings/roles';
 
 const userEditPaths = [
   'fullName',
@@ -1213,6 +1214,11 @@ export class UserService {
   async isAdminUser(userID: string): Promise<boolean> {
     const user = await this.getUser(userID);
     return user instanceof Object ? this.hasAdminRole(user) : false;
+  }
+
+  async getAdminIds(): Promise<string[]> {
+    const users = await this.userModel.find({ roles: 'superadmin', active: true }).select('roles');
+    return users instanceof Array ? users.filter(u => u.roles instanceof Array && u.roles.includes('blocked') === false).map(u => u._id) : [];
   }
 
   async isBlocked(userID: string): Promise<boolean> {

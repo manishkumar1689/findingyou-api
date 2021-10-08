@@ -9,6 +9,11 @@ export const PredictiveRuleSetSchema = new mongoose.Schema({
     required: true,
     ref: 'User',
   },
+  active: {
+    type: Boolean,
+    required: false,
+    default: false
+  },
   type: {
     type: String,
     default: 'transit',
