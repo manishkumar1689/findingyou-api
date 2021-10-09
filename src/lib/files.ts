@@ -297,13 +297,9 @@ export const renameFile = (sourceName: string, newName: string) => {
 
 export const deleteFile = (
   filename: string,
-  mime: string,
   directory: string = '',
 ) => {
-  let targetType = 'media';
-  if (typeof directory === 'string') {
-    targetType = directory;
-  }
+  const targetType = typeof directory === 'string'? directory : 'media';
   let deleted = false;
   const fp = buildFullPath(filename, targetType);
   if (fs.existsSync(fp)) {

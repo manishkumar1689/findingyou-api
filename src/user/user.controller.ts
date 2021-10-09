@@ -48,7 +48,7 @@ import { SnippetService } from '../snippet/snippet.service';
 import { FeedbackService } from '../feedback/feedback.service';
 import { ProfileDTO } from './dto/profile.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { generateFileName, mediaPath, readRawFile, uploadMediaFile } from '../lib/files';
+import { deleteFile, generateFileName, mediaPath, readRawFile, uploadMediaFile } from '../lib/files';
 import { PreferenceDTO } from './dto/preference.dto';
 import { SampleDataDTO } from './dto/sample-data.dto';
 import { SampleRecordDTO } from './dto/sample-record.dto';
@@ -1092,9 +1092,26 @@ export class UserController {
     @Param('userID') userID,
     @Param('mediaRef') mediaRef,
   ) {
-    let data: any = { valid: false, fileData: null };
-    const item = await this.userService.deleteMediaItemByRef(userID, mediaRef);
-    return res.json(item);
+    let data: any = { valid: false, item: null, fileDeleted: false };
+    const result = await this.userService.deleteMediaItemByRef(userID, mediaRef);
+    if (result.deleted) {
+      if (result.item instanceof Object) {
+        data.item = result.item;
+        data.valid = true;
+        if (data.item.source === 'local') {
+          data.fileDeleted = deleteFile(data.item.filename, 'media');
+          if (data.item.variants.length > 0) {
+            data.item.variants.forEach(suffix => {
+              const parts = data.item.filename.split('.');
+              const extension = parts.pop();
+              const variantFn = [[parts.join('.'), suffix].join('-'), extension].join('.');
+              deleteFile(variantFn, 'media');
+            })
+          }
+        }
+      }
+    }
+    return res.json(data);
   }
 
   @Get('media-path/:type')

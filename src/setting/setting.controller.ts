@@ -519,7 +519,7 @@ export class SettingController {
   }
 
   @Delete('delete-swisseph-file/:userID/:fn/:subDir?')
-  async deleteFile(
+  async deleteSwephFile(
     @Res() res,
     @Param('userID') userID,
     @Param('fn') fn,

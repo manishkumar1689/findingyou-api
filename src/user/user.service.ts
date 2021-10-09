@@ -4,9 +4,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { MailerService } from '@nest-modules/mailer';
 import { User } from './interfaces/user.interface';
 import { CreateUserDTO } from './dto/create-user.dto';
-import { hashMapToObject, extractObject } from '../lib/entities';
+import { hashMapToObject, extractObject, extractSimplified } from '../lib/entities';
 import * as bcrypt from 'bcrypt';
-import { hashSalt } from '../.config';
 import { generateHash } from '../lib/hash';
 import * as moment from 'moment-timezone';
 import { inRange, isNumeric, isSystemFileName, notEmptyString, validISODateString, validUri } from '../lib/validators';
@@ -19,7 +18,6 @@ import { MatchedOption, PrefKeyValue } from './settings/preference-options';
 import { smartCastBool, smartCastFloat, smartCastInt } from '../lib/converters';
 import { MediaItemDTO } from './dto/media-item.dto';
 import { PreferenceDTO } from './dto/preference.dto';
-import roles from './settings/roles';
 
 const userEditPaths = [
   'fullName',
@@ -242,7 +240,6 @@ export class UserService {
     let users = [];
     if (criteria instanceof Object) {
       const filter = new Map<string, any>();
-
       const keys = Object.keys(criteria);
 
       for (const key of keys) {
@@ -963,8 +960,8 @@ export class UserService {
       valid: false,
     };
     if (user instanceof Object) {
-      const userData = this.assignProfile(user, type, fileRef, mediaRef);
-      const dt = new Date();
+      const dt = new Date().toISOString();
+      const userData = this.assignProfile(user, type, fileRef, mediaRef, dt);
       data.user = await this.userModel.findByIdAndUpdate(
         userID,
         { profiles: userData.profiles, modifiedAt: dt },
@@ -973,7 +970,7 @@ export class UserService {
         },
       );
       data.valid = userData instanceof Object;
-      data.user = userData;
+      data.user = extractSimplified(userData, ['password', 'coords']);
     }
     return data;
   }
@@ -985,7 +982,7 @@ export class UserService {
    * mediaItemRef Object
    * mediaRef string name of file to be replaced 
   */
-  assignProfile(user: User, profileRef = null, mediaItemRef = null, mediaRef = '') {
+  assignProfile(user: User, profileRef = null, mediaItemRef = null, mediaRef = '', dtRef = '') {
     const userData = user.toObject();
     let profile: any = {};
     let hasProfileData = false;
@@ -1054,6 +1051,9 @@ export class UserService {
       } else {
         if (hasMediaItem) {
           profile.mediaItems = [mediaItem];
+        }
+        if (validISODateString(dtRef)) {
+          profile.modifiedAt = dtRef;
         }
         userData.profiles.push(profile);
       }
