@@ -18,6 +18,7 @@ import { MatchedOption, PrefKeyValue } from './settings/preference-options';
 import { smartCastBool, smartCastFloat, smartCastInt } from '../lib/converters';
 import { MediaItemDTO } from './dto/media-item.dto';
 import { PreferenceDTO } from './dto/preference.dto';
+import { matchFileTypeAndMime } from 'src/lib/files';
 
 const userEditPaths = [
   'fullName',
@@ -1326,18 +1327,33 @@ export class UserService {
     const userObj = hasUser? user.toObject() : {};
     const roles = hasUser ? userObj.roles : [];
     const active = hasUser ? userObj.active : false;
-    const mediaItems = [];
+    const permKeys = permData instanceof Object ? Object.keys(permData) : [];
+    const isAdmin = roles.some(rk => ['superadmin', 'admin'].includes(rk));
+    const permRoles = !isAdmin && permKeys.includes("roles") && permData.roles instanceof Array ? permData.roles.filter(r => roles.includes(r.key)).map(r => r.permissions) : [];
+    const permLimits = !isAdmin && permKeys.includes("limits") && permData.limits instanceof Array ? permData.limits.map(r => {
+      const value = smartCastInt(r.value);
+      return { ...r, value };
+    }) : [];
+    const perms = permRoles.reduce((a, b) => a.concat(b), []).filter(key => key.endsWith('image_uploads'));
+    const limits = permLimits.filter(pl => perms.includes(pl.key));
+    limits.sort((a, b) => b.value - a.value);
+    const limit = limits.length > 0 ? limits[0].value : 0;
+    
+    let numUploaded = 0;
     if (active && roles.length > 0 && roles.includes('blocked') === false) {
       const profiles = userObj.profiles instanceof Array ? userObj.profiles : [];
       profiles.forEach(pr => {
         if (pr instanceof Object && Object.keys(pr).includes('mediaItems') && pr.mediaItems instanceof Array) {
           pr.mediaItems.forEach(mi => {
-            mediaItems.push(mi);
+            const { fileType } = matchFileTypeAndMime(mi.filename, mi.mime);
+            if (fileType === 'image') {
+              numUploaded++;
+            }
           });
         }
       });
     }
-    return {permData, mediaItems, active, roles}
+    return { limit, isAdmin, numUploaded, active, roles };
   }
 
   mapPreferenceKey(key: string) {

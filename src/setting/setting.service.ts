@@ -320,7 +320,7 @@ export class SettingService {
           limitRows[mIndex][1] = v;
          }
        } else {
-        limitRows.push([key, v]);
+        limitRows.push([key, smartCastInt(v)]);
       }
      })
     return Object.fromEntries([...limitRows, ...coreEntries]);
@@ -336,7 +336,7 @@ export class SettingService {
         if (permissions instanceof Array) {
           if (appAccess) {
             if (!permKeys.includes('app_access')) {
-              permKeys.push('app_access',)
+              permKeys.push('app_access');
             }
           }
           if (adminAccess) {

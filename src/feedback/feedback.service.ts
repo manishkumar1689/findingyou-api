@@ -244,6 +244,18 @@ export class FeedbackService {
     return await this.flagModel.count(criteria);
   }
 
+  async prevSwipe(userId: string, otherUserId = '') {
+    const nowTs = new Date().getTime();
+    const oneDayAgo = new Date(nowTs - (24 * 60 * 60 * 1000));
+    const criteria = {
+      key: 'likeability',
+      user: userId,
+      targetUser: otherUserId,
+    };
+    const flag = await this.flagModel.findOne(criteria);
+    return flag instanceof Model ? {...flag.toObject(), valid: true } : { valid: false };
+  }
+
   matchLikeabilityKey(keyRef = 'like') {
     const key = keyRef.toLowerCase();
     switch (key) {

@@ -9,4 +9,7 @@ export class SwipeDTO {
 
   @ApiProperty()
   readonly value: number;
+
+  @ApiProperty()
+  readonly context?: string;
 }

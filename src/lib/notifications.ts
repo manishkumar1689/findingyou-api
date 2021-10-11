@@ -37,13 +37,19 @@ export const mapUserFlag = (item, toMode = false, likeMode = false): IFlag => {
   }
 }
 
-export const mapLikeability = (value = -1) => {
+export const mapLikeability = (value = -1, zeroAsPass = false) => {
   switch (value) {
     case 2:
       return 'superlike';
     case 1:
       return 'like';
     case 0:
+      return zeroAsPass? 'pass': 'ignore';
+    case -1:
+    case -2:
+    case -3:
+    case -4:
+    case -5:
       return 'pass';
     default:
       return '';

@@ -15,10 +15,11 @@ import { FeedbackService } from './feedback.service';
 import { UserService } from '../user/user.service';
 import { SettingService } from '../setting/setting.service';
 import { CreateFlagDTO } from './dto/create-flag.dto';
-import { pushFlag } from '../lib/notifications';
+import { mapLikeability, pushFlag } from '../lib/notifications';
 import { notEmptyString } from '../lib/validators';
 import { SwipeDTO } from './dto/swipe.dto';
-import { smartCastInt } from '../lib/converters';
+import { sanitize, smartCastInt } from '../lib/converters';
+import { Model } from 'mongoose';
 
 @Controller('feedback')
 export class FeedbackController {
@@ -134,24 +135,52 @@ export class FeedbackController {
   // Fetch a particular user using ID
   @Post('swipe')
   async saveSwipe(@Res() res, @Body() swipeDTO: SwipeDTO) {
-    const {to, from, value} = swipeDTO;
-    const flagData = {
-      user: from,
-      targetUser: to,
-      key: 'likeability',
-      type: 'int',
-      isRating: true,
-      value: smartCastInt(value, 0)
-    } as CreateFlagDTO;
-    const numSwipes = await this.feedbackService.countRecentLikeability(from, value);
-    const roles = await this.userService.memberRoles(flagData.user);
+    const {to, from, value, context} = swipeDTO;
+    const contextKey = notEmptyString(context)? sanitize(context, '_') : 'swipe';
+    const prevSwipe = await this.feedbackService.prevSwipe(from, to);
+    let intValue = smartCastInt(value, 0);
+    const maxKey = ['swipe', mapLikeability(intValue, true)].join('_');
+    const hasLimits = notEmptyString(maxKey);
+    let numSwipes = await this.feedbackService.countRecentLikeability(from, value);
+    const roles = await this.userService.memberRoles(from);
     const perms = await this .settingService.getPermissions(roles);
-    const data = { 
-      flag: await this.feedbackService.saveFlag(flagData),
-      fcm: await this.sendNotification(flagData),
-      count: numSwipes,
-      roles,
-      perms
+    const likePerms = Object.keys(perms).filter(p => p === maxKey);
+    const maxRating = hasLimits && likePerms.length > 0? perms[maxKey] : 1;
+    const hasPaidRole = roles.some(rk => rk.includes('member'));
+    let data: any = {valid: false}
+    const hasPrevPass = prevSwipe.valid && prevSwipe.value < 1;
+    const isPass = intValue <= 0;
+    const prevPass = isPass && hasPrevPass ? prevSwipe.value : 0;
+    if (contextKey.includes('like') === false && hasPaidRole && intValue < 1 && isPass) {
+      if (hasPrevPass) {
+        intValue = prevSwipe.value - 1;
+      } else {
+        intValue--;
+      }
+    }
+    if ((numSwipes < maxRating && prevPass >= -3) || maxRating < 1) {
+      const flagData = {
+        user: from,
+        targetUser: to,
+        key: 'likeability',
+        type: 'int',
+        isRating: true,
+        value: intValue
+      } as CreateFlagDTO;
+      const flag = await this.feedbackService.saveFlag(flagData);
+      const valid = Object.keys(flag).includes('value');
+      data = { 
+        valid,
+        flag,
+        fcm: await this.sendNotification(flagData),
+        count: numSwipes,
+        roles,
+        maxRating,
+        prevSwipe
+      }
+      if (valid) {
+        numSwipes++;
+      }
     }
     return res.status(HttpStatus.OK).json(data);
   }
