@@ -48,7 +48,7 @@ import { SnippetService } from '../snippet/snippet.service';
 import { FeedbackService } from '../feedback/feedback.service';
 import { ProfileDTO } from './dto/profile.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { deleteFile, generateFileName, mediaPath, readRawFile, uploadMediaFile } from '../lib/files';
+import { deleteFile, generateFileName, matchFileTypeAndMime, mediaPath, readRawFile, uploadMediaFile } from '../lib/files';
 import { PreferenceDTO } from './dto/preference.dto';
 import { SampleDataDTO } from './dto/sample-data.dto';
 import { SampleRecordDTO } from './dto/sample-record.dto';
@@ -381,14 +381,15 @@ export class UserController {
 
   @Get('permissions')
   async listPermissions(@Res() res) {
-    const storedLimits = await this.settingService.getByKey('permission_limits');
-    const limits = storedLimits instanceof Array ? storedLimits : limitPermissions;
-    const data = {
-      valid: permissionValues instanceof Array,
-      items: permissionValues,
-      limits
-    };
+    const data = await this.settingService.getPermissionData();
     return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('max-upload/:userID')
+  async maxUpload(@Res() res, @Param('userID') userID) {
+    const permData = await this.settingService.getPermissionData();
+    const uploadData = await this.userService.fetchMaxImages(userID, permData);
+    return res.status(HttpStatus.OK).json(uploadData);
   }
 
   // Fetch a particular user using ID
@@ -1046,11 +1047,14 @@ export class UserController {
   ) {
     let data: any = { valid: false, fileData: null };
     if (file instanceof Object) {
+      
       const { originalname, mimetype, size, buffer } = file;
       const fn = generateFileName(userID, originalname);
+      const { fileType, mime } = matchFileTypeAndMime(originalname, mimetype);
       const fileData = {
         filename: fn,
-        mime: mimetype,
+        mime,
+        type: fileType,
         source: 'local',
         size,
         title,

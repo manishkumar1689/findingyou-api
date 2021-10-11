@@ -12,7 +12,7 @@ import {
 } from '../.config';
 import { hashMapToObject } from './entities';
 import { imageSize } from 'image-size';
-import { isNumber, notEmptyString } from './validators';
+import { emptyString, isNumber, notEmptyString } from './validators';
 import { resizeImage } from './resize';
 
 export const mimeFileFilter = (req, file, callback) => {
@@ -487,4 +487,49 @@ export const readRawFile = (filename: string, dir = '', subDir = '') => {
     
   }
   return out;
+}
+
+const matchMimeFromExtension = (extension = '') => {
+  switch (extension) {
+    case 'jpeg':
+    case 'jpg':
+      return 'image/jpeg';
+    case 'gif':
+      return 'image/gif';
+    case 'png':
+      return 'image/png';
+    case 'svg':
+      return 'image/svg+xml';
+    case 'webp':
+      return 'image/webp';
+    case 'mp4':
+    case 'm4v':
+      return 'video/mp4';
+    case 'mp3':
+      return 'audio/mp3';
+    default:
+      return 'application/octet-stream';
+  }
+}
+
+const matchTypeFromMime = (mime = '') => {
+  switch (mime) {
+    case 'application/pdf':
+      return 'document';
+    case 'application/octet-stream':
+      return 'file';
+    default:
+      return mime.split('/').shift();
+  }
+}
+
+export const matchFileTypeAndMime = (filename = '', mimetype = '') => { 
+  let mime = mimetype || 'text/plain';
+  if (notEmptyString(filename) && emptyString(mimetype) || ['application/octet-stream'].includes(mimetype)) {
+    const fn = filename.toLowerCase();
+    const extension = fn.split('.').pop();
+    mime = matchMimeFromExtension(extension);
+  }
+  const type = matchTypeFromMime(mime);
+  return { mime, fileType: type };
 }

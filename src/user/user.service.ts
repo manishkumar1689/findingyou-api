@@ -1320,6 +1320,26 @@ export class UserService {
 }
   }
 
+  async fetchMaxImages(userID = '', permData = null) {
+    const user = await this.userModel.findById(userID).select('active roles profiles');
+    const hasUser = user instanceof Model;
+    const userObj = hasUser? user.toObject() : {};
+    const roles = hasUser ? userObj.roles : [];
+    const active = hasUser ? userObj.active : false;
+    const mediaItems = [];
+    if (active && roles.length > 0 && roles.includes('blocked') === false) {
+      const profiles = userObj.profiles instanceof Array ? userObj.profiles : [];
+      profiles.forEach(pr => {
+        if (pr instanceof Object && Object.keys(pr).includes('mediaItems') && pr.mediaItems instanceof Array) {
+          pr.mediaItems.forEach(mi => {
+            mediaItems.push(mi);
+          });
+        }
+      });
+    }
+    return {permData, mediaItems, active, roles}
+  }
+
   mapPreferenceKey(key: string) {
     const machineName = key.toLowerCase();
     switch (machineName) {
