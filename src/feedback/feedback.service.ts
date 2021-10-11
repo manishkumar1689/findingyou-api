@@ -87,7 +87,7 @@ export class FeedbackService {
     const rows = await this.flagModel.find(criteriaObj1).select({ _id: 0, __v: 0, type: 0, isRating: 0, options: 0, active: 0, targetUser: 0 });
     const filterMutual = mutualMode !== 0;
     if (filterMutual) {
-      const mutualValueFilter = mutualMode > 0 ? valueFilter : { $gte: -5 };
+      const mutualValueFilter = mutualMode > 0 ? valueFilter : { $ne: 0 };
       const mutualRows = await this.flagModel.find({
         targetUser: { $in: rows.map(r => r.user )},
         user: userId,

@@ -73,7 +73,6 @@ export const mapLikeabilityRelation = (item = null): FlagVal => {
   if (item instanceof Object) {
     const { value, modifiedAt } = item;
     const keyVal = mapLikeability(value);
-
     return { value: keyVal, modifiedAt };
   } else {
     return { value: '' };
