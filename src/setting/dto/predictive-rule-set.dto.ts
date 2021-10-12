@@ -7,6 +7,9 @@ export class PredictiveRuleSetDTO {
   readonly user: string;
 
   @ApiProperty()
+  readonly active: boolean;
+
+  @ApiProperty()
   readonly type: string;
 
   @ApiProperty()

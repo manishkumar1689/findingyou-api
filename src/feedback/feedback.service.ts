@@ -107,16 +107,20 @@ export class FeedbackService {
     const userFlags = preFetchFlags? await this.getAllUserInteractions(userId, 1) : { to: [], from: [], likeability: { to: [], from: [] } };
 
     const notFlagItems = notFlags.map(flagKey => {
+      const defVal = { key: flagKey, value: true, op: "eq" };
       switch (flagKey) {
         case 'like':
-          return { key: 'likeability', value: 1};
+          return {...defVal, value: 1 };
         case 'superlike':
-          return { key: 'likeability', value: 2};
-        case 'pass':
+          return {...defVal, value: 2 };
+        case 'ignore':
         case 'not_interested':
-          return { key: 'likeability', value: 0};
+          return {...defVal, value: 0 };
+        case 'pass':
+        case 'passed':
+            return {...defVal, value: 0, op: "lt"  };
         default:
-          return { key: flagKey, value: true};
+          return defVal;
       }
     });
 
@@ -125,8 +129,9 @@ export class FeedbackService {
     const fromLikeFlags = likeability.from.map(fi => {
       return {...fi, key: 'likeability' }
     });
+    
     const fromFlags = preFetchFlags? [...fromLikeFlags, ...from] : [];
-    const excludedIds = preFetchFlags? fromFlags.filter(flag => notFlagItems.some(fi => fi.key === flag.key && fi.value === flag.value)).map(flag => flag.user) : [];
+    const excludedIds = preFetchFlags? fromFlags.filter(flag => notFlagItems.some(fi => fi.key === flag.key && ((fi.op === "eq" && fi.value === flag.value) || (fi.op === "lt" && flag.value < fi.value)))).map(flag => flag.user) : [];
     return { userFlags, excludedIds };
   }
 
