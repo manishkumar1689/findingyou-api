@@ -136,8 +136,10 @@ export class FeedbackController {
   @Post('swipe')
   async saveSwipe(@Res() res, @Body() swipeDTO: SwipeDTO) {
     const {to, from, value, context} = swipeDTO;
+    const minRatingValue = -3;
     const contextKey = notEmptyString(context)? sanitize(context, '_') : 'swipe';
     const prevSwipe = await this.feedbackService.prevSwipe(from, to);
+    const recipSwipe = await this.feedbackService.prevSwipe(to, from);
     let intValue = smartCastInt(value, 0);
     const maxKey = ['swipe', mapLikeability(intValue, true)].join('_');
     const hasLimits = notEmptyString(maxKey);
@@ -149,16 +151,24 @@ export class FeedbackController {
     const hasPaidRole = roles.some(rk => rk.includes('member'));
     let data: any = {valid: false}
     const hasPrevPass = prevSwipe.valid && prevSwipe.value < 1;
-    const isPass = intValue <= 0;
+    let isPass = intValue <= 0;
+    // for free members set pass value to 0 if the other has liked them
+    if (isPass && !hasPaidRole && recipSwipe.value > 0) {
+      intValue = 0;
+      isPass = false;
+    }
     const prevPass = isPass && hasPrevPass ? prevSwipe.value : 0;
     if (contextKey.includes('like') === false && hasPaidRole && intValue < 1 && isPass) {
-      if (hasPrevPass) {
+      const isHardPass = intValue <= minRatingValue;
+      if (isHardPass) {
+        intValue = minRatingValue;
+      } else if (hasPrevPass) {
         intValue = prevSwipe.value - 1;
       } else {
         intValue--;
       }
     }
-    if ((numSwipes < maxRating && prevPass >= -3) || maxRating < 1) {
+    if ((numSwipes < maxRating || maxRating < 1) && prevPass > minRatingValue) {
       const flagData = {
         user: from,
         targetUser: to,

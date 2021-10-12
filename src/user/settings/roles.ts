@@ -75,6 +75,7 @@ export const filterLikeabilityKey = (key = "") => {
     case 'liked2':
     case 'superliked':
     case 'superstarred':
+    case 'starred':
       return { 
         refNum: 2, 
         gte: false
@@ -87,7 +88,7 @@ export const filterLikeabilityKey = (key = "") => {
     case 'likeability':
     case 'likability':
       return { 
-        refNum: 0, 
+        refNum: -3, 
         gte: true
       };
     default:

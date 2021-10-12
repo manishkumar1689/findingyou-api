@@ -54,7 +54,7 @@ import { SampleDataDTO } from './dto/sample-data.dto';
 import { SampleRecordDTO } from './dto/sample-record.dto';
 import { simplifyChart } from '../astrologic/lib/member-charts';
 import { MediaItemDTO } from './dto/media-item.dto';
-import { IFlag, mapLikeabilityRelations } from '../lib/notifications';
+import { filterLikeabilityContext, IFlag, mapLikeabilityRelations } from '../lib/notifications';
 import { Model } from 'mongoose';
 import { ActiveStatusDTO } from './dto/active-status.dto';
 
@@ -250,16 +250,22 @@ export class UserController {
     const queryKeys = Object.keys(query);
     let filterIds = [];
     let hasFilterIds = false;
+    const hasUser = (queryKeys.includes("user") && notEmptyString(query.user, 16));
+    const userId = hasUser ? query.user : '';
+    const context = queryKeys.includes("context")? query.context : "";
+    const hasContext = hasUser && notEmptyString(context, 2);
+    const params = hasContext ? filterLikeabilityContext(context) : query;
+    const paramKeys = Object.keys(params);
     // filter ids by members who have liked or superliked the referenced user
     const likeabilityKeys = ['liked', 'liked1','liked2','passed', 'likeability', 'likability'];
-    if (queryKeys.includes('user') && queryKeys.some(k => likeabilityKeys.includes(k))) {
-      const matchedKey = queryKeys.find(k => likeabilityKeys.includes(k));
+    if (queryKeys.includes('user') && paramKeys.some(k => likeabilityKeys.includes(k))) {
+      const matchedKey = paramKeys.find(k => likeabilityKeys.includes(k));
       const filterByLikeability = notEmptyString(matchedKey);
       if (filterByLikeability) {
         const {refNum, gte } = filterLikeabilityKey(matchedKey);
-        const startDate = toStartRef(query[matchedKey]);
-        const mutual = queryKeys.includes("mutual") && parseInt(query.mutual, 10) > 0;
-        const unrated = !mutual && queryKeys.includes("unrated") && parseInt(query.unrated, 10) > 0;
+        const startDate = toStartRef(params[matchedKey]);
+        const mutual = paramKeys.includes("mutual") && parseInt(params.mutual, 10) > 0;
+        const unrated = !mutual && paramKeys.includes("unrated") && parseInt(params.unrated, 10) > 0;
         const mutualMode = mutual? 1 : unrated ? -1 : 0;
         const flags = await this.feedbackService.fetchByLikeability(query.user, startDate, refNum, gte, mutualMode);
         const skipMutuality = !mutual && !unrated;
@@ -286,15 +292,28 @@ export class UserController {
     const filterFlagsByUser = (item: IFlag, userId = "") => {
       return item.user.toString() === userId
     }
-    const hasUser = (queryKeys.includes("user") && notEmptyString(query.user, 16));
-    const userId = hasUser ? query.user : '';
-    const notFlagStr = queryKeys.includes("nf") ? query.nf : queryKeys.includes("not")? query.not : "";
-    const trueFlagStr = queryKeys.includes("tf") ? query.tf : queryKeys.includes("flags")? query.not : "";
-    const notFlags = notEmptyString(notFlagStr) ? notFlagStr.split(',') : [];
-    const trueFlags = notEmptyString(trueFlagStr) ? trueFlagStr.split(',') : [];
+    
+    let notFlags = [];
+    let trueFlags = [];
+    if (hasContext) {
+      switch (context) {
+        case 'search':
+          notFlags = ['like', 'superlike', 'pass3'];
+          break;
+      }
+    } else {
+      const notFlagStr = queryKeys.includes("nf") ? query.nf : queryKeys.includes("not")? query.not : "";
+      const trueFlagStr = queryKeys.includes("tf") ? query.tf : queryKeys.includes("flags")? query.not : "";
+      notFlags = notEmptyString(notFlagStr) ? notFlagStr.split(',') : [];
+      trueFlags = notEmptyString(trueFlagStr) ? trueFlagStr.split(',') : [];
+    }
     const preFetchFlags = notFlags.length > 0 || trueFlags.length > 0;
     const prefOptions = await this.settingService.getPreferences();
-    const { userFlags, excludedIds } = await this.feedbackService.fetchFilteredUserInteractions(userId, notFlags, preFetchFlags);
+    const { userFlags, excludedIds, includedIds } = await this.feedbackService.fetchFilteredUserInteractions(userId, notFlags, trueFlags, preFetchFlags);
+    if (includedIds instanceof Array && trueFlags.length > 0) {
+      filterIds = includedIds;
+      hasFilterIds = true;
+    }
     const queryParams = hasFilterIds ? { query, ids: filterIds } : query;
     
     const data = await this.userService.members(startInt, limitInt, queryParams, excludedIds);    

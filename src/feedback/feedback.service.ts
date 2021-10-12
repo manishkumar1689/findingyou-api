@@ -7,7 +7,7 @@ import { notEmptyString, validISODateString } from '../lib/validators';
 import { CreateFlagDTO } from './dto/create-flag.dto';
 import { Feedback } from './interfaces/feedback.interface';
 import { Flag, SimpleFlag } from './interfaces/flag.interface';
-import { mapUserFlag } from '../lib/notifications';
+import { filterLikeabilityFlags, mapFlagItems, mapUserFlag } from '../lib/notifications';
 
 @Injectable()
 export class FeedbackService {
@@ -103,27 +103,15 @@ export class FeedbackService {
     };
   }
 
-  async fetchFilteredUserInteractions(userId = "", notFlags = [], preFetchFlags = false) {
+  async fetchFilteredUserInteractions(userId = "", notFlags = [], trueFlags = [], preFetchFlags = false, trueMode = false) {
     const userFlags = preFetchFlags? await this.getAllUserInteractions(userId, 1) : { to: [], from: [], likeability: { to: [], from: [] } };
 
-    const notFlagItems = notFlags.map(flagKey => {
-      const defVal = { key: flagKey, value: true, op: "eq" };
-      switch (flagKey) {
-        case 'like':
-          return {...defVal, value: 1 };
-        case 'superlike':
-          return {...defVal, value: 2 };
-        case 'ignore':
-        case 'not_interested':
-          return {...defVal, value: 0 };
-        case 'pass':
-        case 'passed':
-            return {...defVal, value: 0, op: "lt"  };
-        default:
-          return defVal;
-      }
-    });
+    
 
+    const hasNotFlags = notFlags instanceof Array && notFlags.length > 0;
+    const hasTrueFlags = trueFlags instanceof Array && trueFlags.length > 0;
+    const notFlagItems = hasNotFlags ? notFlags.map(mapFlagItems) : [];
+    const trueFlagItems = hasTrueFlags ? trueFlags.map(mapFlagItems) : [];
     
     const { from, likeability } = userFlags;
     const fromLikeFlags = likeability.from.map(fi => {
@@ -131,8 +119,9 @@ export class FeedbackService {
     });
     
     const fromFlags = preFetchFlags? [...fromLikeFlags, ...from] : [];
-    const excludedIds = preFetchFlags? fromFlags.filter(flag => notFlagItems.some(fi => fi.key === flag.key && ((fi.op === "eq" && fi.value === flag.value) || (fi.op === "lt" && flag.value < fi.value)))).map(flag => flag.user) : [];
-    return { userFlags, excludedIds };
+    const excludedIds = preFetchFlags? fromFlags.filter(flag => filterLikeabilityFlags(flag, notFlagItems)).map(flag => flag.user) : [];
+    const includedIds = preFetchFlags? fromFlags.filter(flag => filterLikeabilityFlags(flag, trueFlagItems)).map(flag => flag.user) : [];
+    return { userFlags, excludedIds, includedIds };
   }
 
   async getMemberSet(user: string, uid: string) {
@@ -234,7 +223,13 @@ export class FeedbackService {
       const newFB = new this.flagModel(fields);
       data = await newFB.save();
     }
-    return data instanceof Object? extractSimplified(data, ['_id', '__v', 'active']) : { valid: false};
+    const hasData = data instanceof Object;
+    const result = hasData? extractSimplified(data, ['_id', '__v', 'active']) : { valid: false, value: 0 };
+    if (hasData) {
+      result.value = value;
+    }
+    return result;
+
   }
 
   async countRecentLikeability(userId: string, refNum = 1) {
@@ -258,7 +253,7 @@ export class FeedbackService {
       targetUser: otherUserId,
     };
     const flag = await this.flagModel.findOne(criteria);
-    return flag instanceof Model ? {...flag.toObject(), valid: true } : { valid: false };
+    return flag instanceof Model ? {...flag.toObject(), valid: true } : { valid: false, value: 0 };
   }
 
   matchLikeabilityKey(keyRef = 'like') {

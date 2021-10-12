@@ -27,6 +27,12 @@ export interface FlagVal {
   modifiedAt?: string;
 }
 
+export interface FlagItem {
+  key: string;
+  value: number | boolean;
+  op: string;
+}
+
 export const mapUserFlag = (item, toMode = false, likeMode = false): IFlag => {
   if (item instanceof Object) {
     const { key, value, type, user, targetUser, modifiedAt } = item;
@@ -118,4 +124,46 @@ export const pushFlag = async (token: string, flag: IFlag) => {
     result.error = e;
   }
   return result;
+}
+
+export const mapFlagItems = (flagKey = ""): FlagItem => {
+  const defVal = { key: flagKey, value: true, op: "eq" };
+  switch (flagKey) {
+    case 'like':
+      return {...defVal, value: 1 };
+    case 'superlike':
+      return {...defVal, value: 2 };
+    case 'ignore':
+    case 'not_interested':
+      return {...defVal, value: 0 };
+    case 'pass':
+    case 'passed':
+        return {...defVal, value: 0, op: "lt"  };
+    case 'passed3':
+      return {...defVal, value: -2, op: "lt"  };
+    default:
+      return defVal;
+  }
+}
+
+export const subFilterFlagItems = (flag: IFlag, fi: FlagItem) => {
+  return flag.key === 'likeability' && ((fi.op === "eq" && fi.value === flag.value) || (fi.op === "lt" && flag.value < fi.value));
+}
+
+export const filterLikeabilityFlags = (flag: IFlag, flagItems: FlagItem[]) => flagItems.some(fi => subFilterFlagItems(flag, fi))
+
+export const filterLikeabilityContext = (context = '') => {
+  switch (context) {
+    case 'liked':
+      return { liked1: 1 };
+    case 'superliked':
+    case 'starred':
+    case 'superstarred':
+      return { liked2: 1 };
+    case 'matched':
+    case 'match':
+      return { liked: 1, mutual: 1 };
+    default:
+      return {};
+  }
 }
