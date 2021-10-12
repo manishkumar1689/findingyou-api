@@ -298,7 +298,7 @@ export class UserController {
     if (hasContext) {
       switch (context) {
         case 'search':
-          notFlags = ['like', 'superlike', 'pass3'];
+          notFlags = ['like', 'superlike', 'passed3'];
           break;
       }
     } else {
