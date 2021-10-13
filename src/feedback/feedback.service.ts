@@ -105,22 +105,33 @@ export class FeedbackService {
 
   async fetchFilteredUserInteractions(userId = "", notFlags = [], trueFlags = [], preFetchFlags = false, trueMode = false) {
     const userFlags = preFetchFlags? await this.getAllUserInteractions(userId, 1) : { to: [], from: [], likeability: { to: [], from: [] } };
-
-    
-
     const hasNotFlags = notFlags instanceof Array && notFlags.length > 0;
     const hasTrueFlags = trueFlags instanceof Array && trueFlags.length > 0;
-    const notFlagItems = hasNotFlags ? notFlags.map(mapFlagItems) : [];
+    const notFlagItems = hasNotFlags ? notFlags.filter(k => k.startsWith('notliked') === false).map(mapFlagItems) : [];
     const trueFlagItems = hasTrueFlags ? trueFlags.map(mapFlagItems) : [];
-    
-    const { from, likeability } = userFlags;
+    const filterLiked2 = preFetchFlags && notFlags.includes('notliked2');
+    const filterLiked1 = preFetchFlags && notFlags.includes('notliked');
+    const filterByLiked = filterLiked2 || filterLiked1;
+    const { from, to, likeability } = userFlags;
     const fromLikeFlags = likeability.from.map(fi => {
+      return {...fi, key: 'likeability' }
+    });
+    const toLikeFlags = likeability.to.map(fi => {
       return {...fi, key: 'likeability' }
     });
     
     const fromFlags = preFetchFlags? [...fromLikeFlags, ...from] : [];
-    const excludedIds = preFetchFlags? fromFlags.filter(flag => filterLikeabilityFlags(flag, notFlagItems)).map(flag => flag.user) : [];
-    const includedIds = preFetchFlags? fromFlags.filter(flag => filterLikeabilityFlags(flag, trueFlagItems)).map(flag => flag.user) : [];
+    const toFlags = preFetchFlags? [...toLikeFlags, ...to] : [];
+    const excludeLikedMinVal = filterLiked2? 2 : filterLiked1 ? 1 : 3;
+    const excludedIds = !preFetchFlags? fromFlags.filter(flag => filterLikeabilityFlags(flag, notFlagItems)).map(flag => flag.user) : [];
+    const includedIds = !preFetchFlags? fromFlags.filter(flag => filterLikeabilityFlags(flag, trueFlagItems)).map(flag => flag.user) : [];
+    const extraExcludedIds = filterByLiked? toFlags.filter(fl => fl.value >= excludeLikedMinVal).map(fl => fl.user) : [];
+    console.log(extraExcludedIds,filterByLiked)
+    if (extraExcludedIds.length > 0) {
+      extraExcludedIds.forEach(id => {
+        excludedIds.push(id);
+      })
+    }
     return { userFlags, excludedIds, includedIds };
   }
 

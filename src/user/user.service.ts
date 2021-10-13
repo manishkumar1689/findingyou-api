@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Model } from 'mongoose';
+import { ObjectId } from 'mongoose/lib/types';
 import { InjectModel } from '@nestjs/mongoose';
 import { MailerService } from '@nest-modules/mailer';
 import { User } from './interfaces/user.interface';
@@ -178,7 +179,7 @@ export class UserService {
     filter.set('active', true);
     filter.set('roles', { $nin: ['superadmin', 'admin', 'blocked', 'editor']});
     if (excludedIds.length > 0) {
-      filter.set('_id', { $nin: excludedIds });
+      filter.set('_id', { $nin: excludedIds.map(_id => new ObjectId(_id)) });
     }
     return hashMapToObject(filter);
   };
@@ -710,8 +711,10 @@ export class UserService {
   }
 
   async members(start = 0, limit = 100, criteria = null, excludedIds: string[] = []) {
+    const userID = Object.keys(criteria).includes('user')? criteria.user : '';
     const matchCriteria = this.buildMemberCriteria(criteria, excludedIds);
     let nearStage = null;
+    
     if (Object.keys(criteria).includes('near')) {
       const geoMatch = this.buildNearQuery(criteria.near);
       if (geoMatch instanceof Object) {
@@ -1217,6 +1220,16 @@ export class UserService {
     return user instanceof Object ? this.hasAdminRole(user) : false;
   }
 
+  async isPaidMember(userID: string): Promise<boolean> {
+    const roles = await this.getRoles(userID);
+    return roles.length > 0 && roles.filter(rk => rk.includes('member')).length > 0;
+  }
+
+  async getRoles(userID: string): Promise<string[]> {
+    const user = await this.userModel.findById(userID).select('active roles');
+    return user instanceof Model ? user.active? user.roles : [] : [];
+  }
+
   async getAdminIds(): Promise<string[]> {
     const users = await this.userModel.find({ roles: 'superadmin', active: true }).select('roles');
     return users instanceof Array ? users.filter(u => u.roles instanceof Array && u.roles.includes('blocked') === false).map(u => u._id) : [];
@@ -1353,7 +1366,8 @@ export class UserService {
         }
       });
     }
-    return { limit, isAdmin, numUploaded, active, roles };
+    const mayUploadMore = isAdmin || numUploaded < limit;
+    return { limit, isAdmin, numUploaded, active, roles, mayUploadMore, valid: hasUser };
   }
 
   mapPreferenceKey(key: string) {

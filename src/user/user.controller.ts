@@ -36,7 +36,6 @@ import roleValues, { filterLikeabilityKey } from './settings/roles';
 import paymentValues from './settings/payments-options';
 import countryValues from './settings/countries';
 import surveyList from './settings/survey-list';
-import permissionValues, { limitPermissions } from './settings/permissions';
 import { Role } from './interfaces/role.interface';
 import { EditStatusDTO } from './dto/edit-status.dto';
 import { PaymentOption } from './interfaces/payment-option.interface';
@@ -250,11 +249,14 @@ export class UserController {
     const queryKeys = Object.keys(query);
     let filterIds = [];
     let hasFilterIds = false;
+    const notLiked = queryKeys.includes("notliked")
     const hasUser = (queryKeys.includes("user") && notEmptyString(query.user, 16));
     const userId = hasUser ? query.user : '';
+    const isPaidMember = hasUser ? await this.userService.isPaidMember(userId) : false;
     const context = queryKeys.includes("context")? query.context : "";
     const hasContext = hasUser && notEmptyString(context, 2);
     const params = hasContext ? filterLikeabilityContext(context) : query;
+    const searchMode = context === 'search';
     const paramKeys = Object.keys(params);
     // filter ids by members who have liked or superliked the referenced user
     const likeabilityKeys = ['liked', 'liked1','liked2','passed', 'likeability', 'likability'];
@@ -262,7 +264,7 @@ export class UserController {
       const matchedKey = paramKeys.find(k => likeabilityKeys.includes(k));
       const filterByLikeability = notEmptyString(matchedKey);
       if (filterByLikeability) {
-        const {refNum, gte } = filterLikeabilityKey(matchedKey);
+        const { refNum, gte } = filterLikeabilityKey(matchedKey);
         const startDate = toStartRef(params[matchedKey]);
         const mutual = paramKeys.includes("mutual") && parseInt(params.mutual, 10) > 0;
         const unrated = !mutual && paramKeys.includes("unrated") && parseInt(params.unrated, 10) > 0;
@@ -292,14 +294,14 @@ export class UserController {
     const filterFlagsByUser = (item: IFlag, userId = "") => {
       return item.user.toString() === userId
     }
-    
     let notFlags = [];
     let trueFlags = [];
-    if (hasContext) {
-      switch (context) {
-        case 'search':
-          notFlags = ['like', 'superlike', 'passed3'];
-          break;
+    if (hasContext && searchMode) {
+      notFlags = ['like', 'superlike', 'passed3', 'superliked'];
+      if (isPaidMember) {
+        notFlags.push('notliked');
+      } else {
+        notFlags.push('notliked2');
       }
     } else {
       const notFlagStr = queryKeys.includes("nf") ? query.nf : queryKeys.includes("not")? query.not : "";
@@ -315,8 +317,10 @@ export class UserController {
       hasFilterIds = true;
     }
     const queryParams = hasFilterIds ? { query, ids: filterIds } : query;
-    
-    const data = await this.userService.members(startInt, limitInt, queryParams, excludedIds);    
+    if (hasUser) {
+      excludedIds.push(userId);
+    }
+    const data = await this.userService.members(startInt, limitInt, queryParams, excludedIds); 
     const users = this.userService.filterByPreferences(
       data,
       query,
@@ -406,9 +410,13 @@ export class UserController {
 
   @Get('max-upload/:userID')
   async maxUpload(@Res() res, @Param('userID') userID) {
-    const permData = await this.settingService.getPermissionData();
-    const uploadData = await this.userService.fetchMaxImages(userID, permData);
+    const uploadData = await this.maxUploadByUser(userID);
     return res.status(HttpStatus.OK).json(uploadData);
+  }
+
+  async maxUploadByUser(userID: string) {
+    const permData = await this.settingService.getPermissionData();
+    return await this.userService.fetchMaxImages(userID, permData);
   }
 
   // Fetch a particular user using ID
@@ -1064,49 +1072,67 @@ export class UserController {
     @Param('title') title = '',
     @UploadedFile() file,
   ) {
-    let data: any = { valid: false, fileData: null };
+    let data: any = { valid: false, fileData: null, message: 'no file data', remaining: 0 };
+    let status = HttpStatus.NOT_ACCEPTABLE;
+    let remaining = 0;
     if (file instanceof Object) {
-      
-      const { originalname, mimetype, size, buffer } = file;
-      const fn = generateFileName(userID, originalname);
-      const { fileType, mime } = matchFileTypeAndMime(originalname, mimetype);
-      const fileData = {
-        filename: fn,
-        mime,
-        type: fileType,
-        source: 'local',
-        size,
-        title,
-        attributes:{},
-        variants: []
-      };
-      data = { valid: false, fileData };
-      const intSize = parseInt(size, 10);
-      const { filename, attributes, variants } = uploadMediaFile(
-        userID,
-        originalname,
-        buffer,
-        'image',
-      );
-      if (filename.length > 5) {
-        fileData.filename = filename;
-        fileData.mime = mimetype;
-        fileData.size = intSize;
-        fileData.attributes = attributes;
-        fileData.variants = variants;
-        const savedSub = await this.userService.saveProfileImage(
-          userID,
-          type,
-          fileData,
-          mediaRef
-        );
-        if (savedSub.valid) {
-          data.user = savedSub.user;
-        }
-        data.valid = true;
+      const uploadAuth = await this.maxUploadByUser(userID);
+      if (!uploadAuth.valid) {
+        data.message = 'unmatched user';
+      } else if (!uploadAuth.mayUploadMore) {
+        data.message = `User has reached maximum upload limit of ${uploadAuth.limit}`
+      } else {
+        remaining = uploadAuth.limit - uploadAuth.numUploaded;
+        data.remaining = remaining;
       }
+      if (uploadAuth.mayUploadMore) {
+        const { originalname, mimetype, size, buffer } = file;
+        const fn = generateFileName(userID, originalname);
+        const { fileType, mime } = matchFileTypeAndMime(originalname, mimetype);
+        const fileData = {
+          filename: fn,
+          mime,
+          type: fileType,
+          source: 'local',
+          size,
+          title,
+          attributes:{},
+          variants: []
+        };
+        data = { valid: false, fileData };
+        const intSize = parseInt(size, 10);
+        const { filename, attributes, variants } = uploadMediaFile(
+          userID,
+          originalname,
+          buffer,
+          'image',
+        );
+        if (filename.length > 5) {
+          fileData.filename = filename;
+          fileData.mime = mimetype;
+          fileData.size = intSize;
+          fileData.attributes = attributes;
+          fileData.variants = variants;
+          const savedSub = await this.userService.saveProfileImage(
+            userID,
+            type,
+            fileData,
+            mediaRef
+          );
+          if (savedSub.valid) {
+            data.user = savedSub.user;
+            status = HttpStatus.OK;
+            data.message = 'success';
+            data.remaining = remaining - 1;
+          }
+          data.valid = true;
+        } else {
+          data.message = 'File upload failed';
+        }
+      }
+      
     }
-    return res.json(data);
+    return res.status(status).json(data);
   }
 
   @Delete('media-item/delete/:userID/:mediaRef')
