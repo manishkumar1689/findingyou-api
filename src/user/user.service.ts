@@ -19,7 +19,7 @@ import { MatchedOption, PrefKeyValue } from './settings/preference-options';
 import { smartCastBool, smartCastFloat, smartCastInt } from '../lib/converters';
 import { MediaItemDTO } from './dto/media-item.dto';
 import { PreferenceDTO } from './dto/preference.dto';
-import { matchFileTypeAndMime } from 'src/lib/files';
+import { matchFileTypeAndMime } from '../lib/files';
 
 const userEditPaths = [
   'fullName',
