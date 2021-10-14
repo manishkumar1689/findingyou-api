@@ -126,7 +126,6 @@ export class FeedbackService {
     const excludedIds = !preFetchFlags? fromFlags.filter(flag => filterLikeabilityFlags(flag, notFlagItems)).map(flag => flag.user) : [];
     const includedIds = !preFetchFlags? fromFlags.filter(flag => filterLikeabilityFlags(flag, trueFlagItems)).map(flag => flag.user) : [];
     const extraExcludedIds = filterByLiked? toFlags.filter(fl => fl.value >= excludeLikedMinVal).map(fl => fl.user) : [];
-    console.log(extraExcludedIds,filterByLiked)
     if (extraExcludedIds.length > 0) {
       extraExcludedIds.forEach(id => {
         excludedIds.push(id);

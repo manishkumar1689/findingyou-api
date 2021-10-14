@@ -136,7 +136,7 @@ export class FeedbackController {
   @Post('swipe')
   async saveSwipe(@Res() res, @Body() swipeDTO: SwipeDTO) {
     const {to, from, value, context} = swipeDTO;
-    const minRatingValue = -3;
+    const minRatingValue = await this.settingService.minPassValue();
     const contextKey = notEmptyString(context)? sanitize(context, '_') : 'swipe';
     const prevSwipe = await this.feedbackService.prevSwipe(from, to);
     const recipSwipe = await this.feedbackService.prevSwipe(to, from);

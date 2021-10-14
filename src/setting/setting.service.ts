@@ -477,15 +477,47 @@ export class SettingService {
     return updatedSetting;
   }
 
-  async getFlags() {
+  async getFlags(skipCache = false) {
     let flags = defaultFlags;
-    const setting = await this.getByKey('flags');
-    if (setting) {
-      if (setting.value instanceof Array && setting.value.length > 0) {
-        flags = setting.value;
+    const cKey = 'flags';
+    const stored = skipCache? null : await this.redisGet(cKey);
+    if (stored instanceof Array && stored.length > 0) {
+      return stored;
+    } else {
+      const setting = await this.getByKey('flags');
+      if (setting) {
+        if (setting.value instanceof Array && setting.value.length > 0) {
+          flags = setting.value;
+          this.redisSet(cKey, flags);
+        }
       }
     }
     return flags;
+  }
+
+
+
+  async getFlagInfo(key = "") {
+    const flags = await this.getFlags();
+    const flag = flags.find(fl =>fl.key === key);
+    let defaultFlag = {
+      key: "",
+      type : "boolean",
+      defaultValue: false,
+      range: [],
+      options: [],
+      valid: false
+    }
+    return flag instanceof Object ? {...flag, valid: true } : defaultFlag;
+  }
+
+  async minPassValue() {
+    let minValue = -3;
+    const likeability = await this.getFlagInfo('likeability');
+    if (likeability.range instanceof Array && likeability.range.length > 1) {
+      minValue = likeability.range[0];
+    }
+    return minValue;
   }
 
   async getProtocol(itemID: string) {
