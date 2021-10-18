@@ -487,6 +487,7 @@ export class AstrologicController {
       const chartData = await this.astrologicService.getUserBirthChart(user);
       if (chartData instanceof Model) {
         const chart = new Chart(chartData.toObject());
+        
         for (const rs of predictionSets) {
           const pr = await this.fetchPredictions(rs, chart, geo);
           const { conditionRefs, operator } = rs.conditionSet;
