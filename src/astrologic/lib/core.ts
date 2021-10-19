@@ -271,7 +271,7 @@ export const translateBodyConstant = (body: string) => {
 
 export const calcAllTransitions = async (datetime: string, geo: GeoPos, jdOffset = 0, showLng = false) => {
   const jd = calcJulDate(datetime);
-  const items = await calcAllTransitionsJd(jd, geo, jdOffset, true, showLng);
+  const items = await calcAllTransitionsJd(jd, geo, jdOffset, true, showLng, true);
   const transitions: TransitionData[] = items.map(row => {
     const key = translateBodyConstant(row.body);
     return { ...row, key }
@@ -289,7 +289,8 @@ export const calcAllTransitionsJd = async (
   geo,
   jdOffset = 0,
   fullSet = false,
-  showLng = false
+  showLng = false,
+  adjustRise = false
 ): Promise<Array<TransitionData>> => {
   const baseKeys = [
     'SE_SUN',
@@ -317,7 +318,7 @@ export const calcAllTransitionsJd = async (
       refJd,
       geo,
       num,
-      true,
+      adjustRise,
       true,
       showLng
     );
