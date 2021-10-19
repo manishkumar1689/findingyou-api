@@ -170,7 +170,7 @@ export class UserService {
             break;
           case 'ids':
             if (val instanceof Array) {
-              filter.set('_id', { $in: val });
+              filter.set('_id', { $in: val.filter(id => excludedIds.some(exId => exId === id) === false) });
             }
             break;
         }
@@ -179,7 +179,9 @@ export class UserService {
     filter.set('active', true);
     filter.set('roles', { $nin: ['superadmin', 'admin', 'blocked', 'editor']});
     if (excludedIds.length > 0) {
-      filter.set('_id', { $nin: excludedIds.map(_id => new ObjectId(_id)) });
+      if (!filter.has('_id')) {
+        filter.set('_id', { $nin: excludedIds.map(_id => new ObjectId(_id)) });
+      }
     }
     return hashMapToObject(filter);
   };
