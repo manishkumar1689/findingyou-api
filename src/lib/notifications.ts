@@ -155,11 +155,11 @@ export const filterLikeabilityFlags = (flag: IFlag, flagItems: FlagItem[]) => fl
 export const filterLikeabilityContext = (context = '') => {
   switch (context) {
     case 'liked':
-      return { liked1: 1 };
+      return { liked1: 1, unrated: 1 };
     case 'superliked':
     case 'starred':
     case 'superstarred':
-      return { liked2: 1 };
+      return { liked2: 1, unrated: 1 };
     case 'matched':
     case 'match':
       return { liked: 1, mutual: 1 };
