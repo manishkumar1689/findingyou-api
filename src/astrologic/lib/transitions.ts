@@ -57,12 +57,19 @@ interface TransitionInput {
 export const matchTransData = async (
   inData: TransitionInput,
   transType = 0,
-  transKey = 'trans',
+  transKey = 'rise',
+  adjustRise = false
 ): Promise<TimeSet> => {
   let data = { valid: false, transitTime: -1 };
   inData.transType = transType;
+  const riseOffset = transKey !== 'set' && inData.planetNum === swisseph.SE_SUN && adjustRise ? -0.5 : 0;
   const jd = inData.jd;
-  await riseTransAsync(...Object.values(inData)).catch(d => {
+  const jdIndex = Object.keys(inData).indexOf('jd');
+  const args = Object.values(inData);
+  if (riseOffset !== 0) {
+    args[jdIndex] += riseOffset;
+  }
+  await riseTransAsync(...args).catch(d => {
     data = d;
     if (!d.error) {
       data.valid = true;
@@ -71,7 +78,6 @@ export const matchTransData = async (
     }
   });
   let result:TimeSet = { jd: -1, after: false };
-  //const offset = Math.floor(jd) < Math.floor(data.transitTime) && transKey === 'set' ? 1 : 0;
   if (data.valid) {
     if (data.transitTime >= 0) {
       result = {
@@ -95,10 +101,10 @@ export const calcTransition = async (
   datetime,
   geo,
   planetNum,
-  showInput = true,
+  adjustRise = false,
 ) => {
   const jd = calcJulDate(datetime);
-  const data = await calcTransitionJd(jd, geo, planetNum, showInput, true);
+  const data = await calcTransitionJd(jd, geo, planetNum, adjustRise, true);
   return { jd, ...data };
 };
 
@@ -106,7 +112,7 @@ export const calcTransitionJd = async (
   jd: number,
   geo,
   planetNum,
-  showInput = true,
+  adjustRise = false,
   showIcMc = false,
   showLng = false,
 ): Promise<TransitionData> => {
@@ -149,16 +155,17 @@ export const calcTransitionJd = async (
     const set = await matchTransData(
       inData,
       swisseph.SE_CALC_SET + offset,
-      'set',
+      'set'
     );
     if (showIcMc) {
-      mc = await matchTransData(inData, swisseph.SE_CALC_MTRANSIT, 'mc');
-      ic = await matchTransData(inData, swisseph.SE_CALC_ITRANSIT, 'ic');
+      mc = await matchTransData(inData, swisseph.SE_CALC_MTRANSIT, 'mc', adjustRise);
+      ic = await matchTransData(inData, swisseph.SE_CALC_ITRANSIT, 'ic', adjustRise);
     }
     const rise = await matchTransData(
       inData,
       swisseph.SE_CALC_RISE + offset,
       'rise',
+      adjustRise
     );
     if (rise.jd >= -1) {
       valid = true;

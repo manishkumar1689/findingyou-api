@@ -137,6 +137,7 @@ export class Condition {
   varga2 = 1;
   context = '';
   aspectQuality = '';
+  orb = -1;
   lordRev = false; // reverse lordship order from A => B to B <= A
   isSet = false;
   kutaRange = [-1, -1];
@@ -163,6 +164,7 @@ export class Condition {
             switch (key) {
               case 'varga1':
               case 'varga2':
+              case 'orb':
                 this[key] = val;
                 break;
             }
@@ -813,9 +815,13 @@ export class Protocol {
     return matchOrbFromGrid(aspect, k1, k2, this.orbs);
   }
 
-  matchOrbValue(aspect: string, k1: string, k2: string) {
+  fetchOrbValue(aspect: string, k1: string, k2: string) {
     const aspectData = calcOrb(aspect, k1, k2);
     return matchAspectOrb(aspect, k1, k2, aspectData, this.orbs);
+  }
+
+  matchOrbValue(aspect: string, k1: string, k2: string, customOrb = -1) {
+    return customOrb >= 0? customOrb : this.fetchOrbValue(aspect, k1, k2);
   }
 
   kutaMax(kutaType = '', variantKey = '') {
@@ -1878,4 +1884,8 @@ export const matchShulaChakra = async (cond: Condition, chart: Chart) => {
 
 export const matchKalanalaChandra = async (cond: Condition, chart: Chart, geo: GeoPos) => {
   return await matchNakshatraGroups("kalanala", cond, chart, geo);
+}
+
+export const matchPanchaPakshi = async (cond: Condition, chart: Chart, geo: GeoPos) => {
+  return {};
 }

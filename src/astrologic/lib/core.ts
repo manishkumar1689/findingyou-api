@@ -308,16 +308,22 @@ export const calcAllTransitionsJd = async (
   ];
   const bodyKeys = fullSet? [...baseKeys, ...extraKeys] : baseKeys;
   const bodies: Array<TransitionData> = [];
+  let sunRiseJd = 0;
   for (const body of bodyKeys) {
     const num = swisseph[body];
+    const isSun = body === 'SE_SUN';
+    const refJd = isSun || sunRiseJd === 0? jd + jdOffset : sunRiseJd;
     const bodyData = await calcTransitionJd(
-      jd + jdOffset,
+      refJd,
       geo,
       num,
-      false,
+      true,
       true,
       showLng
     );
+    if (isSun) {
+      sunRiseJd = bodyData.rise.jd;
+    }
     bodies.push({
       num,
       body,

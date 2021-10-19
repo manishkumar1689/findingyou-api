@@ -93,6 +93,7 @@ import {
   matchKalanalaChandra,
   matchKotaChakra,
   matchOrbFromGrid,
+  matchPanchaPakshi,
   matchShulaChakra,
   PredictiveRule,
   processByBirthSign,
@@ -492,17 +493,6 @@ export class AstrologicController {
           const pr = await this.fetchPredictions(rs, chart, geo);
           const { conditionRefs, operator } = rs.conditionSet;
           const conditions = simplifyConditions(conditionRefs);
-          /* 
-          const conditions = condItems.map(c => {
-            let orb = 0;
-            if (c.isAspect && c.objects instanceof Array) {
-              const orbData = calcOrb(c.context, c.objects[0].key, c.objects[1].key)
-              if (orbData.key === c.context) {
-                orb = orbData.orb;
-              }
-            }
-            return {...c, orb };
-          }) */
           const toTimes = (jd = 0) => {
             return {
               jd,
@@ -1192,6 +1182,8 @@ export class AstrologicController {
       case 'kalanala':
       case 'chandra_kalanala':
         return matchKalanalaChandra(cond, chart, geo);
+      case 'panchapakshi':
+        return matchPanchaPakshi(cond, chart, geo);
       default:
         return result;
     }
