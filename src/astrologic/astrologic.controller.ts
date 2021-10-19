@@ -470,7 +470,7 @@ export class AstrologicController {
     const hasGeo = geo instanceof Object;
     const ayanamshaKey = notEmptyString(ayanamsha) ? ayanamsha : 'true_citra';
     const result = await this.astrologicService.getGrahaPositions(datetime, geo, hasGeo, ayanamshaKey);
-    const grahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 'sa', 'ra', 'ke', 'ur', 'ne', 'pl'];
+    const grahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa', 'ra', 'ke', 'ur', 'ne', 'pl'];
     if (hasGeo) {
       grahaKeys.unshift('as');
     }
