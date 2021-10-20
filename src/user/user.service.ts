@@ -1349,11 +1349,11 @@ export class UserService {
       const value = smartCastInt(r.value);
       return { ...r, value };
     }) : [];
-    const perms = permRoles.reduce((a, b) => a.concat(b), []).filter(key => key.endsWith('image_uploads'));
+    
+    const perms = permRoles.reduce((a, b) => a.concat(b), []).filter(key => key.endsWith('image_upload'));
     const limits = permLimits.filter(pl => perms.includes(pl.key));
     limits.sort((a, b) => b.value - a.value);
-    const limit = limits.length > 0 ? limits[0].value : 0;
-    
+    const limit = limits.length > 0 ? limits[0].value : 0;    
     let numUploaded = 0;
     if (active && roles.length > 0 && roles.includes('blocked') === false) {
       const profiles = userObj.profiles instanceof Array ? userObj.profiles : [];
