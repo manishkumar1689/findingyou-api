@@ -120,7 +120,7 @@ import ayanamshaValues from './lib/settings/ayanamsha-values';
 import { calcBavGraphData, calcBavSignSamples } from './lib/settings/ashtakavarga-values';
 import { GeoPos } from './interfaces/geo-pos';
 import { Model } from 'mongoose';
-import { calcYamaSets, matchBirdByNak, matchBirdRulers, matchDayBirdKeys } from './lib/settings/pancha-pakshi';
+import { calcYamaSets, matchBirdByNak, matchBirdRulers, matchDayBirdKeys, panchaPakshiDayNightSet } from './lib/settings/pancha-pakshi';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -234,11 +234,12 @@ export class AstrologicController {
     res.send(data);
   }
 
-  @Get('transitions/:loc/:dt/:modeRef?')
-  async transitions(@Res() res, @Param('loc') loc, @Param('dt') dt, @Param('modeRef') modeRef) {
+  @Get('transitions/:loc/:dt/:modeRef?/:adjustMode?')
+  async transitions(@Res() res, @Param('loc') loc, @Param('dt') dt, @Param('modeRef') modeRef, @Param('adjustMode') adjustMode) {
     if (validISODateString(dt) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
-      const data = await calcAllTransitions(dt, geo, 0, true);
+      const adjustRiseBy12 = adjustMode !== 'spot';
+      const data = await calcAllTransitions(dt, geo, 0, adjustRiseBy12);
       const mode = ["basic", "standard", "extended"].includes(modeRef)? modeRef : "standard";
       const showSunData = ["standard", "extended"].includes(mode);
       const showGeoData = ["extended"].includes(mode);
@@ -311,7 +312,7 @@ export class AstrologicController {
   }
 
   @Get('pancha-pakshi/:chartID/:loc/:dt?/:mode?')
-  async pankshaPanchaDaya(@Res() res, @Param('chartID') chartID, @Param('loc') loc, @Param('dt') dt, @Param('mode') mode) {
+  async pankshaPanchaDaySet(@Res() res, @Param('chartID') chartID, @Param('loc') loc, @Param('dt') dt, @Param('mode') mode) {
     let status = HttpStatus.BAD_REQUEST;
     let data: Map<string, any> = new Map(Object.entries({ jd: 0, dtUtc: '', valid: false, geo: null, rise: 0, set: 0, nextRise: 0, riseDt: '', setDt: '', nextRiseDt: '', moon: null, bird: null, yamas: [] }));
     const fetchNightAndDay = mode === 'dual';
@@ -323,86 +324,71 @@ export class AstrologicController {
       const chartData = await this.astrologicService.getChart(chartID);
       const hasChart = chartData instanceof Model;
       const valid = hasChart && chartData.grahas.length > 1;
-      
       data.set('valid', valid);
       if (valid) {
         const chartObj = hasChart ? chartData.toObject() : {};
-        const iTime = await toIndianTimeJd(jd, geo);
-        const setBefore = fetchNightAndDay ? iTime.rise.jd > iTime.set.jd : false;
-        const dayBefore = fetchNightAndDay ? false : iTime.dayBefore;
-        const periodStart = dayBefore ? iTime.prevSet.jd : iTime.rise.jd;
-        const periodEnd = dayBefore ? iTime.rise.jd : setBefore? iTime.nextSet.jd : iTime.set.jd;
-        const riseJd = setBefore ? periodStart : iTime.rise.jd;
-        const setJd = setBefore ? periodEnd : iTime.set.jd;
-        data.set('rise', riseJd);
-        data.set('set', setJd);
-        data.set('nextRise', iTime.nextRise.jd);
-        data.set('riseDt', julToISODate(riseJd));
-        data.set('setDt', julToISODate(setJd));
-        data.set('nextRiseDt', julToISODate(iTime.nextRise.jd));
-
         const chart = new Chart(chartObj);
-        chart.setAyanamshaItemByNum(27);
-        const moon = chart.graha('mo');
-        const moonJd = fetchNightAndDay ? iTime.rise.jd : jd;
-        const current = await calcMoonDataJd(moonJd);
-        data.set('geo', {
-          birth: chart.geo,
-          current: geo
-        });
-        data.set('moon', {
-          birth: { 
-            lng: moon.longitude,
-            nakshatra27: moon.nakshatra27,
-            waxing: chart.moonWaxing
-          },
-          current
-        });
-        const isDayTime = fetchNightAndDay ? true : iTime.isDayTime;
-        const bird = matchBirdByNak(moon.nakshatra27, chart.moonWaxing);
-
-        const currentBirds = matchDayBirdKeys(iTime.weekDayNum, current.waxing, isDayTime); 
-        data.set('bird', {
-          birth: bird.key,
-          current: currentBirds
-        });
-        const yamaData = calcYamaSets(jd, periodStart, periodEnd, current.waxing, isDayTime, bird.num, iTime.weekDayNum);
-        data.set('yamas', yamaData.yamas);
-        data.set('lengthJd', yamaData.lengthJd);
-        data.set('period', isDayTime ? 'day' : 'night');
-        const special: any = {
-          day: getSunMoonSpecialValues(moonJd, iTime, current.sunLng, current.lng)
+        const ppData = await panchaPakshiDayNightSet(jd, geo, chart, fetchNightAndDay);
+        if (ppData.get('valid')) {
+          data = new Map([...data, ...ppData]);
+          data.set('message', 'valid data set');
         }
-        
-        if (fetchNightAndDay) {
-          const jd2 = jd + 0.5;
-          const iTime2 = await toIndianTimeJd(jd2, geo);
-          const moon2Jd = iTime.set.jd;
-          const next = await calcMoonDataJd(moon2Jd);
-          const period2Start = periodEnd;
-          const period2End = iTime.nextRise.jd;
-          const isDayTime2 = !isDayTime;
-          const yamaData2 = calcYamaSets(jd2, period2Start, period2End, next.waxing, isDayTime2, bird.num, iTime.weekDayNum);
-          data.set('yamas2', yamaData2.yamas);
-          data.set('lengthJd2', yamaData2.lengthJd);
-          const mn = data.get('moon');
-          data.set('moon', {...mn, next});
-          const bd = data.get('bird');
-          const nextBirds = matchDayBirdKeys(iTime.weekDayNum, next.waxing, isDayTime2);
-          data.set('bird', { ...bd, next: nextBirds });
-          data.set('period2', isDayTime2 ? 'day' : 'night');
-          special.night = getSunMoonSpecialValues(moon2Jd, iTime, next.sunLng, next.lng);
-        }
-
-        data.set('special', special);
       }
       status = HttpStatus.OK;
     } else {
-      const result = {
-        valid: false,
-        message: 'Invalid parameters',
-      };
-      
+      data.set('message', 'Invalid parameters');
+    }
+    return res.status(status).json(Object.fromEntries(data));
+  }
+
+  @Get('pancha-pakshi-pair/:u1/:u2/:dt?')
+  async pankshaPanchaPairDaySet(@Res() res, @Param('u1') u1, @Param('u2') u2, @Param('dt') dt) {
+    let status = HttpStatus.BAD_REQUEST;
+    let data: Map<string, any> = new Map(Object.entries({ jd: 0, dtUtc: '', valid: false, geo1: null, geo2: null, p1: null, p2: null }));
+    
+    if (notEmptyString(u1, 20) && notEmptyString(u2, 12)) {
+      if (u1 === u2) {
+        data.set('message', 'IDs refer to the same user');
+      } else {
+        const user1 = await this.userService.getUser(u1, ['geo']);
+        const user2 = await this.userService.getUser(u2, ['geo']);
+        if (user1 instanceof Object && user2 instanceof Object) {
+          const geo1 = user1.geo;
+          const geo2 = user2.geo;
+          data.set('geo1', geo1);
+          data.set('geo2', geo2);
+          const { dtUtc, jd } = matchJdAndDatetime(dt);
+          data.set('jd', jd);
+          data.set('dtUtc', dtUtc);
+          const c1Data = await this.astrologicService.getUserBirthChart(u1);
+          const c2Data = await this.astrologicService.getUserBirthChart(u2);
+          const hasChart = c1Data instanceof Model && c2Data instanceof Model;
+          const valid = hasChart && c1Data.grahas.length > 1 && c2Data.grahas.length > 1;
+          if (valid) {
+            const c1Obj = hasChart ? c1Data.toObject() : {};
+            const c2Obj = hasChart ? c2Data.toObject() : {};
+            const chart1 = new Chart(c1Obj);
+            const chart2 = new Chart(c2Obj);
+            const ppData1 = await panchaPakshiDayNightSet(jd, geo1, chart1, true);
+            const ppData2 = await panchaPakshiDayNightSet(jd, geo2, chart2, true);
+            if (ppData1.get('valid')) {
+              data.set('p1', Object.fromEntries(ppData1.entries()));
+              data.set('p2', Object.fromEntries(ppData2.entries()));
+              data.set('message', 'valid data set');
+              data.set('valid', true);
+              status = HttpStatus.OK;
+            }  else {
+              data.set('message', 'Invalid data');
+            }
+          } else {
+            data.set('message', 'Missing chart(s)');
+          }
+        } else {
+          data.set('message', 'Invalid user IDs');
+        }
+      }
+    } else {
+      data.set('message', 'Invalid parameters');
     }
     return res.status(status).json(Object.fromEntries(data));
   }
@@ -1183,7 +1169,7 @@ export class AstrologicController {
       case 'chandra_kalanala':
         return matchKalanalaChandra(cond, chart, geo);
       case 'panchapakshi':
-        return matchPanchaPakshi(cond, chart, geo);
+        return await matchPanchaPakshi(cond, chart, geo);
       default:
         return result;
     }

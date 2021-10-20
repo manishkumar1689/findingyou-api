@@ -1,4 +1,9 @@
+import { GeoPos } from "src/astrologic/interfaces/geo-pos";
+import { calcMoonDataJd, getSunMoonSpecialValues } from "../core";
+import { julToISODate } from "../date-funcs";
 import { KeyNum, KeyNumValue } from "../interfaces";
+import { Chart } from "../models/chart";
+import { toIndianTimeJd } from "../transitions";
 
 const birdMap = { 1: 'vulture', 2: 'owl', 3: 'crow', 4: 'cock', 5: 'peacock' };
 
@@ -1220,11 +1225,12 @@ export const calcYamaSets = (jd = 0, startJd = 0, endJd = 0, isWaxing = true, is
   const progressJd = jd - startJd;
   const progress = progressJd / lengthJd;
   const subProgress = (progress % 0.2) * 5;
-  const yamas = [1, 2, 3, 4, 5].map((num, index) => {
+  const yamas = [1, 2, 3, 4, 5].map((num, yi) => {
+    const subLength = lengthJd / 5;
     return {
       num,
-      start: (startJd + (lengthJd / 5 * index) ),
-      end: (startJd + (lengthJd / 5 * num) )
+      start: (startJd + (subLength * yi) ),
+      end: (startJd + (subLength * num) )
     }
   });
   
@@ -1263,4 +1269,74 @@ export const expandBirdAttributes = (birdNum = 0, isWaxing = true) => {
   const birdIndex = birdNum > 0 && birdNum <= 5? birdNum - 1 : 0;
   const attrs = birdAttributes[birdIndex][waxWaneKey(isWaxing)];
   return { key: birdMap[birdNum], ...attrs };
+}
+
+export const panchaPakshiDayNightSet = async (jd = 0, geo: GeoPos, chart:Chart, fetchNightAndDay = true): Promise<Map<string, any>> => {  
+  const data: Map<string, any> = new Map();
+  const iTime = await toIndianTimeJd(jd, geo);
+  const setBefore = fetchNightAndDay ? iTime.rise.jd > iTime.set.jd : false;
+  const dayBefore = fetchNightAndDay ? false : iTime.dayBefore;
+  const periodStart = dayBefore ? iTime.prevSet.jd : iTime.rise.jd;
+  const periodEnd = dayBefore ? iTime.rise.jd : setBefore? iTime.nextSet.jd : iTime.set.jd;
+  const riseJd = setBefore ? periodStart : iTime.rise.jd;
+  const setJd = setBefore ? periodEnd : iTime.set.jd;
+  data.set('rise', riseJd);
+  data.set('set', setJd);
+  data.set('nextRise', iTime.nextRise.jd);
+  data.set('riseDt', julToISODate(riseJd));
+  data.set('setDt', julToISODate(setJd));
+  data.set('nextRiseDt', julToISODate(iTime.nextRise.jd));
+  chart.setAyanamshaItemByNum(27);
+  const moon = chart.graha('mo');
+  const moonJd = fetchNightAndDay ? iTime.rise.jd : jd;
+  const current = await calcMoonDataJd(moonJd);
+  data.set('geo', {
+    birth: chart.geo,
+    current: geo
+  });
+  data.set('moon', {
+    birth: { 
+      lng: moon.longitude,
+      nakshatra27: moon.nakshatra27,
+      waxing: chart.moonWaxing
+    },
+    current
+  });
+  const isDayTime = fetchNightAndDay ? true : iTime.isDayTime;
+  const bird = matchBirdByNak(moon.nakshatra27, chart.moonWaxing);
+  const currentBirds = matchDayBirdKeys(iTime.weekDayNum, current.waxing, isDayTime); 
+  data.set('bird', {
+    birth: bird.key,
+    current: currentBirds
+  });
+  const yamaData = calcYamaSets(jd, periodStart, periodEnd, current.waxing, isDayTime, bird.num, iTime.weekDayNum);
+  data.set('yamas', yamaData.yamas);
+  data.set('lengthJd', yamaData.lengthJd);
+  data.set('period', isDayTime ? 'day' : 'night');
+  const special: any = {
+    day: getSunMoonSpecialValues(moonJd, iTime, current.sunLng, current.lng)
+  }
+  
+  if (fetchNightAndDay) {
+    const jd2 = jd + 0.5;
+    //const iTime2 = await toIndianTimeJd(jd2, geo);
+    const moon2Jd = iTime.set.jd;
+    const next = await calcMoonDataJd(moon2Jd);
+    const period2Start = periodEnd;
+    const period2End = iTime.nextRise.jd;
+    const isDayTime2 = !isDayTime;
+    const yamaData2 = calcYamaSets(jd2, period2Start, period2End, next.waxing, isDayTime2, bird.num, iTime.weekDayNum);
+    data.set('yamas2', yamaData2.yamas);
+    data.set('lengthJd2', yamaData2.lengthJd);
+    const mn = data.get('moon');
+    data.set('moon', {...mn, next});
+    const bd = data.get('bird');
+    const nextBirds = matchDayBirdKeys(iTime.weekDayNum, next.waxing, isDayTime2);
+    data.set('bird', { ...bd, next: nextBirds });
+    data.set('period2', isDayTime2 ? 'day' : 'night');
+    special.night = getSunMoonSpecialValues(moon2Jd, iTime, next.sunLng, next.lng);
+  }
+  data.set('special', special);
+  data.set('valid', yamaData.yamas.length === 5);
+  return data;
 }

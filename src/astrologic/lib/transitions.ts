@@ -58,7 +58,8 @@ export const matchTransData = async (
   inData: TransitionInput,
   transType = 0,
   transKey = 'rise',
-  adjustRise = false
+  adjustRise = false,
+  startJd = -1
 ): Promise<TimeSet> => {
   let data = { valid: false, transitTime: -1 };
   inData.transType = transType;
@@ -66,8 +67,14 @@ export const matchTransData = async (
   const jd = inData.jd;
   const jdIndex = Object.keys(inData).indexOf('jd');
   const args = Object.values(inData);
-  if (riseOffset !== 0) {
-    args[jdIndex] += riseOffset;
+  const hasStartJd = startJd > 0;
+  if (riseOffset !== 0 || hasStartJd) {
+    if (hasStartJd) {
+      args[jdIndex] = startJd;  
+    } else {
+      args[jdIndex] += riseOffset;
+    }
+    
   }
   await riseTransAsync(...args).catch(d => {
     data = d;
@@ -152,7 +159,7 @@ export const calcTransitionJd = async (
     let mc = null;
     let ic = null;
 
-    const set = await matchTransData(
+    let set = await matchTransData(
       inData,
       swisseph.SE_CALC_SET + offset,
       'set'
@@ -161,12 +168,28 @@ export const calcTransitionJd = async (
       mc = await matchTransData(inData, swisseph.SE_CALC_MTRANSIT, 'mc', adjustRise);
       ic = await matchTransData(inData, swisseph.SE_CALC_ITRANSIT, 'ic', adjustRise);
     }
-    const rise = await matchTransData(
+    let rise = await matchTransData(
       inData,
       swisseph.SE_CALC_RISE + offset,
       'rise',
       adjustRise
     );
+    if (!adjustRise && rise.jd > set.jd) {
+      rise = await matchTransData(
+        inData,
+        swisseph.SE_CALC_RISE + offset,
+        'rise',
+        true
+      );
+      
+      set = await matchTransData(
+        inData,
+        swisseph.SE_CALC_SET + offset,
+        'set',
+        false,
+        rise.jd
+      );
+    }
     if (rise.jd >= -1) {
       valid = true;
     }
