@@ -416,7 +416,7 @@ export class UserController {
   }
 
   async maxUploadByUser(userID: string) {
-    const permData = await this.settingService.getPermissionData();
+    const permData = await this.settingService.getPermissionData(true);
     return await this.userService.fetchMaxImages(userID, permData);
   }
 
