@@ -1923,12 +1923,32 @@ const matchPanchaPakshiBirdAction = async (currJd = 0, geo: GeoPos, chart: Chart
   if (refBirds.length > 0) {
     const refDayBird = refBirds[0];
     const refNightBird = refBirds.length > 1 ? refBirds[1] : refBirds[0];
-    matchedYama = dayYamas.find(ym => ym.subs[0].bird === refDayBird && action === ym.subs[0].key);
-    birdKey = refDayBird;
+    if (isDayAction) {
+      const actionKey = action.includes("ruling")? "ruling" : "dying";
+      valid = bird.current[actionKey].key === refDayBird;
+      if (valid) {
+        matchedYama = { start: dayYamas[0].start, end: dayYamas[4].end };
+      }
+    } else {
+      matchedYama = dayYamas.find(ym => ym.subs[0].bird === refDayBird && action === ym.subs[0].key); 
+    }
+    if (matchedYama instanceof Object) {
+      birdKey = refDayBird;
+    }
     if (!matchedYama) {
-      matchedYama = nightYamas.find(ym => ym.subs[0].bird === refNightBird && action === ym.subs[0].key);
+      if (isDayAction) {
+        const actionKey = refKey.includes("ruling")? "ruling" : "dying";
+        valid = bird.current[actionKey].key === refDayBird;
+        if (valid) {
+          matchedYama = { start: nightYamas[0].start, end: nightYamas[4].end };
+        }
+      } else {
+        matchedYama = nightYamas.find(ym => ym.subs[0].bird === refNightBird && action === ym.subs[0].key);
+      }
       isNight = matchedYama instanceof Object;
-      birdKey = refNightBird;
+      if (isNight) {
+        birdKey = refNightBird;
+      }
     }
     valid = matchedYama instanceof Object;
   }
@@ -1960,7 +1980,7 @@ export const matchPanchaPakshi = async (cond: Condition, chart: Chart, geo: GeoP
     let matched = false;
     let counter = 0;
     while (!matched && counter < 20) {
-      const { valid, yama, birdKey, isNight } = await matchPanchaPakshiBirdAction(currJd, geo, chart, refKey, action, isDayAction);
+      const { valid, yama, birdKey, isNight } = await matchPanchaPakshiBirdAction(currJd + counter, geo, chart, refKey, action, isDayAction);
       if (valid) {
         matched = true;
         start = yama.start;

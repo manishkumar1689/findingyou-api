@@ -486,10 +486,15 @@ export class AstrologicController {
               dt: julToISODate(jd)
             }
           }
+          const toInfo = (item) => {
+            const entries = Object.entries(item).filter(([k, v]) => ['start', 'end', 'valid'].includes(k) === false);
+            return Object.fromEntries(entries);
+          }
           const items = pr.items.filter(pr => pr.valid).map(item => {
             return {
               start: toTimes(item.start),
-              end: toTimes(item.end)
+              end: toTimes(item.end),
+              info: toInfo(item)
             }
           })
           predictions.push({name: rs.name, text: rs.text, ...pr, items, conditions, operator });
