@@ -151,21 +151,19 @@ export class FeedbackController {
     const hasPaidRole = roles.some(rk => rk.includes('member'));
     let data: any = {valid: false}
     const hasPrevPass = prevSwipe.valid && prevSwipe.value < 1;
-    let isPass = intValue <= 0;
+    const isPass = intValue <= 0;
     // for free members set pass value to 0 if the other has liked them
-    if (isPass && !hasPaidRole && recipSwipe.value > 0) {
+    /* if (isPass && !hasPaidRole && recipSwipe.value > 0) {
       intValue = 0;
       isPass = false;
-    }
+    } */
     const prevPass = isPass && hasPrevPass ? prevSwipe.value : 0;
-    if (contextKey.includes('like') === false && hasPaidRole && intValue < 1 && isPass) {
+    if (contextKey.includes('like') === false && intValue < 1 && isPass) {
       const isHardPass = intValue <= minRatingValue;
       if (isHardPass) {
         intValue = minRatingValue;
       } else if (hasPrevPass) {
         intValue = prevSwipe.value - 1;
-      } else {
-        intValue--;
       }
     }
     if ((numSwipes < maxRating || maxRating < 1) && prevPass > minRatingValue) {

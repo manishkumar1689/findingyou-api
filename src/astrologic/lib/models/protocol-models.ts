@@ -1899,7 +1899,7 @@ const translateActionToGerund = (action: string) => {
   }
 }
 
-const matchPanchaPakshiBirdAction = async (currJd = 0, geo: GeoPos, chart: Chart, refKey: string, action: string) => {
+const matchPanchaPakshiBirdAction = async (currJd = 0, geo: GeoPos, chart: Chart, refKey: string, action: string, isDayAction = false) => {
   const ppData = await panchaPakshiDayNightSet(currJd, geo, chart, true);
   const bird = ppData.get('bird');
   const dayYamas = ppData.get('yamas');
@@ -1956,10 +1956,11 @@ export const matchPanchaPakshi = async (cond: Condition, chart: Chart, geo: GeoP
   let nightMatched = false;
   if (isAction) {
     const refKey = cond.object1.key;
+    const isDayAction = context.includes("_is_");
     let matched = false;
     let counter = 0;
     while (!matched && counter < 20) {
-      const { valid, yama, birdKey, isNight } = await matchPanchaPakshiBirdAction(currJd, geo, chart, refKey, action);
+      const { valid, yama, birdKey, isNight } = await matchPanchaPakshiBirdAction(currJd, geo, chart, refKey, action, isDayAction);
       if (valid) {
         matched = true;
         start = yama.start;
