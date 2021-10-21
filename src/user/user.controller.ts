@@ -311,8 +311,7 @@ export class UserController {
     }
     const preFetchFlags = notFlags.length > 0 || trueFlags.length > 0;
     const prefOptions = await this.settingService.getPreferences();
-    const { userFlags, excludedIds, includedIds } = await this.feedbackService.fetchFilteredUserInteractions(userId, notFlags, trueFlags, preFetchFlags);
-    
+    const { userFlags, excludedIds, includedIds } = await this.feedbackService.fetchFilteredUserInteractions(userId, notFlags, trueFlags, preFetchFlags, searchMode);
     if (includedIds instanceof Array && trueFlags.length > 0) {
       filterIds = includedIds;
       hasFilterIds = true;

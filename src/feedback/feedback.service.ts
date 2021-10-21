@@ -103,7 +103,7 @@ export class FeedbackService {
     };
   }
 
-  async fetchFilteredUserInteractions(userId = "", notFlags = [], trueFlags = [], preFetchFlags = false, trueMode = false) {
+  async fetchFilteredUserInteractions(userId = "", notFlags = [], trueFlags = [], preFetchFlags = false, searchMode = false) {
     const userFlags = preFetchFlags? await this.getAllUserInteractions(userId, 1) : { to: [], from: [], likeability: { to: [], from: [] } };
     const hasNotFlags = notFlags instanceof Array && notFlags.length > 0;
     const hasTrueFlags = trueFlags instanceof Array && trueFlags.length > 0;
@@ -121,10 +121,11 @@ export class FeedbackService {
     });
     
     const fromFlags = preFetchFlags? [...fromLikeFlags, ...from] : [];
+
     const toFlags = preFetchFlags? [...toLikeFlags, ...to] : [];
     const excludeLikedMinVal = filterLiked2? 2 : filterLiked1 ? 1 : 3;
-    const excludedIds = !preFetchFlags? fromFlags.filter(flag => filterLikeabilityFlags(flag, notFlagItems)).map(flag => flag.user) : [];
-    const includedIds = !preFetchFlags? fromFlags.filter(flag => filterLikeabilityFlags(flag, trueFlagItems)).map(flag => flag.user) : [];
+    const excludedIds = !preFetchFlags || searchMode? fromFlags.filter(flag => filterLikeabilityFlags(flag, notFlagItems)).map(flag => flag.user) : [];
+    const includedIds = !preFetchFlags || searchMode? fromFlags.filter(flag => filterLikeabilityFlags(flag, trueFlagItems)).map(flag => flag.user) : [];
     const extraExcludedIds = filterByLiked? toFlags.filter(fl => fl.value >= excludeLikedMinVal).map(fl => fl.user) : [];
     if (extraExcludedIds.length > 0) {
       extraExcludedIds.forEach(id => {
