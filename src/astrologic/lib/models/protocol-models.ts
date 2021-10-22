@@ -157,7 +157,7 @@ export class Condition {
               case 'c2Key':
               case 'context':
               case 'aspectQuality':
-                this[key] = val;
+                this[key] = val.trim();
                 break;
             }
             break;
