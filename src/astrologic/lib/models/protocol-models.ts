@@ -1272,10 +1272,12 @@ const useRuleSet = (
   return filterByRuleSet === false || ruleSetIndex === filterIndex;
 };
 
-export const  matchAspectOrb = (aspect: string, k1: string, k2: string, aspectData = null, orbs: KeyOrbs[] = []) => {
+export const  matchAspectOrb = (aspect: string, k1: string, k2: string, aspectData = null, orbs: KeyOrbs[] = [], customOrb = -1) => {
   let orbDouble = 1;
   if (orbs.length > 0) {
     orbDouble = matchOrbFromGrid(aspect, k1, k2, orbs);
+  } else  if (customOrb > 0) {
+    orbDouble = smartCastFloat(customOrb, 0);
   }
   if (orbDouble < 0) {
     const matchedOrbData =
@@ -1285,9 +1287,9 @@ export const  matchAspectOrb = (aspect: string, k1: string, k2: string, aspectDa
   return orbDouble;
 }
 
-export const matchAspectRange = (aspect: string, k1: string, k2: string, orbs: KeyOrbs[] = []) => {
+export const matchAspectRange = (aspect: string, k1: string, k2: string, orbs: KeyOrbs[] = [], customOrb = -1) => {
   const aspectData = calcOrb(aspect, k1, k2);
-  const orb = matchAspectOrb(aspect, k1, k2, aspectData, orbs);
+  const orb = matchAspectOrb(aspect, k1, k2, aspectData, orbs, customOrb);
   const range =
     orb !== aspectData.orb
       ? [subtractLng360(aspectData.deg, orb), (aspectData.deg + orb) % 360]
@@ -1295,14 +1297,14 @@ export const matchAspectRange = (aspect: string, k1: string, k2: string, orbs: K
   return range;
 }
 
-export const matchAspectRanges = (aspect: string, k1: string, k2: string, orbs: KeyOrbs[] = []) => {
+export const matchAspectRanges = (aspect: string, k1: string, k2: string, orbs: KeyOrbs[] = [], customOrb = -1) => {
   const isSign = isNumeric(k1);
   if (isSign) {
     const signNum = parseInt(k1, 10);
     return [[((signNum - 1) * 30), (signNum * 30)]];
   } else {
     const aspectData = calcOrb(aspect, k1, k2);
-    const orb = matchAspectOrb(aspect, k1, k2, aspectData, orbs);
+    const orb = matchAspectOrb(aspect, k1, k2, aspectData, orbs, customOrb);
     const ranges =
       orb !== aspectData.orb
         ? calcAllAspectRanges(aspectData.row, orb, [
@@ -1478,7 +1480,7 @@ export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Ch
   let valid = false;
   for (const bKey of birthKeys) {
     if (ct.isAspect) {
-      const ranges = matchAspectRanges(cond.context, bKey, gkTransit);
+      const ranges = matchAspectRanges(cond.context, bKey, gkTransit, [], cond.orb);
       const dist = calcDist360(g1.longitude, g2.longitude);
       ranges.forEach(range => {
         const inOrb = inRange(dist, range);
@@ -1630,7 +1632,7 @@ export const processTransitMatch = async (cond: Condition, chart: Chart, geo: Ge
   const ct = matchContextType(cond.context);
   let addEnd = false;
   if (ct.isAspect) {
-    const ranges = matchAspectRanges(cond.context, gkBirth, gkTransit);
+    const ranges = matchAspectRanges(cond.context, gkBirth, gkTransit, [], cond.orb);
     const targetRanges = ranges.map(range => range.map(num => addLng360(num,g1.longitude)));
     nextMatches = await matchGrahaInTargetRanges(targetRanges, startJd, gkTransit, geo);
     if (nextMatches.length > 1) {

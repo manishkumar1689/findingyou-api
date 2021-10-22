@@ -1697,7 +1697,9 @@ export class PairedChart {
     k1: string,
     k2: string,
   ) {
-    const orb = protocol.matchOrbValue(condition.context, k1, k2);
+    
+    const orbRef = condition.orb > 0 ? condition.orb : -1;
+    const orb = protocol.matchOrbValue(condition.context, k1, k2, orbRef);
     const { parallel, incontraParallel } = this.matchDeclination(
       fromChart.graha(k1),
       toChart.graha(k2),
