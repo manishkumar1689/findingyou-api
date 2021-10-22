@@ -17,7 +17,7 @@ import { buildFunctionalBMMap, naturalBenefics, naturalMalefics } from '../setti
 import { coreIndianGrahaKeys } from './graha-set';
 import { mapRelationships } from '../map-relationships';
 import { matchKotaCakraSection } from '../settings/nakshatra-values';
-import { panchaPakshiDayNightSet } from '../settings/pancha-pakshi';
+import { matchBirdKeyRulers, panchaPakshiDayNightSet } from '../settings/pancha-pakshi';
 
 export interface KeyNumVal {
   key: string;
@@ -1976,7 +1976,7 @@ export const matchPanchaPakshi = async (cond: Condition, chart: Chart, geo: GeoP
   const currJd = currentJulianDay();
   let matchedBird = '';
   let nightMatched = false;
-  if (isAction) {
+  if (isAction && mode === 'pp') {
     const refKey = cond.object1.key;
     const isDayAction = context.includes("_is_");
     let matched = false;
@@ -1992,7 +1992,67 @@ export const matchPanchaPakshi = async (cond: Condition, chart: Chart, geo: GeoP
       }
       counter++;
     }
+  } else if (mode === 'transit') {
+    const refKey = cond.object1.key.toLocaleLowerCase();
+    let counter = 0;
+    let matched = false;
+    while (!matched && counter < 20) {
+      const { valid, yama, birdKey, isNight } = await matchPPTransitBirdGraha(currJd + counter, geo, chart, refKey, action);
+      if (valid) {
+        matched = true;
+        start = yama.start;
+        end = yama.end;
+        nightMatched = isNight;
+        matchedBird = birdKey;
+      }
+      counter++;
+    }
   }
+
   const valid = start > 0 && end > start;
   return { start, end, action, matchedBird, isNight: nightMatched, valid };
+}
+
+
+export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Chart, refKey: string, action: string) => {
+  const ppData = await panchaPakshiDayNightSet(currJd, geo, chart, true);
+  const bird = ppData.get('bird');
+  const dayYamas = ppData.get('yamas');
+  const nightYamas = ppData.get('yamas2');
+  const isDayTime = ppData.get('isDayTime');
+  let valid = false;
+  let matchedYama = null;
+  let rulers = [];
+  let isNight = false;
+  let birdKey = '';
+  let yama = null;
+  const periodYamas = isDayTime ? dayYamas : nightYamas;
+  switch (refKey) {
+    case 'birth_bird_graha':
+      matchedYama = dayYamas.find(ym => ym.bird == bird.birth);
+      if (matchedYama) {
+        rulers = matchBirdKeyRulers(bird.birth, isDayTime, matchedYama.key);
+      }
+      break;
+    case 'day_ruler_bird_graha':
+      case 'day_dying_bird_graha':
+      const actPart = refKey.split('_bird_').shift().split('_').pop();
+      const actKey = actPart.includes('rul')? 'ruling' : 'dying';
+      const { key } = bird.current[actKey];
+      rulers = matchBirdKeyRulers(key, isDayTime, actKey);
+      break;
+    case 'yama_ruling_graha':
+    case 'yama_eating_graha':
+    case 'yama_walking_graha':
+    case 'yama_sleeping_graha':
+    case 'yama_dying_graha':
+      const action = refKey.split('_')[1];
+      matchedYama = dayYamas.find(ym => ym.subs[0].key === action);
+      if (yama) {
+        rulers = yama.rulers;
+      }
+      break;
+  }
+  valid = matchedYama instanceof Object;
+  return { valid, yama: matchedYama, birdKey, isNight, rulers }
 }

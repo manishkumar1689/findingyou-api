@@ -1065,6 +1065,12 @@ export const matchBirdRulers = (birdNum = 0, isDayTime = false, activity = ""): 
   return row instanceof Object ? activity === 'dying'? row.death : isDayTime ? row.day : row.night : [];
 }
 
+
+export const matchBirdKeyRulers = (key = "", isDayTime = false, activity = ""): string[] => {
+  const birdNum = birdMap[key];
+  return matchBirdRulers(birdNum, isDayTime, activity);
+}
+
 export const matchBirdRelationsKeys = (bird1 = "", bird2 = "") => {
   const birdValues = Object.values(birdMap);
   const num1 = birdValues.indexOf(bird1) + 1;
@@ -1286,6 +1292,7 @@ export const panchaPakshiDayNightSet = async (jd = 0, geo: GeoPos, chart:Chart, 
   data.set('riseDt', julToISODate(riseJd));
   data.set('setDt', julToISODate(setJd));
   data.set('nextRiseDt', julToISODate(iTime.nextRise.jd));
+  data.set('isDayTime', iTime.isDayTime);
   chart.setAyanamshaItemByNum(27);
   const moon = chart.graha('mo');
   const moonJd = fetchNightAndDay ? iTime.rise.jd : jd;
