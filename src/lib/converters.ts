@@ -51,7 +51,7 @@ export const smartCastNumber = (
 
   if (typeof item === 'string') {
     if (item.length > 0) {
-      if (/^\s*\d+(\.\d+)?\s*/.test(item)) {
+      if (/^\s*-?\d+(\.\d+)?\s*/.test(item)) {
         out = isInt ? parseInt(item, 10) : parseFloat(item);
       }
     }
