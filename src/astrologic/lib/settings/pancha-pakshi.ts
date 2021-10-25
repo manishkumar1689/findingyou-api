@@ -1113,6 +1113,12 @@ export const matchDayBirds = (dayNum = 0, isWaxing = true, isDayTime = true) => 
   return { ruling, dying };
 }
 
+export const expandBirdAttributes = (birdNum = 0, isWaxing = true) => {
+  const birdIndex = birdNum > 0 && birdNum <= 5? birdNum - 1 : 0;
+  const attrs = birdAttributes[birdIndex][waxWaneKey(isWaxing)];
+  return { key: birdMap[birdNum], ...attrs };
+}
+
 export const matchDayBirdKeys = (dayNum = 0, isWaxing = true, isDayTime = true) => {
   const { ruling, dying } = matchDayBirds(dayNum, isWaxing, isDayTime);
   const rulingB = expandBirdAttributes(ruling);
@@ -1196,6 +1202,20 @@ export const matchSubPeriods = (birdNum = 0, dayNum = 0, isWaxing = true, isDayT
   });
 }
 
+export const calcPanchaPakshiStrength = (birdNum = 0, activityKey = "", subKey = "", waxing = true) => {
+  const row = panchaStrengthBaseValues.find(row => row.nums[waxWaneKey(waxing)] === birdNum);
+  const matched = row instanceof Object;
+  const keys = matched ? Object.keys(row) : [];
+  let score = 0;
+  const percent = matched && keys.includes('percent') ? row.percent : 0;
+  if (keys.includes(activityKey) && row[activityKey] instanceof Object) {
+    const subKeys = Object.keys(row[activityKey]);
+    const multiplier = subKeys.includes(subKey)? row[activityKey][subKey] : 0;
+    score = (percent / 100) * multiplier;
+  }
+  return score;
+}
+
 export const calcSubPeriods = (subPeriods: KeyNumValue[], birds: KeyNum[], birthBirdNum = 0, startJd = 0, endJd = 0, refJd = 0, waxing = true, isDayTime = true, dayActivity: string, yamaIndex = 0) => {
   const lengthJd = endJd - startJd;
   const numBirds = birds.length;
@@ -1255,26 +1275,6 @@ export const calcYamaSets = (jd = 0, startJd = 0, endJd = 0, isWaxing = true, is
     yama,
     yamas: yamaSets,
   };
-}
-
-export const calcPanchaPakshiStrength = (birdNum = 0, activityKey = "", subKey = "", waxing = true) => {
-  const row = panchaStrengthBaseValues.find(row => row.nums[waxWaneKey(waxing)] === birdNum);
-  const matched = row instanceof Object;
-  const keys = matched ? Object.keys(row) : [];
-  let score = 0;
-  const percent = matched && keys.includes('percent') ? row.percent : 0;
-  if (keys.includes(activityKey) && row[activityKey] instanceof Object) {
-    const subKeys = Object.keys(row[activityKey]);
-    const multiplier = subKeys.includes(subKey)? row[activityKey][subKey] : 0;
-    score = (percent / 100) * multiplier;
-  }
-  return score;
-}
-
-export const expandBirdAttributes = (birdNum = 0, isWaxing = true) => {
-  const birdIndex = birdNum > 0 && birdNum <= 5? birdNum - 1 : 0;
-  const attrs = birdAttributes[birdIndex][waxWaneKey(isWaxing)];
-  return { key: birdMap[birdNum], ...attrs };
 }
 
 export const panchaPakshiDayNightSet = async (jd = 0, geo: GeoPos, chart:Chart, fetchNightAndDay = true): Promise<Map<string, any>> => {  

@@ -42,8 +42,6 @@ import {
   calcAyanamsha,
   fetchHouseDataJd,
   calcCoreGrahaPositions,
-  calcMoonDataJd,
-  getSunMoonSpecialValues,
 } from './lib/core';
 import { sampleBaseObjects } from './lib/custom-transits';
 import {
@@ -63,7 +61,7 @@ import {
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
 import { calcGrahaSignTimeline, calcRetroGrade, calcStation, matchNextTransitAtLng, matchNextTransitAtLngRanges, RangeSet } from './lib/astro-motion';
-import { toIndianTime, calcTransition, calcSunTransJd, TransitionData, toIndianTimeJd } from './lib/transitions';
+import { toIndianTime, calcTransition, calcSunTransJd, TransitionData } from './lib/transitions';
 import { readEpheFiles } from './lib/files';
 import { ChartInputDTO } from './dto/chart-input.dto';
 import {
@@ -83,7 +81,7 @@ import {
   Record,
 } from '../lib/parse-astro-csv';
 import { Kuta } from './lib/kuta';
-import { Chart, PairedChart } from './lib/models/chart';
+import { Chart } from './lib/models/chart';
 import { AspectSet, calcOrb } from './lib/calc-orbs';
 import { AspectSetDTO } from './dto/aspect-set.dto';
 import {
@@ -120,7 +118,7 @@ import ayanamshaValues from './lib/settings/ayanamsha-values';
 import { calcBavGraphData, calcBavSignSamples } from './lib/settings/ashtakavarga-values';
 import { GeoPos } from './interfaces/geo-pos';
 import { Model } from 'mongoose';
-import { calcYamaSets, matchBirdByNak, matchBirdRulers, matchDayBirdKeys, panchaPakshiDayNightSet } from './lib/settings/pancha-pakshi';
+import { panchaPakshiDayNightSet } from './lib/settings/pancha-pakshi';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -344,7 +342,7 @@ export class AstrologicController {
   @Get('pancha-pakshi-pair/:u1/:u2/:dt?')
   async pankshaPanchaPairDaySet(@Res() res, @Param('u1') u1, @Param('u2') u2, @Param('dt') dt) {
     let status = HttpStatus.BAD_REQUEST;
-    let data: Map<string, any> = new Map(Object.entries({ jd: 0, dtUtc: '', valid: false, geo1: null, geo2: null, p1: null, p2: null }));
+    const data: Map<string, any> = new Map(Object.entries({ jd: 0, dtUtc: '', valid: false, geo1: null, geo2: null, p1: null, p2: null }));
     
     if (notEmptyString(u1, 20) && notEmptyString(u2, 12)) {
       if (u1 === u2) {
@@ -487,7 +485,7 @@ export class AstrologicController {
             }
           }
           const toInfo = (item) => {
-            const entries = Object.entries(item).filter(([k, v]) => ['start', 'end', 'valid'].includes(k) === false);
+            const entries = Object.entries(item).filter(entry => ['start', 'end', 'valid'].includes(entry[0]) === false);
             return Object.fromEntries(entries);
           }
           const items = pr.items.filter(pr => pr.valid).map(item => {
@@ -597,7 +595,7 @@ export class AstrologicController {
         dt,
       );
     }
-    return geoInfo;
+    return {...geoInfo, distance };
   }
 
   async fetchCompactChart(loc: string, dt: string, ayanamshaMode = "true_citra", topList = "", fetchFull = true, addExtraSets = true) {
@@ -656,7 +654,7 @@ export class AstrologicController {
     const jd = calcJulDate(dtUtc);
     const asc = calcOffsetAscendant(geo.lat, geo.lng, jd, ayanamshaVal);
     const adjusted = applyAscendantToSimpleChart(chart, geo, ayanamshaKey);
-    return res.json({chart: adjusted });
+    return res.json({chart: adjusted, asc });
   }
 
   @Get('existing-placenames/:loc/:maxDistance?')
@@ -770,7 +768,7 @@ export class AstrologicController {
   }
 
   async saveChartData(inData: ChartInputDTO, save = true, chartID = '', ayanamsha = 'top', fetchFull = true) {
-    let data: any = { valid: false, message: '', chart: null };
+    const data: any = { valid: false, message: '', chart: null, hasGeoTzData: false  };
     const {
       user,
       datetime,
@@ -818,7 +816,7 @@ export class AstrologicController {
             roddenValue,
             notes,
           };
-          const hasGeoTzData =
+          data.hasGeoTzData =
             notEmptyString(tz) &&
             isNumeric(tzOffset) &&
             placenames instanceof Array && placenames.length > 1;
@@ -899,7 +897,7 @@ export class AstrologicController {
   }
 
   async quickSaveChart(inData: ChartInputDTO, chart = null) {
-    let data: any = { valid: false, recalculated: false, chart: null };
+    const data: any = { valid: false, recalculated: false, chart: null };
     const {
       user,
       datetime,
@@ -1036,7 +1034,7 @@ export class AstrologicController {
         );
       }
     }
-    return res.json({...data, nak, lng });
+    return res.json({...data, nak, lng, dt });
   }
 
   async matchDashaQueryParams(query) {
@@ -1099,8 +1097,7 @@ export class AstrologicController {
   @Get('dasha-balance')
   async getDashBalance(@Res() res, @Query() query) {
     const { dt, transitJd, system, key, chartData, balanceRef, maxLevel } = await this.matchDashaQueryParams(query);
-    
-    let data: any = {};
+    const data: any = {};
     let nak = -1;
     let lng = -1;
     let balances = [];
@@ -1119,7 +1116,7 @@ export class AstrologicController {
     const geo = locStringToGeo(loc);
     const lngFl = smartCastFloat(lng, 0)
     const data = await calcNextAscendantLng(lngFl, geo.lat, geo.lng, jd, "true_citra")
-    return res.json({data});
+    return res.json({ ...data, dtUtc });
   }
 
   @Get('predictive-rule-check/:ruleID/:chartID/:loc?')
@@ -1220,7 +1217,7 @@ export class AstrologicController {
   }
 
   @Get('life-events/:chartID')
-  async getRelated(@Res() res, @Param('chartID') chartID, @Param('start') start, @Param('limit') limit) {
+  async getRelated(@Res() res, @Param('chartID') chartID) {
     const criteria: Map<string, any> = new Map();
     criteria.set('$or', [
       { _id: chartID },
@@ -1385,7 +1382,7 @@ export class AstrologicController {
   @Post('aspect-match')
   async getByAspectRanges(@Res() res, @Body() inData: AspectSetDTO) {
     let resultItems: Array<any>;
-    let items: Array<AspectSet> = [];
+    const items: Array<AspectSet> = [];
     if (inData instanceof Object) {
       const hasProtocolID = notEmptyString(inData.protocolID, 12);
       const isAuto = inData.protocolID === 'auto';
@@ -2022,7 +2019,6 @@ export class AstrologicController {
     const validC2 = c2 instanceof Object;
     let surfaceGeo = { lat: 0, lng: 0 };
     let surfaceAscendant = 0;
-    let surfaceTzOffset = 0;
     if (validC1 && validC2) {
       const midJd = (c1.jd + c2.jd) / 2;
       const datetime = jdToDateTime(midJd);
@@ -2820,7 +2816,7 @@ export class AstrologicController {
     @Param('years') years,
   ) {
     let data: any = { valid: false };
-    let days = isNumeric(years) ? parseInt(years) * 367 : 367;
+    const days = isNumeric(years) ? parseInt(years) * 367 : 367;
     if (validISODateString(dt) && isNumeric(planet)) {
       const num = parseInt(planet);
       data = await this.astrologicService.savePlanetStations(num, dt, days);
@@ -2836,8 +2832,9 @@ export class AstrologicController {
   ) {
     
     const { dtUtc, jd } = matchJdAndDatetime(dt);
-    let data: any = { valid: false, dtUtc, jd, result: null };
+    const data: any = { valid: false, dtUtc, jd, result: null };
     data.result = await this.astrologicService.matchStations(key, jd);
+    data.valid = data.result instanceof Object;
     return res.status(HttpStatus.OK).json(data);
   }
 
@@ -3011,10 +3008,11 @@ export class AstrologicController {
 
   @Get('speed-patterns/:planet')
   async motionPatternsByPlanet(@Res() res, @Param('planet') planet) {
-    let data: any = { valid: false, values: [] };
+    const data: any = { valid: false, values: [] };
     if (isNumeric(planet)) {
       const num = parseInt(planet);
       data.values = await this.astrologicService.speedPatternsByPlanet(num);
+      data.valid = data.values.length > 0;
     }
     return res.status(HttpStatus.OK).json(data);
   }
@@ -3026,7 +3024,7 @@ export class AstrologicController {
     @Param('startYear') startYear,
     @Param('endYear') endYear,
   ) {
-    let data: any = { valid: false, values: [] };
+    const data: any = { valid: false, values: [] };
     const num = isNumeric(planet)? parseInt(planet) : matchPlanetNum(planet);
     if (num >= 0) {
       const startYearInt = isNumeric(startYear)
@@ -3144,7 +3142,7 @@ export class AstrologicController {
     @Param('dt') dt,
     @Param('current') current,
   ) {
-    let rows = new Map<number, any>();
+    const rows = new Map<number, any>();
     const nums = [2, 3, 4, 5, 6, 7, 8, 9];
     let valid = false;
     const showCurrent = current === 'current';
@@ -3236,7 +3234,7 @@ export class AstrologicController {
                 rel,
                 userID,
               );
-              const pData = await this.savePairedChartData(pd);
+              await this.savePairedChartData(pd);
             }
           }, relIndex * timeoutMs);
         }
@@ -3311,7 +3309,7 @@ export class AstrologicController {
           eventType: 'birth',
           roddenValue: 200,
         } as ChartInputDTO;
-        const c = await this.saveChartData(inData);
+        await this.saveChartData(inData);
       }, delay);
       delay += 2000;
     }

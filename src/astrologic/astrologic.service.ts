@@ -2011,7 +2011,7 @@ export class AstrologicService {
       .sort({ jd: 1 })
       .limit(5000)
       .exec();
-    let results: Array<BodySpeed> = [];
+    const results: Array<BodySpeed> = [];
     if (data instanceof Array && data.length > 0) {
       let maxSpd = 0;
       let minSpd = 0;
@@ -2094,7 +2094,7 @@ export class AstrologicService {
     datetime: string,
     fetchCurrent = false,
   ): Promise<Array<any>> {
-    let data = new Map<string, any>();
+    const data = new Map<string, any>();
     data.set('valid', false);
     const stations = ['peak', 'retro-start', 'retro-peak', 'retro-end'];
     const assignDSRow = (

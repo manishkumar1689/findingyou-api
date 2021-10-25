@@ -7,7 +7,7 @@ import { subtractLng360, addLng360, calcDist360, nakshatra28, numbersToNakshatra
 import ayanamshaValues from '../settings/ayanamsha-values';
 import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
 import { calcInclusiveSignPositions, calcInclusiveTwelfths } from '../math-funcs';
-import { Chart, filterBmMatchRow, matchGrahaEquivalent, matchSignNums, PairedChart } from './chart';
+import { Chart, matchGrahaEquivalent, matchSignNums, PairedChart } from './chart';
 import { currentJulianDay } from '../julian-date';
 import { assignDashaBalances, DashaBalance, matchCurrentDashaLord } from './dasha-set';
 import { matchNextTransitAtLng, matchNextTransitAtLngRanges, RangeSet } from '../astro-motion';
@@ -18,6 +18,7 @@ import { coreIndianGrahaKeys } from './graha-set';
 import { mapRelationships } from '../map-relationships';
 import { matchKotaCakraSection } from '../settings/nakshatra-values';
 import { matchBirdKeyRulers, panchaPakshiDayNightSet } from '../settings/pancha-pakshi';
+import { filterBmMatchRow } from '../chart-funcs';
 
 export interface KeyNumVal {
   key: string;
@@ -34,8 +35,332 @@ export interface KeyNumPair {
   pair: number[];
 }
 
+
+
+export const matchOrbFromGrid = (
+  aspect: string,
+  k1: string,
+  k2: string,
+  orbs: Array<KeyOrbs> = [],
+) => {
+  let orbDouble = 1;
+  const orbRow1 = orbs.find(orbRow => orbRow.key === k1);
+  const orbRow2 = orbs.find(orbRow => orbRow.key === k2);
+  if (orbRow1 instanceof Object && orbRow2 instanceof Object) {
+    const aspRow1 = orbRow1.orbs.find(row => row.key === aspect);
+    const aspRow2 = orbRow2.orbs.find(row => row.key === aspect);
+
+    if (aspRow1 instanceof Object && aspRow2 instanceof Object) {
+      orbDouble =
+        (smartCastFloat(aspRow1.value) + smartCastFloat(aspRow2.value)) / 2;
+    }
+  }
+  return orbDouble;
+};
+
+
+export const  matchAspectOrb = (aspect: string, k1: string, k2: string, aspectData = null, orbs: KeyOrbs[] = [], customOrb = -1) => {
+  let orbDouble = 1;
+  if (orbs.length > 0) {
+    orbDouble = matchOrbFromGrid(aspect, k1, k2, orbs);
+  } else  if (customOrb > 0) {
+    orbDouble = smartCastFloat(customOrb, 0);
+  }
+  if (orbDouble < 0) {
+    const matchedOrbData =
+      aspectData instanceof Object ? aspectData : calcOrb(aspect, k1, k2);
+    orbDouble = matchedOrbData.orb;
+  }
+  return orbDouble;
+}
+
+export class BooleanMatch {
+  matched = false;
+  conditionRef: any;
+
+  constructor(condRef: Condition | ConditionSet, matched = false) {
+    this.conditionRef = condRef.toJson();
+    this.matched = matched;
+  }
+
+  get isSet() {
+    return this.conditionRef.isSet;
+  }
+}
+
+export class ObjectType {
+  type = '';
+  key = '';
+
+  constructor(comboKey = '') {
+    const [objectType, objectKey] = comboKey.split('__');
+    this.key = objectKey;
+    this.type = objectType;
+  }
+
+  get mayBeGraha() {
+    switch (this.type) {
+      case 'lots':
+      case 'upapada':
+      case 'p_tithi':
+      case 'p_karana':
+      case 'p_yoga':
+      case 'p_vara':
+      case 'special':
+      case 'kutas':
+        return false;
+      default:
+        return true;
+    }
+  }
+
+  get isLordship() {
+    return this.type.startsWith('lord');
+  }
+
+  get isPanchanga() {
+    return this.type.startsWith('p_');
+  }
+
+  get panchangaType() {
+    return this.isPanchanga ? this.type.split('_').pop() : '';
+  }
+
+  get endVal() {
+    return this.key.indexOf('_') ? this.key.split('_').pop() : '';
+  }
+
+  get isNumeric() {
+    return isNumeric(this.endVal);
+  }
+
+  get numValue(): number {
+    return this.isNumeric ? parseInt(this.endVal) : -1;
+  }
+
+  // match tithi value (not number)
+  get tithiRange() {
+    switch (this.key) {
+      case 'q_1':
+        return [0, 7.5];
+      case 'q_2':
+        return [7.5, 15];
+      case 'q_3':
+        return [15, 22.5];
+      case 'q_4':
+        return [22.5, 30];
+      case 'h_1':
+        return [0, 15];
+      case 'h_2':
+        return [15, 30];
+      case 'gt_hm':
+        return [7.5, 22.5];
+      case 'lt_hm':
+        return [0, 7.5, 22.5, 30];
+      default:
+        return [this.numValue - 1, this.numValue];
+    }
+  }
+
+  matchTithiRange(value: number) {
+    const numRanges = this.tithiRange.length / 2;
+    if (numRanges < 2) {
+      return inRange(value, this.tithiRange);
+    } else {
+      return (
+        inRange(value, this.tithiRange.slice(0, 2)) ||
+        inRange(value, this.tithiRange.slice(2, 4))
+      );
+    }
+  }
+}
+
+export class ContextType {
+  key = '';
+  isAspect = false;
+  isKuta = false;
+
+  constructor(inData = null) {
+    if (inData instanceof Object) {
+      Object.entries(inData).forEach(entry => {
+        const [k, v] = entry;
+        switch (k) {
+          case 'key':
+            if (typeof v === 'string') {
+              this[k] = v;
+            }
+            break;
+          case 'isAspect':
+          case 'isKuta':
+            if (typeof v === 'boolean') {
+              this[k] = v;
+            }
+            break;
+        }
+      });
+    }
+  }
+
+  get kutaKey() {
+    return this.key
+      .toLowerCase()
+      .replace(/_kuta$/, '')
+      .replace(/^dina_/, '')
+      .replace(/_/, '');
+  }
+
+  get isDivisional() {
+    switch (this.key) {
+      case 'in_sign':
+      case 'sign':
+      case 'signs':
+      case 'in_house':
+      case 'house':
+      case 'houses':
+      case 'nakshatra':
+      case 'nakshatras':
+      case 'in_nakshatra':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  get stateCompare() {
+    return this.key === 'state_compare';
+  }
+
+  get isDignityBala() {
+    return this.key === 'has_dignity_bala_type';
+  }
+
+  get isDeclination() {
+    switch (this.key) {
+      case 'incontra_parallel':
+      case 'decl_parallel':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  get sameSign() {
+    switch (this.key) {
+      case 'in_same_sign':
+      case 'same_sign':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  get isSign() {
+    return this.key === "in_sign";
+  }
+
+  get bySign() {
+    switch (this.key) {
+      case 'in_sign':
+      case 'sign':
+      case 'signs':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  get byHouse() {
+    switch (this.key) {
+      case 'in_house':
+      case 'house':
+      case 'houses':
+        return true;
+      default:
+        return false;
+    }
+  }
+  get byNakshatra() {
+    switch (this.key) {
+      case 'nakshatra':
+      case 'nakshatras':
+      case 'in_nakshatra':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  get isYuti() {
+    return this.key === 'graha_yuti';
+  }
+
+  get isIndianAspect() {
+    const keys = [
+      'sends_graha_drishti',
+      'receives_graha_drishti',
+      'mutual_graha_drishti',
+      'rashi_drishti',
+      'shubha_kartari_yoga',
+      'papa_kartari_yoga',
+    ];
+    return keys.includes(this.key);
+  }
+
+  get bmKey() {
+    switch (this.key) {
+      case 'shubha_kartari_yoga':
+        return 'benefics';
+      case 'papa_kartari_yoga':
+        return 'malefics';
+      default:
+        return 'neutral';
+    }
+  }
+
+  get isDrishtiAspect() {
+    const keys = [
+      'sends_graha_drishti',
+      'receives_graha_drishti',
+      'mutual_graha_drishti',
+      'rashi_drishti',
+    ];
+    return keys.includes(this.key);
+  }
+
+  get isRashiDrishti() {
+    return this.key === 'rashi_drishti';
+  }
+
+  get isKartariYoga() {
+    const keys = ['kartari_yoga', 'papa_kartari_yoga', 'shubha_kartari_yoga'];
+    return keys.includes(this.key);
+  }
+
+  get sendsDrishti() {
+    return this.key.startsWith('sends_');
+  }
+
+  get receivesDrishti() {
+    return this.key.startsWith('receives_');
+  }
+
+  get mutualDrishti() {
+    return this.key.startsWith('mutual_');
+  }
+}
+
 export const matchContextType = (context: string) => {
-  const matched = contextTypes.find(ct => ct.key === context);
+  let matched = contextTypes.find(ct => ct.key === context);
+  if (!matched) {
+    matched = {
+      key: context,
+      isAspect: false,
+      isKuta: false,
+      c2groups: [],
+      type: '',
+      name: context.split('_').join(' ')
+    }
+  }
   return new ContextType(matched);
 }
 
@@ -709,8 +1034,6 @@ export class Protocol {
         categories,
         collections,
         settings,
-        createdAt,
-        modifiedAt,
       } = inData;
       if (notEmptyString(_id, 16)) {
         this._id = _id;
@@ -945,309 +1268,13 @@ export class BooleanSet {
   }
 }
 
-export class BooleanMatch {
-  matched = false;
-  conditionRef: any;
-
-  constructor(condRef: Condition | ConditionSet, matched = false) {
-    this.conditionRef = condRef.toJson();
-    this.matched = matched;
-  }
-
-  get isSet() {
-    return this.conditionRef.isSet;
-  }
-}
-
-export class ObjectType {
-  type = '';
-  key = '';
-
-  constructor(comboKey = '') {
-    const [objectType, objectKey] = comboKey.split('__');
-    this.key = objectKey;
-    this.type = objectType;
-  }
-
-  get mayBeGraha() {
-    switch (this.type) {
-      case 'lots':
-      case 'upapada':
-      case 'p_tithi':
-      case 'p_karana':
-      case 'p_yoga':
-      case 'p_vara':
-      case 'special':
-      case 'kutas':
-        return false;
-      default:
-        return true;
-    }
-  }
-
-  get isLordship() {
-    return this.type.startsWith('lord');
-  }
-
-  get isPanchanga() {
-    return this.type.startsWith('p_');
-  }
-
-  get panchangaType() {
-    return this.isPanchanga ? this.type.split('_').pop() : '';
-  }
-
-  get endVal() {
-    return this.key.indexOf('_') ? this.key.split('_').pop() : '';
-  }
-
-  get isNumeric() {
-    return isNumeric(this.endVal);
-  }
-
-  get numValue(): number {
-    return this.isNumeric ? parseInt(this.endVal) : -1;
-  }
-
-  // match tithi value (not number)
-  get tithiRange() {
-    switch (this.key) {
-      case 'q_1':
-        return [0, 7.5];
-      case 'q_2':
-        return [7.5, 15];
-      case 'q_3':
-        return [15, 22.5];
-      case 'q_4':
-        return [22.5, 30];
-      case 'h_1':
-        return [0, 15];
-      case 'h_2':
-        return [15, 30];
-      case 'gt_hm':
-        return [7.5, 22.5];
-      case 'lt_hm':
-        return [0, 7.5, 22.5, 30];
-      default:
-        return [this.numValue - 1, this.numValue];
-    }
-  }
-
-  matchTithiRange(value: number) {
-    const numRanges = this.tithiRange.length / 2;
-    if (numRanges < 2) {
-      return inRange(value, this.tithiRange);
-    } else {
-      return (
-        inRange(value, this.tithiRange.slice(0, 2)) ||
-        inRange(value, this.tithiRange.slice(2, 4))
-      );
-    }
-  }
-}
-
-export class ContextType {
-  key = '';
-  isAspect = false;
-  isKuta = false;
-
-  constructor(inData = null) {
-    if (inData instanceof Object) {
-      Object.entries(inData).forEach(entry => {
-        const [k, v] = entry;
-        switch (k) {
-          case 'key':
-            if (typeof v === 'string') {
-              this[k] = v;
-            }
-            break;
-          case 'isAspect':
-          case 'isKuta':
-            if (typeof v === 'boolean') {
-              this[k] = v;
-            }
-            break;
-        }
-      });
-    }
-  }
-
-  get kutaKey() {
-    return this.key
-      .toLowerCase()
-      .replace(/_kuta$/, '')
-      .replace(/^dina_/, '')
-      .replace(/_/, '');
-  }
-
-  get isDivisional() {
-    switch (this.key) {
-      case 'in_sign':
-      case 'sign':
-      case 'signs':
-      case 'in_house':
-      case 'house':
-      case 'houses':
-      case 'nakshatra':
-      case 'nakshatras':
-      case 'in_nakshatra':
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  get stateCompare() {
-    return this.key === 'state_compare';
-  }
-
-  get isDignityBala() {
-    return this.key === 'has_dignity_bala_type';
-  }
-
-  get isDeclination() {
-    switch (this.key) {
-      case 'incontra_parallel':
-      case 'decl_parallel':
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  get sameSign() {
-    switch (this.key) {
-      case 'in_same_sign':
-      case 'same_sign':
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  get isSign() {
-    return this.key === "in_sign";
-  }
-
-  get bySign() {
-    switch (this.key) {
-      case 'in_sign':
-      case 'sign':
-      case 'signs':
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  get byHouse() {
-    switch (this.key) {
-      case 'in_house':
-      case 'house':
-      case 'houses':
-        return true;
-      default:
-        return false;
-    }
-  }
-  get byNakshatra() {
-    switch (this.key) {
-      case 'nakshatra':
-      case 'nakshatras':
-      case 'in_nakshatra':
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  get isYuti() {
-    return this.key === 'graha_yuti';
-  }
-
-  get isIndianAspect() {
-    const keys = [
-      'sends_graha_drishti',
-      'receives_graha_drishti',
-      'mutual_graha_drishti',
-      'rashi_drishti',
-      'shubha_kartari_yoga',
-      'papa_kartari_yoga',
-    ];
-    return keys.includes(this.key);
-  }
-
-  get bmKey() {
-    switch (this.key) {
-      case 'shubha_kartari_yoga':
-        return 'benefics';
-      case 'papa_kartari_yoga':
-        return 'malefics';
-      default:
-        return 'neutral';
-    }
-  }
-
-  get isDrishtiAspect() {
-    const keys = [
-      'sends_graha_drishti',
-      'receives_graha_drishti',
-      'mutual_graha_drishti',
-      'rashi_drishti',
-    ];
-    return keys.includes(this.key);
-  }
-
-  get isRashiDrishti() {
-    return this.key === 'rashi_drishti';
-  }
-
-  get isKartariYoga() {
-    const keys = ['kartari_yoga', 'papa_kartari_yoga', 'shubha_kartari_yoga'];
-    return keys.includes(this.key);
-  }
-
-  get sendsDrishti() {
-    return this.key.startsWith('sends_');
-  }
-
-  get receivesDrishti() {
-    return this.key.startsWith('receives_');
-  }
-
-  get mutualDrishti() {
-    return this.key.startsWith('mutual_');
-  }
-}
-
-export const matchOrbFromGrid = (
-  aspect: string,
-  k1: string,
-  k2: string,
-  orbs: Array<KeyOrbs> = [],
-) => {
-  let orbDouble = 1;
-  const orbRow1 = orbs.find(orbRow => orbRow.key === k1);
-  const orbRow2 = orbs.find(orbRow => orbRow.key === k2);
-  if (orbRow1 instanceof Object && orbRow2 instanceof Object) {
-    const aspRow1 = orbRow1.orbs.find(row => row.key === aspect);
-    const aspRow2 = orbRow2.orbs.find(row => row.key === aspect);
-
-    if (aspRow1 instanceof Object && aspRow2 instanceof Object) {
-      orbDouble =
-        (smartCastFloat(aspRow1.value) + smartCastFloat(aspRow2.value)) / 2;
-    }
-  }
-  return orbDouble;
-};
-
 export const matchHouse = (sign: number, firstHouseSign: number) => {
   return calcInclusiveTwelfths(firstHouseSign, sign);
 };
 
 export const buildSignHouse = (firstHouseSign = 1): Array<SignHouse> => {
   const signs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-  let values = signs.map(sign => {
+  const values = signs.map(sign => {
     return {
       sign,
       house: matchHouse(sign, firstHouseSign),
@@ -1272,20 +1299,6 @@ const useRuleSet = (
   return filterByRuleSet === false || ruleSetIndex === filterIndex;
 };
 
-export const  matchAspectOrb = (aspect: string, k1: string, k2: string, aspectData = null, orbs: KeyOrbs[] = [], customOrb = -1) => {
-  let orbDouble = 1;
-  if (orbs.length > 0) {
-    orbDouble = matchOrbFromGrid(aspect, k1, k2, orbs);
-  } else  if (customOrb > 0) {
-    orbDouble = smartCastFloat(customOrb, 0);
-  }
-  if (orbDouble < 0) {
-    const matchedOrbData =
-      aspectData instanceof Object ? aspectData : calcOrb(aspect, k1, k2);
-    orbDouble = matchedOrbData.orb;
-  }
-  return orbDouble;
-}
 
 export const matchAspectRange = (aspect: string, k1: string, k2: string, orbs: KeyOrbs[] = [], customOrb = -1) => {
   const aspectData = calcOrb(aspect, k1, k2);
@@ -1451,71 +1464,6 @@ export const compatibilityResultSetHasScores = (row: any = null) => {
   return false;
 };
 
-export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Chart, settings = null) => {
-  const transitJd = currentJulianDay();
-  const [t1, k1] = cond.c1Key.split("__");
-  const criteria: Map<string, any> = new Map();
-  criteria.set(`lv${level}`, k1);
-  criteria.set(`maxLevel`, level);
-  const balanceRef = new DashaBalance(criteria)
-  const results = assignDashaBalances(chart, transitJd, level, balanceRef, 'vimshottari', 'mo');
-  let start = 0;
-  let end = 0;
-  let validPeriod = results.length > 0;
-  if (validPeriod) {
-    const last = results[results.length - 1];
-    start = last.startJd;
-    end = last.endJd;
-  }
-  const ayaItem = chart.setAyanamshaItemByKey("true_citra");
-  const ct = matchContextType(cond.context);
-  const gkTransit = matchGrahaEquivalent(cond.object1, chart);
-  const gkBirth = matchGrahaEquivalent(cond.object2, chart);
-  const birthKeys = gkBirth.split(',');
-  const isDignity = !ct.isKartariYoga && !ct.isSign && gkBirth.length > 3;
-  const g1 = chart.graha(gkBirth);
-  const g2 = chart.graha(gkTransit);
-  g1.setAyanamshaItem(ayaItem);
-  g2.setAyanamshaItem(ayaItem);
-  let valid = false;
-  for (const bKey of birthKeys) {
-    if (ct.isAspect) {
-      const ranges = matchAspectRanges(cond.context, bKey, gkTransit, [], cond.orb);
-      const dist = calcDist360(g1.longitude, g2.longitude);
-      ranges.forEach(range => {
-        const inOrb = inRange(dist, range);
-        if (inOrb) {
-          valid = validPeriod && inOrb;
-        }
-      });
-    } else if (ct.isDrishtiAspect) {
-      const ranges = matchDrishtiConditionSignLngs(cond, chart, bKey, gkTransit, settings).map(deg => [deg, deg + 30]);
-      valid = ranges.some(range => {
-        const [start, end] = range;
-        return g1.longitude >= start && g1.longitude < end;
-      });
-    } else if (isDignity) {
-      valid = matchDignity(chart, bKey, gkTransit);
-    } else if (ct.isSign) {
-      valid = matchByBirthSign(cond, chart);
-    } else if (ct.isKartariYoga) {
-      chart.setAyanamshaItemByNum(27);
-      const keys = matchBmGrahaKeys(ct.bmKey, cond, chart);
-      const refGr = chart.graha(gkTransit);
-      const adjacentSignIndices =  [(refGr.signIndex + 11) % 12, (refGr.signIndex + 1) % 12];
-      const filtered = keys.filter(k => {
-        const gr = chart.graha(k);
-        return adjacentSignIndices.includes(gr.signIndex);
-      });
-      valid = filtered.length >= 2;
-    }
-    if (valid) {
-      break;
-    }
-  }
-  return { valid, start, end };
-}
-
 export const matchGrahaInTargetRanges = async (targetRanges: number[][], startJd = 0, gkTransit = "", geo: GeoPos) => {
   const nextMatches = [];
   const isAscendant = gkTransit === 'as';
@@ -1621,52 +1569,7 @@ export const matchDignity = (chart: Chart, typeKey = "", grahaKey = "") => {
   return false;
 }
 
-export const processTransitMatch = async (cond: Condition, chart: Chart, geo: GeoPos, settings = null) => {
-  const ayaItem = chart.setAyanamshaItemByKey("true_citra");
-  const startJd = currentJulianDay();
-  const gkTransit = matchGrahaEquivalent(cond.object1, chart);
-  const gkBirth = matchGrahaEquivalent(cond.object2, chart);  
-  const g1 = chart.graha(gkBirth);
-  g1.setAyanamshaItem(ayaItem);
-  let nextMatches = [];
-  const ct = matchContextType(cond.context);
-  let addEnd = false;
-  if (ct.isAspect) {
-    const ranges = matchAspectRanges(cond.context, gkBirth, gkTransit, [], cond.orb);
-    const targetRanges = ranges.map(range => range.map(num => addLng360(num,g1.longitude)));
-    nextMatches = await matchGrahaInTargetRanges(targetRanges, startJd, gkTransit, geo);
-    if (nextMatches.length > 1) {
-      const diff = Math.abs(nextMatches[1] - nextMatches[0]);
-      addEnd = diff < 30;
-    }
-  } else if (ct.isDrishtiAspect) {
-    const ranges = matchDrishtiConditionSignLngs(cond, chart, gkBirth, gkTransit, settings).map(deg => [deg, deg + 30]);
-    nextMatches = await matchGrahaInTargetRanges(ranges, startJd, gkTransit, geo);
-  }
-  nextMatches.sort((a, b) => a - b);
-  const valid = nextMatches.length > 0;
-  const start = nextMatches.length > 0 ? nextMatches[0] : 0;
-  const end = addEnd && nextMatches.length > 1? nextMatches[1] : start;
-  return {valid, start, end };
-}
 
-export const matchDrishtiConditionSignLngs = (
-  condition: Condition,
-  fromChart: Chart,
-  k1 = '',
-  k2 = '',
-  settings: ProtocolSettings
-) => {
-  const degs = [];
-  for (let i = 0; i < 12; i++) {
-    const deg = i * 30;
-    const matched = matchDrishtiCondition(condition, fromChart, deg, k1, k2, settings);
-    if (matched) {
-      degs.push(deg);
-    }
-  }
-  return degs;
-};
 
 export const matchDrishtiCondition = (
   condition: Condition,
@@ -1711,6 +1614,53 @@ export const matchDrishtiCondition = (
     });
   });
   return bmRows.some(row => filterBmMatchRow(row, condition));
+}
+
+export const matchDrishtiConditionSignLngs = (
+  condition: Condition,
+  fromChart: Chart,
+  k1 = '',
+  k2 = '',
+  settings: ProtocolSettings
+) => {
+  const degs = [];
+  for (let i = 0; i < 12; i++) {
+    const deg = i * 30;
+    const matched = matchDrishtiCondition(condition, fromChart, deg, k1, k2, settings);
+    if (matched) {
+      degs.push(deg);
+    }
+  }
+  return degs;
+}
+
+export const processTransitMatch = async (cond: Condition, chart: Chart, geo: GeoPos, settings = null) => {
+  const ayaItem = chart.setAyanamshaItemByKey("true_citra");
+  const startJd = currentJulianDay();
+  const gkTransit = matchGrahaEquivalent(cond.object1, chart);
+  const gkBirth = matchGrahaEquivalent(cond.object2, chart);  
+  const g1 = chart.graha(gkBirth);
+  g1.setAyanamshaItem(ayaItem);
+  let nextMatches = [];
+  const ct = matchContextType(cond.context);
+  let addEnd = false;
+  if (ct.isAspect) {
+    const ranges = matchAspectRanges(cond.context, gkBirth, gkTransit, [], cond.orb);
+    const targetRanges = ranges.map(range => range.map(num => addLng360(num,g1.longitude)));
+    nextMatches = await matchGrahaInTargetRanges(targetRanges, startJd, gkTransit, geo);
+    if (nextMatches.length > 1) {
+      const diff = Math.abs(nextMatches[1] - nextMatches[0]);
+      addEnd = diff < 30;
+    }
+  } else if (ct.isDrishtiAspect) {
+    const ranges = matchDrishtiConditionSignLngs(cond, chart, gkBirth, gkTransit, settings).map(deg => [deg, deg + 30]);
+    nextMatches = await matchGrahaInTargetRanges(ranges, startJd, gkTransit, geo);
+  }
+  nextMatches.sort((a, b) => a - b);
+  const valid = nextMatches.length > 0;
+  const start = nextMatches.length > 0 ? nextMatches[0] : 0;
+  const end = addEnd && nextMatches.length > 1? nextMatches[1] : start;
+  return {valid, start, end };
 }
 
 export const processByBirthSign = (condition: Condition, fromChart: Chart) => {
@@ -1889,6 +1839,71 @@ export const matchKalanalaChandra = async (cond: Condition, chart: Chart, geo: G
   return await matchNakshatraGroups("kalanala", cond, chart, geo);
 }
 
+export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Chart, settings = null) => {
+  const transitJd = currentJulianDay();
+  const [t1, k1] = cond.c1Key.split("__");
+  const criteria: Map<string, any> = new Map();
+  criteria.set(`lv${level}`, k1);
+  criteria.set(`maxLevel`, level);
+  const balanceRef = new DashaBalance(criteria)
+  const results = assignDashaBalances(chart, transitJd, level, balanceRef, 'vimshottari', 'mo');
+  let start = 0;
+  let end = 0;
+  const validPeriod = results.length > 0;
+  if (validPeriod) {
+    const last = results[results.length - 1];
+    start = last.startJd;
+    end = last.endJd;
+  }
+  const ayaItem = chart.setAyanamshaItemByKey("true_citra");
+  const ct = matchContextType(cond.context);
+  const gkTransit = matchGrahaEquivalent(cond.object1, chart);
+  const gkBirth = matchGrahaEquivalent(cond.object2, chart);
+  const birthKeys = gkBirth.split(',');
+  const isDignity = !ct.isKartariYoga && !ct.isSign && gkBirth.length > 3;
+  const g1 = chart.graha(gkBirth);
+  const g2 = chart.graha(gkTransit);
+  g1.setAyanamshaItem(ayaItem);
+  g2.setAyanamshaItem(ayaItem);
+  let valid = false;
+  for (const bKey of birthKeys) {
+    if (ct.isAspect) {
+      const ranges = matchAspectRanges(cond.context, bKey, gkTransit, [], cond.orb);
+      const dist = calcDist360(g1.longitude, g2.longitude);
+      ranges.forEach(range => {
+        const inOrb = inRange(dist, range);
+        if (inOrb) {
+          valid = validPeriod && inOrb;
+        }
+      });
+    } else if (ct.isDrishtiAspect) {
+      const ranges = matchDrishtiConditionSignLngs(cond, chart, bKey, gkTransit, settings).map(deg => [deg, deg + 30]);
+      valid = ranges.some(range => {
+        const [start, end] = range;
+        return g1.longitude >= start && g1.longitude < end;
+      });
+    } else if (isDignity) {
+      valid = matchDignity(chart, bKey, gkTransit);
+    } else if (ct.isSign) {
+      valid = matchByBirthSign(cond, chart);
+    } else if (ct.isKartariYoga) {
+      chart.setAyanamshaItemByNum(27);
+      const keys = matchBmGrahaKeys(ct.bmKey, cond, chart);
+      const refGr = chart.graha(gkTransit);
+      const adjacentSignIndices =  [(refGr.signIndex + 11) % 12, (refGr.signIndex + 1) % 12];
+      const filtered = keys.filter(k => {
+        const gr = chart.graha(k);
+        return adjacentSignIndices.includes(gr.signIndex);
+      });
+      valid = filtered.length >= 2;
+    }
+    if (valid) {
+      break;
+    }
+  }
+  return { valid, start, end };
+}
+
 const translateActionToGerund = (action: string) => {
   const suffix = action.split('_').pop().trim().toLowerCase();
   switch (suffix) {
@@ -1957,6 +1972,61 @@ const matchPanchaPakshiBirdAction = async (currJd = 0, geo: GeoPos, chart: Chart
   return {valid, yama: matchedYama, isNight, birdKey };
 }
 
+export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Chart, refKey: string, contextType: ContextType) => {
+  const ppData = await panchaPakshiDayNightSet(currJd, geo, chart, true);
+  const bird = ppData.get('bird');
+  const dayYamas = ppData.get('yamas');
+  const nightYamas = ppData.get('yamas2');
+  const isDayTime = ppData.get('isDayTime');
+  let valid = false;
+  let matchedYama = null;
+  let rulers = [];
+  let birdKey = '';
+  //const periodYamas = isDayTime ? dayYamas : nightYamas;
+  let isNight = !isDayTime;
+  switch (refKey) {
+    case 'birth_bird_graha':
+      matchedYama = dayYamas.find(ym => ym.bird == bird.birth);
+      if (!matchedYama) {
+        matchedYama = nightYamas.find(ym => ym.bird == bird.birth);
+        isNight = true;
+      }
+      if (matchedYama) {
+        rulers = matchBirdKeyRulers(bird.birth, !isNight, matchedYama.key);
+      }
+      birdKey = bird.birth;
+      break;
+    case 'day_ruler_bird_graha':
+    case 'day_dying_bird_graha':
+      const actPart = refKey.split('_bird_').shift().split('_').pop();
+      const actKey = actPart.includes('rul')? 'ruling' : 'dying';
+      const { key } = bird.current[actKey];
+      birdKey = key;
+      rulers = matchBirdKeyRulers(key, isDayTime, actKey);
+      break;
+    case 'yama_ruling_graha':
+    case 'yama_eating_graha':
+    case 'yama_walking_graha':
+    case 'yama_sleeping_graha':
+    case 'yama_dying_graha':
+      const action = refKey.split('_')[1];
+      matchedYama = dayYamas.find(ym => ym.subs[0].key === action);
+      if (matchedYama) {
+        rulers = matchedYama.rulers;
+      }
+      break;
+  }
+  valid = matchedYama instanceof Object;
+  if (valid) {
+    switch (contextType.key) {
+      case 'yoga_karaka':
+        valid = rulers.includes(chart.yogaKaraka);
+        break;
+    }
+  }
+  return { valid, yama: matchedYama, birdKey, isNight, rulers }
+}
+
 export const matchPanchaPakshi = async (cond: Condition, chart: Chart, geo: GeoPos) => {
   let mode = '';
   switch (cond.fromMode) {
@@ -1997,7 +2067,8 @@ export const matchPanchaPakshi = async (cond: Condition, chart: Chart, geo: GeoP
     let counter = 0;
     let matched = false;
     while (!matched && counter < 20) {
-      const { valid, yama, birdKey, isNight } = await matchPPTransitBirdGraha(currJd + counter, geo, chart, refKey, action);
+      
+      const { valid, yama, birdKey, isNight } = await matchPPTransitBirdGraha(currJd + counter, geo, chart, refKey, cond.contextType);
       if (valid) {
         matched = true;
         start = yama.start;
@@ -2011,48 +2082,4 @@ export const matchPanchaPakshi = async (cond: Condition, chart: Chart, geo: GeoP
 
   const valid = start > 0 && end > start;
   return { start, end, action, matchedBird, isNight: nightMatched, valid };
-}
-
-
-export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Chart, refKey: string, action: string) => {
-  const ppData = await panchaPakshiDayNightSet(currJd, geo, chart, true);
-  const bird = ppData.get('bird');
-  const dayYamas = ppData.get('yamas');
-  const nightYamas = ppData.get('yamas2');
-  const isDayTime = ppData.get('isDayTime');
-  let valid = false;
-  let matchedYama = null;
-  let rulers = [];
-  let isNight = false;
-  let birdKey = '';
-  let yama = null;
-  const periodYamas = isDayTime ? dayYamas : nightYamas;
-  switch (refKey) {
-    case 'birth_bird_graha':
-      matchedYama = dayYamas.find(ym => ym.bird == bird.birth);
-      if (matchedYama) {
-        rulers = matchBirdKeyRulers(bird.birth, isDayTime, matchedYama.key);
-      }
-      break;
-    case 'day_ruler_bird_graha':
-      case 'day_dying_bird_graha':
-      const actPart = refKey.split('_bird_').shift().split('_').pop();
-      const actKey = actPart.includes('rul')? 'ruling' : 'dying';
-      const { key } = bird.current[actKey];
-      rulers = matchBirdKeyRulers(key, isDayTime, actKey);
-      break;
-    case 'yama_ruling_graha':
-    case 'yama_eating_graha':
-    case 'yama_walking_graha':
-    case 'yama_sleeping_graha':
-    case 'yama_dying_graha':
-      const action = refKey.split('_')[1];
-      matchedYama = dayYamas.find(ym => ym.subs[0].key === action);
-      if (yama) {
-        rulers = yama.rulers;
-      }
-      break;
-  }
-  valid = matchedYama instanceof Object;
-  return { valid, yama: matchedYama, birdKey, isNight, rulers }
 }
