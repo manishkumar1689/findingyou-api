@@ -10,35 +10,66 @@ import { zeroPad } from '../../lib/converters';
 
 export const defaultDateParts = { year: 0, month: 0, day: 0, hour: 0 };
 
-/*
-@param params:Object
-*/
-export const calcJulianDate = params => {
-  let iso = null;
-  let jd = null;
-  let dp = defaultDateParts;
-  if (params instanceof Object) {
-    if (params.hasOwnProperty('dt') && validISODateString(params.dt)) {
-      iso = params.dt;
-    } else if (params.hasOwnProperty('y')) {
-      dp = buildDatePartsFromParams(params);
+export const zero2Pad = num => {
+  let out = '';
+  if (isNumeric(num)) {
+    const iVal = parseInt(num);
+    if (iVal < 10) {
+      out = '0' + iVal;
+    } else {
+      out = iVal.toString();
     }
   }
-  if (iso) {
-    jd = calcJulDate(iso);
-  } else if (dp.year > 0) {
-    jd = calcJulDateFromParts(dp);
-    iso = buildIsoDateFromParts(dp);
-  }
+  return out;
+};
+
+export const buildIsoDateFromParts = dp => {
+  const hours = Math.floor(dp.hour);
+  const minVal = (dp.hour % 1) * 60;
+  const mins = Math.floor(minVal);
+  const secs = Math.ceil((minVal % 1) * 60);
+  const strDate = [dp.year, zero2Pad(dp.month - 1), zero2Pad(dp.day)].join('-');
+  const strTime = [zero2Pad(hours), zero2Pad(mins), zero2Pad(secs)].join(':');
+  const isoDate = [strDate, strTime].join('T');
+  return moment
+    .utc(isoDate)
+    .format()
+    .split('.')
+    .shift();
+};
+
+export const toDateParts = (strDate: string) => {
+  const [dtPart, remainder] = strDate.trim().replace(' ', 'T').split("T");
+  const timeStr = remainder.split(".").shift();
+  const isNeg = dtPart.startsWith('-');
+  const dtStr = isNeg? dtPart.substring(1) : dtPart;
+  const [years, months, days] = dtStr.split("-").map(part => parseInt(part, 10));
+  const [hours, minutes, secs] = timeStr.split(":").map(part => parseInt(part, 10));
+  const seconds = typeof secs === 'number' ? secs : 0;
+  const minSecs = minutes * 60 + seconds;
+  const decHrs = hours + minSecs / 3600;
+  const negMultiplier = isNeg ? -1 : 1;
   return {
-    iso,
-    jd,
+    year: years * negMultiplier,
+    month: months,
+    day: days,
+    hour: decHrs,
   };
+};
+
+export const calcJulDateFromParts = (dp, julian = false) => {
+  const gregFlag = julian === true ? 0 : 1;
+  return swisseph.swe_julday(dp.year, dp.month, dp.day, dp.hour, gregFlag);
+};
+
+export const calcJulDate = (strDate, julian = false) => {
+  const dp = toDateParts(strDate);
+  return calcJulDateFromParts(dp, julian);
 };
 
 export const buildDatePartsFromParams = query => {
   const keys = Object.keys(query);
-  let dp = defaultDateParts;
+  const dp = defaultDateParts;
   if (keys.includes('y')) {
     if (isNumeric(query.y)) {
       dp.year = parseInt(query.y, 10);
@@ -65,44 +96,49 @@ export const buildDatePartsFromParams = query => {
   return dp;
 };
 
-export const toDateParts = (strDate: string) => {
-  const [dtPart, remainder] = strDate.trim().replace(' ', 'T').split("T");
-  const timeStr = remainder.split(".").shift();
-  const isNeg = dtPart.startsWith('-');
-  const dtStr = isNeg? dtPart.substring(1) : dtPart;
-  const [years, months, days] = dtStr.split("-").map(part => parseInt(part, 10));
-  const [hours, minutes, secs] = timeStr.split(":").map(part => parseInt(part, 10));
-  const seconds = typeof secs === 'number' ? secs : 0;
-  const minSecs = minutes * 60 + seconds;
-  const decHrs = hours + minSecs / 3600;
-  const negMultiplier = isNeg ? -1 : 1;
+/*
+@param params:Object
+*/
+export const calcJulianDate = params => {
+  let iso = null;
+  let jd = null;
+  let dp = defaultDateParts;
+  if (params instanceof Object) {
+    if (params.hasOwnProperty('dt') && validISODateString(params.dt)) {
+      iso = params.dt;
+    } else if (params.hasOwnProperty('y')) {
+      dp = buildDatePartsFromParams(params);
+    }
+  }
+  if (iso) {
+    jd = calcJulDate(iso);
+  } else if (dp.year > 0) {
+    jd = calcJulDateFromParts(dp);
+    iso = buildIsoDateFromParts(dp);
+  }
   return {
-    year: years * negMultiplier,
-    month: months,
-    day: days,
-    hour: decHrs,
+    iso,
+    jd,
   };
 };
 
-export const buildIsoDateFromParts = dp => {
-  const hours = Math.floor(dp.hour);
-  const minVal = (dp.hour % 1) * 60;
-  const mins = Math.floor(minVal);
-  const secs = Math.ceil((minVal % 1) * 60);
-  const strDate = [dp.year, zero2Pad(dp.month - 1), zero2Pad(dp.day)].join('-');
-  const strTime = [zero2Pad(hours), zero2Pad(mins), zero2Pad(secs)].join(':');
-  const isoDate = [strDate, strTime].join('T');
-  return moment
-    .utc(isoDate)
-    .format()
-    .split('.')
-    .shift();
+export const julToUnixTime = (jd: number, tzOffset = 0): number => {
+  const epoch = 2440587.5; // Jan. 1, 1970 00:00:00 UTC
+  return jd !== undefined ? (jd - epoch) * 86400 + tzOffset : 0;
 };
 
-export const calcJulDate = (strDate, julian = false) => {
-  let dp = toDateParts(strDate);
-  return calcJulDateFromParts(dp, julian);
+export const julToISODateObj = (jd: number, tzOffset = 0): Moment => {
+  return !isNaN(jd) ? moment.unix(julToUnixTime(jd, tzOffset)) : moment.unix(0);
 };
+
+export const julToISODate = (jd: number, tzOffset = 0): string => {
+  return julToISODateObj(jd, tzOffset).toISOString();
+};
+
+export const currentISODate = (fromDayStart = false) => {
+  const dt = moment.utc().format();
+  return fromDayStart ? dt.split('T').shift() + 'T00:00:00' : dt;
+}
 
 export const matchJdAndDatetime = (dtRef = "", startJd = -1, fromDayStart = false, fromNoon = false) => {
   const strRef = typeof dtRef === "string" ? dtRef.trim().replace(/\s+/, 'T') : dtRef;
@@ -122,11 +158,6 @@ export const matchEndJdAndDatetime = (strRef = "", startJd = 0) => {
   const { jd, dtUtc } = matchJdAndDatetime(strRef, startJd);
   return { endJd: jd, endDt: dtUtc.split(".").shift() };
 }
-
-export const calcJulDateFromParts = (dp, julian = false) => {
-  const greg_flag = julian === true ? 0 : 1;
-  return swisseph.swe_julday(dp.year, dp.month, dp.day, dp.hour, greg_flag);
-};
 
 export const jdToDateParts = (jd, gregFlag = 1) => {
   return swisseph.swe_revjul(jd, gregFlag);
@@ -167,19 +198,6 @@ export const durationStringToDays = (str = ""): number => {
     days = convertUnitValsToDays(numVal, unit);
   }
   return days;
-};
-
-export const zero2Pad = num => {
-  let out = '';
-  if (isNumeric(num)) {
-    const iVal = parseInt(num);
-    if (iVal < 10) {
-      out = '0' + iVal;
-    } else {
-      out = iVal.toString();
-    }
-  }
-  return out;
 };
 
 export const jdToDateTime = (jd, gregFlag = 1) => {
@@ -287,19 +305,6 @@ export const utcDate = (dt: Date | string) => {
 export const toShortTzAbbr = (dt, timezoneRef: string) =>
   moment.tz(dt, timezoneRef).format('z');
 
-export const julToUnixTime = (jd: number, tzOffset = 0): number => {
-  const epoch = 2440587.5; // Jan. 1, 1970 00:00:00 UTC
-  return jd !== undefined ? (jd - epoch) * 86400 + tzOffset : 0;
-};
-
-export const julToISODateObj = (jd: number, tzOffset = 0): Moment => {
-  return !isNaN(jd) ? moment.unix(julToUnixTime(jd, tzOffset)) : moment.unix(0);
-};
-
-export const julToISODate = (jd: number, tzOffset = 0): string => {
-  return julToISODateObj(jd, tzOffset).toISOString();
-};
-
 export const julToDateFormat = (
   jd: number,
   tzOffset = 0,
@@ -349,12 +354,6 @@ export const decimalYear = (strDate = '') => {
   const yearProgress = mom.dayOfYear() / numDaysInYear;
   return years + yearProgress;
 };
-
-
-export const currentISODate = (fromDayStart = false) => {
-  const dt = moment.utc().format();
-  return fromDayStart ? dt.split('T').shift() + 'T00:00:00' : dt;
-}
 
 export const julRangeToAge = (
   startJd: number,

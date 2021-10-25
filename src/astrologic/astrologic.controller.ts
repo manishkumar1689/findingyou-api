@@ -110,7 +110,7 @@ import { SingleCore } from './interfaces/single-core';
 import { AssignPairedDTO } from './dto/assign-paired.dto';
 import { matchPlanetNum } from './lib/settings/graha-values';
 import { CreateUserDTO } from '../user/dto/create-user.dto';
-import { assignDashaBalances, calcDashaSetByKey, DashaBalance, mapDashaItem } from './lib/models/dasha-set';
+import { assignDashaBalances, DashaBalance, matchDashaSubsetFromChart } from './lib/models/dasha-set';
 import { calcAscendantTimelineItems, calcNextAscendantLng, calcOffsetAscendant } from './lib/calc-ascendant';
 import { GeoLoc } from './lib/models/geo-loc';
 import { Graha } from './lib/models/graha-set';
@@ -1006,35 +1006,17 @@ export class AstrologicController {
   @Get('dasha-set')
   async fetchDashSet(@Res() res, @Query() query) {
     const { dt, transitJd, system, key, chartData, maxLevel, durDays } = await this.matchDashaQueryParams(query);
-    let data: any = {};
-    let nak = -1;
-    let lng = -1;
+    const data = { dashas: [], nak: -1, lng: -1 };
     if (chartData instanceof Object) {
       const chart = new Chart(chartData);
-      chart.setAyanamshaItemByNum(27);
-      const graha = chart.graha(key);
-      const scanStartJd = transitJd;
-      const scanEndJd = durDays > 0? scanStartJd + durDays : -1;
-      nak = graha.nakshatra27;
-      lng = graha.longitude;
-      data = calcDashaSetByKey(system, graha, chart.jd);
-      if (data.dashas instanceof Array) {
-        data.dashas = data.dashas.filter(sp => scanStartJd < 1 || (scanStartJd <= sp.endJd  && scanEndJd >= sp.startJd)).map(span =>
-          mapDashaItem(
-            span,
-            chart.jd,
-            data.set,
-            1,
-            maxLevel,
-            chart.tzOffset,
-            scanStartJd,
-            false,
-            scanEndJd
-          )
-        );
+      const { dashas, nak, lng } = matchDashaSubsetFromChart(chart, transitJd, maxLevel, durDays, key, system);
+      if (dashas instanceof Array) {
+        data.dashas = dashas;
+        data.nak = nak;
+        data.lng = lng;
       }
     }
-    return res.json({...data, nak, lng, dt });
+    return res.json({...data, dt });
   }
 
   async matchDashaQueryParams(query) {
@@ -1058,7 +1040,7 @@ export class AstrologicController {
     const validRefs = hasDt && (hasLoc || hasLatLng);
     const balanceRef = new DashaBalance(criteria);
     const duration = criteria.has('duration') ? criteria.get('duration') : '';
-    const durDays = notEmptyString(duration) ? durationStringToDays(duration) : '';
+    const durDays = notEmptyString(duration) ? durationStringToDays(duration) : 30;
     if (balanceRef.maxLevel > 0) {
       levelInt = balanceRef.maxLevel;
     }

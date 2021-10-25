@@ -427,6 +427,34 @@ export const filterByDashaContraints = (sp: DashaSpan, targetJd = -1, after = fa
   return hasRange ? filterDashaBetween(sp) : hasStart ? filterDashaAfterStart(sp) : true;
 }
 
+export const mapDashaItem = (
+  span: DashaSpan,
+  jd = 0,
+  dashaSet,
+  depth = 0,
+  maxDepth = 3,
+  tzOffset = 0,
+  targetJd = -1,
+  hasBalanceKeys = false,
+  endJd = -1,
+): DashaSpanItem => {
+  const children =
+    depth < maxDepth
+      ? span
+          .children(dashaSet)
+          .filter(sp => filterByDashaContraints(sp, targetJd, hasBalanceKeys, endJd) )
+          .map(ds2 =>
+            mapDashaItem(ds2, jd, dashaSet, depth + 1, maxDepth, tzOffset, targetJd, hasBalanceKeys, endJd),
+          )
+      : [];
+  const age = julRangeToAge(span.startJd, jd, tzOffset);
+  return {
+    ...span,
+    children,
+    age,
+  };
+};
+
 export const matchCurrentDashaLord = (chart:Chart, refJd = 0, level = 1): DashaSpan => {
   const ds = calcDashaSetByKey('vimshottari', chart.graha('mo'), chart.jd);
   let obj = null;
@@ -539,34 +567,6 @@ export class DashaBalance {
   }
 
 } 
-
-export const mapDashaItem = (
-  span: DashaSpan,
-  jd = 0,
-  dashaSet,
-  depth = 0,
-  maxDepth = 3,
-  tzOffset = 0,
-  targetJd = -1,
-  hasBalanceKeys = false,
-  endJd = -1,
-): DashaSpanItem => {
-  const children =
-    depth < maxDepth
-      ? span
-          .children(dashaSet)
-          .filter(sp => filterByDashaContraints(sp, targetJd, hasBalanceKeys, endJd) )
-          .map(ds2 =>
-            mapDashaItem(ds2, jd, dashaSet, depth + 1, maxDepth, tzOffset, targetJd, hasBalanceKeys, endJd),
-          )
-      : [];
-  const age = julRangeToAge(span.startJd, jd, tzOffset);
-  return {
-    ...span,
-    children,
-    age,
-  };
-};
 
 export const assignDashaBalances = (chart: Chart, transitJd = -1, maxLevel = 3, balanceRef: DashaBalance, system = 'vimshottari', key = 'mo') => {
   const balances = [];
@@ -886,3 +886,29 @@ export const mapDashaPointAspects = (
   return aspectMatches;
 };
 
+export const matchDashaSubsetFromChart = (chart: Chart, transitJd = 0, maxLevel = 1, durDays = 366, key = 'mo', system = 'vimshottari') => {
+  let dashas = [];
+  chart.setAyanamshaItemByNum(27);
+  const graha = chart.graha(key);
+  const scanStartJd = transitJd;
+  const scanEndJd = durDays > 0? scanStartJd + durDays : -1;
+  const nak = graha.nakshatra27;
+  const lng = graha.longitude;
+  const data = calcDashaSetByKey(system, graha, chart.jd);
+  if (data.dashas instanceof Array) {
+    dashas = data.dashas.filter(sp => scanStartJd < 1 || (scanStartJd <= sp.endJd  && scanEndJd >= sp.startJd)).map(span =>
+      mapDashaItem(
+        span,
+        chart.jd,
+        data.set,
+        1,
+        maxLevel,
+        chart.tzOffset,
+        scanStartJd,
+        false,
+        scanEndJd
+      )
+    );
+  }
+  return { dashas, nak, lng };
+}

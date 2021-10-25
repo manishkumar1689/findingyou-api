@@ -8,7 +8,7 @@ import {
   getAyanamsa,
   getAzalt,
 } from './sweph-async';
-import { calcJulDate, jdToDateTime, julToISODate } from './date-funcs';
+import { calcJulDate, jdToDateTime } from './date-funcs';
 import { calcDeclinationFromLngLatEcl, calcInclusiveTwelfths, calcRectAscension, subtractLng360 } from './math-funcs';
 import {
   calcTransitionJd,
@@ -70,6 +70,152 @@ swisseph.swe_set_ephe_path(ephemerisPath);
 // Make user-configurable
 swisseph.swe_set_sid_mode(swisseph[ephemerisDefaults.sid_mode], 0, 0);
 
+const degreeToSign = deg => Math.floor(deg / 30) + 1;
+
+const addCycleInclusive = (one, two, radix) => {
+  return ((one - 1 + two) % radix) + 1;
+}
+
+const subtractCycleInclusive = (one, two, radix) => {
+  return ((one - 1 - two + radix) % radix) + 1;
+}
+
+/*
+@param sunLng:number
+@param moonLng:number
+*/
+export const relativeAngle = (
+  sunLng: number,
+  moonLng: number,
+  multiplier = 1,
+) => {
+  const mn = ((moonLng - sunLng) * multiplier) % 360;
+  return mn < 0 ? 360 + mn : mn;
+};
+
+const calcDeclination = async (
+  jd: number,
+  num: number,
+): Promise<DeclinationResult> => {
+  const flag =
+    swisseph.SEFLG_SWIEPH | swisseph.SEFLG_SPEED | swisseph.SEFLG_EQUATORIAL;
+  let data = { valid: false, value: 0, ra: 0 };
+  await calcUtAsync(jd, num, flag).catch(async result => {
+    if (result instanceof Object) {
+      if (!result.error) {
+        if (result instanceof Object) {
+          data = { valid: true, value: result.declination, ra: result.rectAscension };
+        }
+      }
+    }
+  });
+  return data;
+};
+
+export const matchSideralMode = (mode: string) => {
+  let iflag = swisseph.SEFLG_SWIEPH;
+  let sidModeNum = 0;
+  if (notEmptyString(mode, 3) && mode !== 'RAW') {
+    iflag += swisseph.SEFLG_SIDEREAL;
+    const sidModeKey = notEmptyString(mode, 2)
+      ? ['SE_SIDM', mode.toUpperCase()].join('_')
+      : '';
+    if (sidModeKey.length > 8 && swisseph.hasOwnProperty(sidModeKey)) {
+      sidModeNum = swisseph[sidModeKey];
+    }
+  }
+  swisseph.swe_set_sid_mode(sidModeNum, 0, 0);
+  return iflag;
+};
+
+export const calcGrahaPos = async (jd = 0, num = 0, flag = 0) => {
+  let data: any = { valid: false };
+  const gFlag = swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SPEED + flag;
+  const dV = await calcDeclination(jd, num);
+  await calcUtAsync(jd, num, gFlag).catch(async result => {
+    if (result instanceof Object) {
+      if (!result.error) {
+        data = { ...result, declination: dV.value, rectAscension: dV.ra, valid: true};
+      }
+    }
+  });
+  return data;
+}
+
+export const fetchHouseDataJd = async (
+  jd,
+  geo,
+  system = 'W',
+  mode = 'RAW',
+): Promise<HouseSet> => {
+  let houseData: any = { jd };
+  const iflag = matchSideralMode(mode);
+  
+  await getHouses(jd, iflag, geo.lat, geo.lng, system).catch(res => {
+    if (res instanceof Object) {
+      if (res.house) {
+        houseData = res;
+        houseData.jd = jd;
+      }
+    }
+  });
+  swisseph.swe_set_topo(geo.lng, geo.lat, geo.alt);
+  const posData = await calcGrahaPos(jd, -1, 0);
+  let ascDeclination = 0;
+  let ecliptic = 0;
+  let ascRectAscension = 0;
+  let mcRectAscension = 0;
+  const hasEclipticData = posData instanceof Object;
+  const keys = hasEclipticData ? Object.keys(posData) : [];
+  if (hasEclipticData && keys.includes("longitude")) {
+    ecliptic = posData.longitude;
+    ascDeclination = calcDeclinationFromLngLatEcl(houseData.ascendant, 0, ecliptic);
+    ascRectAscension = calcRectAscension(houseData.ascendant, 0, ecliptic);
+    mcRectAscension = calcRectAscension(houseData.mc, 0, ecliptic);
+  }
+  const extraData = hasEclipticData ? { ascDeclination, ecliptic, ascRectAscension, mcRectAscension } : {};
+  return new HouseSet(houseData, extraData);
+};
+
+export const fetchHouseData = async (
+  datetime: string,
+  geo,
+  system = 'W',
+): Promise<HouseSet> => {
+  let houseData = new HouseSet();
+  //swisseph.swe_set_sid_mode(swisseph.SE_SIDM_TRUE_CITRA, 0, 0);
+  if (validISODateString(datetime) && geo instanceof Object) {
+    const jd = calcJulDate(datetime);
+    houseData = await fetchHouseDataJd(jd, geo, system);
+  }
+  return houseData;
+};
+
+const calcUpagrahaPeriods = async (
+  startJd: number,
+  eighthJd: number,
+  geo,
+  ayanamshaValue: number,
+) => {
+  const periods = [];
+  for (let i = 0; i < 9; i++) {
+    const periodJd = startJd + i * eighthJd;
+    const midPeriodJd = startJd + (i + 0.5) * eighthJd;
+    const hd = await fetchHouseDataJd(periodJd, geo, 'W');
+    const hd2 = await fetchHouseDataJd(midPeriodJd, geo, 'W');
+    periods.push({
+      startJd: periodJd,
+      midJd: midPeriodJd,
+      dt: jdToDateTime(periodJd),
+      ascendant: subtractLng360(hd.ascendant, ayanamshaValue),
+      midAscendant: subtractLng360(hd2.ascendant, ayanamshaValue),
+      index: i,
+      num: i + 1,
+    });
+  }
+  return periods;
+};
+
 export const calcUpagrahas = async (
   datetime,
   geo,
@@ -95,7 +241,7 @@ export const calcUpagrahas = async (
   const sectionKey = isDayTime ? 'daytime' : 'nighttime';
 
   const upaRow = upagrahaData[sectionKey].find(row => row.day === weekDay);
-  let values = [];
+  const values = [];
   for (const ref of upagrahaData.refs) {
     const partIndex = upaRow.parts.findIndex(b => b === ref.body);
     const parts = partIndex + 1;
@@ -110,7 +256,7 @@ export const calcUpagrahas = async (
       upagraha: subtractLng360(hd.ascendant, ayanamshaValue),
     });
   }
-  let out = {
+  const out = {
     jd,
     startJd,
     ...sunData,
@@ -144,14 +290,6 @@ export const calcHoras = async (datetime: string, geo) => {
   return { jd, horaRow, ruler, index: horaIndex, weekDay, isDaytime };
 };
 
-const calcMuhurtaIndex = async (datetime: string, geo) => {
-  const { jd, sunData, dayLength, dayBefore } = await calcJyotishSunRise(
-    datetime,
-    geo,
-  );
-  return calcMuhurtaIndexJyotish(jd, sunData, dayLength, dayBefore);
-};
-
 const calcMuhurtaIndexJyotish = (
   jd: number,
   sunData: SunTransitionData,
@@ -167,6 +305,14 @@ const calcMuhurtaIndexJyotish = (
   const index =
     muhurtaVal < numMuhurtas ? Math.floor(muhurtaVal) : numMuhurtas - 1;
   return { jd, dayStart, index, numMuhurtas, muhurtaLength };
+};
+
+const calcMuhurtaIndex = async (datetime: string, geo) => {
+  const { jd, sunData, dayLength, dayBefore } = await calcJyotishSunRise(
+    datetime,
+    geo,
+  );
+  return calcMuhurtaIndexJyotish(jd, sunData, dayLength, dayBefore);
 };
 
 const calcMuhurta = async (datetime: string, geo) => {
@@ -188,38 +334,115 @@ const calcDayMuhurtas = async (datetime: string, geo) => {
   return { jd, values, muhurtaLength, dayStart };
 };
 
-const calcUpagrahaPeriods = async (
-  startJd: number,
-  eighthJd: number,
-  geo,
-  ayanamshaValue: number,
-) => {
-  let periods = [];
-  for (let i = 0; i < 9; i++) {
-    const periodJd = startJd + i * eighthJd;
-    const midPeriodJd = startJd + (i + 0.5) * eighthJd;
-    const hd = await fetchHouseDataJd(periodJd, geo, 'W');
-    const hd2 = await fetchHouseDataJd(midPeriodJd, geo, 'W');
-    periods.push({
-      startJd: periodJd,
-      midJd: midPeriodJd,
-      dt: jdToDateTime(periodJd),
-      ascendant: subtractLng360(hd.ascendant, ayanamshaValue),
-      midAscendant: subtractLng360(hd2.ascendant, ayanamshaValue),
-      index: i,
-      num: i + 1,
-    });
+/*
+	add extra data for each body based on position
+@param result:Object
+@param body:Object
+*/
+const processBodyResult = (result: any, body: any) => {
+  // for Ketu calculate opposing longitude
+  switch (body.calc) {
+    case 'opposite':
+      result.longitude = (result.longitude + 180) % 360;
+      break;
   }
-  return periods;
+
+  result.mulaTrikon = body.mulaTrikon;
+  const attrKeys = [
+    'key',
+    'ownSign',
+    'charaKarakaMode',
+    'exaltedDegree',
+    'mulaTrikonDegrees',
+    'exalted',
+    'jyNum',
+    'icon',
+    'bhuta',
+    'guna',
+    'caste',
+    'dhatu',
+    'dosha',
+  ];
+
+  attrKeys.forEach(attr => {
+    if (body.hasOwnProperty(attr)) {
+      result[attr] = body[attr];
+    }
+  });
+
+  return result;
 };
 
-export const calcMrityubhaga = async (datetime: string, geo) => {
-  const bodyData = await calcAllBodies(datetime, 'core');
-  const { jd, bodies } = bodyData;
-  const hd = await fetchHouseDataJd(jd, geo);
-  const { ascendant } = hd;
-  const md = calcMrityubhagaValues(bodies, ascendant);
-  return { jd, dt: datetime, ...md };
+const addGrahaValues = async (data, applyTopo = false) => {
+  const gFlag = swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SPEED;
+  for (const body of grahaValues) {
+    const num = swisseph[body.ref];
+    const dV = await calcDeclination(data.jd, body.num);
+
+    await calcUtAsync(data.jd, num, gFlag).catch(async result => {
+      if (result instanceof Object) {
+        if (!result.error) {
+          processBodyResult(result, body);
+          data.bodies.push({
+            num: num,
+            name: body.subkey,
+            friends: body.friends,
+            neutral: body.neutral,
+            enemies: body.enemies,
+            ...result,
+            declination: dV.value,
+            rectAscension: dV.ra
+          });
+          if (!data.valid) {
+            data.valid = true;
+          }
+        }
+      }
+    });
+  }
+  if (applyTopo) {
+    const tFlag = gFlag + swisseph.SEFLG_TOPOCTR;
+    for (const body of grahaValues) {
+      const num = swisseph[body.ref];
+      await calcUtAsync(data.jd, num, tFlag).catch(async result => {
+        if (result instanceof Object) {
+          if (!result.error) {
+            const bd = data.bodies.find(b => b.num === num);
+            if (bd instanceof Object) {
+              bd.topo = {
+                lng: result.longitude,
+                lat: result.latitude,
+              };
+            }
+          }
+        }
+      });
+    }
+  }
+
+  data = new GrahaSet(data);
+  data.matchValues();
+};
+
+const addAsteroids = async data => {
+  for (const body of asteroidValues) {
+    const num = body.num + swisseph.SE_AST_OFFSET;
+    await calcUtAsync(data.jd, num, swisseph.SEFLG_SIDEREAL).catch(result => {
+      if (result instanceof Object) {
+        result.valid = !result.error;
+        data.bodies.push({
+          refNum: num,
+          bodyNum: body.num,
+          bodyName: body.name,
+          file: body.file,
+          ...result,
+        });
+        if (!data.valid && !result.error) {
+          data.valid = true;
+        }
+      }
+    });
+  }
 };
 
 export const calcMrityubhagaValues = (
@@ -259,6 +482,41 @@ export const calcMrityubhagaValues = (
   return { ascendant, standardRange, altRange, bodies };
 };
 
+/*
+@param datetime:string IsoDate
+@param mode:string (all|core|asteroids)
+@param showBodyConfig:boolean
+*/
+export const calcAllBodies = async (
+  datetime: string,
+  mode = 'all',
+  applyTopo = false,
+) => {
+  const data = { valid: false, jd: 0, bodies: [] };
+  if (validISODateString(datetime)) {
+    data.jd = calcJulDate(datetime);
+    const showCore = mode === 'core' || mode === 'all';
+    const showAsteroids = mode === 'asteroids' || mode === 'all';
+    if (showCore) {
+      await addGrahaValues(data, applyTopo);
+    }
+
+    if (showAsteroids) {
+      await addAsteroids(data);
+    }
+  }
+  return data;
+};
+
+export const calcMrityubhaga = async (datetime: string, geo) => {
+  const bodyData = await calcAllBodies(datetime, 'core');
+  const { jd, bodies } = bodyData;
+  const hd = await fetchHouseDataJd(jd, geo);
+  const { ascendant } = hd;
+  const md = calcMrityubhagaValues(bodies, ascendant);
+  return { jd, dt: datetime, ...md };
+};
+
 export const translateBodyConstant = (body: string) => {
   const bodyBase = body.replace(/^SE_/, '').toLowerCase();
   switch (bodyBase) {
@@ -268,21 +526,6 @@ export const translateBodyConstant = (body: string) => {
       return bodyBase.substring(0, 2).toLowerCase();
   }
 }
-
-export const calcAllTransitions = async (datetime: string, geo: GeoPos, jdOffset = 0, showLng = false) => {
-  const jd = calcJulDate(datetime);
-  const items = await calcAllTransitionsJd(jd, geo, jdOffset, true, showLng, true);
-  const transitions: TransitionData[] = items.map(row => {
-    const key = translateBodyConstant(row.body);
-    return { ...row, key }
-  });
-  return {
-    jd,
-    transitions,
-    geo,
-    chart: null
-  };
-};
 
 export const calcAllTransitionsJd = async (
   jd: number,
@@ -348,14 +591,23 @@ export const calcAllTransitionsJd = async (
   return bodies;
 };
 
-export const calcStarPos = async (datetime: string, starname: string) => {
+export const calcAllTransitions = async (datetime: string, geo: GeoPos, jdOffset = 0, showLng = false) => {
   const jd = calcJulDate(datetime);
-  const data = await calcStarPosJd(jd, starname);
-  return { jd, ...data };
+  const items = await calcAllTransitionsJd(jd, geo, jdOffset, true, showLng, true);
+  const transitions: TransitionData[] = items.map(row => {
+    const key = translateBodyConstant(row.body);
+    return { ...row, key }
+  });
+  return {
+    jd,
+    transitions,
+    geo,
+    chart: null
+  };
 };
 
 const calcStarPosJd = async (jd: number, starname: string) => {
-  let data: any = { valid: false };
+  const data: any = { valid: false };
   if (isNumeric(jd) && notEmptyString(starname, 2)) {
     await fixedStar2UtAsync(starname, jd, swisseph.SEFLG_SWIEPH).catch(
       result => {
@@ -378,14 +630,20 @@ const calcStarPosJd = async (jd: number, starname: string) => {
     }
   }
   return data;
-};
+}
+
+export const calcStarPos = async (datetime: string, starname: string) => {
+  const jd = calcJulDate(datetime);
+  const data = await calcStarPosJd(jd, starname);
+  return { jd, ...data };
+}
 
 /*
 @param datetime:string isodate
 @return Promise<Array<Object>>
 */
 export const calcAllStars = async (datetime: string) => {
-  let data = {
+  const data = {
     valid: false,
     jd: calcJulDate(datetime),
     stars: [],
@@ -414,75 +672,6 @@ export const matchNakshatra = (deg: number) => {
   return row;
 };
 
-/*
-	add extra data for each body based on position
-@param result:Object
-@param body:Object
-*/
-const processBodyResult = (result: any, body: any) => {
-  // for Ketu calculate opposing longitude
-  switch (body.calc) {
-    case 'opposite':
-      result.longitude = (result.longitude + 180) % 360;
-      break;
-  }
-
-  result.mulaTrikon = body.mulaTrikon;
-  const attrKeys = [
-    'key',
-    'ownSign',
-    'charaKarakaMode',
-    'exaltedDegree',
-    'mulaTrikonDegrees',
-    'exalted',
-    'jyNum',
-    'icon',
-    'bhuta',
-    'guna',
-    'caste',
-    'dhatu',
-    'dosha',
-  ];
-
-  attrKeys.forEach(attr => {
-    if (body.hasOwnProperty(attr)) {
-      result[attr] = body[attr];
-    }
-  });
-
-  return result;
-};
-
-export const matchSideralMode = (mode: string) => {
-  let iflag = swisseph.SEFLG_SWIEPH;
-  let sid_mode_num = 0;
-  if (notEmptyString(mode, 3) && mode !== 'RAW') {
-    iflag += swisseph.SEFLG_SIDEREAL;
-    const sid_mode_key = notEmptyString(mode, 2)
-      ? ['SE_SIDM', mode.toUpperCase()].join('_')
-      : '';
-    if (sid_mode_key.length > 8 && swisseph.hasOwnProperty(sid_mode_key)) {
-      sid_mode_num = swisseph[sid_mode_key];
-    }
-  }
-  swisseph.swe_set_sid_mode(sid_mode_num, 0, 0);
-  return iflag;
-};
-
-export const calcGrahaPos = async (jd = 0, num = 0, flag = 0) => {
-  let data: any = { valid: false };
-  const gFlag = swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SPEED + flag;
-  const dV = await calcDeclination(jd, num);
-  await calcUtAsync(jd, num, gFlag).catch(async result => {
-    if (result instanceof Object) {
-      if (!result.error) {
-        data = { ...result, declination: dV.value, rectAscension: dV.ra, valid: true};
-      }
-    }
-  });
-  return data;
-}
-
 export const calcGrahaLng = async (jd = 0, num = 0, flag = 0) => {
   let lng = 0;
   const gFlag = swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SPEED + flag;
@@ -496,130 +685,11 @@ export const calcGrahaLng = async (jd = 0, num = 0, flag = 0) => {
   return lng;
 }
 
-export const fetchHouseDataJd = async (
-  jd,
-  geo,
-  system = 'W',
-  mode = 'RAW',
-): Promise<HouseSet> => {
-  let houseData: any = { jd };
-  const iflag = matchSideralMode(mode);
-  
-  await getHouses(jd, iflag, geo.lat, geo.lng, system).catch(res => {
-    if (res instanceof Object) {
-      if (res.house) {
-        houseData = res;
-        houseData.jd = jd;
-      }
-    }
-  });
-  swisseph.swe_set_topo(geo.lng, geo.lat, geo.alt);
-  const posData = await calcGrahaPos(jd, -1, 0);
-  let ascDeclination = 0;
-  let ecliptic = 0;
-  let ascRectAscension = 0;
-  let mcRectAscension = 0;
-  const hasEclipticData = posData instanceof Object;
-  const keys = hasEclipticData ? Object.keys(posData) : [];
-  if (hasEclipticData && keys.includes("longitude")) {
-    ecliptic = posData.longitude;
-    ascDeclination = calcDeclinationFromLngLatEcl(houseData.ascendant, 0, ecliptic);
-    ascRectAscension = calcRectAscension(houseData.ascendant, 0, ecliptic);
-    mcRectAscension = calcRectAscension(houseData.mc, 0, ecliptic);
-  }
-  const extraData = hasEclipticData ? { ascDeclination, ecliptic, ascRectAscension, mcRectAscension } : {};
-  return new HouseSet(houseData, extraData);
-};
-
-export const fetchHouseData = async (
-  datetime: string,
-  geo,
-  system = 'W',
-): Promise<HouseSet> => {
-  let houseData = new HouseSet();
-  //swisseph.swe_set_sid_mode(swisseph.SE_SIDM_TRUE_CITRA, 0, 0);
-  if (validISODateString(datetime) && geo instanceof Object) {
-    const jd = calcJulDate(datetime);
-    houseData = await fetchHouseDataJd(jd, geo, system);
-  }
-  return houseData;
-};
-
-const addGrahaValues = async (data, applyTopo = false) => {
-  const gFlag = swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SPEED;
-  for (const body of grahaValues) {
-    const num = swisseph[body.ref];
-    const dV = await calcDeclination(data.jd, body.num);
-
-    await calcUtAsync(data.jd, num, gFlag).catch(async result => {
-      if (result instanceof Object) {
-        if (!result.error) {
-          processBodyResult(result, body);
-          data.bodies.push({
-            num: num,
-            name: body.subkey,
-            friends: body.friends,
-            neutral: body.neutral,
-            enemies: body.enemies,
-            ...result,
-            declination: dV.value,
-            rectAscension: dV.ra
-          });
-          if (!data.valid) {
-            data.valid = true;
-          }
-        }
-      }
-    });
-  }
-  if (applyTopo) {
-    const tFlag = gFlag + swisseph.SEFLG_TOPOCTR;
-    for (const body of grahaValues) {
-      const num = swisseph[body.ref];
-      await calcUtAsync(data.jd, num, tFlag).catch(async result => {
-        if (result instanceof Object) {
-          if (!result.error) {
-            const bd = data.bodies.find(b => b.num === num);
-            if (bd instanceof Object) {
-              bd.topo = {
-                lng: result.longitude,
-                lat: result.latitude,
-              };
-            }
-          }
-        }
-      });
-    }
-  }
-
-  data = new GrahaSet(data);
-  data.matchValues();
-};
-
 interface DeclinationResult {
   valid: boolean;
   value: number;
   ra?: number;
 }
-
-const calcDeclination = async (
-  jd: number,
-  num: number,
-): Promise<DeclinationResult> => {
-  const flag =
-    swisseph.SEFLG_SWIEPH | swisseph.SEFLG_SPEED | swisseph.SEFLG_EQUATORIAL;
-  let data = { valid: false, value: 0, ra: 0 };
-  await calcUtAsync(jd, num, flag).catch(async result => {
-    if (result instanceof Object) {
-      if (!result.error) {
-        if (result instanceof Object) {
-          data = { valid: true, value: result.declination, ra: result.rectAscension };
-        }
-      }
-    }
-  });
-  return data;
-};
 
 export const calcAltitudeSE = async (
   jd: number,
@@ -641,53 +711,6 @@ export const calcAltitudeSE = async (
     }
   });
   return value;
-};
-
-const addAsteroids = async data => {
-  for (const body of asteroidValues) {
-    const num = body.num + swisseph.SE_AST_OFFSET;
-    await calcUtAsync(data.jd, num, swisseph.SEFLG_SIDEREAL).catch(result => {
-      if (result instanceof Object) {
-        result.valid = !result.error;
-        data.bodies.push({
-          refNum: num,
-          bodyNum: body.num,
-          bodyName: body.name,
-          file: body.file,
-          ...result,
-        });
-        if (!data.valid && !result.error) {
-          data.valid = true;
-        }
-      }
-    });
-  }
-};
-
-/*
-@param datetime:string IsoDate
-@param mode:string (all|core|asteroids)
-@param showBodyConfig:boolean
-*/
-export const calcAllBodies = async (
-  datetime: string,
-  mode: string = 'all',
-  applyTopo = false,
-) => {
-  let data = { valid: false, jd: 0, bodies: [] };
-  if (validISODateString(datetime)) {
-    data.jd = calcJulDate(datetime);
-    const showCore = mode === 'core' || mode === 'all';
-    const showAsteroids = mode === 'asteroids' || mode === 'all';
-    if (showCore) {
-      await addGrahaValues(data, applyTopo);
-    }
-
-    if (showAsteroids) {
-      await addAsteroids(data);
-    }
-  }
-  return data;
 };
 
 export const calcBodyJd = async (jd: number, key: string, sideralMode = true): Promise<Graha> => {
@@ -727,27 +750,167 @@ export const calcBodiesJd = async (jd: number, keys: string[] = []) => {
 const calcSunJd = async (jd: number, sideralMode = true) =>
   calcBodyJd(jd, 'su', sideralMode);
 
-
-export const calcMoonDataJd = async (jd: number, ayanamshaKey = 'true_citra') => {
-    const moon = await calcBodyJd(jd, 'mo', true);
-    const sun = await calcBodyJd(jd, 'su', true);
-    const ayanamsha = await calcAyanamsha(jd, ayanamshaKey);
-    const angle = (moon.lng + 360 - sun.lng) % 360;
-    const waxing = angle <= 180;
-    const lng = subtractLng360(moon.lng, ayanamsha);
-    const sunLng = subtractLng360(sun.lng, ayanamsha);
-    return {
-      moon: moon.lng, 
-      sun: sun.lng,
-      lng,
-      sunLng,
-      nakshatra27: Math.floor(lng / (360/27)) + 1,
-      ayanamsha,
-      angle,
-      waxing
+export const calcAyanamsha = async (jd: number, key = "true_citra"): Promise<number> => {
+  const iflag = swisseph.SEFLG_SIDEREAL;
+  const row = ayanamshaValues.find(r => r.key === key);
+  if (row instanceof Object) {
+    const { value } = row;
+    swisseph.swe_set_sid_mode(value, 0, 0);
+    const result = getAyanamsa(jd, iflag);
+    if (result instanceof Object) {
+      const { ayanamsa } = result;
+      if (isNumeric(ayanamsa)) {
+        return ayanamsa;
+      }
     }
   }
-  
+  return 0;
+};
+const calcAyanamshas = async (jd: number, matchedNum = 0): Promise<Array<KeyValue>> => {
+  const iflag = swisseph.SEFLG_SIDEREAL;
+  return ayanamshaValues.filter(row => matchedNum < 1 || matchedNum === row.value).map(row => {
+    const { key, value } = row;
+    swisseph.swe_set_sid_mode(value, 0, 0);
+    const result = value !== 0? getAyanamsa(jd, iflag) : { ayanamsa: 0 };
+    const { ayanamsa } = result;
+    return {
+      key,
+      value: ayanamsa,
+    };
+  });
+};
+
+export const calcMoonDataJd = async (jd: number, ayanamshaKey = 'true_citra') => {
+  const moon = await calcBodyJd(jd, 'mo', true);
+  const sun = await calcBodyJd(jd, 'su', true);
+  const ayanamsha = await calcAyanamsha(jd, ayanamshaKey);
+  const angle = (moon.lng + 360 - sun.lng) % 360;
+  const waxing = angle <= 180;
+  const lng = subtractLng360(moon.lng, ayanamsha);
+  const sunLng = subtractLng360(sun.lng, ayanamsha);
+  return {
+    moon: moon.lng, 
+    sun: sun.lng,
+    lng,
+    sunLng,
+    nakshatra27: Math.floor(lng / (360/27)) + 1,
+    ayanamsha,
+    angle,
+    waxing
+  }
+}
+
+const calcGrahaSet = async (datetime, geo: any = null, applyTopo = false) => {
+  if (applyTopo && geo instanceof Object) {
+    swisseph.swe_set_topo(geo.lng, geo.lat, geo.alt);
+  }
+  const bodyData = await calcAllBodies(datetime, 'core', applyTopo);
+  return new GrahaSet(bodyData);
+};
+
+const matchInduVal = (houseNum: number) => {
+  const matchedGraha = rashiValues.find(r => r.num === houseNum);
+  let indu = {
+    graha: '',
+    value: 0,
+    houseNum: 0,
+  };
+  if (matchedGraha) {
+    const induRow = induValues.find(v => v.graha === matchedGraha.ruler);
+    if (induRow) {
+      indu = { ...induRow, houseNum };
+    }
+  }
+  return indu;
+};
+
+const calcVarnadaLagna = (data, houseData) => {
+  const lagnaSign = degreeToSign(houseData.ascendant);
+  const horaSign = degreeToSign(data.horaLagna);
+  const lagnaEven = lagnaSign % 2 === 0;
+  const horaEven = horaSign % 2 === 0;
+  const lagnaSign2 = lagnaEven ? 12 - lagnaSign + 1 : lagnaSign;
+  const horaSign2 = horaEven ? 12 - horaSign + 1 : horaSign;
+  const bothSame = lagnaEven === horaEven;
+  const ascendantWithinDegree = houseData.ascendant % 30;
+  const varnadaSignMultiplier = bothSame
+    ? addCycleInclusive(horaSign2, lagnaSign2, 12)
+    : subtractCycleInclusive(lagnaSign2, horaSign2, 12);
+  return (varnadaSignMultiplier - 1) * 30 + ascendantWithinDegree;
+};
+
+const addSphutaData = (
+  grahaSet: GrahaSet,
+  houseData,
+  iTime,
+  upagrahas,
+  sunAtSunRise,
+) => {
+  const data: any = { grahaSet };
+  const grahaLngs = grahaSet.longitudes();
+  data.houseSign = Math.floor(houseData.ascendant / 30) + 1;
+  const moon = grahaSet.moon();
+
+  data.sriLagna =
+    ((moon.nakshatra.percent / 100) * 360 + houseData.ascendant) % 360;
+
+  const houseSignPlusNine = ((data.houseSign - 1 + (9 - 1)) % 12) + 1;
+  const lagnaInduRow = matchInduVal(houseSignPlusNine);
+
+  const moonSignPlusNine = ((moon.sign - 1 + (9 - 1)) % 12) + 1;
+
+  const moonInduRow = matchInduVal(moonSignPlusNine);
+
+  const induLagnaSign =
+    ((lagnaInduRow.value + moonInduRow.value + moon.sign) % 12) - 1;
+  data.induLagna = (induLagnaSign - 1) * 30 + grahaSet.moon().withinSign;
+
+  data.ghatiLagna = (iTime.ghatiVal() * 30 + sunAtSunRise.longitude) % 360;
+
+  const bhava = iTime.ghatiVal() / 5;
+
+  data.bhavaLagna = (sunAtSunRise.lng + bhava * 30) % 360;
+  //data.ghatiAsDegree = indianTimeData.ghatiVal * 6;
+
+  data.horaLagna = (sunAtSunRise.lng + iTime.progress() * 720) % 360;
+
+  data.varnadaLagna = calcVarnadaLagna(data, houseData);
+
+  data.yogiSphuta = grahaSet.calcYogiSphuta();
+
+  const yogiSphutaNk = matchNakshatra(data.yogiSphuta);
+  data.yogi = yogiSphutaNk.ruler;
+  data.avayogiSphuta = (data.yogiSphuta + 560 / 3) % 360;
+  const avayogiSphutaNk = matchNakshatra(data.avayogiSphuta);
+  data.avayogi = avayogiSphutaNk.ruler;
+  data.bijaSphuta = grahaSet.calcBijaSphuta();
+  data.ksetraSphuta = grahaSet.calcKsetraSphuta();
+  // The tithi of result of = ceiling(mod(mod((Moon's degree-Sun's degree)*5,360)/12,15),1)
+
+  // prāṅasphuta    -> my chart= 156.55     -> formula= ((Lagna's degree x 5)+Gulika's degree) / mod 360
+  const gulika = upagrahas.values.find(row => row.key === 'gu');
+  data.pranaSphuta = (houseData.ascendant * 5 + gulika.upagraha) % 360;
+
+  // formula= ((Moon's degree x 8)+Gulika's degree) / mod 360
+  data.dehaSphuta = (grahaLngs.mo * 8 + gulika.upagraha) % 360;
+
+  //mṛtusphuta     -> my chart= 321.899999 -> formula= ((Gulika's degree x 7)+Sun's degree) / mod 360
+  data.mrtuSphuta = (gulika.upagraha * 7 + grahaLngs.su) % 360;
+
+  // trisphuta      -> my chart= 178.52     -> formula= Prāṅasphuta + Dehasphuta + Mṛtusphuta / mod 360
+  data.triSphuta = (houseData.ascendant + grahaLngs.mo + gulika.upagraha) % 360;
+
+  // catusphuta     -> my chart= 251.73     -> formula= Trisphuta + Sun's degree / mod 360
+  data.catuSphuta = (data.triSphuta + grahaLngs.su) % 360;
+
+  // pañcasphuta    -> my chart= 18.35      -> formula= Catusphuta + Rahu's degree / mod 360
+  data.pancaSphuta = (data.catuSphuta + grahaLngs.ra) % 360;
+
+  // bṛghu bindu    -> my chart= 189.5      -> formula= Version1=(Moon degree+Rahu degree) / 2, counting from Rahu --- Version2=(Moon degree+Rahu degree) / 2 (shortest distance) less 180
+  data.brghuBindu = ((grahaLngs.mo + grahaLngs.ra) / 2) % 360;
+  data.sunLngAtSunRise = sunAtSunRise.lng;
+  return data;
+};
 
 export const calcSphutaData = async (datetime: string, geo) => {
   const grahaSet = await calcGrahaSet(datetime);
@@ -825,6 +988,33 @@ const addIndianNumericAndStringValues = (chartData, chart: Chart) => {
   return chartData;
 }
 
+const addUpapadaSecondAndLord = (
+  rashiSets: Array<RashiItemSet>,
+  grahaSet: GrahaSet,
+  sps: NumValueSet,
+  ayanamshaNum = 27,
+) => {
+  const rashiSet = rashiSets.find(rs => rs.num === ayanamshaNum);
+  if (rashiSet instanceof Object) {
+    const rashiHouse12 = rashiSet.items.find(r => r.houseNum === 12);
+    const nextArudhaInHouse = rashiHouse12.arudhaInHouse + 1;
+    const upapadaSecond = nextArudhaInHouse > 12 ? 1 : nextArudhaInHouse;
+    sps.items.push({
+      key: 'upapadaSecond',
+      value: upapadaSecond,
+    });
+    const upapadaLord = grahaSet.bodies.find(
+      b => b.key === rashiHouse12.arudhaLord,
+    );
+    if (upagrahaData instanceof Object) {
+      sps.items.push({
+        key: 'upapadaLord',
+        value: upapadaLord.lng,
+      });
+    }
+  }
+};
+
 const mergeExtraDataSetsByAyanamsha = (key: string, chart: Chart, objectSets: ObjectMatchSet[], ayanamshas: KeyValue[], grahaSet: GrahaSet, sphutaSet: NumValueSet[], rashiSets: RashiItemSet[]) => {
   const ar = ayanamshas.find(a => a.key === key);
   if (ar) {
@@ -871,6 +1061,266 @@ const mergeExtraDataSetsByAyanamsha = (key: string, chart: Chart, objectSets: Ob
     }
   }
 }
+
+const addSphutasAndBaseObjects = (grahaSet: GrahaSet, hdW: HouseSet, indianTimeData: IndianTime, upagrahas: KeyValue[], sunAtSunRise) => {
+  const sphutaObj = addSphutaData(
+    grahaSet,
+    hdW,
+    indianTimeData,
+    upagrahas,
+    sunAtSunRise,
+  );
+
+  const excludeKeys = ['grahaSet', 'houseSign'];
+
+  const sphutas = Object.entries(sphutaObj)
+    .filter(
+      entry => excludeKeys.includes(entry[0]) === false && isNumeric(entry[1]),
+    )
+    .map(entry => {
+      const [key, value] = entry;
+      return {
+        key,
+        value,
+      };
+    });
+  const yogiAvayogiKeys = ['yogi', 'avayogi'];
+  const objects = Object.entries(sphutaObj)
+    .filter(entry => yogiAvayogiKeys.includes(entry[0]))
+    .map(entry => {
+      const [key, value] = entry;
+      const gr = grahaSet.bodies.find(b => b.key === value);
+      let refVal = -1;
+      if (gr) {
+        refVal = gr.lng;
+      }
+      return {
+        key,
+        type: 'graha',
+        value,
+        refVal,
+      };
+    });
+  return { sphutas, objects };
+}
+
+export const coreGrahaKeys = (fullMode = false) => {
+  const headKeys = [
+    'num',
+    'key',
+    'lng',
+    'lat',
+    'lngSpeed',
+    'topo',
+    'declination',
+    'rectAscension'
+  ];
+  const extraKeys = fullMode
+    ? [
+        'sign',
+        'nakshatra',
+        'ruler',
+        'relationship',
+        'isOwnSign',
+        'isMulaTrikon',
+        'charaKaraka',
+        'house',
+        'ownHouses',
+        'padaNum',
+        'percent',
+        'akshara',
+        'isExalted',
+        'isDebilitated',
+      ]
+    : [];
+  const setKeys = ['transitions', 'variants'];
+  return [...headKeys, ...extraKeys, ...setKeys];
+};
+
+const cleanGraha = (graha: Graha) => {
+  const mp = new Map<string, any>();
+  coreGrahaKeys(true).forEach(k => {
+    switch (k) {
+      case 'nakshatra':
+        mp.set(k, {
+          num: graha.nakshatra.num,
+          within: graha.nakshatra.within,
+        });
+        break;
+      case 'relationship':
+        mp.set(k, graha.relationship.compound);
+        break;
+      default:
+        mp.set(k, graha[k]);
+        break;
+    }
+  });
+  return hashMapToObject(mp);
+}
+
+const matchRashis = (houseData, bodyData: GrahaSet, corrected = false) => {
+  return houseData.houses.map((deg, houseIndex) => {
+    const houseSignIndexFloor = Math.floor((deg % 360) / 30);
+    const houseSignIndex = houseSignIndexFloor < 0 ? 0 : houseSignIndexFloor >= 12? 11 : houseSignIndexFloor;
+    const rashiRow = rashiValues[houseSignIndex];
+    // Ensure index is between 0 and 11
+    const graha = rashiRow instanceof Object? bodyData.bodies.find(b => b.key === rashiRow.ruler) : null;
+    const houseNum = houseIndex + 1;
+    const houseSignDiff = (houseSignIndex - houseIndex + 12) % 12;
+    //const houseSignNum = houseSignIndex + 1;
+    let lordInHouse = -1;
+    let lordInSign = -1;
+    if (graha instanceof Object) {
+      const grLng = corrected ? graha.lng : graha.longitude;
+      lordInHouse = graha.house;
+      lordInSign = Math.floor(grLng / 30) + 1;
+    }
+    /* const diff = lordInHouse + houseNum;
+    const houseLordCount = diff <= 12 ? diff : (diff % 12) + 1; */
+    const houseLordCount = calcInclusiveTwelfths(lordInHouse, houseNum);
+
+    const arudhaIndex = (lordInHouse - 1 + (houseLordCount - 1)) % 12;
+    //const arudhaSignIndex = (lordInSign + signCount) % 12;
+    //const arudhaHouseIndex = houseData.houses.indexOf(arudhaSignIndex * 30);
+    let arudhaInHouse = arudhaIndex + 1;
+    const plus7 = houseNum + 6;
+    const plus7House = plus7 <= 12 ? plus7 : plus7 % 12;
+    let mode = 'standard';
+    if (arudhaInHouse === houseNum || arudhaInHouse === plus7House) {
+      arudhaInHouse -= 3;
+      mode = '-3';
+      if (arudhaInHouse < 1) {
+        arudhaInHouse += 12;
+      }
+    }
+    //const arudhaSignIndex = (lordInSign - 1 + (houseLordCount - 1)) % 12;
+    const arudhaSignIndex = (arudhaInHouse - 1 + houseSignDiff + 12) % 12;
+    const arudhaInSign = arudhaSignIndex + 1;
+    const arudhaLord = rashiValues[arudhaSignIndex].ruler;
+    return {
+      houseNum,
+      sign: rashiRow.num,
+      lordInHouse,
+      arudhaInHouse,
+      arudhaInSign,
+      arudhaLord,
+    };
+  });
+}
+
+const calcCompactVariantSet = (
+  ayanamsha: KeyValue,
+  grahaSet: GrahaSet,
+  hdP: HouseSet,
+  indianTimeData: IndianTime,
+  upagrahas,
+  sunAtSunRise,
+  fetchFull = true,
+  addExtraSets = true
+) => {
+  const applyAyanamsha = ayanamsha.value !== 0;
+  const shouldCalcVariants = (fetchFull || applyAyanamsha) && addExtraSets;
+  if (applyAyanamsha) {
+    grahaSet.bodies = grahaSet.bodies.map(b => {
+      b.lng = subtractLng360(b.lng, ayanamsha.value);
+      if (fetchFull) {
+        b.topo.lng = subtractLng360(b.topo.lng, ayanamsha.value);
+      }
+      return b;
+    });
+    hdP.ascendant = subtractLng360(hdP.ascendant, ayanamsha.value);
+    hdP.mc = subtractLng360(hdP.mc, ayanamsha.value);
+
+    if (hdP.houses.length > 0) {
+      hdP.houses = hdP.houses.map(h => {
+        return subtractLng360(h, ayanamsha.value);
+      });
+    }
+    sunAtSunRise.lng = subtractLng360(sunAtSunRise.lng, ayanamsha.value);
+  }
+
+  const firstHouseLng = getFirstHouseLng(hdP);
+
+  const wHouses = expandWholeHouses(firstHouseLng);
+  const hdW = new HouseSet({ ...hdP, houses: wHouses });
+  grahaSet.mergeHouseData(hdW, true);
+  grahaSet.matchValues();
+  const houses = [
+    { system: 'W', values: [firstHouseLng] },
+  ];
+  if (fetchFull) {
+    houses.unshift({ system: 'P', values: hdP.houses.slice(0, 6) });
+  }
+  const houseData = { ...hdP, houses };
+  const grahas = grahaSet.bodies.map(cleanGraha);
+  const { sphutas, objects } = shouldCalcVariants? addSphutasAndBaseObjects(grahaSet, hdW, indianTimeData, upagrahas, sunAtSunRise) : { sphutas: [], objects: [] };
+    
+  const rashis = matchRashis(hdW, grahaSet, true);
+  const numValues = [];
+  return {
+    grahas,
+    sphutas,
+    ...houseData,
+    numValues,
+    objects,
+    rashis,
+  };
+};
+
+const mapToVariantMap = (gr: any, ayanamsaNum: number) => {
+  const variant: Map<string, any> = new Map();
+  if (gr instanceof Object) {
+    variant.set('num', ayanamsaNum);
+    variant.set('key', gr.key);
+    variant.set('sign', gr.sign);
+    variant.set('house', gr.house);
+    const compRel =
+      gr.relationship instanceof Object
+        ? gr.relationship.compound
+        : gr.relationship;
+    variant.set('relationship', compRel);
+    variant.set('nakshatra', gr.nakshatra.num);
+    variant.set('charaKaraka', gr.charaKaraka);
+  }
+  return variant;
+}
+
+const mapToVariant = (mp: Map<string, any>) => {
+  const obj = Object.fromEntries(mp);
+  const { num, sign, house, nakshatra, relationship, charaKaraka } = obj;
+  return { num, sign, house, nakshatra, relationship, charaKaraka };
+};
+
+const matchBodyLng = (key, bodies, retVal = -1) => {
+  const graha = bodies.find(b => b.key === key);
+  if (graha) {
+    return graha.longitude;
+  }
+  return retVal;
+};
+
+const cleanBodyObj = (body: any) => {
+  const mp = new Map<string, any>();
+  if (body instanceof Object) {
+    const objKeys = Object.keys(body);
+    coreGrahaKeys(false).forEach(k => {
+      if (objKeys.includes(k)) {
+        mp.set(k, body[k]);
+      }
+    });
+  }
+  return hashMapToObject(mp);
+};
+
+
+
+const mapUpagraha = obj => {
+  const { key, upagraha } = obj;
+  return {
+    key,
+    value: upagraha,
+  };
+};
 
 export const calcCompactChartData = async (
   datetime: string,
@@ -922,7 +1372,7 @@ export const calcCompactChartData = async (
     mapToVariantMap(gr, 0),
   ) : [];
   const objectSets: Array<ObjectMatchSet> = [];
-  let sphutaSet = [];
+  const sphutaSet = [];
   const coreAyanamshas =
     topKeys.length > 0 ? topKeys : ['true_citra', 'lahiri', 'krishnamurti'];
   // arudha and greek lots only available for this ayanamsha
@@ -1003,285 +1453,6 @@ export const calcCompactChartData = async (
   return chartData;
 };
 
-const mapToVariant = (mp: Map<string, any>) => {
-  const obj = Object.fromEntries(mp);
-  const { num, sign, house, nakshatra, relationship, charaKaraka } = obj;
-  return { num, sign, house, nakshatra, relationship, charaKaraka };
-};
-
-const mapToVariantMap = (gr: any, ayanamsaNum: number) => {
-  const variant: Map<string, any> = new Map();
-  if (gr instanceof Object) {
-    variant.set('num', ayanamsaNum);
-    variant.set('key', gr.key);
-    variant.set('sign', gr.sign);
-    variant.set('house', gr.house);
-    const compRel =
-      gr.relationship instanceof Object
-        ? gr.relationship.compound
-        : gr.relationship;
-    variant.set('relationship', compRel);
-    variant.set('nakshatra', gr.nakshatra.num);
-    variant.set('charaKaraka', gr.charaKaraka);
-  }
-  return variant;
-};
-
-const addSphutasAndBaseObjects = (grahaSet: GrahaSet, hdW: HouseSet, indianTimeData: IndianTime, upagrahas: KeyValue[], sunAtSunRise) => {
-  const sphutaObj = addSphutaData(
-    grahaSet,
-    hdW,
-    indianTimeData,
-    upagrahas,
-    sunAtSunRise,
-  );
-
-  const excludeKeys = ['grahaSet', 'houseSign'];
-
-  const sphutas = Object.entries(sphutaObj)
-    .filter(
-      entry => excludeKeys.includes(entry[0]) === false && isNumeric(entry[1]),
-    )
-    .map(entry => {
-      const [key, value] = entry;
-      return {
-        key,
-        value,
-      };
-    });
-  const yogiAvayogiKeys = ['yogi', 'avayogi'];
-  const objects = Object.entries(sphutaObj)
-    .filter(entry => yogiAvayogiKeys.includes(entry[0]))
-    .map(entry => {
-      const [key, value] = entry;
-      const gr = grahaSet.bodies.find(b => b.key === value);
-      let refVal = -1;
-      if (gr) {
-        refVal = gr.lng;
-      }
-      return {
-        key,
-        type: 'graha',
-        value,
-        refVal,
-      };
-    });
-  return { sphutas, objects };
-}
-
-const calcCompactVariantSet = (
-  ayanamsha: KeyValue,
-  grahaSet: GrahaSet,
-  hdP: HouseSet,
-  indianTimeData: IndianTime,
-  upagrahas,
-  sunAtSunRise,
-  fetchFull = true,
-  addExtraSets = true
-) => {
-  const applyAyanamsha = ayanamsha.value !== 0;
-  const shouldCalcVariants = (fetchFull || applyAyanamsha) && addExtraSets;
-  if (applyAyanamsha) {
-    grahaSet.bodies = grahaSet.bodies.map(b => {
-      b.lng = subtractLng360(b.lng, ayanamsha.value);
-      if (fetchFull) {
-        b.topo.lng = subtractLng360(b.topo.lng, ayanamsha.value);
-      }
-      return b;
-    });
-    hdP.ascendant = subtractLng360(hdP.ascendant, ayanamsha.value);
-    hdP.mc = subtractLng360(hdP.mc, ayanamsha.value);
-
-    if (hdP.houses.length > 0) {
-      hdP.houses = hdP.houses.map(h => {
-        return subtractLng360(h, ayanamsha.value);
-      });
-    }
-    sunAtSunRise.lng = subtractLng360(sunAtSunRise.lng, ayanamsha.value);
-  }
-
-  const firstHouseLng = getFirstHouseLng(hdP);
-
-  const wHouses = expandWholeHouses(firstHouseLng);
-  const hdW = new HouseSet({ ...hdP, houses: wHouses });
-  grahaSet.mergeHouseData(hdW, true);
-  grahaSet.matchValues();
-  const houses = [
-    { system: 'W', values: [firstHouseLng] },
-  ];
-  if (fetchFull) {
-    houses.unshift({ system: 'P', values: hdP.houses.slice(0, 6) });
-  }
-  const houseData = { ...hdP, houses };
-  const grahas = grahaSet.bodies.map(cleanGraha);
-  const { sphutas, objects } = shouldCalcVariants? addSphutasAndBaseObjects(grahaSet, hdW, indianTimeData, upagrahas, sunAtSunRise) : { sphutas: [], objects: [] };
-    
-  const rashis = matchRashis(hdW, grahaSet, true);
-  const numValues = [];
-  return {
-    grahas,
-    sphutas,
-    ...houseData,
-    numValues,
-    objects,
-    rashis,
-  };
-};
-
-const calcAyanamshas = async (jd: number, matchedNum = 0): Promise<Array<KeyValue>> => {
-  const iflag = swisseph.SEFLG_SIDEREAL;
-  return ayanamshaValues.filter(row => matchedNum < 1 || matchedNum === row.value).map(row => {
-    const { key, value } = row;
-    swisseph.swe_set_sid_mode(value, 0, 0);
-    const result = value !== 0? getAyanamsa(jd, iflag) : { ayanamsa: 0 };
-    const { ayanamsa } = result;
-    return {
-      key,
-      value: ayanamsa,
-    };
-  });
-};
-
-export const calcAyanamsha = async (jd: number, key = "true_citra"): Promise<number> => {
-  const iflag = swisseph.SEFLG_SIDEREAL;
-  const row = ayanamshaValues.find(r => r.key === key);
-  if (row instanceof Object) {
-    const { key, value } = row;
-    swisseph.swe_set_sid_mode(value, 0, 0);
-    const result = getAyanamsa(jd, iflag);
-    if (result instanceof Object) {
-      const { ayanamsa } = result;
-      if (isNumeric(ayanamsa)) {
-        return ayanamsa;
-      }
-    }
-  }
-  return 0;
-};
-
-const matchInduVal = (houseNum: number) => {
-  const matchedGraha = rashiValues.find(r => r.num === houseNum);
-  let indu = {
-    graha: '',
-    value: 0,
-    houseNum: 0,
-  };
-  if (matchedGraha) {
-    const induRow = induValues.find(v => v.graha === matchedGraha.ruler);
-    if (induRow) {
-      indu = { ...induRow, houseNum };
-    }
-  }
-  return indu;
-};
-
-const degreeToSign = deg => Math.floor(deg / 30) + 1;
-
-const addCycleInclusive = (one, two, radix) => {
-  return ((one - 1 + two) % radix) + 1;
-};
-
-const subtractCycleInclusive = (one, two, radix) => {
-  return ((one - 1 - two + radix) % radix) + 1;
-};
-
-const addSphutaData = (
-  grahaSet: GrahaSet,
-  houseData,
-  iTime,
-  upagrahas,
-  sunAtSunRise,
-) => {
-  const { bodies } = grahaSet;
-  let data: any = { grahaSet };
-  const grahaLngs = grahaSet.longitudes();
-  data.houseSign = Math.floor(houseData.ascendant / 30) + 1;
-  const moon = grahaSet.moon();
-
-  data.sriLagna =
-    ((moon.nakshatra.percent / 100) * 360 + houseData.ascendant) % 360;
-
-  const houseSignPlusNine = ((data.houseSign - 1 + (9 - 1)) % 12) + 1;
-  const lagnaInduRow = matchInduVal(houseSignPlusNine);
-
-  const moonSignPlusNine = ((moon.sign - 1 + (9 - 1)) % 12) + 1;
-
-  const moonInduRow = matchInduVal(moonSignPlusNine);
-
-  const induLagnaSign =
-    ((lagnaInduRow.value + moonInduRow.value + moon.sign) % 12) - 1;
-  data.induLagna = (induLagnaSign - 1) * 30 + grahaSet.moon().withinSign;
-
-  data.ghatiLagna = (iTime.ghatiVal() * 30 + sunAtSunRise.longitude) % 360;
-
-  const bhava = iTime.ghatiVal() / 5;
-
-  data.bhavaLagna = (sunAtSunRise.lng + bhava * 30) % 360;
-  //data.ghatiAsDegree = indianTimeData.ghatiVal * 6;
-
-  data.horaLagna = (sunAtSunRise.lng + iTime.progress() * 720) % 360;
-
-  data.varnadaLagna = calcVarnadaLagna(data, houseData);
-
-  data.yogiSphuta = grahaSet.calcYogiSphuta();
-
-  const yogiSphutaNk = matchNakshatra(data.yogiSphuta);
-  data.yogi = yogiSphutaNk.ruler;
-  data.avayogiSphuta = (data.yogiSphuta + 560 / 3) % 360;
-  const avayogiSphutaNk = matchNakshatra(data.avayogiSphuta);
-  data.avayogi = avayogiSphutaNk.ruler;
-  data.bijaSphuta = grahaSet.calcBijaSphuta();
-  data.ksetraSphuta = grahaSet.calcKsetraSphuta();
-  // The tithi of result of = ceiling(mod(mod((Moon's degree-Sun's degree)*5,360)/12,15),1)
-
-  // prāṅasphuta    -> my chart= 156.55     -> formula= ((Lagna's degree x 5)+Gulika's degree) / mod 360
-  const gulika = upagrahas.values.find(row => row.key === 'gu');
-  data.pranaSphuta = (houseData.ascendant * 5 + gulika.upagraha) % 360;
-
-  // formula= ((Moon's degree x 8)+Gulika's degree) / mod 360
-  data.dehaSphuta = (grahaLngs.mo * 8 + gulika.upagraha) % 360;
-
-  //mṛtusphuta     -> my chart= 321.899999 -> formula= ((Gulika's degree x 7)+Sun's degree) / mod 360
-  data.mrtuSphuta = (gulika.upagraha * 7 + grahaLngs.su) % 360;
-
-  // trisphuta      -> my chart= 178.52     -> formula= Prāṅasphuta + Dehasphuta + Mṛtusphuta / mod 360
-  data.triSphuta = (houseData.ascendant + grahaLngs.mo + gulika.upagraha) % 360;
-
-  // catusphuta     -> my chart= 251.73     -> formula= Trisphuta + Sun's degree / mod 360
-  data.catuSphuta = (data.triSphuta + grahaLngs.su) % 360;
-
-  // pañcasphuta    -> my chart= 18.35      -> formula= Catusphuta + Rahu's degree / mod 360
-  data.pancaSphuta = (data.catuSphuta + grahaLngs.ra) % 360;
-
-  // bṛghu bindu    -> my chart= 189.5      -> formula= Version1=(Moon degree+Rahu degree) / 2, counting from Rahu --- Version2=(Moon degree+Rahu degree) / 2 (shortest distance) less 180
-  data.brghuBindu = ((grahaLngs.mo + grahaLngs.ra) / 2) % 360;
-  data.sunLngAtSunRise = sunAtSunRise.lng;
-  return data;
-};
-
-const calcVarnadaLagna = (data, houseData) => {
-  const lagnaSign = degreeToSign(houseData.ascendant);
-  const horaSign = degreeToSign(data.horaLagna);
-  const lagnaEven = lagnaSign % 2 === 0;
-  const horaEven = horaSign % 2 === 0;
-  const lagnaSign2 = lagnaEven ? 12 - lagnaSign + 1 : lagnaSign;
-  const horaSign2 = horaEven ? 12 - horaSign + 1 : horaSign;
-  const bothSame = lagnaEven === horaEven;
-  const ascendantWithinDegree = houseData.ascendant % 30;
-  const varnadaSignMultiplier = bothSame
-    ? addCycleInclusive(horaSign2, lagnaSign2, 12)
-    : subtractCycleInclusive(lagnaSign2, horaSign2, 12);
-  return (varnadaSignMultiplier - 1) * 30 + ascendantWithinDegree;
-};
-
-const matchBodyLng = (key, bodies, retVal = -1) => {
-  const graha = bodies.find(b => b.key === key);
-  if (graha) {
-    return graha.longitude;
-  }
-  return retVal;
-};
-
 const matchTithiNum = (bodies, multiplier = 1) => {
   const sunMoonAngle = relativeAngle(
     matchBodyLng('su', bodies, 0),
@@ -1293,22 +1464,10 @@ const matchTithiNum = (bodies, multiplier = 1) => {
 };
 
 /*
-@param Array<Object>
-@return Array<Object>
-*/
-const calcAprakasaValues = bodies => {
-  const sun = bodies.find(b => b.key === 'su');
-  if (sun instanceof Object) {
-    return calcAprakasa(sun.longitude);
-  } else {
-    return [];
-  }
-};
-/*
 Calculate Aprakasa values from the the sun's longitude
 */
 const calcAprakasa = (sunLng = 0) => {
-  let items = [];
+  const items = [];
 
   let prevVal = null;
   aprakasaValues.forEach(row => {
@@ -1335,13 +1494,19 @@ const calcAprakasa = (sunLng = 0) => {
   return items;
 };
 
-const calcGrahaSet = async (datetime, geo: any = null, applyTopo = false) => {
-  if (applyTopo && geo instanceof Object) {
-    swisseph.swe_set_topo(geo.lng, geo.lat, geo.alt);
+/*
+@param Array<Object>
+@return Array<Object>
+*/
+const calcAprakasaValues = bodies => {
+  const sun = bodies.find(b => b.key === 'su');
+  if (sun instanceof Object) {
+    return calcAprakasa(sun.longitude);
+  } else {
+    return [];
   }
-  const bodyData = await calcAllBodies(datetime, 'core', applyTopo);
-  return new GrahaSet(bodyData);
 };
+
 
 /*
 @param datetime:string isodate
@@ -1393,12 +1558,10 @@ export const calcBodiesInHouses = async (
 export const calcCoreGrahaPositions = async (datetime = null, geo: GeoPos, ayanamshaKey = "true_citra", addAscendant = true) => {
   const jd = calcJulDate(datetime);
   let ayaVal = 0;
-  let ayanamshaNum = 0;
   const matchedRow = ayanamshaValues.find(item => item.key == ayanamshaKey);
   const ayaRow = matchedRow instanceof Object ? matchedRow : ayanamshaValues[0];
   const grahaSet = await calcGrahaSet(datetime, geo, false);
   if (matchedRow instanceof Object) {
-    ayanamshaNum = matchedRow.value;
     matchSideralMode(ayaRow.key);
     const { ayanamsa } = getAyanamsa(jd, swisseph.SEFLG_SIDEREAL);
     ayaVal = ayanamsa;
@@ -1417,7 +1580,7 @@ export const calcCoreGrahaPositions = async (datetime = null, geo: GeoPos, ayana
     
     bodies.push({key: "as", lng: ascendantLng});
   }
-  return {bodies, ayanamsha: ayanamshaItem };
+  return { bodies, ayanamsha: ayanamshaItem };
 }
 
 /*
@@ -1426,7 +1589,7 @@ export const calcCoreGrahaPositions = async (datetime = null, geo: GeoPos, ayana
 @param system: string
 	*/
 export const calcVargas = async (datetime, geo, system = 'W') => {
-  let grahaSet = await calcGrahaSet(datetime);
+  const grahaSet = await calcGrahaSet(datetime);
 
   const houseData = await fetchHouseData(datetime, geo, system);
 
@@ -1434,83 +1597,6 @@ export const calcVargas = async (datetime, geo, system = 'W') => {
 
   const vargas = grahaSet.getFullVargaSet(houseData.ascendant);
   return { jd: houseData.jd, datetime, geo, vargas };
-};
-
-const matchRashis = (houseData, bodyData: GrahaSet, corrected = false) => {
-  return houseData.houses.map((deg, houseIndex) => {
-    const houseSignIndexFloor = Math.floor((deg % 360) / 30);
-    const houseSignIndex = houseSignIndexFloor < 0 ? 0 : houseSignIndexFloor >= 12? 11 : houseSignIndexFloor;
-    const rashiRow = rashiValues[houseSignIndex];
-    // Ensure index is between 0 and 11
-    const graha = rashiRow instanceof Object? bodyData.bodies.find(b => b.key === rashiRow.ruler) : null;
-    const houseNum = houseIndex + 1;
-    const houseSignDiff = (houseSignIndex - houseIndex + 12) % 12;
-    //const houseSignNum = houseSignIndex + 1;
-    let lordInHouse = -1;
-    let lordInSign = null;
-    if (graha instanceof Object) {
-      const grLng = corrected ? graha.lng : graha.longitude;
-      lordInHouse = graha.house;
-      lordInSign = Math.floor(grLng / 30) + 1;
-    }
-    /* const diff = lordInHouse + houseNum;
-    const houseLordCount = diff <= 12 ? diff : (diff % 12) + 1; */
-    const houseLordCount = calcInclusiveTwelfths(lordInHouse, houseNum);
-
-    const arudhaIndex = (lordInHouse - 1 + (houseLordCount - 1)) % 12;
-    //const arudhaSignIndex = (lordInSign + signCount) % 12;
-    //const arudhaHouseIndex = houseData.houses.indexOf(arudhaSignIndex * 30);
-    let arudhaInHouse = arudhaIndex + 1;
-    const plus7 = houseNum + 6;
-    const plus7House = plus7 <= 12 ? plus7 : plus7 % 12;
-    let mode = 'standard';
-    if (arudhaInHouse === houseNum || arudhaInHouse === plus7House) {
-      arudhaInHouse -= 3;
-      mode = '-3';
-      if (arudhaInHouse < 1) {
-        arudhaInHouse += 12;
-      }
-    }
-    //const arudhaSignIndex = (lordInSign - 1 + (houseLordCount - 1)) % 12;
-    const arudhaSignIndex = (arudhaInHouse - 1 + houseSignDiff + 12) % 12;
-    const arudhaInSign = arudhaSignIndex + 1;
-    const arudhaLord = rashiValues[arudhaSignIndex].ruler;
-    return {
-      houseNum,
-      sign: rashiRow.num,
-      lordInHouse,
-      arudhaInHouse,
-      arudhaInSign,
-      arudhaLord,
-    };
-  });
-};
-
-const addUpapadaSecondAndLord = (
-  rashiSets: Array<RashiItemSet>,
-  grahaSet: GrahaSet,
-  sps: NumValueSet,
-  ayanamshaNum = 27,
-) => {
-  const rashiSet = rashiSets.find(rs => rs.num === ayanamshaNum);
-  if (rashiSet instanceof Object) {
-    const rashiHouse12 = rashiSet.items.find(r => r.houseNum === 12);
-    const nextArudhaInHouse = rashiHouse12.arudhaInHouse + 1;
-    const upapadaSecond = nextArudhaInHouse > 12 ? 1 : nextArudhaInHouse;
-    sps.items.push({
-      key: 'upapadaSecond',
-      value: upapadaSecond,
-    });
-    const upapadaLord = grahaSet.bodies.find(
-      b => b.key === rashiHouse12.arudhaLord,
-    );
-    if (upagrahaData instanceof Object) {
-      sps.items.push({
-        key: 'upapadaLord',
-        value: upapadaLord.lng,
-      });
-    }
-  }
 };
 
 export const calcAllAspects = (c1: Chart, c2: Chart) => {
@@ -1529,19 +1615,6 @@ export const calcAllAspects = (c1: Chart, c2: Chart) => {
     });
   });
   return aspects;
-};
-
-/*
-@param sunLng:number
-@param moonLng:number
-*/
-export const relativeAngle = (
-  sunLng: number,
-  moonLng: number,
-  multiplier = 1,
-) => {
-  const mn = ((moonLng - sunLng) * multiplier) % 360;
-  return mn < 0 ? 360 + mn : mn;
 };
 
 const matchCaughadia = ({ jd, weekDay, dayStart, dayLength, isDaytime }) => {
@@ -1652,15 +1725,13 @@ export const calcPanchanga = async (datetime, geo) => {
 
   const {
     jd,
-    startJd,
     sunData,
     dayLength,
     dayBefore,
-    periodHours,
     isDaytime,
     weekDay,
   } = await calcJyotishSunRise(datetime, geo);
-  const { rise, set, nextRise } = sunData;
+  const { rise, nextRise } = sunData;
   const sameDay = !dayBefore;
   const dayStart = sameDay ? rise.jd : nextRise.jd;
   const dayProgress = ((jd - dayStart) / dayLength) * 100;
@@ -1707,81 +1778,6 @@ export const calcPanchanga = async (datetime, geo) => {
   };
 };
 
-const mapUpagraha = obj => {
-  const { key, upagraha } = obj;
-  return {
-    key,
-    value: upagraha,
-  };
-};
-
-const cleanBodyObj = (body: any) => {
-  const mp = new Map<string, any>();
-  if (body instanceof Object) {
-    const objKeys = Object.keys(body);
-    coreGrahaKeys(false).forEach(k => {
-      if (objKeys.includes(k)) {
-        mp.set(k, body[k]);
-      }
-    });
-  }
-  return hashMapToObject(mp);
-};
-
-const cleanGraha = (graha: Graha) => {
-  const mp = new Map<string, any>();
-  coreGrahaKeys(true).forEach(k => {
-    switch (k) {
-      case 'nakshatra':
-        mp.set(k, {
-          num: graha.nakshatra.num,
-          within: graha.nakshatra.within,
-        });
-        break;
-      case 'relationship':
-        mp.set(k, graha.relationship.compound);
-        break;
-      default:
-        mp.set(k, graha[k]);
-        break;
-    }
-  });
-  return hashMapToObject(mp);
-};
-
-export const coreGrahaKeys = (fullMode = false) => {
-  const headKeys = [
-    'num',
-    'key',
-    'lng',
-    'lat',
-    'lngSpeed',
-    'topo',
-    'declination',
-    'rectAscension'
-  ];
-  const extraKeys = fullMode
-    ? [
-        'sign',
-        'nakshatra',
-        'ruler',
-        'relationship',
-        'isOwnSign',
-        'isMulaTrikon',
-        'charaKaraka',
-        'house',
-        'ownHouses',
-        'padaNum',
-        'percent',
-        'akshara',
-        'isExalted',
-        'isDebilitated',
-      ]
-    : [];
-  const setKeys = ['transitions', 'variants'];
-  return [...headKeys, ...extraKeys, ...setKeys];
-};
-
 export const fetchAllSettings = (filters: Array<string> = []) => {
   const settings: any = {
     starValues,
@@ -1807,7 +1803,6 @@ export const fetchAllSettings = (filters: Array<string> = []) => {
   };
 
   if (filters.length > 0) {
-    const keys = Object.keys(settings);
     if (filters.length > 1) {
       const mp = new Map<string, any>();
       filters.forEach(fk => {

@@ -1209,7 +1209,7 @@ export class Chart {
   matchCaughadia(showDefault = true) {
     let cRows = [];
     if (this.hasIndianTime) {
-      const { dayStart, dayLength, dayBefore, isDayTime } = this.indianTime;
+      const { dayStart, dayBefore, isDayTime } = this.indianTime;
       const jd = this.jd;
       const weekDay = weekDayNum(this.datetime, dayBefore);
       const weekDayIndex = weekDay % caughadiaData.days.length;
@@ -1375,7 +1375,6 @@ export const matchGrahaEquivalent = (obj: ObjectType, chart: Chart, ayanamshaNum
     }
     if (matchedKey.length > 2) {
       chart.setAyanamshaItemByNum(ayanamshaNum);
-      const currJd = currentJulianDay();
       switch (matchedKey) {
         case 'kota_svami':
           matchedKey = chart.kotaSvami;
