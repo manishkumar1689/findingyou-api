@@ -59,7 +59,7 @@ export class UserService {
     start: number,
     limit: number,
     criteria: any = null,
-    activeOnly: boolean = true,
+    activeOnly = true,
   ): Promise<User[]> {
     const filterCriteria = this.buildCriteria(criteria, activeOnly);
     return await this.userModel
@@ -73,7 +73,7 @@ export class UserService {
   
   async count(
     criteria: any = null,
-    activeOnly: boolean = true,
+    activeOnly = true,
   ): Promise<number> {
     const filterCriteria = this.buildCriteria(criteria, activeOnly);
     return await this.userModel.count(filterCriteria).exec();
@@ -239,7 +239,7 @@ export class UserService {
 
   async findByCriteria(
     criteria: any,
-    activeOnly: boolean = true,
+    activeOnly = true,
   ): Promise<string[]> {
     let users = [];
     if (criteria instanceof Object) {
@@ -334,7 +334,7 @@ export class UserService {
 
   transformUserDTO(
     inData = null,
-    isNew: boolean = false,
+    isNew = false,
     roles: Array<Role> = [],
     currentUser = null,
     mayEditPassword = false
@@ -344,7 +344,6 @@ export class UserService {
     const userObj = hasCurrentUser ? currentUser.toObject() : {};
     const userData = new Map<string, any>();
     const dt = new Date();
-    const userKeys = Object.keys(userObj);
     if (isNew) {
       userData.set('roles', ['active']);
     } else if (hasCurrentUser) {
@@ -515,7 +514,7 @@ export class UserService {
         if (duration > 0 && notEmptyString(period)) {
           expiryDate = moment()
             .add(duration, period)
-            .toDate()!;
+            .toDate();
         }
       }
       const { status } = userObj;
@@ -572,7 +571,7 @@ export class UserService {
         return st;
       });
       const newRoles = statuses.filter(st => st.current).map(st => st.role);
-      let active =
+      const active =
         newRoles.length > 0 && newRoles.includes('blocked') === false;
       return await this.userModel.findByIdAndUpdate(
         userID,
@@ -590,7 +589,7 @@ export class UserService {
   async updateActive(userID = "", active = false, reason = "", expiryDate = null, removeLastBlock = false) {
     const user = await this.userModel.findById(userID);
     if (user instanceof Model) {
-      let userObj = user.toObject();
+      const userObj = user.toObject();
       const { status } = userObj;
       const statusItems = status instanceof Array ? status : [];
       const numItems = statusItems.length;
@@ -653,7 +652,7 @@ export class UserService {
         s => s.role !== statusKey && notEmptyString(s.role),
       );
       const newRoles = statuses.filter(st => st.current).map(st => st.role);
-      let active =
+      const active =
         newRoles.length > 0 && newRoles.includes('blocked') === false;
       return await this.userModel.findByIdAndUpdate(
         userID,
@@ -713,10 +712,9 @@ export class UserService {
   }
 
   async members(start = 0, limit = 100, criteria = null, excludedIds: string[] = []) {
-    const userID = Object.keys(criteria).includes('user')? criteria.user : '';
+    //const userID = Object.keys(criteria).includes('user')? criteria.user : '';
     const matchCriteria = this.buildMemberCriteria(criteria, excludedIds);
     let nearStage = null;
-    
     if (Object.keys(criteria).includes('near')) {
       const geoMatch = this.buildNearQuery(criteria.near);
       if (geoMatch instanceof Object) {
@@ -773,11 +771,10 @@ export class UserService {
   }
 
   hasRole(user: User, role: string): boolean {
-    let valid = false;
     if (user.roles.includes(role)) {
       return user.active;
     }
-    return valid;
+    return false;
   }
 
   async savePreference(userID: string, preference: PreferenceDTO) {
@@ -1392,7 +1389,6 @@ export class UserService {
     query = null,
     prefOpts = [],
     matchByDefault = true,
-    exludedIds = []
   ) {
     if (query instanceof Object) {
       const excludeKeys = ['age', 'near', 'gender','genders', 'age_range'];

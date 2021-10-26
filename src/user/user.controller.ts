@@ -172,7 +172,7 @@ export class UserController {
   ) {
     const roles = await this.getRoles();
     const {user, keys, message } = await this.userService.updateUser(userID, createUserDTO, roles);
-    let status = user instanceof Object && keys.length > 0 ? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
+    const status = user instanceof Object && keys.length > 0 ? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
     
     return res.status(status).json({
       message,
@@ -260,6 +260,7 @@ export class UserController {
     const paramKeys = Object.keys(params);
     // filter ids by members who have liked or superliked the referenced user
     const likeabilityKeys = ['liked', 'liked1','liked2','passed', 'likeability', 'likability'];
+
     if (queryKeys.includes('user') && paramKeys.some(k => likeabilityKeys.includes(k))) {
       const matchedKey = paramKeys.find(k => likeabilityKeys.includes(k));
       const filterByLikeability = notEmptyString(matchedKey);
@@ -850,9 +851,10 @@ export class UserController {
     @Param('hash') hash,
     @Body() loginDTO: LoginDTO,
   ) {
-    let { user, matched } = await this.matchUserByHash(hash, loginDTO.email);
+    const { user, matched } = await this.matchUserByHash(hash, loginDTO.email);
     const userData = new Map<string, any>();
     let valid = false;
+    let editedUser = user;
     if (!user) {
       userData.set('msg', 'User not found');
       userData.set('key', 'not-found');
@@ -871,13 +873,13 @@ export class UserController {
               password,
             );
             if (updatedUser) {
-              user = updatedUser;
+              editedUser = updatedUser;
             }
           }
         }
       }
       if (valid) {
-        extractObjectAndMerge(user, userData, ['password', 'status','preferences', 'coords']);
+        extractObjectAndMerge(editedUser, userData, ['password', 'status','preferences', 'coords']);
       }
     }
     userData.set('valid', valid);
@@ -1141,7 +1143,7 @@ export class UserController {
     @Param('userID') userID,
     @Param('mediaRef') mediaRef,
   ) {
-    let data: any = { valid: false, item: null, fileDeleted: false };
+    const data: any = { valid: false, item: null, fileDeleted: false };
     const result = await this.userService.deleteMediaItemByRef(userID, mediaRef);
     if (result.deleted) {
       if (result.item instanceof Object) {

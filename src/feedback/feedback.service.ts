@@ -17,8 +17,8 @@ export class FeedbackService {
   ) {}
 
   async getByTargetUserOrKey(
-    userRef: string = '',
-    keyRef: string = '',
+    userRef = '',
+    keyRef = '',
     otherCriteria = null,
   ) {
     const criteria = this.buildFilterCriteria(userRef, keyRef, otherCriteria);
@@ -26,8 +26,8 @@ export class FeedbackService {
   }
 
   async countByTargetUserOrKey(
-    userRef: string = '',
-    keyRef: string = '',
+    userRef = '',
+    keyRef = '',
     otherCriteria = null,
   ) {
     const criteria = this.buildFilterCriteria(userRef, keyRef, otherCriteria);
@@ -83,6 +83,7 @@ export class FeedbackService {
       modifiedAt: { $gte: dt }
     };
     const criteriaObj1 = {...criteriaObj, targetUser: userId };
+    console.log(criteriaObj1)
     const rows = await this.flagModel.find(criteriaObj1).select({ _id: 0, __v: 0, type: 0, isRating: 0, options: 0, active: 0, targetUser: 0 });
     const filterMutual = mutualMode !== 0;
     if (filterMutual) {
@@ -126,7 +127,7 @@ export class FeedbackService {
     const excludeLikedMinVal = filterLiked2? 2 : filterLiked1 ? 1 : 3;
     const excludedIds = !preFetchFlags || searchMode? fromFlags.filter(flag => filterLikeabilityFlags(flag, notFlagItems)).map(flag => flag.user) : [];
     const includedIds = !preFetchFlags || searchMode? fromFlags.filter(flag => filterLikeabilityFlags(flag, trueFlagItems)).map(flag => flag.user) : [];
-    const extraExcludedIds = filterByLiked? toFlags.filter(fl => fl.value >= excludeLikedMinVal).map(fl => fl.user) : [];
+    const extraExcludedIds = filterByLiked? toFlags.filter(fl => fl.value >= excludeLikedMinVal || filterLikeabilityFlags(fl, notFlagItems)).map(fl => fl.user) : [];
     if (extraExcludedIds.length > 0) {
       extraExcludedIds.forEach(id => {
         excludedIds.push(id);
@@ -173,8 +174,8 @@ export class FeedbackService {
   }
 
   buildFilterCriteria(
-    userRef: string = '',
-    keyRef: string = '',
+    userRef = '',
+    keyRef = '',
     otherCriteria = null,
   ) {
     const filterByUser = notEmptyString(userRef, 8);
@@ -256,8 +257,6 @@ export class FeedbackService {
   }
 
   async prevSwipe(userId: string, otherUserId = '') {
-    const nowTs = new Date().getTime();
-    const oneDayAgo = new Date(nowTs - (24 * 60 * 60 * 1000));
     const criteria = {
       key: 'likeability',
       user: userId,
