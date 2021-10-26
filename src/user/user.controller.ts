@@ -298,7 +298,8 @@ export class UserController {
     let notFlags = [];
     let trueFlags = [];
     if (hasContext && searchMode) {
-      notFlags = ['like', 'superlike', 'passed3', 'superliked'];
+      //notFlags = ['like', 'superlike', 'passed3'];
+      notFlags = ['passed3'];
       if (isPaidMember) {
         notFlags.push('notliked');
       } else {
@@ -310,6 +311,7 @@ export class UserController {
       notFlags = notEmptyString(notFlagStr) ? notFlagStr.split(',') : [];
       trueFlags = notEmptyString(trueFlagStr) ? trueFlagStr.split(',') : [];
     }
+    
     const preFetchFlags = notFlags.length > 0 || trueFlags.length > 0;
     const prefOptions = await this.settingService.getPreferences();
     const { userFlags, excludedIds, includedIds } = await this.feedbackService.fetchFilteredUserInteractions(userId, notFlags, trueFlags, preFetchFlags, searchMode);

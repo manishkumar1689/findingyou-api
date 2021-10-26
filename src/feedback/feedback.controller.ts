@@ -190,7 +190,7 @@ export class FeedbackController {
         numSwipes++;
       }
     }
-    return res.status(HttpStatus.OK).json(data);
+    return res.status(HttpStatus.OK).json({...data, recipSwipe, hasPaidRole });
   }
 
   @Get('deactivate/:user?/?')

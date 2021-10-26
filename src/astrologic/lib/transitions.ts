@@ -104,16 +104,6 @@ const centerDiscRising = () => {
   );
 };
 
-export const calcTransition = async (
-  datetime,
-  geo,
-  planetNum,
-  adjustRise = false,
-) => {
-  const jd = calcJulDate(datetime);
-  const data = await calcTransitionJd(jd, geo, planetNum, adjustRise, true);
-  return { jd, ...data };
-};
 
 export const calcTransitionJd = async (
   jd: number,
@@ -128,7 +118,7 @@ export const calcTransitionJd = async (
     let valid = false;
     let longitude = 0;
     let latitude = 0;
-    let { altitude, temperature, pressure } = ephemerisDefaults;
+    let { altitude } = ephemerisDefaults;
     if (!planetNum) {
       planetNum = 0;
     }
@@ -152,8 +142,8 @@ export const calcTransitionJd = async (
       longitude,
       latitude,
       altitude,
-      pressure,
-      temperature,
+      pressure: 10,
+      temperature: 10,
     };
     const offset = centerDiscRising();
     let mc = null;
@@ -208,11 +198,18 @@ export const calcTransitionJd = async (
   return data;
 };
 
-export const calcSunTrans = async (datetime, geo: GeoPos, tzOffset = 0) => {
+export const calcTransition = async (
+  datetime,
+  geo,
+  planetNum,
+  adjustRise = false,
+) => {
   const jd = calcJulDate(datetime);
-  const transData = await calcSunTransJd(jd, new GeoLoc(geo));
-  return { ...transData, datetime, tzOffset };
+  const data = await calcTransitionJd(jd, geo, planetNum, adjustRise, true);
+  return { jd, ...data };
 };
+
+
 
 export const offsetToMidNight = (jd = 0, geoLat = 0): number => {
 	const offset = geoLat / 360;
@@ -239,6 +236,12 @@ export const calcSunTransJd = async (
     nextRise: next.rise,
     nextSet: next.set,
   };
+};
+
+export const calcSunTrans = async (datetime, geo: GeoPos, tzOffset = 0) => {
+  const jd = calcJulDate(datetime);
+  const transData = await calcSunTransJd(jd, new GeoLoc(geo));
+  return { ...transData, datetime, tzOffset };
 };
 
 export const calcJyotishDay = async (datetime, geo: GeoPos, tzOffset = 0) => {
