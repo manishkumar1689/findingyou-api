@@ -1982,13 +1982,17 @@ const matchDashaLord = async (transitJd = 0, chart: Chart, rulers : string[] = [
       level = 2;
       break;
   }
-  const { dashas, nak, lng } = matchDashaSubsetFromChart(chart, transitJd, level, 1000);
+  const { dashas } = matchDashaSubsetFromChart(chart, transitJd, level, 1000);
   let refDasha = dashas.find(ds => transitJd >= ds.startJd && transitJd < ds.endJd);
   if (level > 1 && refDasha instanceof Object) {
     refDasha = refDasha.children.find(ds => transitJd >= ds.startJd && transitJd < ds.endJd);
   }
   const lordKey = refDasha instanceof Object ? refDasha.key : '--';
   return rulers.includes(lordKey);
+}
+
+const filterSubYamaByAction = (ym, action = '', currJd = 0) => {
+  return ym.subs.some(sub => sub.key === action) && ym.start >= currJd
 }
 
 export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Chart, refKey: string, contextType: ContextType) => {
@@ -2029,9 +2033,20 @@ export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Ch
     case 'yama_sleeping_graha':
     case 'yama_dying_graha':
       const action = refKey.split('_')[1];
-      matchedYama = dayYamas.find(ym => ym.subs[0].key === action);
-      if (matchedYama && matchedYama.rulers instanceof Array) {
-        rulers = matchedYama.rulers;
+      matchedYama = dayYamas.find(ym => filterSubYamaByAction(ym, action, currJd));
+      
+      if (matchedYama) {
+        const sub = matchedYama.subs.find(sn => sn.key === action);
+        if (sub instanceof Object) {
+          rulers = sub.rulers;
+        }
+      }
+      matchedYama = nightYamas.find(ym => filterSubYamaByAction(ym, action, currJd));
+      if (matchedYama) {
+        const sub = matchedYama.subs.find(sn => sn.key === action);
+        if (sub instanceof Object) {
+          rulers = sub.rulers;
+        }
       }
       break;
   }
@@ -2092,8 +2107,12 @@ export const matchPanchaPakshi = async (cond: Condition, chart: Chart, geo: GeoP
     const refKey = cond.object1.key.toLocaleLowerCase();
     let counter = 0;
     let matched = false;
-    while (!matched && counter < 20) {
-      
+    let maxDays = 20;
+    if (cond.context.includes('dasha')) {
+      //maxDays = cond.context.includes('antardasha') ? 366 * 3 : 366 * 20; 
+      maxDays = 40;
+    }
+    while (!matched && counter < maxDays) {
       const { valid, yama, birdKey, isNight } = await matchPPTransitBirdGraha(currJd + counter, geo, chart, refKey, cond.contextType);
       if (valid) {
         matched = true;
