@@ -1,4 +1,6 @@
+import { GeoPos } from "../interfaces/geo-pos";
 import { BmMatchRow } from "../interfaces/sign-house";
+import { calcCompactChartData } from "./core";
 import { deepClone, midLng } from "./helpers";
 import { applyAyanamsha, Chart } from "./models/chart";
 import { Condition } from "./models/protocol-models";
@@ -106,3 +108,10 @@ export const filterBmMatchRow = (row: BmMatchRow, condition: Condition) => {
     return false;
   }
 };
+
+export const fetchChartObject = async (dtUtc = '', geo: GeoPos, addExtras = false): Promise<Chart> => {
+  const chartData = await calcCompactChartData(dtUtc, geo, 'true_citra', [], 0, false, addExtras);
+  const chart = new Chart(chartData);
+  chart.setAyanamshaItemByNum(27);
+  return chart;
+}

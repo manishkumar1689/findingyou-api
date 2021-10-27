@@ -1411,9 +1411,10 @@ export const calcCompactChartData = async (
       }
     });
   } else if (addExtraSets) {
-    sphutaSet.push({ num: ayanamsha.value, items: sphutas });
-    rashiSets.push({ num: ayanamsha.value, items: rashis });
-    objectSets.push({ num: ayanamsha.value, items: objects });
+    const aya = ayanamshaValues.find(a => a.key === ayanamsaKey);
+    sphutaSet.push({ num: aya.value, items: sphutas });
+    rashiSets.push({ num: aya.value, items: rashis });
+    objectSets.push({ num: aya.value, items: objects });
   }
   
   const chartData = {

@@ -60,7 +60,6 @@ import {
 } from '../settings/graha-values';
 import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
 import { Kuta } from '../kuta';
-import { currentJulianDay } from '../julian-date';
 import { matchKotaPala } from '../settings/kota-values';
 import { combineCharts, filterBmMatchRow } from '../chart-funcs';
 
@@ -385,7 +384,7 @@ export class Chart {
   }
 
   matchUpapada(refKey = '') {
-    const { key, type, isDegree } = matchUpapadaKey(refKey);
+    const { key, type } = matchUpapadaKey(refKey);
     switch (type) {
       case 'sphutas':
         return this.matchSpecial(key);
@@ -414,9 +413,9 @@ export class Chart {
       spSet => spSet.num === this.ayanamshaItem.num,
     );
     let strVal = '';
-    if (row instanceof ObjectType) {
+    if (row instanceof Object) {
       const item = row.items.find(sp => sp.key === key);
-      if (item instanceof ObjectType) {
+      if (item instanceof Object) {
         strVal = item.value;
       }
     }
@@ -1591,7 +1590,7 @@ export class PairedChart {
     if (kutaSet instanceof Map && kutaSet.size > 0) {
       this.kutaSet = kutaSet;
     }
-    this.matchConditionSet(rs.conditionSet, protocol, protoRs, true);
+    this.matchConditionSet(rs.conditionSet, protocol, protoRs);
     return protoRs;
   }
 
@@ -1627,7 +1626,6 @@ export class PairedChart {
     conditionSet: ConditionSet,
     protocol: Protocol,
     rs: ProtocolResultSet,
-    init = false,
   ) {
     const bs = new BooleanSet(conditionSet.operator, conditionSet.min);
     conditionSet.conditionRefs.forEach(cond => {
@@ -1637,7 +1635,7 @@ export class PairedChart {
           bs.addMatch(cond, matched);
         }
       } else if (cond instanceof ConditionSet) {
-        const matched = this.matchConditionSet(cond, protocol, rs, false);
+        const matched = this.matchConditionSet(cond, protocol, rs);
         bs.addMatch(cond, matched);
       }
     });

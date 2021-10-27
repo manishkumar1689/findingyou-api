@@ -29,7 +29,7 @@ export class GeoController {
         status = HttpStatus.OK;
       }
     }
-    return res.send(data);
+    return res.status(status).send(data);
   }
 
   @Get('google-by-coords/:loc/:code?')

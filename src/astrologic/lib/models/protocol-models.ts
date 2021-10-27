@@ -1,6 +1,6 @@
 import { KeyNameMax } from '../interfaces';
 import { inRange, isNumeric, notEmptyString } from '../../../lib/validators';
-import { smartCastFloat } from '../../../lib/converters';
+import { smartCastFloat, smartCastInt } from '../../../lib/converters';
 import { contextTypes } from '../settings/compatibility-sets';
 import { calcOrb, calcAllAspectRanges } from '../calc-orbs';
 import { subtractLng360, addLng360, calcDist360, nakshatra28, numbersToNakshatraDegreeRanges } from '../helpers';
@@ -18,7 +18,7 @@ import { coreIndianGrahaKeys } from './graha-set';
 import { mapRelationships } from '../map-relationships';
 import { matchKotaCakraSection } from '../settings/nakshatra-values';
 import { matchBirdKeyRulers, panchaPakshiDayNightSet } from '../settings/pancha-pakshi';
-import { filterBmMatchRow } from '../chart-funcs';
+import { fetchChartObject, filterBmMatchRow } from '../chart-funcs';
 import { calcCompactChartData } from '../core';
 import { julToISODate } from '../date-funcs';
 import { calcTransitionPointJd } from '../transitions';
@@ -2080,7 +2080,8 @@ export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Ch
       if (matchedNightYama) {
         const sub = matchedNightYama.subs.find(sn => sn.key === action);
         if (sub instanceof Object) {
-          const {start, end, rulers } = sub;
+          const {start, end } = sub;
+          rulers = sub.rulers;
           startEndLords.push({ start, end, rulers });
         }
       }
@@ -2091,16 +2092,17 @@ export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Ch
   const yama = matchedYama instanceof Object ? matchedYama : matchedNightYama;
   valid = yama instanceof Object;
   if (valid) {
-    let transitChart = null;
+    let transitChart = new Chart(null);
     switch (contextType.key) {
       case 'yoga_karaka':
-        const transitChartData = await calcCompactChartData(dtUtc, geo, 'true_citra');
-        transitChart = new Chart(transitChartData);
+      case 'avayogi_graha':
+      case 'yogi_graha':
+        transitChart = await fetchChartObject(dtUtc, geo, true);
         break;
     }
     switch (contextType.key) {
       case 'yoga_karaka':
-        valid = rulers.includes(transitChart.yogaKaraka);
+        valid = transitChart instanceof Chart? rulers.includes(transitChart.yogaKaraka) : false;
         break;
       case 'dasha_lord':
       case 'antardasha_lord':
@@ -2123,9 +2125,24 @@ export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Ch
           rulers = lords;
         }
         break;
+      case "avayogi_graha":
+      case "yogi_graha":
+        const [ key, _ ] = contextType.key.split("_");
+        const lord = transitChart.matchObject(key);
+        if (lord) {
+          valid = rulers.includes(lord);
+        }
+        break;
+
     }
   }
-  
+
+  if (refKey.startsWith("lord_")) {
+    const lords = refKey.split('_').slice(1).map(smartCastInt);
+    const transitChart = await fetchChartObject(dtUtc, geo);
+    const lordKeys = lords.map(houseNum => transitChart.matchHouseSignRuler(houseNum));
+    valid = rulers.some(gk => lordKeys.includes(gk));
+  }
   return { valid, yama, birdKey, isNight, rulers }
 }
 
