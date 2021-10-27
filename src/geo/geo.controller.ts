@@ -3,10 +3,6 @@ import {
   Get,
   Res,
   HttpStatus,
-  Post,
-  Put,
-  Query,
-  NotFoundException,
   Param,
 } from '@nestjs/common';
 import { GeoService } from './geo.service';
@@ -25,10 +21,13 @@ export class GeoController {
       .split(',')
       .filter(isNumeric)
       .map(parseFloat);
-
+    let status = HttpStatus.NOT_ACCEPTABLE;
     if (coords.length > 1) {
       const [lat, lng] = coords;
       data = await this.geoService.fetchGeoData(lat, lng);
+      if (data.valid) {
+        status = HttpStatus.OK;
+      }
     }
     return res.send(data);
   }

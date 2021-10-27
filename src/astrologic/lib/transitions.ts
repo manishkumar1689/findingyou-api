@@ -8,6 +8,7 @@ import { ephemerisDefaults } from '../../.config';
 import { GeoLoc } from './models/geo-loc';
 import { calcGrahaLng } from './core';
 import { GeoPos } from '../interfaces/geo-pos';
+import { matchPlanetNum } from 'sample-data/graha-values';
 
 export interface TimeSet {
   jd: number;
@@ -63,10 +64,12 @@ export const matchTransData = async (
 ): Promise<TimeSet> => {
   let data = { valid: false, transitTime: -1 };
   inData.transType = transType;
+  // set the rise offset to 12 hrs ago
   const riseOffset = transKey !== 'set' && inData.planetNum === swisseph.SE_SUN && adjustRise ? -0.5 : 0;
   const jd = inData.jd;
   const jdIndex = Object.keys(inData).indexOf('jd');
   const args = Object.values(inData);
+  // if startJd specified search next transition after referenced jd
   const hasStartJd = startJd > 0;
   if (riseOffset !== 0 || hasStartJd) {
     if (hasStartJd) {
@@ -74,7 +77,6 @@ export const matchTransData = async (
     } else {
       args[jdIndex] += riseOffset;
     }
-    
   }
   await riseTransAsync(...args).catch(d => {
     data = d;
@@ -197,6 +199,49 @@ export const calcTransitionJd = async (
   }
   return data;
 };
+
+export const matchSwissEphTransType = (type = 'rise') => {
+  switch (type) {
+    case 'set':
+    case 'ds':
+      return { key: 'set', num: swisseph.SE_CALC_SET }
+    case 'mc':
+    case 'highest':
+      return {
+        key: 'mc',
+        num: swisseph.SE_CALC_MTRANSIT
+      }
+    case 'ic':
+    case 'lowest':
+      return {
+        key: 'ic',
+        num: swisseph.SE_CALC_ITRANSIT
+      }
+    default:
+      return {
+        key: 'rise',
+        num: swisseph.SE_CALC_RISE
+      }
+  }
+}
+
+export const calcTransitionPointJd = async (jd = 0, gKey = '', geo: GeoPos, type = 'rise'): Promise<TimeSet> => {
+  const planetNum = matchPlanetNum(gKey);
+  const { key, num} = matchSwissEphTransType(type);
+  const inData = {
+    jd,
+    planetNum,
+    star: '',
+    iflag: swisseph.SEFLG_TOPOCTR,
+    transType: num,
+    longitude: geo.lng,
+    latitude: geo.lat,
+    altitude: geo.alt,
+    pressure: 10,
+    temperature: 10,
+  } as TransitionInput;
+  return await matchTransData(inData, num, key, false, jd);
+}
 
 export const calcTransition = async (
   datetime,

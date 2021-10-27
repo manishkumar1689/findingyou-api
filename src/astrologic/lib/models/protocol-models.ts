@@ -13,7 +13,7 @@ import { assignDashaBalances, DashaBalance, matchCurrentDashaLord, matchDashaSub
 import { matchNextTransitAtLng, matchNextTransitAtLngRanges, RangeSet } from '../astro-motion';
 import { GeoPos } from '../../interfaces/geo-pos';
 import { calcNextAscendantLng } from '../calc-ascendant';
-import { buildFunctionalBMMap, naturalBenefics, naturalMalefics } from '../settings/graha-values';
+import { buildFunctionalBMMap, matchPlanetNum, naturalBenefics, naturalMalefics } from '../settings/graha-values';
 import { coreIndianGrahaKeys } from './graha-set';
 import { mapRelationships } from '../map-relationships';
 import { matchKotaCakraSection } from '../settings/nakshatra-values';
@@ -21,6 +21,9 @@ import { matchBirdKeyRulers, panchaPakshiDayNightSet } from '../settings/pancha-
 import { filterBmMatchRow } from '../chart-funcs';
 import { calcCompactChartData } from '../core';
 import { julToISODate } from '../date-funcs';
+import { exit } from 'process';
+import { calcTransitionJd, calcTransitionPointJd } from '../transitions';
+import { StartEnd } from 'src/astrologic/interfaces/nakshatra-item';
 
 export interface KeyNumVal {
   key: string;
@@ -1992,7 +1995,16 @@ const matchDashaLord = async (transitJd = 0, chart: Chart, rulers : string[] = [
 }
 
 const filterSubYamaByAction = (ym, action = '', currJd = 0) => {
-  return ym.subs.some(sub => sub.key === action) && ym.start >= currJd
+  return ym.subs.some(sub => sub.key === action) && ym.start >= (currJd - 0.5)
+}
+
+const matchGrahaTransitPoint = async (currJd = 0, geo: GeoPos, rulers: string[] = [], contextKey = '', startEnd: StartEnd = { start: 0, end: 0 }) => {
+  let valid = false;
+  for (const gk of rulers) {
+    const trData = await calcTransitionPointJd(startEnd.start - 0.5, gk, geo, contextKey);
+    valid = trData.jd >= startEnd.start && trData.jd <= startEnd.end;
+  }
+  return valid;
 }
 
 export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Chart, refKey: string, contextType: ContextType) => {
@@ -2001,6 +2013,7 @@ export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Ch
   const dayYamas = ppData.get('yamas');
   const nightYamas = ppData.get('yamas2');
   const isDayTime = ppData.get('isDayTime');
+  const startEnd = { start: currJd, end: currJd + 10000 };
   let valid = false;
   let matchedYama = null;
   let rulers = [];
@@ -2026,6 +2039,8 @@ export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Ch
       const { key } = bird.current[actKey];
       birdKey = key;
       rulers = matchBirdKeyRulers(key, isDayTime, actKey);
+      startEnd.start = ppData.get('rise');
+      startEnd.end = ppData.get('nextRise');
       break;
     case 'yama_ruling_graha':
     case 'yama_eating_graha':
@@ -2046,15 +2061,23 @@ export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Ch
         const sub = matchedYama.subs.find(sn => sn.key === action);
         if (sub instanceof Object) {
           rulers = sub.rulers;
+          startEnd.start = sub.start;
+          startEnd.end = sub.end;
         }
       }
       break;
   }
   valid = matchedYama instanceof Object;
   const dtUtc = julToISODate(currJd);
-  const transitChartData = await calcCompactChartData(dtUtc, geo, 'true_citra');
-  const transitChart = new Chart(transitChartData);
+  
   if (valid) {
+    let transitChart = null;
+    switch (contextType.key) {
+      case 'yoga_karaka':
+        const transitChartData = await calcCompactChartData(dtUtc, geo, 'true_citra');
+        transitChart = new Chart(transitChartData);
+        break;
+    }
     switch (contextType.key) {
       case 'yoga_karaka':
         valid = rulers.includes(transitChart.yogaKaraka);
@@ -2062,6 +2085,17 @@ export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Ch
       case 'dasha_lord':
       case 'antardasha_lord':
         valid = await matchDashaLord(currJd, chart, rulers, contextType.key);
+        break;
+      case 'as':
+      case 'asc':
+      case 'ds':
+      case 'dsc':
+      case 'desc':
+      case 'rise':
+      case 'set':
+      case 'ic':
+      case 'mc':
+        valid = await matchGrahaTransitPoint(currJd, geo, rulers, contextType.key, startEnd);
         break;
     }
   }
@@ -2111,6 +2145,8 @@ export const matchPanchaPakshi = async (cond: Condition, chart: Chart, geo: GeoP
     if (cond.context.includes('dasha')) {
       //maxDays = cond.context.includes('antardasha') ? 366 * 3 : 366 * 20; 
       maxDays = 40;
+    } else if (['as', 'rise', 'asc', 'ds', 'set', 'desc', 'dsc', 'mc', 'ic'].includes(cond.contextType.key)) {
+      maxDays = 160;
     }
     while (!matched && counter < maxDays) {
       const { valid, yama, birdKey, isNight } = await matchPPTransitBirdGraha(currJd + counter, geo, chart, refKey, cond.contextType);
@@ -2121,7 +2157,7 @@ export const matchPanchaPakshi = async (cond: Condition, chart: Chart, geo: GeoP
         nightMatched = isNight;
         matchedBird = birdKey;
       }
-      counter++;
+      counter += 1;
     }
   }
 

@@ -607,7 +607,6 @@ export class GeoService {
 
   async googleNearby(nearby = '', regionCode = '') {
     const key = googleGeo.apiKey;
-    //const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latLngStr}&rankby=distance&types=country,cities,locality&key=${key}`;
     const { code, regionType } = this.matchGoogleRegionCode(regionCode);
     const extraParams = notEmptyString(code)? `&components=${regionType}:${code}` : '';
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${nearby}${extraParams}&key=${key}`;
@@ -638,7 +637,7 @@ export class GeoService {
     if (max > 0) {
       mp.set('maxRows', max.toString());
     }
-    let items = [];
+    const items = [];
     const data = await this.fetchGeoNames('searchJSON', Object.fromEntries(mp));
     const fcs = [
       'PPL',
@@ -654,7 +653,7 @@ export class GeoService {
       const { geonames } = data;
       const keys: Array<string> = [];
       if (geonames instanceof Array) {
-        const entries = geonames
+        geonames
           .filter(tp => fcs.includes(tp.fcode))
           .forEach(fc => {
             const {
