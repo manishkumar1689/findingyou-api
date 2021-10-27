@@ -8,7 +8,7 @@ import { ephemerisDefaults } from '../../.config';
 import { GeoLoc } from './models/geo-loc';
 import { calcGrahaLng } from './core';
 import { GeoPos } from '../interfaces/geo-pos';
-import { matchPlanetNum } from 'sample-data/graha-values';
+import { matchPlanetNum } from './settings/graha-values';
 
 export interface TimeSet {
   jd: number;

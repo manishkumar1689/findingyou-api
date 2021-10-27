@@ -13,7 +13,7 @@ import { assignDashaBalances, DashaBalance, matchCurrentDashaLord, matchDashaSub
 import { matchNextTransitAtLng, matchNextTransitAtLngRanges, RangeSet } from '../astro-motion';
 import { GeoPos } from '../../interfaces/geo-pos';
 import { calcNextAscendantLng } from '../calc-ascendant';
-import { buildFunctionalBMMap, matchPlanetNum, naturalBenefics, naturalMalefics } from '../settings/graha-values';
+import { buildFunctionalBMMap, naturalBenefics, naturalMalefics } from '../settings/graha-values';
 import { coreIndianGrahaKeys } from './graha-set';
 import { mapRelationships } from '../map-relationships';
 import { matchKotaCakraSection } from '../settings/nakshatra-values';
@@ -21,9 +21,8 @@ import { matchBirdKeyRulers, panchaPakshiDayNightSet } from '../settings/pancha-
 import { filterBmMatchRow } from '../chart-funcs';
 import { calcCompactChartData } from '../core';
 import { julToISODate } from '../date-funcs';
-import { exit } from 'process';
-import { calcTransitionJd, calcTransitionPointJd } from '../transitions';
-import { StartEnd } from 'src/astrologic/interfaces/nakshatra-item';
+import { calcTransitionPointJd } from '../transitions';
+import { StartEnd } from '../../interfaces/nakshatra-item';
 
 export interface KeyNumVal {
   key: string;
