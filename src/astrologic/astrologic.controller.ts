@@ -1114,6 +1114,7 @@ export class AstrologicController {
       const geo = isLocationString(loc)? locStringToGeo(loc) : chart.geo;
       const data = await this.fetchPredictions(ruleData, chart, geo);
       if (data.valid) {
+        result.valid = true;
         result.matches = data.matches;
         result.items = data.items;
       }

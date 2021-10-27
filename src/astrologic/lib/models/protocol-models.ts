@@ -2135,13 +2135,12 @@ export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Ch
         break;
 
     }
-  }
-
-  if (refKey.startsWith("lord_")) {
-    const lords = refKey.split('_').slice(1).map(smartCastInt);
-    const transitChart = await fetchChartObject(dtUtc, geo);
-    const lordKeys = lords.map(houseNum => transitChart.matchHouseSignRuler(houseNum));
-    valid = rulers.some(gk => lordKeys.includes(gk));
+    if (contextType.key.startsWith("lord_")) {
+      const lords = contextType.key.split('_').slice(1).map(smartCastInt);
+      const transitChart = await fetchChartObject(dtUtc, geo);
+      const lordKeys = lords.map(houseNum => transitChart.matchHouseSignRuler(houseNum));
+      valid = rulers.some(gk => lordKeys.includes(gk));
+    }
   }
   return { valid, yama, birdKey, isNight, rulers }
 }
