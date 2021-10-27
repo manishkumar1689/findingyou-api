@@ -1,4 +1,4 @@
-import { GeoPos } from "src/astrologic/interfaces/geo-pos";
+import { GeoPos } from "../../interfaces/geo-pos";
 import { calcMoonDataJd, getSunMoonSpecialValues } from "../core";
 import { julToISODate } from "../date-funcs";
 import { KeyNum, KeyNumValue } from "../interfaces";
