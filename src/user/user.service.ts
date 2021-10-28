@@ -226,7 +226,7 @@ export class UserService {
   // Get a single User
   async findOneByEmail(
     email: string,
-    activeOnly: boolean = true,
+    activeOnly = true,
   ): Promise<User> {
     const filter = new Map<string, any>();
     filter.set('identifier', email);
@@ -873,7 +873,7 @@ export class UserService {
     return userObj;
   }
 
-  mergePreferences(user, prefItems:PreferenceDTO[] = []) {
+  mergePreferences(user: User, prefItems: PreferenceDTO[] = []) {
     const userData = user.toObject();
     const { preferences } = userData;
     const prefs = preferences instanceof Array ? preferences : [];
@@ -914,7 +914,7 @@ export class UserService {
           up => up.type === profile.type,
         );
         if (profileIndex >= 0) {
-          const { createdAt } = userData.profiles[profileIndex];
+          //const { createdAt } = userData.profiles[profileIndex];
           const editedProfile = this.updateProfile(profile, userData.profiles[profileIndex], dt);
           userData.profiles[profileIndex] = { ...editedProfile };
         } else {
@@ -993,6 +993,7 @@ export class UserService {
       profile = profileRef;
       hasProfileData = true;
     } else if (notEmptyString(profileRef)) {
+      hasProfileData = true;
       profile = {
         type: profileRef,
         text: '',
@@ -1060,7 +1061,7 @@ export class UserService {
         }
         userData.profiles.push(profile);
       }
-    } else {
+    } else if (hasProfileData) {
       if (hasMediaItem) {
         profile.mediaItems = [mediaItem];
       }

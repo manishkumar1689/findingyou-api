@@ -64,9 +64,9 @@ export const fetchTransitSampleResultSet = async (jd = 0, geo: GeoPos, includeKe
     resultMap.set(key, {...result, altitude } );
   }
   
-  const sunLng = resultMap.get('su').longitude;
+  /* const sunLng = resultMap.get('su').longitude;
   const moonLng = resultMap.get('mo').longitude;
-  const rahuLng = resultMap.has('ra')? resultMap.get('ra').longitude : 0;
+  const rahuLng = resultMap.has('ra')? resultMap.get('ra').longitude : 0; */
   return resultMap;
 }
 
@@ -102,8 +102,11 @@ const calcBaseObjectsAltitude = async (key = "", jd = 0, geo: GeoPos, resultMap:
     return { longitude, rectAscension: ra, latitude: declination, altitude };
 }
 
+/*
+* Fetch sample transitions of abstract objects
+*/
 export const calcBaseObjects = async(jd = 0, geo: GeoPos) => {
-  const resultMap= await fetchTransitSampleResultSet(jd, geo);  
+  const resultMap = await fetchTransitSampleResultSet(jd, geo);
   for (const key of specialTransitKeys) {
     const {longitude, latitude, altitude } = await calcBaseObjectsAltitude(key, jd, geo, resultMap );
     resultMap.set(key, { longitude, latitude, altitude } );

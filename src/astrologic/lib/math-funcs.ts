@@ -37,9 +37,9 @@ export const limitValueToRange = (num = 0, min = 0, max = 360): number => {
   return (min < 0 && (val < 0 || num > max))? 0 - outVal: outVal;
 }
 
-export const calcVargaValue = (lng, num) => (lng * num) % 360;
+export const calcVargaValue = (lng: number, num = 1) => (lng * num) % 360;
 
-export const subtractLng360 = (lng: number, offset: number = 0) =>
+export const subtractLng360 = (lng: number, offset = 0) =>
   (lng + 360 - offset) % 360;
 
 export const calcAllVargas = (lng: number) => {
@@ -105,7 +105,7 @@ public static double altitudeForEquatorialPosition(final double geoLat, final do
     return RangeUtil.limitValueToRange(Math.toDegrees(Math.asin(sinAltitude)), -90, 90);
 }
 */
-export const altitudeForEquatorialPosition = (geoLat = 0, declination = 0, rightAscension = 0, raMC = 0) => {
+export const altitudeForEquatorialPosition = (geoLat = 0, declination = 0, rightAscension = 0, raMC = 0): number => {
   const hourAngle = limitValueToRange(raMC - rightAscension, 0, 360);
   const cosHourAngle = Math.cos(toRadians(hourAngle));
   const sinGeoLat = Math.sin(toRadians(geoLat));

@@ -54,7 +54,6 @@ import { GeoPos } from '../interfaces/geo-pos';
 import { IndianTime } from './models/indian-time';
 import {
   Chart,
-  ObjectMatch,
   ObjectMatchSet,
   RashiItemSet,
   NumValueSet,
@@ -62,8 +61,6 @@ import {
 } from './models/chart';
 import { capitalize } from './helpers';
 import houseTypeData from './settings/house-type-data';
-import { async } from 'rxjs/internal/scheduler/async';
-import { julToDateParts } from './julian-date';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 
@@ -72,7 +69,7 @@ swisseph.swe_set_sid_mode(swisseph[ephemerisDefaults.sid_mode], 0, 0);
 
 const degreeToSign = deg => Math.floor(deg / 30) + 1;
 
-const addCycleInclusive = (one, two, radix) => {
+const addCycleInclusive = (one = 0, two = 0, radix = 0) => {
   return ((one - 1 + two) % radix) + 1;
 }
 
