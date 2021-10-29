@@ -6,7 +6,6 @@ import {
   calcAllVargas,
   calcVargaValue,
   calcVargaSet,
-  calcInclusiveTwelfths,
   matchHouseNum,
 } from '../math-funcs';
 import { matchNakshatra } from '../core';
@@ -49,39 +48,32 @@ const defaultVariant = {
   charaKaraka: 0,
 };
 
-interface withinSignBody {
-  key: string;
-  deg: number;
-  num?: number;
-  ck?: string;
-}
-
 export class Graha extends BaseObject {
-  num: number = -1;
-  name: string = '';
-  key: string = '';
-  ref: string = '';
-  altRef: string = '';
-  jyNum: number = -1;
-  icon: string = '';
-  bhuta: string = '';
-  guna: string = '';
-  caste: string = '';
-  dhatu: string = '';
-  dosha: string = '';
-  lng: number = 0;
-  lat: number = 0;
+  num = -1;
+  name = '';
+  key = '';
+  ref = '';
+  altRef = '';
+  jyNum = -1;
+  icon = '';
+  bhuta = '';
+  guna = '';
+  caste = '';
+  dhatu = '';
+  dosha = '';
+  lng = 0;
+  lat = 0;
   topo: GeoPos = {
     lng: 0,
     lat: 0,
   };
-  distance: number = 1;
+  distance = 1;
   declination?: number = null;
   rectAscension?: number = null;
-  lngSpeed: number = 0;
-  latSpeed: number = 0;
-  dstSpeed: number = 0;
-  calc: string = '';
+  lngSpeed = 0;
+  latSpeed = 0;
+  dstSpeed = 0;
+  calc = '';
   friends = [];
   neutral = [];
   enemies = [];
@@ -457,7 +449,7 @@ export class GrahaSet {
   }
 
   longitudes() {
-    let map = new Map();
+    const map: Map<string, number> = new Map();
     this.bodies.forEach(b => {
       map.set(b.key, b.lng);
     });

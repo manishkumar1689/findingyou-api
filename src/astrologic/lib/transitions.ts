@@ -45,8 +45,8 @@ export interface SunTransitionData {
 
 interface TransitionInput {
   jd: number;
-  planetNum: 0;
-  iflag: 0;
+  planetNum: number;
+  iflag: number;
   transType: number;
   longitude: number;
   latitude: number;
