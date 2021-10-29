@@ -646,7 +646,8 @@ export const calcAllStars = async (datetime: string, nameList: string[] = []) =>
     stars: [],
     sample: null
   };
-  const starList = nameList instanceof Array && nameList.length > 0? nameList : starValues;
+  const hasCustomList = nameList instanceof Array && nameList.length > 0;
+  const starList = hasCustomList? nameList : starValues;
   if (validISODateString(datetime)) {
     for (const star of starList) {
       const res = await calcStarPosJd(data.jd, star);
@@ -657,7 +658,7 @@ export const calcAllStars = async (datetime: string, nameList: string[] = []) =>
   }
   data.valid = data.stars.some(row => row.valid);
   const testLine = 'AA11_page_B73,     ,ICRS,14,39,36.4958,-60,50, 2.309,-3678.06,  482.87, -21.6,742,0   ,  0,    0';
-  if (data.valid) {
+  if (data.valid && hasCustomList) {
     const firstKeys = Object.keys(data.stars[0].result);
     const values = testLine.split(',').map(str => str.trim());
     const entries = values.map((v, i) => {
