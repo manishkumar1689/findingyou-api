@@ -639,19 +639,33 @@ export const calcStarPos = async (datetime: string, starname: string) => {
 @param datetime:string isodate
 @return Promise<Array<Object>>
 */
-export const calcAllStars = async (datetime: string) => {
+export const calcAllStars = async (datetime: string, nameList: string[] = []) => {
   const data = {
     valid: false,
     jd: calcJulDate(datetime),
     stars: [],
+    sample: null
   };
+  const starList = nameList instanceof Array && nameList.length > 0? nameList : starValues;
   if (validISODateString(datetime)) {
-    for (const star of starValues) {
+    for (const star of starList) {
       const res = await calcStarPosJd(data.jd, star);
-      data.stars.push({ star, ...res });
+      if (res instanceof Object) {
+        data.stars.push({ star, ...res });
+      }
     }
   }
   data.valid = data.stars.some(row => row.valid);
+  const testLine = 'AA11_page_B73,     ,ICRS,14,39,36.4958,-60,50, 2.309,-3678.06,  482.87, -21.6,742,0   ,  0,    0';
+  if (data.valid) {
+    const firstKeys = Object.keys(data.stars[0].result);
+    const values = testLine.split(',').map(str => str.trim());
+    const entries = values.map((v, i) => {
+      const k  = i < firstKeys.length ? firstKeys[i] : ['item',i].join('_');
+      return [k, v];
+    })
+    data.sample = Object.fromEntries(entries);
+  }
   return data;
 };
 

@@ -42,6 +42,7 @@ import {
   calcAyanamsha,
   fetchHouseDataJd,
   calcCoreGrahaPositions,
+  calcAllStars,
 } from './lib/core';
 import { sampleBaseObjects } from './lib/custom-transits';
 import {
@@ -507,6 +508,23 @@ export class AstrologicController {
       tz: 'UTC',
       predictions
     });
+  }
+
+  @Get('stars/:dt?/:nameRef?')
+  async allStars(@Res() res, @Param('dt') dt, @Param('nameRef') nameRef) {
+    const { dtUtc, jd } = matchJdAndDatetime(dt);
+    const nameList = notEmptyString(nameRef)? nameRef.split(',').map(str => str.trim()) : [];
+    const data = await calcAllStars(dtUtc, nameList);
+    if (data.valid) {
+      const { valid, stars, jd, sample } = data;
+      const filteredStars = stars.filter(item => item.valid).map(item => {
+        return { star: item.star, ...item.result }
+      });
+      const num = stars.length;
+      return res.json({ valid, num, stars: filteredStars, sample, dt: dtUtc, jd});
+    } else {
+      return res.status(HttpStatus.NOT_ACCEPTABLE).json({ ...data, dt: dtUtc, jd});
+    }
   }
 
   @Get('all/:loc/:dt/:system?')
