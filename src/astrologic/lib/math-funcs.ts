@@ -143,8 +143,8 @@ export const approxTransitTimes = (geo: GeoPos, alt: number, jd: number, ra: num
   if (transData instanceof Object) {
     const keys = Object.keys(transData);
     if (keys.includes("rise") && keys.includes("set")) {
-      result.set = secsToExactJd(jd, transData.set);
       result.rise = secsToExactJd(jd, transData.rise);
+      result.set = secsToExactJd(jd, transData.set);
       result.mc = secsToExactJd(jd, transData.mc),
       result.ic = secsToExactJd(jd, transData.ic);
     }

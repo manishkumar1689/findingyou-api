@@ -1136,7 +1136,15 @@ export class AstrologicController {
         for (const gr of chart.grahas) {
           const dV = await calcDeclination(chart.jd, gr.num);
           const approxTimes = approxTransitTimes(geo, dV.distance, jd, dV.ra, dV.value);
-          result.items.push({...dV, ...approxTimes});
+          const entries = Object.entries(approxTimes).map(([k, v]) => {
+            const item = {
+              jd: v,
+              dt: julToISODate(v)
+            }
+            return [k, item];
+          });
+          const transSet = Object.fromEntries(entries);
+          result.items.push({...dV, ...transSet});
         }
       }
 
