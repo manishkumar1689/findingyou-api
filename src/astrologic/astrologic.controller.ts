@@ -21,6 +21,7 @@ import {
   notEmptyString,
   isNumber,
   isLocationString,
+  validLocationParameter,
 } from '../lib/validators';
 import { correctDatetime, latLngParamsToGeo, locStringToGeo } from './lib/converters';
 import { applyAscendantToSimpleChart, simplifyAstroChart, simplifyChart, simplifyConditions } from './lib/member-charts';
@@ -1125,14 +1126,18 @@ export class AstrologicController {
   async transposeChart(@Res() res, @Param('chart') chart, @Param('loc') loc, @Param('dt') dt) {
     const { dtUtc, jd } = matchJdAndDatetime(dt);
     
-    const result = { valid: false, dt: dtUtc, jd, items: [], chart: null };
+    const result = { valid: false, dt: dtUtc, jd, birthJd: 0, birthDt: '', geo: { lat: 0, lng: 0 }, birthGeo: { lat: 0, lng: 0 },  items: [], chart: null };
     const cData = await this.astrologicService.getChart(chart);
     if (cData instanceof Model) {
       const chart = new Chart(cData.toObject());
-      const geo = notEmptyString(loc) ? locStringToGeo(loc) : chart.geo;
+      const hasTransitGeo = validLocationParameter(loc);
+      const geo = hasTransitGeo ? locStringToGeo(loc) : chart.geo;
       result.chart = chart;
       result.valid = true;
+      result.geo = hasTransitGeo? geo : chart.geo;
       if (chart.grahas.length > 0) {
+        result.birthGeo = chart.geo;
+        result.birthDt = julToISODate(chart.jd);
         for (const gr of chart.grahas) {
           const dV = await calcDeclination(chart.jd, gr.num);
           const approxTimes = approxTransitTimes(geo, dV.distance, jd, dV.ra, dV.value);
