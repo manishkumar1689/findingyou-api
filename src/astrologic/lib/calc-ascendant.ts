@@ -119,7 +119,7 @@ export const calcNextAscendantLng = async (targetLng = 0, lat = 0, lng = 0, star
 	let currJd = startJd;
 	let matchedJd = 0;
 	let prevLng = 0;
-	let matchedLngs: number[][] = [];
+	const matchedLngs: number[][] = [];
 	while (matchedLngs.length < 3 && counter < 1000000) {
 		currJd += minuteJd;
 		const nextLng = calcOffsetAscendant(lat, lng, currJd, ayanamshaValue);
@@ -145,10 +145,6 @@ export const calcNextAscendantLng = async (targetLng = 0, lat = 0, lng = 0, star
 	return { startJd, targetJd: matchedJd };
 }
 
-export const calcAscendantIntervalTimelineItems = (lat = 0, lng = 0, startJd = 0, endJd = 0, ayanamshaValue = 0) => {
-	return calcAscendantTimelineItems(12, lat, lng, startJd, endJd, ayanamshaValue);
-}
-
 export const calcAscendantTimelineItems = (subDiv = 12, lat = 0, lng = 0, startJd = 0, endJd = 0, ayanamshaValue = 0) => {
 	
 	const data = calcAscendantTimeline(subDiv, lat, lng, startJd, endJd, ayanamshaValue);
@@ -161,4 +157,8 @@ export const calcAscendantTimelineItems = (subDiv = 12, lat = 0, lng = 0, startJ
 		return { ...item, lng, sign, dt: julToISODate(item.jd) }
 	});
 	return data;
+}
+
+export const calcAscendantIntervalTimelineItems = (lat = 0, lng = 0, startJd = 0, endJd = 0, ayanamshaValue = 0) => {
+	return calcAscendantTimelineItems(12, lat, lng, startJd, endJd, ayanamshaValue);
 }

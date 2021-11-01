@@ -7,6 +7,8 @@ export const calcUtAsync = util.promisify(swisseph.swe_calc_ut);
 
 export const riseTransAsync = util.promisify(swisseph.swe_rise_trans);
 
+export const fixedStarAsync = util.promisify(swisseph.swe_fixstar);
+
 export const fixedStarUtAsync = util.promisify(swisseph.swe_fixstar_ut);
 
 export const fixedStar2UtAsync = util.promisify(swisseph.swe_fixstar2_ut);

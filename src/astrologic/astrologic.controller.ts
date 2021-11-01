@@ -43,6 +43,7 @@ import {
   fetchHouseDataJd,
   calcCoreGrahaPositions,
   calcAllStars,
+  calcDeclination,
 } from './lib/core';
 import { sampleBaseObjects } from './lib/custom-transits';
 import {
@@ -73,7 +74,7 @@ import {
   roundNumber,
 } from '../lib/converters';
 import { PairedChartInputDTO } from './dto/paired-chart-input.dto';
-import { midPointSurface, medianLatlng, subtractLng360 } from './lib/math-funcs';
+import { midPointSurface, medianLatlng, subtractLng360, approxTransitTimes } from './lib/math-funcs';
 import { PairedChartDTO } from './dto/paired-chart.dto';
 import {
   mapPairedChartInput,
@@ -510,11 +511,12 @@ export class AstrologicController {
     });
   }
 
-  @Get('stars/:dt?/:nameRef?')
-  async allStars(@Res() res, @Param('dt') dt, @Param('nameRef') nameRef) {
+  @Get('stars/:dt?/:nameRef?/:mode?')
+  async allStars(@Res() res, @Param('dt') dt, @Param('nameRef') nameRef, @Param('mode') mode) {
     const { dtUtc, jd } = matchJdAndDatetime(dt);
+    const funcMode = notEmptyString(mode)? mode : '2ut';
     const nameList = notEmptyString(nameRef)? nameRef.split(',').map(str => str.trim()) : [];
-    const data = await calcAllStars(dtUtc, nameList);
+    const data = await calcAllStars(dtUtc, nameList, funcMode);
     if (data.valid) {
       const { valid, stars, jd, sample } = data;
       const filteredStars = stars.filter(item => item.valid).map(item => {
@@ -1117,6 +1119,31 @@ export class AstrologicController {
     const lngFl = smartCastFloat(lng, 0)
     const data = await calcNextAscendantLng(lngFl, geo.lat, geo.lng, jd, "true_citra")
     return res.json({ ...data, dtUtc });
+  }
+
+  @Get('transpose-chart/:chart/:loc?/:dt?')
+  async transposeChart(@Res() res, @Param('chart') chart, @Param('loc') loc, @Param('dt') dt) {
+    const { dtUtc, jd } = matchJdAndDatetime(dt);
+    
+    const result = { valid: false, dt: dtUtc, jd, items: [], chart: null };
+    const cData = await this.astrologicService.getChart(chart);
+    if (cData instanceof Model) {
+      const chart = new Chart(cData.toObject());
+      const geo = notEmptyString(loc) ? locStringToGeo(loc) : chart.geo;
+      result.chart = chart;
+      result.valid = true;
+      if (chart.grahas.length > 0) {
+        for (const gr of chart.grahas) {
+          const dV = await calcDeclination(chart.jd, gr.num);
+          const approxTimes = approxTransitTimes(geo, dV.distance, jd, dV.ra, dV.value);
+          result.items.push({...dV, ...approxTimes});
+        }
+      }
+
+    } else {
+      result.chart = cData;
+    }
+    return res.json({...result, chartId: chart});
   }
 
   @Get('predictive-rule-check/:ruleID/:chartID/:loc?')

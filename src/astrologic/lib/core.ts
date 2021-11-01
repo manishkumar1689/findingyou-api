@@ -7,6 +7,7 @@ import {
   getHouses,
   getAyanamsa,
   getAzalt,
+  fixedStarAsync,
 } from './sweph-async';
 import { calcJulDate, jdToDateTime } from './date-funcs';
 import { calcDeclinationFromLngLatEcl, calcInclusiveTwelfths, calcRectAscension, subtractLng360 } from './math-funcs';
@@ -90,18 +91,20 @@ export const relativeAngle = (
   return mn < 0 ? 360 + mn : mn;
 };
 
-const calcDeclination = async (
+export const calcDeclination = async (
   jd: number,
   num: number,
 ): Promise<DeclinationResult> => {
   const flag =
     swisseph.SEFLG_SWIEPH | swisseph.SEFLG_SPEED | swisseph.SEFLG_EQUATORIAL;
-  let data = { valid: false, value: 0, ra: 0 };
+  let data = { valid: false, value: 0, ra: 0, distance: 0 };
   await calcUtAsync(jd, num, flag).catch(async result => {
     if (result instanceof Object) {
       if (!result.error) {
         if (result instanceof Object) {
-          data = { valid: true, value: result.declination, ra: result.rectAscension };
+          const { distance } = result;
+          const distVal = isNumeric(distance) ? distance : 0;
+          data = { valid: true, value: result.declination, ra: result.rectAscension, distance: distVal  };
         }
       }
     }
@@ -224,11 +227,9 @@ export const calcUpagrahas = async (
     startJd,
     sunData,
     periodLength,
-    dayBefore,
     periodHours,
     isDayTime,
     weekDay,
-    afterSunSet,
   } = await calcJyotishSunRise(datetime, geo);
   const eighthJd = periodLength / 8;
   const eighth = periodHours / 8;
@@ -447,7 +448,8 @@ export const calcMrityubhagaValues = (
   ascendant: number,
 ) => {
   const { orb, mrityu } = mrityubhagaData;
-  const { standard, alternative } = mrityu;
+  //const { standard, alternative } = mrityu;
+  const { standard } = mrityu;
   const standardRange = standard.values.map(row => {
     let lng = null;
     let sign = null;
@@ -603,10 +605,12 @@ export const calcAllTransitions = async (datetime: string, geo: GeoPos, jdOffset
   };
 };
 
-const calcStarPosJd = async (jd: number, starname: string) => {
+const calcStarPosJd = async (jd: number, starname: string, mode = '2ut') => {
   const data: any = { valid: false };
   if (isNumeric(jd) && notEmptyString(starname, 2)) {
-    await fixedStar2UtAsync(starname, jd, swisseph.SEFLG_SWIEPH).catch(
+    const func = mode === 'plain' ? fixedStarAsync : fixedStar2UtAsync;
+    await func(starname, jd, swisseph.SEFLG_SWIEPH + swisseph.SEFLG_EQUATORIAL)
+      .catch(
       result => {
         if (result instanceof Object) {
           if (result.name) {
@@ -629,9 +633,9 @@ const calcStarPosJd = async (jd: number, starname: string) => {
   return data;
 }
 
-export const calcStarPos = async (datetime: string, starname: string) => {
+export const calcStarPos = async (datetime: string, starname: string, mode = '2ut') => {
   const jd = calcJulDate(datetime);
-  const data = await calcStarPosJd(jd, starname);
+  const data = await calcStarPosJd(jd, starname, mode);
   return { jd, ...data };
 }
 
@@ -639,7 +643,7 @@ export const calcStarPos = async (datetime: string, starname: string) => {
 @param datetime:string isodate
 @return Promise<Array<Object>>
 */
-export const calcAllStars = async (datetime: string, nameList: string[] = []) => {
+export const calcAllStars = async (datetime: string, nameList: string[] = [], mode = '2ut') => {
   const data = {
     valid: false,
     jd: calcJulDate(datetime),
@@ -650,7 +654,7 @@ export const calcAllStars = async (datetime: string, nameList: string[] = []) =>
   const starList = hasCustomList? nameList : starValues;
   if (validISODateString(datetime)) {
     for (const star of starList) {
-      const res = await calcStarPosJd(data.jd, star);
+      const res = await calcStarPosJd(data.jd, star, mode);
       if (res instanceof Object) {
         data.stars.push({ star, ...res });
       }
@@ -701,6 +705,7 @@ interface DeclinationResult {
   valid: boolean;
   value: number;
   ra?: number;
+  distance?: number;
 }
 
 export const calcAltitudeSE = async (
@@ -1181,11 +1186,11 @@ const matchRashis = (houseData, bodyData: GrahaSet, corrected = false) => {
     const houseSignDiff = (houseSignIndex - houseIndex + 12) % 12;
     //const houseSignNum = houseSignIndex + 1;
     let lordInHouse = -1;
-    let lordInSign = -1;
+    //let lordInSign = -1;
     if (graha instanceof Object) {
-      const grLng = corrected ? graha.lng : graha.longitude;
+      //const grLng = corrected ? graha.lng : graha.longitude;
       lordInHouse = graha.house;
-      lordInSign = Math.floor(grLng / 30) + 1;
+      //lordInSign = Math.floor(grLng / 30) + 1;
     }
     /* const diff = lordInHouse + houseNum;
     const houseLordCount = diff <= 12 ? diff : (diff % 12) + 1; */

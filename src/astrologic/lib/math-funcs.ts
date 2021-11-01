@@ -1,5 +1,8 @@
 import vargaValues from './settings/varga-values';
 import { GeoPos } from '../interfaces/geo-pos';
+import { TransitJdSet } from './interfaces';
+import rise from './astronomia/rise';
+import sidereal, { secsToExactJd }  from './astronomia/sidereal';
 
 export const matchHouseNum = (lng: number, houses: Array<number>): number => {
   const len = houses.length;
@@ -128,6 +131,26 @@ export const midPointSurface = (coord1: GeoPos, coord2: GeoPos) => {
   const midLng = c1.lng + Math.atan2(by, Math.cos(c1.lat) + bx);
   return { lat: toDegrees(midLat), lng: toDegrees(midLng) };
 };
+
+export const approxTransitTimes = (geo: GeoPos, alt: number, jd: number, ra: number, decl: number): TransitJdSet => {
+  const h0 = toRadians(alt);
+  const α = toRadians(ra);
+  const δ = toRadians(decl);
+  const th0 = sidereal.apparent0UT(jd);
+  const th1 = sidereal.apparent0UT(jd - 0.5);
+  const transData = rise.approxTimes({lat: geo.lat, lon: geo.lng}, h0, th0, α, δ, th1);
+  const result = { set: 0, rise: 0, mc: 0, ic: 0 };
+  if (transData instanceof Object) {
+    const keys = Object.keys(transData);
+    if (keys.includes("rise") && keys.includes("set")) {
+      result.set = secsToExactJd(jd, transData.set);
+      result.rise = secsToExactJd(jd, transData.rise);
+      result.mc = secsToExactJd(jd, transData.mc),
+      result.ic = secsToExactJd(jd, transData.ic);
+    }
+  }
+  return result;
+}
 
 export const to360 = lng => (lng >= 0 ? lng + 180 : 180 + lng);
 

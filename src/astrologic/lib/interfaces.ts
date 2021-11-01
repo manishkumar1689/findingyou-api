@@ -72,7 +72,14 @@ export interface Toponym {
 }
 
 export interface ProtocolSettings {
-  kuta: any,
+  kuta: any;
   grahaDrishti: Map<string, number[]>;
   rashiDrishti: Map<number, number[]>;
+}
+
+export interface TransitJdSet {
+  rise: number;
+  set: number;
+  mc: number;
+  ic?: number;
 }
