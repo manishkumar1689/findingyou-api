@@ -117,7 +117,7 @@ export function apparent0UT (jd) {
 
 export function secsToExactJd(jd = 0, secs = 0) {
   const startJd = Math.floor(jd + 0.5) - 0.5;
-  return startJd + (secs / 86400);
+  return startJd + (secs / 86400) + 0.5;
 }
 
 export default {

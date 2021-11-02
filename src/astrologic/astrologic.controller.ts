@@ -1122,12 +1122,36 @@ export class AstrologicController {
     return res.json({ ...data, dtUtc });
   }
 
-  @Get('transpose-chart/:chart/:loc?/:dt?')
-  async transposeChart(@Res() res, @Param('chart') chart, @Param('loc') loc, @Param('dt') dt) {
+  @Get('transpose-chart')
+  async transposeChart(@Res() res, @Query() query) {
+    const params = query instanceof Object ? query : {};
+    const keys = Object.keys(params);
+    const dt = keys.includes('dt') ? params.dt : '';
+    const loc = keys.includes('loc') ? params.loc : '';
+    const hasLoc = validISODateString(loc);
+    const hasChartId = keys.includes('chart') && notEmptyString(params.chart, 16);
+    const hasBirthLoc = keys.includes('bloc') && validLocationParameter(params.bloc);
+    const hasBirthDt = keys.includes('bdt') && validISODateString(params.bdt);
+    const sameLocTime = hasLoc && keys.includes('auto') && smartCastInt(params.auto, 0) > 0;
     const { dtUtc, jd } = matchJdAndDatetime(dt);
-    
-    const result = { valid: false, dt: dtUtc, jd, birthJd: 0, birthDt: '', geo: { lat: 0, lng: 0 }, birthGeo: { lat: 0, lng: 0 },  items: [], chart: null };
-    const cData = await this.astrologicService.getChart(chart);
+    const chartId = hasChartId ? params.chart : '';
+    const useGeneratedChart = hasBirthDt && hasBirthLoc && !hasChartId;
+    const loadCustom = useGeneratedChart || sameLocTime;
+    const result = { valid: false, message: '', dt: dtUtc, jd, birthJd: 0, birthDt: '', geo: { lat: 0, lng: 0 }, birthGeo: { lat: 0, lng: 0 },  items: [], chart: null };
+    let cData = null;
+    if (hasChartId) {
+      cData = await this.astrologicService.getChart(chartId);
+      if (!cData) {
+        result.message = 'Cannot match the chart ID';
+      }
+    } else if (loadCustom) {
+      const cLoc = sameLocTime ? loc : params.bloc;
+      const cDt = sameLocTime ? dtUtc : params.btd;
+      cData = await this.fetchCompactChart(cLoc, cDt, 'true_citra', '', true);
+      if (!cData) {
+        result.message = `Invalid birth location and/or date parameters "bloc" and "bdt"`;
+      }
+    }
     if (cData instanceof Model) {
       const chart = new Chart(cData.toObject());
       const hasTransitGeo = validLocationParameter(loc);
@@ -1137,10 +1161,11 @@ export class AstrologicController {
       result.geo = hasTransitGeo? geo : chart.geo;
       if (chart.grahas.length > 0) {
         result.birthGeo = chart.geo;
-        result.birthDt = julToISODate(chart.jd);
+        result.birthDt = julToISODate(chart.jd).split('.').shift();
         for (const gr of chart.grahas) {
           const dV = await calcDeclination(chart.jd, gr.num);
           const approxTimes = approxTransitTimes(geo, dV.distance, jd, dV.ra, dV.value);
+          const cTransItem = chart.getTransitions().find(tr => tr.key === gr.key);
           const entries = Object.entries(approxTimes).map(([k, v]) => {
             const item = {
               jd: v,
@@ -1149,14 +1174,16 @@ export class AstrologicController {
             return [k, item];
           });
           const transSet = Object.fromEntries(entries);
-          result.items.push({...dV, ...transSet});
+          result.items.push({key: gr.key, ...dV, ...transSet, source: cTransItem});
         }
       }
 
     } else {
-      result.chart = cData;
+      if (result.message.length < 3) {
+        result.message = 'Invalid parameters';
+      }
     }
-    return res.json({...result, chartId: chart});
+    return res.json({...result, chartId});
   }
 
   @Get('predictive-rule-check/:ruleID/:chartID/:loc?')
@@ -1172,7 +1199,7 @@ export class AstrologicController {
       const geo = isLocationString(loc)? locStringToGeo(loc) : chart.geo;
       const data = await this.fetchPredictions(ruleData, chart, geo);
       if (data.valid) {
-        result.valid = true;
+        result.valid = data.items.length > 0;
         result.matches = data.matches;
         result.items = data.items;
       }

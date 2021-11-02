@@ -138,8 +138,8 @@ export const approxTransitTimes = (geo: GeoPos, alt: number, jd: number, ra: num
   const δ = toRadians(decl);
   const th0 = sidereal.apparent0UT(jd);
   const th1 = sidereal.apparent0UT(jd - 0.5);
-  const transData = rise.approxTimes({lat: geo.lat, lon: geo.lng}, h0, th0, α, δ, th1);
-  const result = { set: 0, rise: 0, mc: 0, ic: 0 };
+  const transData = rise.approxTimes({lat: toRadians(geo.lat), lon: toRadians(geo.lng)}, h0, th0, α, δ, th1);
+  const result = { rise: 0, set: 0, mc: 0, ic: 0 };
   if (transData instanceof Object) {
     const keys = Object.keys(transData);
     if (keys.includes("rise") && keys.includes("set")) {
