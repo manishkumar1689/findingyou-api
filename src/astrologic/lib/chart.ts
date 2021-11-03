@@ -11,7 +11,7 @@ const run = util.promisify(exec);
 
 export const chartData = async (dt = "", loc) => {
   const currDir = __dirname.replace('/dist/astrologic/', '/src/astrologic/');
-  const script_dir = path.resolve(currDir + '/../scripts') + '/';
+  const scriptDir = path.resolve(currDir + '/../scripts') + '/';
   let datetime = '';
   let location = '';
   let result: any = { valid: false };
@@ -24,7 +24,7 @@ export const chartData = async (dt = "", loc) => {
     }
   }
   if (datetime.length > 5 && location.length > 5) {
-    const cmd = [`${script_dir}astro`, datetime, location].join(' ');
+    const cmd = [`${scriptDir}astro`, datetime, location].join(' ');
 
     const out = await run(cmd);
     if (emptyString(out.stderr) && notEmptyString(out.stdout)) {
