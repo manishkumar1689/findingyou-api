@@ -106,7 +106,7 @@ export function apparent (jd = 0) {
  * @param {number} jd - Julian Days
  * @return {number}
  */
-export function apparent0UT (jd) {
+export function apparent0UT(jd: number): number {
   const [j0, f] = base.modf(jd + 0.5)
   const cen = (j0 - 0.5 - base.J2000) / 36525
   const s = base.horner(cen, ...iau82) + f * 1.00273790935 * 86400
@@ -115,9 +115,10 @@ export function apparent0UT (jd) {
   return base.pmod(s + ns, 86400)
 }
 
-export function secsToExactJd(jd = 0, secs = 0) {
+export function secsToExactJd(jd = 0, secs = 0, lng = 0) {
+  const lngSecs = (lng / 15) * 3600;
   const startJd = Math.floor(jd + 0.5) - 0.5;
-  return startJd + (secs / 86400) + 0.5;
+  return startJd + ((secs - lngSecs) / 86400) + 0.5;
 }
 
 export default {

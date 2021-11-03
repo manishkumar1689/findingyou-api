@@ -22,3 +22,15 @@ export const getColTrans = util.promisify(swisseph.swe_cotrans);
 export const getAzalt = util.promisify(swisseph.swe_azalt);
 
 export const getAyanamsa = swisseph.swe_get_ayanamsa_ex_ut;
+
+export const getSidTime = (jd = 0, eps = 0, nut = 0) => {
+  const result = swisseph.swe_sidtime0(jd, eps, nut);
+  return result instanceof Object ? result.siderialTime * 3600 : -1;
+}
+
+export const getDeltaT = (jd = 0): number => {
+  const result = swisseph.swe_deltat(jd);
+  return result instanceof Object ? result.delta : -1;
+}
+
+

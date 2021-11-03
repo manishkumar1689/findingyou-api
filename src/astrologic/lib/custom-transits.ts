@@ -96,7 +96,6 @@ const calcBaseObjectsAltitude = async (key = "", jd = 0, geo: GeoPos, resultMap:
         longitude = (((sunLng + moonLng + 93 + 1 / 3) % 360) + 560 / 3) % 360;
         break;
     }
-
     const declination = calcDeclinationFromLngLatEcl(ra, 0, ecliptic);
     const altitude = await calcAltitudeSE(jd, geo, ra, declination, true);
     return { longitude, rectAscension: ra, latitude: declination, altitude };

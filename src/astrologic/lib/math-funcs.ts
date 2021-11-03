@@ -3,6 +3,8 @@ import { GeoPos } from '../interfaces/geo-pos';
 import { TransitJdSet } from './interfaces';
 import rise from './astronomia/rise';
 import sidereal, { secsToExactJd }  from './astronomia/sidereal';
+import { getDeltaT, getSidTime } from './sweph-async';
+import { nutation } from './astronomia/nutation';
 
 export const matchHouseNum = (lng: number, houses: Array<number>): number => {
   const len = houses.length;
@@ -133,20 +135,25 @@ export const midPointSurface = (coord1: GeoPos, coord2: GeoPos) => {
 };
 
 export const approxTransitTimes = (geo: GeoPos, alt: number, jd: number, ra: number, decl: number): TransitJdSet => {
+  const deltaT = getDeltaT(jd);
+  const nut = nutation(jd + deltaT)[0];
+  const sidTime = getSidTime(jd, 0, nut);
   const h0 = toRadians(alt);
   const α = toRadians(ra);
   const δ = toRadians(decl);
-  const th0 = sidereal.apparent0UT(jd);
-  const th1 = sidereal.apparent0UT(jd - 0.5);
+  //const th0 = sidereal.apparent0UT(jd);
+  const th0 = sidTime;
+  //const th1 = sidereal.apparent0UT(jd - 0.5);
+  const th1 = getSidTime(jd - 0.5, 0, nut);
   const transData = rise.approxTimes({lat: toRadians(geo.lat), lon: toRadians(geo.lng)}, h0, th0, α, δ, th1);
   const result = { rise: 0, set: 0, mc: 0, ic: 0 };
   if (transData instanceof Object) {
     const keys = Object.keys(transData);
     if (keys.includes("rise") && keys.includes("set")) {
-      result.rise = secsToExactJd(jd, transData.rise);
-      result.set = secsToExactJd(jd, transData.set);
-      result.mc = secsToExactJd(jd, transData.mc),
-      result.ic = secsToExactJd(jd, transData.ic);
+      result.rise = secsToExactJd(jd, transData.rise, geo.lng);
+      result.set = secsToExactJd(jd, transData.set, geo.lng);
+      result.mc = secsToExactJd(jd, transData.mc, geo.lng),
+      result.ic = secsToExactJd(jd, transData.ic, geo.lng);
     }
   }
   return result;

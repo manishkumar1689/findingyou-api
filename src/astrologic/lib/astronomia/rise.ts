@@ -86,7 +86,7 @@ function _th0 (Th0, m) {
  * @return {RiseObj} Result units are seconds and are in the range [0,86400)
  * @throws Error
  */
-export function approxTimes (p, h0 = 0, Th0 = 0, α = 0, δ = 0, Th1 = -1): TransitJdSet {
+export function approxTimes(p, h0 = 0, Th0 = 0, α = 0, δ = 0, Th1 = -1): TransitJdSet {
   const H0 = hourAngle(p.lat, h0, δ) * SECS_PER_DEGREE * 180 / Math.PI // in degrees per day === seconds
   // approximate transit, rise, set times.
   // (15.2) p. 102.0

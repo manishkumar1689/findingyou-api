@@ -45,6 +45,8 @@ import {
   calcCoreGrahaPositions,
   calcAllStars,
   calcDeclination,
+  calcAltitudeSE,
+  calcAltitudeSEDay,
 } from './lib/core';
 import { sampleBaseObjects } from './lib/custom-transits';
 import {
@@ -259,7 +261,7 @@ export class AstrologicController {
 
       const toTransitSet = (key, tr = null) => {
         const keys = tr instanceof Object ? Object.keys(tr) : [];
-        const values = ["rise", 'set', 'mc', 'ic'].map(k => {
+        const values = ['rise', 'set', 'mc', 'ic'].map(k => {
           const v = keys.includes(k) ? tr[k] : { jd: 0, lng: 0, after: false };
           return [k, v];
         })
@@ -1128,15 +1130,17 @@ export class AstrologicController {
     const keys = Object.keys(params);
     const dt = keys.includes('dt') ? params.dt : '';
     const loc = keys.includes('loc') ? params.loc : '';
-    const hasLoc = validISODateString(loc);
+    const hasLoc = validLocationParameter(loc);
     const hasChartId = keys.includes('chart') && notEmptyString(params.chart, 16);
     const hasBirthLoc = keys.includes('bloc') && validLocationParameter(params.bloc);
     const hasBirthDt = keys.includes('bdt') && validISODateString(params.bdt);
     const sameLocTime = hasLoc && keys.includes('auto') && smartCastInt(params.auto, 0) > 0;
+    
     const { dtUtc, jd } = matchJdAndDatetime(dt);
     const chartId = hasChartId ? params.chart : '';
     const useGeneratedChart = hasBirthDt && hasBirthLoc && !hasChartId;
     const loadCustom = useGeneratedChart || sameLocTime;
+    
     const result = { valid: false, message: '', dt: dtUtc, jd, birthJd: 0, birthDt: '', geo: { lat: 0, lng: 0 }, birthGeo: { lat: 0, lng: 0 },  items: [], chart: null };
     let cData = null;
     if (hasChartId) {
@@ -1147,13 +1151,17 @@ export class AstrologicController {
     } else if (loadCustom) {
       const cLoc = sameLocTime ? loc : params.bloc;
       const cDt = sameLocTime ? dtUtc : params.btd;
-      cData = await this.fetchCompactChart(cLoc, cDt, 'true_citra', '', true);
+      const geo = locStringToGeo(cLoc);
+      cData = await calcCompactChartData(cDt, geo, 'true_citra', [], 0, true);
       if (!cData) {
         result.message = `Invalid birth location and/or date parameters "bloc" and "bdt"`;
       }
     }
-    if (cData instanceof Model) {
-      const chart = new Chart(cData.toObject());
+    if (cData instanceof Object) {
+      const cObj = cData instanceof Model ? cData.toObject() : cData;
+      const chart = new Chart(cObj);
+      chart.setAyanamshaItemByKey("true_citra");
+      result.birthJd = chart.jd;
       const hasTransitGeo = validLocationParameter(loc);
       const geo = hasTransitGeo ? locStringToGeo(loc) : chart.geo;
       result.chart = chart;
@@ -1162,19 +1170,31 @@ export class AstrologicController {
       if (chart.grahas.length > 0) {
         result.birthGeo = chart.geo;
         result.birthDt = julToISODate(chart.jd).split('.').shift();
-        for (const gr of chart.grahas) {
+        const sourceTransitions = chart.getTransitions();
+        for (const gr of chart.bodies) {
           const dV = await calcDeclination(chart.jd, gr.num);
-          const approxTimes = approxTransitTimes(geo, dV.distance, jd, dV.ra, dV.value);
-          const cTransItem = chart.getTransitions().find(tr => tr.key === gr.key);
+          const altitude = await calcAltitudeSE(jd, chart.geo, gr.longitude, gr.lat, false);
+          const approxTimes = approxTransitTimes(geo, 0, jd, dV.ra, dV.value);
+          const cTransItem = sourceTransitions.find(tr => tr.key === gr.key);
+          const hasCTrans = cTransItem instanceof Object && Object.keys(cTransItem).includes("rise");
+          const sourceEntries = hasCTrans ? Object.entries(cTransItem).filter(entry => ['rise', 'set', 'mc', 'ic'].includes(entry[0])).map(([k, v]) => {
+            const { jd } = v;
+            return [k, { jd, dt: julToISODate(jd) }];
+          }) : [];
+          const source = Object.fromEntries(sourceEntries);
+          const sourceKeys = sourceEntries.map(entry => entry[0]);
+          
           const entries = Object.entries(approxTimes).map(([k, v]) => {
             const item = {
               jd: v,
-              dt: julToISODate(v)
+              dt: julToISODate(v),
+              bJd: sourceKeys.includes(k)? source[k].jd : 0,
+              bDt: sourceKeys.includes(k)? source[k].dt : '',
             }
             return [k, item];
           });
           const transSet = Object.fromEntries(entries);
-          result.items.push({key: gr.key, ...dV, ...transSet, source: cTransItem});
+          result.items.push({key: gr.key, ...dV, ...transSet, altitude, longitude: gr.longitude, tropLng: gr.lng });
         }
       }
 
@@ -1186,6 +1206,20 @@ export class AstrologicController {
     return res.json({...result, chartId});
   }
 
+  @Get('day-transits')
+  async dayTransits(@Res() res, @Query() query) {
+    const params = query instanceof Object ? query : {};
+    const keys = Object.keys(params);
+    const dt = keys.includes('dt') ? params.dt : '';
+    const loc = keys.includes('loc') ? params.loc : '';
+    const hasLoc = validLocationParameter(loc);
+    const lng = keys.includes('lng') ? smartCastInt(params.lng, 0) : 0;
+    const lat = keys.includes('lat') ? smartCastInt(params.lat, 0) : 0;
+    const { dtUtc, jd } = matchJdAndDatetime(dt);
+    const geo = locStringToGeo(loc);
+    const data = hasLoc ? await calcAltitudeSEDay(jd, geo, lng, lat) : [];
+    return res.json({jd, dtUtc, lat, lng, ...data });
+  }
   @Get('predictive-rule-check/:ruleID/:chartID/:loc?')
   async checkRulesetForChart(@Res() res, @Param('ruleID') ruleID, @Param('chartID') chartID, @Param('loc') loc) {
     const ruleData = await this.settingService.getRuleSet(ruleID);

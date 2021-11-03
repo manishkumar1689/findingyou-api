@@ -713,12 +713,11 @@ export const calcAltitudeSE = async (
   geo: GeoPos,
   lng: number,
   lat: number,
-  isEqual = false,
-  distance = null
+  isEqual = false
 ): Promise<number> => {
   const flag = isEqual? swisseph.SE_EQU2HOR : swisseph.SE_ECL2HOR;
   let value = 0;
-  await getAzalt(jd, flag, geo.lng, geo.lat, geo.alt, 0, 0, lng, lat, distance).catch(async result => {
+  await getAzalt(jd, flag, geo.lng, geo.lat, geo.alt, 0, 0, lng, lat).catch(async result => {
     if (result instanceof Object) {
       if (!result.error) {
         if (Object.keys(result).includes("trueAltitude")) {
@@ -729,6 +728,76 @@ export const calcAltitudeSE = async (
   });
   return value;
 };
+
+export class AltitudeSample {
+  mins = 0;
+  value = 0
+  jd = 0;
+
+  constructor(row = null) {
+    if (row instanceof Object) {
+      Object.entries(row).forEach(([k, v]) => {
+        if (typeof v === "number") {
+          switch (k) {
+            case 'mins':
+            case 'value':
+            case 'jd':
+              this[k] = v;
+          }
+        }
+      });
+    }
+  }
+
+  get isoDate() {
+    return jdToDateTime(this.jd);
+  }
+
+  toJSON() {
+    return { 
+      value: this.value,
+      jd: this.jd,
+      dt: this.isoDate,
+    }
+  }
+
+}
+
+export const calcAltitudeSEDay = async (jdStart: number, geo: GeoPos, lng: number, lat: number) => {
+  const minsDay = 1440;
+  const multiplier = 1;
+  const max = minsDay / multiplier;
+  const items = [];
+  let ic = new AltitudeSample();
+  let rise = new AltitudeSample();
+  let set = new AltitudeSample();
+  let mc = new AltitudeSample();
+  let prevValue = 0;
+  let prevMin = 0;
+  let prevJd = 0;
+  for (let i = 0; i <= max; i++) {
+    const n = i * multiplier;
+    const jd = jdStart + (n / minsDay);
+    const value = await calcAltitudeSE(jd, geo, lng, lat);
+    const item = new AltitudeSample({mins: n, value, jd});
+    if (value > mc.value) {
+      mc = item;
+    }
+    if (value < ic.value) {
+      ic = item;
+    }
+    if (prevValue > 0 && value < 0) {
+      set = item;
+    } else if (prevValue < 0 && value > 0) {
+      rise = new AltitudeSample({mins: prevMin, value: prevValue, jd: prevJd});
+    }
+    items.push(item)
+    prevValue = value;
+    prevMin = n;
+    prevJd = jd;
+  }
+  return { rise: rise.toJSON(), set: set.toJSON(), mc: mc.toJSON(), ic: ic.toJSON() };
+}
 
 export const calcBodyJd = async (jd: number, key: string, sideralMode = true): Promise<Graha> => {
   let data: any = {};
