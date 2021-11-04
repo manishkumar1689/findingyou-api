@@ -78,6 +78,8 @@ const subtractCycleInclusive = (one, two, radix) => {
   return ((one - 1 - two + radix) % radix) + 1;
 }
 
+const minsDay = 1440;
+
 /*
 @param sunLng:number
 @param moonLng:number
@@ -753,7 +755,7 @@ export class AltitudeSample {
     return jdToDateTime(this.jd);
   }
 
-  toJSON() {
+  toObject() {
     return { 
       value: this.value,
       jd: this.jd,
@@ -763,9 +765,41 @@ export class AltitudeSample {
 
 }
 
-export const calcAltitudeSEDay = async (jdStart: number, geo: GeoPos, lng: number, lat: number) => {
-  const minsDay = 1440;
-  const multiplier = 1;
+const calcMidPoint = (first: AltitudeSample, second: AltitudeSample) => {
+	const valueDiff = second.value - first.value;
+	const progress = second.value / valueDiff;
+	const jdDiff = second.jd - first.jd;
+	return second.jd - (jdDiff * progress);
+}
+
+const calcMidSample = (item: AltitudeSample, prevMin = 0, prevValue = 0, prevJd = 0): AltitudeSample => {
+  const prevSample = new AltitudeSample({mins: prevMin, value: prevValue, jd: prevJd});
+  const midPoint = calcMidPoint(prevSample, item);
+  return new AltitudeSample({mins: prevMin, value: 0, jd: midPoint});
+}
+
+const recalcMinMaxTransitSample = async (sample: AltitudeSample, geo: GeoPos, lng = 0, lat = 0, maxMode = true, multiplier = 5) => {
+  const sampleRate = 0.25;
+  const numSubSamples = multiplier * 2 * (1 / sampleRate);
+  
+  const sampleStartJd = sample.jd - ((numSubSamples / (2 / sampleRate)) / minsDay );
+  const sampleStartMin = sample.mins - (numSubSamples / (2 / sampleRate));
+  //console.log({numSubSamples, mcJd: sample.jd, sampleStartJd, mcMins: mc.mins, sampleStartMin })
+  for (let i = 0; i <= numSubSamples; i++) {
+    const mins = sampleStartMin + (i * sampleRate);
+    const jd = sampleStartJd + ((i * sampleRate) / minsDay);
+    const value = await calcAltitudeSE(jd, geo, lng, lat);
+    const item = new AltitudeSample({mins, value, jd});
+    if (maxMode && item.value > sample.value) {
+      sample = item;
+    } else if (!maxMode && item.value < sample.value) {
+      sample = item;
+    }
+  }
+  return sample;
+}
+
+export const calcAltitudeSEDay = async (jdStart: number, geo: GeoPos, lng: number, lat: number, multiplier = 5) => {
   const max = minsDay / multiplier;
   const items = [];
   let ic = new AltitudeSample();
@@ -787,16 +821,25 @@ export const calcAltitudeSEDay = async (jdStart: number, geo: GeoPos, lng: numbe
       ic = item;
     }
     if (prevValue > 0 && value < 0) {
-      set = item;
+      set = calcMidSample(item, prevMin, prevValue, prevJd);
     } else if (prevValue < 0 && value > 0) {
-      rise = new AltitudeSample({mins: prevMin, value: prevValue, jd: prevJd});
+      rise = calcMidSample(item, prevMin, prevValue, prevJd);
     }
     items.push(item)
     prevValue = value;
     prevMin = n;
     prevJd = jd;
   }
-  return { rise: rise.toJSON(), set: set.toJSON(), mc: mc.toJSON(), ic: ic.toJSON() };
+  if (multiplier > 1) {
+    if (mc.jd > 0) {
+      mc = await recalcMinMaxTransitSample(mc, geo, lng, lat, true, multiplier);
+    } 
+    if (ic.jd > 0) {
+      ic = await recalcMinMaxTransitSample(ic, geo, lng, lat, false, multiplier);
+    }
+    
+  }
+  return { rise: rise.toObject(), set: set.toObject(), mc: mc.toObject(), ic: ic.toObject() };
 }
 
 export const calcBodyJd = async (jd: number, key: string, sideralMode = true): Promise<Graha> => {
