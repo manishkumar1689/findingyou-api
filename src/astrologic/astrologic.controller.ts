@@ -46,7 +46,7 @@ import {
   calcAllStars,
   calcDeclination,
   calcAltitudeSE,
-  calcAltitudeSEDay,
+  calcTransposedObjectTransitionsSimple,
 } from './lib/core';
 import { sampleBaseObjects } from './lib/custom-transits';
 import {
@@ -1217,7 +1217,7 @@ export class AstrologicController {
     const lat = keys.includes('lat') ? smartCastInt(params.lat, 0) : 0;
     const { dtUtc, jd } = matchJdAndDatetime(dt);
     const geo = locStringToGeo(loc);
-    const data = hasLoc ? await calcAltitudeSEDay(jd, geo, lng, lat) : [];
+    const data = hasLoc ? await calcTransposedObjectTransitionsSimple(jd, geo, lng, lat) : [];
     return res.json({jd, dtUtc, lat, lng, ...data });
   }
   @Get('predictive-rule-check/:ruleID/:chartID/:loc?')

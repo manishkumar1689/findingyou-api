@@ -799,7 +799,7 @@ const recalcMinMaxTransitSample = async (sample: AltitudeSample, geo: GeoPos, ln
   return sample;
 }
 
-export const calcAltitudeSEDay = async (jdStart: number, geo: GeoPos, lng: number, lat: number, multiplier = 5) => {
+export const calcTransposedObjectTransitions = async (jdStart: number, geo: GeoPos, lng: number, lat: number, multiplier = 5) => {
   const max = minsDay / multiplier;
   const items = [];
   let ic = new AltitudeSample();
@@ -839,6 +839,11 @@ export const calcAltitudeSEDay = async (jdStart: number, geo: GeoPos, lng: numbe
     }
     
   }
+  return { rise, set, mc, ic };
+}
+
+export const calcTransposedObjectTransitionsSimple = async (jdStart: number, geo: GeoPos, lng: number, lat: number, multiplier = 5) => {
+  const { rise, set, mc, ic } = await calcTransposedObjectTransitions(jdStart, geo, lng, lat, multiplier);
   return { rise: rise.toObject(), set: set.toObject(), mc: mc.toObject(), ic: ic.toObject() };
 }
 
