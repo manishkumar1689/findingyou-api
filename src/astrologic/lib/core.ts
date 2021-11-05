@@ -149,6 +149,10 @@ export const calcGrahaPos = async (jd = 0, num = 0, flag = 0) => {
   return data;
 }
 
+export const calcGrahaPosTopo = async (jd = 0, num = 0) => {
+  return await calcGrahaPos(jd, num, swisseph.SEFLG_TOPOCTR);
+}
+
 export const fetchHouseDataJd = async (
   jd,
   geo,
@@ -708,13 +712,15 @@ export const calcGrahaLng = async (jd = 0, num = 0, flag = 0) => {
   return lng;
 }
 
-export const calcBodyJd = async (jd: number, key: string, sideralMode = true): Promise<Graha> => {
+export const calcBodyJd = async (jd: number, key: string, sideralMode = true, topoMode = false): Promise<Graha> => {
   let data: any = {};
   const body = grahaValues.find(b => b.key === key);
   if (body) {
+    const topoFlag = topoMode ? swisseph.SEFLG_TOPOCTR : 0;
+    // sidFlag = topoMode ? 0: swisseph.SEFLG_SWIEPH;
     const gFlag = sideralMode
-      ? swisseph.SEFLG_SIDEREAL
-      : swisseph.SEFLG_SWIEPH + swisseph.SEFLG_SPEED;
+      ? swisseph.SEFLG_SIDEREAL + topoFlag
+      : swisseph.SEFLG_SWIEPH | swisseph.SEFLG_SPEED | topoFlag;
     await calcUtAsync(jd, body.num, gFlag).catch(result => {
       if (result instanceof Object) {
         result.valid = !result.error;

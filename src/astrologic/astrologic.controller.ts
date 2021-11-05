@@ -1218,21 +1218,24 @@ export class AstrologicController {
     const planetNum = hasGrahaKey ? matchPlanetNum(grahaKey) : -1;
     const fromCurrentGraha = planetNum >= 0;
     const hasLoc = validLocationParameter(loc);
+    const topoMode = keys.includes('topo') ? smartCastInt(params.topo) === 1 : false;
     const { dtUtc, jd } = matchJdAndDatetime(dt);
     const geo = locStringToGeo(loc);
     let seTransits = [];
     let hasLngLat = false;
     let lng = 0;
     let lat = 0;
+    let lngSpeed = 0;
     if (fromCurrentGraha) {
       const result = await calcTransitionJd(jd, geo, planetNum, true, true, true);
       const adjustMode = keys.includes('adjust') ? params.adjust : '';
+      const useRefSpeed = adjustMode === 'spd';
       if (result.valid) {
         seTransits = ['rise', 'set', 'mc', 'ic'].map(k => {
           const item = result[k];
           return { type: k, lng: item.lng, jd: item.jd, dt: julToISODate(item. jd)};
         })
-        const body = await calcBodyJd(jd, grahaKey, false);
+        const body = await calcBodyJd(jd, grahaKey, false, topoMode);
         switch (adjustMode) {
           case 'rise':
             lng = result.rise.lng;
@@ -1248,20 +1251,24 @@ export class AstrologicController {
         }
         
         lat = body.lat;
+        if (useRefSpeed) {
+          lngSpeed = body.lngSpeed;
+        }
         hasLngLat = true;
       }
     }
     if (!hasLngLat) {
       lng = keys.includes('lng') ? smartCastInt(params.lng, 0) : 0;
       lat = keys.includes('lat') ? smartCastInt(params.lat, 0) : 0;
+      lngSpeed = keys.includes('speed') ? smartCastInt(params.lat, 0) : 0;
     }
-    const mins = keys.includes('mins') ? smartCastInt(params.mins, 1) : 5;
-    const multiplier = mins > 0 ? mins : 5;
+    const mins = keys.includes('mins') ? smartCastInt(params.mins, 1) : 0;
+    const multiplier = mins > 0 ? mins : grahaKey === 'mo'? 1 : 5;
     const filterStr = keys.includes('types') ? notEmptyString(params.types, 1) ? params.types : '' : '';
     const filterKeys = filterStr.length > 1 ? filterStr.split(',') : [];
-    
-    const data = hasLoc ? await calcTransposedObjectTransitionsSimple(jd, geo, lng, lat, multiplier, filterKeys) : [];
-    return res.json({jd, dtUtc, lat, lng, grahaKey, seTransits, ...data });
+    const sampleKey = grahaKey === 'mo' ? grahaKey : '';
+    const data = hasLoc ? await calcTransposedObjectTransitionsSimple(jd, geo, lng, lat, lngSpeed, multiplier, filterKeys, sampleKey) : [];
+    return res.json({jd, dtUtc, lat, lng, lngSpeed, grahaKey, multiplier, seTransits, ...data });
   }
   
   @Get('predictive-rule-check/:ruleID/:chartID/:loc?')

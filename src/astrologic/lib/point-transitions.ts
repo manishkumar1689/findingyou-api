@@ -1,5 +1,6 @@
 import * as swisseph from 'swisseph';
 import { GeoPos } from "../interfaces/geo-pos";
+import { calcBodyJd } from './core';
 import { jdToDateTime } from './date-funcs';
 import { getAzalt } from './sweph-async';
 
@@ -14,6 +15,7 @@ export const calcAltitudeSE = async (
 ): Promise<number> => {
   const flag = isEqual? swisseph.SE_EQU2HOR : swisseph.SE_ECL2HOR;
   let value = 0;
+
   await getAzalt(jd, flag, geo.lng, geo.lat, geo.alt, 0, 0, lng, lat).catch(async result => {
     if (result instanceof Object) {
       if (!result.error) {
@@ -90,7 +92,6 @@ const recalcMinMaxTransitSample = async (sample: AltitudeSample, geo: GeoPos, ln
   
   const sampleStartJd = sample.jd - ((numSubSamples / (2 / sampleRate)) / minsDay );
   const sampleStartMin = sample.mins - (numSubSamples / (2 / sampleRate));
-  //console.log({numSubSamples, mcJd: sample.jd, sampleStartJd, mcMins: mc.mins, sampleStartMin })
   const type = maxMode ? 'mc' : 'ic';
   for (let i = 0; i <= numSubSamples; i++) {
     const mins = sampleStartMin + (i * sampleRate);
@@ -106,7 +107,7 @@ const recalcMinMaxTransitSample = async (sample: AltitudeSample, geo: GeoPos, ln
   return sample;
 }
 
-export const calcTransposedObjectTransitions = async (jdStart: number, geo: GeoPos, lng: number, lat: number, multiplier = 5, filterKeys: string[] = []) => {
+export const calcTransposedObjectTransitions = async (jdStart: number, geo: GeoPos, lng: number, lat: number, lngSpeed = 0, multiplier = 5, filterKeys: string[] = [], sampleKey = '') => {
   const max = minsDay / multiplier;
   const items = [];
   const filterKeyItems = filterKeys.length > 0;
@@ -121,10 +122,21 @@ export const calcTransposedObjectTransitions = async (jdStart: number, geo: GeoP
   let prevValue = 0;
   let prevMin = 0;
   let prevJd = 0;
+  const resampleSpeed = sampleKey === 'mo' && lngSpeed !== 0;
   for (let i = 0; i <= max; i++) {
     const n = i * multiplier;
-    const jd = jdStart + (n / minsDay);
-    const value = await calcAltitudeSE(jd, geo, lng, lat);
+    const dayFrac = (n / minsDay);
+    const jd = jdStart + dayFrac;
+    let sampleSpd = lngSpeed;
+    let latSpd = 0;
+    if (resampleSpeed) {
+      const sampleBody = await calcBodyJd(jd, sampleKey, false, true);
+      sampleSpd = sampleBody.lngSpeed;
+      latSpd = sampleBody.latSpeed;
+    }
+    const adjustedLng = lngSpeed !== 0 ? lng + (sampleSpd * dayFrac ) : lng;
+    const adjustedLat = latSpd !== 0 ? lat + (latSpd * dayFrac ) : lat;
+    const value = await calcAltitudeSE(jd, geo, adjustedLng, adjustedLat);
     const item = new AltitudeSample({mins: n, value, jd});
     if (matchMc && value > mc.value) {
       mc = item.withType('mc');
@@ -158,7 +170,7 @@ export const calcTransposedObjectTransitions = async (jdStart: number, geo: GeoP
   return [rise, set, mc, ic].filter(item => item.jd > 0);
 }
 
-export const calcTransposedObjectTransitionsSimple = async (jdStart: number, geo: GeoPos, lng: number, lat: number, multiplier = 5, filterKeys: string[] = []) => {
-  const items = await calcTransposedObjectTransitions(jdStart, geo, lng, lat, multiplier, filterKeys);
+export const calcTransposedObjectTransitionsSimple = async (jdStart: number, geo: GeoPos, lng: number, lat: number, lngSpeed = 0, multiplier = 5, filterKeys: string[] = [], sampleKey = '') => {
+  const items = await calcTransposedObjectTransitions(jdStart, geo, lng, lat, lngSpeed, multiplier, filterKeys, sampleKey);
   return items.map(item => item.toObject());
 }
