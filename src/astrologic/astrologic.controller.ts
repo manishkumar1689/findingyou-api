@@ -45,9 +45,10 @@ import {
   calcCoreGrahaPositions,
   calcAllStars,
   calcDeclination,
-  calcAltitudeSE,
-  calcTransposedObjectTransitionsSimple,
 } from './lib/core';
+import { 
+  calcAltitudeSE,
+  calcTransposedObjectTransitionsSimple, } from './lib/point-transitions';
 import { sampleBaseObjects } from './lib/custom-transits';
 import {
   calcJulianDate,
@@ -1628,6 +1629,7 @@ export class AstrologicController {
       k1,
       k2,
       orbDouble,
+      maxInt
     );
     return res.status(200).send({
       valid: data.length > 0,

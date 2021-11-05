@@ -534,6 +534,7 @@ export class AstrologicService {
     k1: string,
     k2: string,
     orb = 1,
+    max = 0
   ) {
     const { steps, outFieldProject, conditions } = addOrbRangeMatchStep(
       aspectKey,
@@ -545,6 +546,9 @@ export class AstrologicService {
       $project: outFieldProject,
     };
     const comboSteps = [...steps, projectionStep, ...conditions];
+    if (max > 0) {
+      comboSteps.push({ $limit: max });
+    }
     //const c = conditions.find(cond => Object.keys(cond).includes('$match'));
     return await this.pairedChartModel.aggregate(comboSteps);
   }
