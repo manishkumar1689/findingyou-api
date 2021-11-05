@@ -1,0 +1,36 @@
+import { relativeAngle } from "src/astrologic/lib/core";
+
+const tithiValues = [
+    { num: 1, tithi: "tithi__1", lord: "su", div: "tithi__type_1" },
+    { num: 2, tithi: "tithi__2", lord: "mo", div: "tithi__type_2" },
+    { num: 3, tithi: "tithi__3", lord: "ma", div: "tithi__type_3" },
+    { num: 4, tithi: "tithi__4", lord: "me", div: "tithi__type_4" },
+    { num: 5, tithi: "tithi__5", lord: "ju", div: "tithi__type_5" },
+    { num: 6, tithi: "tithi__6", lord: "ve", div: "tithi__type_1" },
+    { num: 7, tithi: "tithi__7", lord: "sa", div: "tithi__type_2" },
+    { num: 8, tithi: "tithi__8", lord: "ra", div: "tithi__type_3" },
+    { num: 9, tithi: "tithi__9", lord: "su", div: "tithi__type_4" },
+    { num: 10, tithi: "tithi__10", lord: "mo", div: "tithi__type_5" },
+    { num: 11, tithi: "tithi__11", lord: "ma", div: "tithi__type_1" },
+    { num: 12, tithi: "tithi__12", lord: "me", div: "tithi__type_2" },
+    { num: 13, tithi: "tithi__13", lord: "ju", div: "tithi__type_3" },
+    { num: 14, tithi: "tithi__14", lord: "ve", div: "tithi__type_4" },
+    { num: 15, tithi: "tithi__15", lord: "sa", div: "tithi__type_5" },
+    { num: 16, tithi: "tithi__16", lord: "su", div: "tithi__type_1" },
+    { num: 17, tithi: "tithi__17", lord: "mo", div: "tithi__type_2" },
+    { num: 18, tithi: "tithi__18", lord: "ma", div: "tithi__type_3" },
+    { num: 19, tithi: "tithi__19", lord: "me", div: "tithi__type_4" },
+    { num: 20, tithi: "tithi__20", lord: "ju", div: "tithi__type_5" },
+    { num: 21, tithi: "tithi__21", lord: "ve", div: "tithi__type_1" },
+    { num: 22, tithi: "tithi__22", lord: "sa", div: "tithi__type_2" },
+    { num: 23, tithi: "tithi__23", lord: "ra", div: "tithi__type_3" },
+    { num: 24, tithi: "tithi__24", lord: "su", div: "tithi__type_4" },
+    { num: 25, tithi: "tithi__25", lord: "mo", div: "tithi__type_5" },
+    { num: 26, tithi: "tithi__26", lord: "ma", div: "tithi__type_1" },
+    { num: 27, tithi: "tithi__27", lord: "me", div: "tithi__type_2" },
+    { num: 28, tithi: "tithi__28", lord: "ju", div: "tithi__type_3" },
+    { num: 29, tithi: "tithi__29", lord: "ve", div: "tithi__type_4" },
+    { num: 30, tithi: "tithi__30", lord: "ra", div: "tithi__type_5" },
+];
+
+export default tithiValues;
