@@ -1,6 +1,7 @@
 import * as swisseph from 'swisseph';
 import { GeoPos } from '../interfaces/geo-pos';
-import { calcAltitudeSE, calcGrahaPos, fetchHouseDataJd } from './core';
+import { calcGrahaPos, fetchHouseDataJd } from './core';
+import { calcAltitudeSE} from './point-transitions';
 import { julToISODate } from './date-funcs';
 import { calcDeclinationFromLngLatEcl } from './math-funcs';
 
