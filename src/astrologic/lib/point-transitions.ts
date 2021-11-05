@@ -1,12 +1,9 @@
-import { isNumeric } from 'src/lib/validators';
 import * as swisseph from 'swisseph';
 import { GeoPos } from "../interfaces/geo-pos";
 import { jdToDateTime } from './date-funcs';
-import { calcUtAsync, getAzalt } from './sweph-async';
+import { getAzalt } from './sweph-async';
 
 const minsDay = 1440;
-
-
 
 export const calcAltitudeSE = async (
   jd: number,
