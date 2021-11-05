@@ -246,7 +246,7 @@ export const calcTransitionPointJd = async (jd = 0, gKey = '', geo: GeoPos, type
 export const calcTransition = async (
   datetime,
   geo,
-  planetNum,
+  planetNum = 0,
   adjustRise = false,
 ) => {
   const jd = calcJulDate(datetime);

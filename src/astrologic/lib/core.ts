@@ -732,11 +732,13 @@ export const calcAltitudeSE = async (
 };
 
 export class AltitudeSample {
+
+  type = '';
   mins = 0;
   value = 0
   jd = 0;
 
-  constructor(row = null) {
+  constructor(row = null, type = '') {
     if (row instanceof Object) {
       Object.entries(row).forEach(([k, v]) => {
         if (typeof v === "number") {
@@ -749,14 +751,23 @@ export class AltitudeSample {
         }
       });
     }
+    if (type.length > 0) {
+      this.type = type;
+    }
+  }
+
+  withType(type = '') {
+    this.type = type;
+    return this;
   }
 
   get isoDate() {
-    return jdToDateTime(this.jd);
+    return this.jd > 0 ? jdToDateTime(this.jd) : '';
   }
 
   toObject() {
     return { 
+      type: this.type,
       value: this.value,
       jd: this.jd,
       dt: this.isoDate,
@@ -772,10 +783,10 @@ const calcMidPoint = (first: AltitudeSample, second: AltitudeSample) => {
 	return second.jd - (jdDiff * progress);
 }
 
-const calcMidSample = (item: AltitudeSample, prevMin = 0, prevValue = 0, prevJd = 0): AltitudeSample => {
+const calcMidSample = (item: AltitudeSample, prevMin = 0, prevValue = 0, prevJd = 0, type = ''): AltitudeSample => {
   const prevSample = new AltitudeSample({mins: prevMin, value: prevValue, jd: prevJd});
   const midPoint = calcMidPoint(prevSample, item);
-  return new AltitudeSample({mins: prevMin, value: 0, jd: midPoint});
+  return new AltitudeSample({mins: prevMin, value: 0, jd: midPoint}, type);
 }
 
 const recalcMinMaxTransitSample = async (sample: AltitudeSample, geo: GeoPos, lng = 0, lat = 0, maxMode = true, multiplier = 5) => {
@@ -785,11 +796,12 @@ const recalcMinMaxTransitSample = async (sample: AltitudeSample, geo: GeoPos, ln
   const sampleStartJd = sample.jd - ((numSubSamples / (2 / sampleRate)) / minsDay );
   const sampleStartMin = sample.mins - (numSubSamples / (2 / sampleRate));
   //console.log({numSubSamples, mcJd: sample.jd, sampleStartJd, mcMins: mc.mins, sampleStartMin })
+  const type = maxMode ? 'mc' : 'ic';
   for (let i = 0; i <= numSubSamples; i++) {
     const mins = sampleStartMin + (i * sampleRate);
     const jd = sampleStartJd + ((i * sampleRate) / minsDay);
     const value = await calcAltitudeSE(jd, geo, lng, lat);
-    const item = new AltitudeSample({mins, value, jd});
+    const item = new AltitudeSample({mins, value, jd}, type);
     if (maxMode && item.value > sample.value) {
       sample = item;
     } else if (!maxMode && item.value < sample.value) {
@@ -799,13 +811,18 @@ const recalcMinMaxTransitSample = async (sample: AltitudeSample, geo: GeoPos, ln
   return sample;
 }
 
-export const calcTransposedObjectTransitions = async (jdStart: number, geo: GeoPos, lng: number, lat: number, multiplier = 5) => {
+export const calcTransposedObjectTransitions = async (jdStart: number, geo: GeoPos, lng: number, lat: number, multiplier = 5, filterKeys: string[] = []) => {
   const max = minsDay / multiplier;
   const items = [];
-  let ic = new AltitudeSample();
-  let rise = new AltitudeSample();
-  let set = new AltitudeSample();
-  let mc = new AltitudeSample();
+  const filterKeyItems = filterKeys.length > 0;
+  const matchSet = filterKeyItems? filterKeys.includes('set') : true;
+  const matchRise = filterKeyItems? filterKeys.includes('rise') : true;
+  const matchMc = filterKeyItems? filterKeys.includes('mc') : true;
+  const matchIc = filterKeyItems? filterKeys.includes('ic') : true;
+  let ic = new AltitudeSample(null, 'ic');
+  let rise = new AltitudeSample(null, 'rise');
+  let set = new AltitudeSample(null, 'set');
+  let mc = new AltitudeSample(null, 'mc');
   let prevValue = 0;
   let prevMin = 0;
   let prevJd = 0;
@@ -814,37 +831,41 @@ export const calcTransposedObjectTransitions = async (jdStart: number, geo: GeoP
     const jd = jdStart + (n / minsDay);
     const value = await calcAltitudeSE(jd, geo, lng, lat);
     const item = new AltitudeSample({mins: n, value, jd});
-    if (value > mc.value) {
-      mc = item;
+    if (matchMc && value > mc.value) {
+      mc = item.withType('mc');
     }
-    if (value < ic.value) {
-      ic = item;
+    if (matchIc && value < ic.value) {
+      ic = item.withType('ic');
     }
-    if (prevValue > 0 && value < 0) {
-      set = calcMidSample(item, prevMin, prevValue, prevJd);
-    } else if (prevValue < 0 && value > 0) {
-      rise = calcMidSample(item, prevMin, prevValue, prevJd);
+    if (matchRise && prevValue < 0 && value > 0) {
+      rise = calcMidSample(item, prevMin, prevValue, prevJd, 'rise');
+    } else if (matchSet && prevValue > 0 && value < 0) {
+      set = calcMidSample(item, prevMin, prevValue, prevJd, 'set');
+    }
+    if (!matchMc && !matchIc) {
+      if (!matchRise && matchSet && set.jd > 0) {
+        break;
+      } else if (!matchSet && matchRise && rise.jd > 0) {
+        break;
+      }
     }
     items.push(item)
     prevValue = value;
     prevMin = n;
     prevJd = jd;
   }
-  if (multiplier > 1) {
-    if (mc.jd > 0) {
-      mc = await recalcMinMaxTransitSample(mc, geo, lng, lat, true, multiplier);
-    } 
-    if (ic.jd > 0) {
-      ic = await recalcMinMaxTransitSample(ic, geo, lng, lat, false, multiplier);
-    }
-    
+  if (matchMc && mc.jd > 0) {
+    mc = await recalcMinMaxTransitSample(mc, geo, lng, lat, true, multiplier);
+  } 
+  if (matchIc && ic.jd > 0) {
+    ic = await recalcMinMaxTransitSample(ic, geo, lng, lat, false, multiplier);
   }
-  return { rise, set, mc, ic };
+  return [rise, set, mc, ic].filter(item => item.jd > 0);
 }
 
-export const calcTransposedObjectTransitionsSimple = async (jdStart: number, geo: GeoPos, lng: number, lat: number, multiplier = 5) => {
-  const { rise, set, mc, ic } = await calcTransposedObjectTransitions(jdStart, geo, lng, lat, multiplier);
-  return { rise: rise.toObject(), set: set.toObject(), mc: mc.toObject(), ic: ic.toObject() };
+export const calcTransposedObjectTransitionsSimple = async (jdStart: number, geo: GeoPos, lng: number, lat: number, multiplier = 5, filterKeys: string[] = []) => {
+  const items = await calcTransposedObjectTransitions(jdStart, geo, lng, lat, multiplier, filterKeys);
+  return items.map(item => item.toObject());
 }
 
 export const calcBodyJd = async (jd: number, key: string, sideralMode = true): Promise<Graha> => {

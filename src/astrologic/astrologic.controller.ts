@@ -66,7 +66,7 @@ import {
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
 import { calcGrahaSignTimeline, calcRetroGrade, calcStation, matchNextTransitAtLng, matchNextTransitAtLngRanges, RangeSet } from './lib/astro-motion';
-import { toIndianTime, calcTransition, calcSunTransJd, TransitionData } from './lib/transitions';
+import { toIndianTime, calcTransition, calcSunTransJd, TransitionData, calcTransitionJd } from './lib/transitions';
 import { readEpheFiles } from './lib/files';
 import { ChartInputDTO } from './dto/chart-input.dto';
 import {
@@ -1212,14 +1212,57 @@ export class AstrologicController {
     const keys = Object.keys(params);
     const dt = keys.includes('dt') ? params.dt : '';
     const loc = keys.includes('loc') ? params.loc : '';
+    const grahaKey = keys.includes('gr') ? params.gr : '';
+    const hasGrahaKey = grahaKey.length === 2;
+    const planetNum = hasGrahaKey ? matchPlanetNum(grahaKey) : -1;
+    const fromCurrentGraha = planetNum >= 0;
     const hasLoc = validLocationParameter(loc);
-    const lng = keys.includes('lng') ? smartCastInt(params.lng, 0) : 0;
-    const lat = keys.includes('lat') ? smartCastInt(params.lat, 0) : 0;
     const { dtUtc, jd } = matchJdAndDatetime(dt);
     const geo = locStringToGeo(loc);
-    const data = hasLoc ? await calcTransposedObjectTransitionsSimple(jd, geo, lng, lat) : [];
-    return res.json({jd, dtUtc, lat, lng, ...data });
+    let seTransits = [];
+    let hasLngLat = false;
+    let lng = 0;
+    let lat = 0;
+    if (fromCurrentGraha) {
+      const result = await calcTransitionJd(jd, geo, planetNum, true, true, true);
+      const adjustMode = keys.includes('adjust') ? params.adjust : '';
+      if (result.valid) {
+        seTransits = ['rise', 'set', 'mc', 'ic'].map(k => {
+          const item = result[k];
+          return { type: k, lng: item.lng, jd: item.jd, dt: julToISODate(item. jd)};
+        })
+        const body = await calcBodyJd(jd, grahaKey, false);
+        switch (adjustMode) {
+          case 'rise':
+            lng = result.rise.lng;
+            break;
+          case 'set':
+            lng = result.set.lng;
+          case 'mc':
+            lng = result.mc.lng;
+            break;
+          default:
+            lng = body.lng;
+            break;
+        }
+        
+        lat = body.lat;
+        hasLngLat = true;
+      }
+    }
+    if (!hasLngLat) {
+      lng = keys.includes('lng') ? smartCastInt(params.lng, 0) : 0;
+      lat = keys.includes('lat') ? smartCastInt(params.lat, 0) : 0;
+    }
+    const mins = keys.includes('mins') ? smartCastInt(params.mins, 1) : 5;
+    const multiplier = mins > 0 ? mins : 5;
+    const filterStr = keys.includes('types') ? notEmptyString(params.types, 1) ? params.types : '' : '';
+    const filterKeys = filterStr.length > 1 ? filterStr.split(',') : [];
+    
+    const data = hasLoc ? await calcTransposedObjectTransitionsSimple(jd, geo, lng, lat, multiplier, filterKeys) : [];
+    return res.json({jd, dtUtc, lat, lng, grahaKey, seTransits, ...data });
   }
+  
   @Get('predictive-rule-check/:ruleID/:chartID/:loc?')
   async checkRulesetForChart(@Res() res, @Param('ruleID') ruleID, @Param('chartID') chartID, @Param('loc') loc) {
     const ruleData = await this.settingService.getRuleSet(ruleID);
