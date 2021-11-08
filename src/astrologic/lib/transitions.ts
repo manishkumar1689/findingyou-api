@@ -9,6 +9,7 @@ import { GeoLoc } from './models/geo-loc';
 import { calcGrahaLng } from './core';
 import { GeoPos } from '../interfaces/geo-pos';
 import { matchPlanetNum } from './settings/graha-values';
+import { calcTransposedGrahaTransition, GrahaPos } from './point-transitions';
 
 export interface TimeSet {
   jd: number;
@@ -241,6 +242,24 @@ export const calcTransitionPointJd = async (jd = 0, gKey = '', geo: GeoPos, type
     temperature: 10,
   } as TransitionInput;
   return await matchTransData(inData, num, key, false, jd);
+}
+
+export const calcTransposedTransitionPointJd = async (jd = 0, gKey = '', geo: GeoPos, type = 'rise', gPositions: GrahaPos[] = []): Promise<TimeSet> => {
+  const grahaPos = gPositions.find(gp => gp.key === gKey);
+  const timeSet = { jd: 0, lng: grahaPos.lng, dt: '', after: false }
+  if (grahaPos instanceof Object) {
+    const result = await calcTransposedGrahaTransition(jd, geo, grahaPos, type)
+    if (result instanceof Object) {
+      if (result instanceof Array) {
+        const trResult = result.find(tr => tr.type === type);
+        if (trResult) {
+          timeSet.jd = trResult.jd;
+          timeSet.dt = trResult.isoDate;
+        }
+      }
+    }
+  }
+  return timeSet;
 }
 
 export const calcTransition = async (

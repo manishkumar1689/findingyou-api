@@ -717,9 +717,8 @@ export const calcBodyJd = async (jd: number, key: string, sideralMode = true, to
   const body = grahaValues.find(b => b.key === key);
   if (body) {
     const topoFlag = topoMode ? swisseph.SEFLG_TOPOCTR : 0;
-    // sidFlag = topoMode ? 0: swisseph.SEFLG_SWIEPH;
     const gFlag = sideralMode
-      ? swisseph.SEFLG_SIDEREAL + topoFlag
+      ? swisseph.SEFLG_SIDEREAL | topoFlag
       : swisseph.SEFLG_SWIEPH | swisseph.SEFLG_SPEED | topoFlag;
     await calcUtAsync(jd, body.num, gFlag).catch(result => {
       if (result instanceof Object) {

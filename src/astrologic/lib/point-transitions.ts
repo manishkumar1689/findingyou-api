@@ -1,10 +1,19 @@
+import { isNumeric } from 'src/lib/validators';
 import * as swisseph from 'swisseph';
 import { GeoPos } from "../interfaces/geo-pos";
 import { calcBodyJd } from './core';
 import { jdToDateTime } from './date-funcs';
+import { Chart } from './models/chart';
 import { getAzalt } from './sweph-async';
 
 const minsDay = 1440;
+
+export interface GrahaPos {
+  key: string;
+  lng: number;
+  lat: number;
+  lngSpeed?: number;
+}
 
 export const calcAltitudeSE = async (
   jd: number,
@@ -122,6 +131,7 @@ export const calcTransposedObjectTransitions = async (jdStart: number, geo: GeoP
   let prevValue = 0;
   let prevMin = 0;
   let prevJd = 0;
+  // resample the longitude and latitude speed for the moon only
   const resampleSpeed = sampleKey === 'mo' && lngSpeed !== 0;
   for (let i = 0; i <= max; i++) {
     const n = i * multiplier;
@@ -173,4 +183,18 @@ export const calcTransposedObjectTransitions = async (jdStart: number, geo: GeoP
 export const calcTransposedObjectTransitionsSimple = async (jdStart: number, geo: GeoPos, lng: number, lat: number, lngSpeed = 0, multiplier = 5, filterKeys: string[] = [], sampleKey = '') => {
   const items = await calcTransposedObjectTransitions(jdStart, geo, lng, lat, lngSpeed, multiplier, filterKeys, sampleKey);
   return items.map(item => item.toObject());
+}
+
+export const calcTransposedGrahaTransition = async (jdStart = 0, geo: GeoPos, grahaPos: GrahaPos, transType = '', multiplier = 5) => {
+  const { key, lng, lat, lngSpeed } = grahaPos;
+  const refLngSpeed = isNumeric(lngSpeed) ? lngSpeed : 0;
+  const filterKeys = ['ic', 'mc', 'rise', 'set'].includes(transType) ? [transType] : [];
+  return await calcTransposedObjectTransitions(jdStart, geo, lng, lat, refLngSpeed, multiplier, filterKeys, key);
+}
+
+export const buildGrahaPositionsFromChart = (grahaKeys: string[] = [], chart: Chart): GrahaPos[] => {
+  return chart.grahas.filter(bg => bg instanceof Object && grahaKeys.includes(bg.key)).map(baseGraha => {
+    const { key, lat, lng, lngSpeed } = baseGraha;
+    return { key, lat, lng, lngSpeed };
+  })
 }

@@ -10,6 +10,7 @@ import {
   Delete,
   Param,
 } from '@nestjs/common';
+import { Model } from 'mongoose';
 import { AstrologicService } from './astrologic.service';
 import { GeoService } from './../geo/geo.service';
 import { UserService } from './../user/user.service';
@@ -94,21 +95,14 @@ import {
   assessChart,
   compatibilityResultSetHasScores,
   Condition,
-  matchKalanalaChandra,
-  matchKotaChakra,
   matchOrbFromGrid,
-  matchPanchaPakshi,
-  matchShulaChakra,
   PredictiveRule,
-  processByBirthSign,
-  processTransitDashaRuleSet,
-  processTransitMatch,
   Protocol,
 } from './lib/models/protocol-models';
 import { mapNestedKaranaTithiYoga, mapToponyms } from './lib/mappers';
 import { CreateSettingDTO } from '../setting/dto/create-setting.dto';
 import typeTags from './lib/settings/relationship-types';
-import { KeyName, ProtocolSettings } from './lib/interfaces';
+import { KeyName } from './lib/interfaces';
 import { TagReassignDTO } from './dto/tag-reassign.dto';
 import { TagDTO } from './dto/tag.dto';
 import { RuleSetDTO } from '../setting/dto/rule-set.dto';
@@ -123,7 +117,7 @@ import { Graha } from './lib/models/graha-set';
 import ayanamshaValues from './lib/settings/ayanamsha-values';
 import { calcBavGraphData, calcBavSignSamples } from './lib/settings/ashtakavarga-values';
 import { GeoPos } from './interfaces/geo-pos';
-import { Model } from 'mongoose';
+import { processPredictiveRuleSet } from './lib/predictions';
 import { panchaPakshiDayNightSet } from './lib/settings/pancha-pakshi';
 
 @Controller('astrologic')
@@ -1301,7 +1295,7 @@ export class AstrologicController {
     const outerItems = [];
     for (const cond of outerConditions) {
       if (cond instanceof Condition) {
-        const newOuterItem = await this.processPredictiveRuleSet(cond, rule.type, chart, geo, settings);
+        const newOuterItem = await processPredictiveRuleSet(cond, rule.type, chart, geo, settings);
         outerItems.push(newOuterItem);
       }
     }
@@ -1309,40 +1303,6 @@ export class AstrologicController {
     const numOuterValid = outerItems.filter(oi => oi.valid).length;
     const matches = andMode ? numOuterValid === outerItems.length : numOuterValid > 0;
     return { valid , matches, items: outerItems }
-  }
-
-  async processPredictiveRuleSet(cond: Condition, ruleType = "", chart: Chart, geo: GeoPos, settings: ProtocolSettings) {
-    const result: any = { valid: false, start: null, end: null, score: 0 };
-    switch (ruleType) {
-      case 'transit':
-        return await this.processTransitRuleSet(cond, chart, geo, settings);
-      case 'kota':
-        return matchKotaChakra(cond, chart);
-      case 'shula':
-        return matchShulaChakra(cond, chart);
-      case 'kalanala':
-      case 'chandra_kalanala':
-        return matchKalanalaChandra(cond, chart, geo);
-      case 'panchapakshi':
-        return await matchPanchaPakshi(cond, chart, geo);
-      default:
-        return result;
-    }
-  }
-
-  async processTransitRuleSet(cond: Condition, chart: Chart, geo: GeoPos, settings: ProtocolSettings) {
-    const [fromCat, subType] = cond.fromMode.split("_");
-    const refCat = cond.matchBirthSign ? 'birth_asc' : fromCat;
-    switch (refCat) {
-      case "birth_asc":
-        return processByBirthSign(cond, chart);
-      case "level":
-        return await processTransitDashaRuleSet(cond, parseInt(subType, 10), chart, settings);
-      case "transit":
-        return await processTransitMatch(cond, chart, geo, settings);
-      default:
-        return { valid: false };
-    }
   }
 
   @Get('recalc-charts/:start?/:limit?')

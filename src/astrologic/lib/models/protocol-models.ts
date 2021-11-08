@@ -19,16 +19,15 @@ import { mapRelationships } from '../map-relationships';
 import { matchKotaCakraSection } from '../settings/nakshatra-values';
 import { matchBirdKeyRulers, panchaPakshiDayNightSet } from '../settings/pancha-pakshi';
 import { fetchChartObject, filterBmMatchRow } from '../chart-funcs';
-import { calcCompactChartData } from '../core';
 import { julToISODate } from '../date-funcs';
-import { calcTransitionPointJd } from '../transitions';
+import { calcTransitionPointJd, calcTransposedTransitionPointJd } from '../transitions';
+import { buildGrahaPositionsFromChart } from '../point-transitions';
 
 interface StartEndLord {
   start: number;
   end: number;
   rulers: string[];
 }
-
 
 export interface KeyNumVal {
   key: string;
@@ -2003,14 +2002,17 @@ const filterSubYamaByAction = (ym, action = '', currJd = 0) => {
   return ym.subs.some(sub => sub.key === action) && ym.start >= (currJd - 0.5)
 }
 
-const matchGrahaTransitPoint = async (rows: StartEndLord[], geo: GeoPos, contextKey = '') => {
+const matchGrahaTransitPoint = async (rows: StartEndLord[], geo: GeoPos, contextKey = '', transitMode = 'transit', chart: Chart) => {
   let matched = false;
   let start = 0;
   let end = 0;
   let lords = [];
+  const transposedMode = transitMode === 'birth';
+  const rulers = rows.length > 0 ? rows.map(r => r.rulers).reduce((a, b) => b.concat(a)) : [];
+  const grahaPositions = transposedMode ? buildGrahaPositionsFromChart(rulers, chart) : [];
   for (const row of rows) {
     for (const gk of row.rulers) {
-      const trData = await calcTransitionPointJd(row.start - 0.5, gk, geo, contextKey);
+      const trData = transposedMode ? await calcTransposedTransitionPointJd(row.start - 0.5, gk, geo, contextKey, grahaPositions) : await calcTransitionPointJd(row.start - 0.5, gk, geo, contextKey);
       const itemValid = trData.jd >= row.start && trData.jd <= row.end;
       if (itemValid) {
         matched = true;
@@ -2023,7 +2025,7 @@ const matchGrahaTransitPoint = async (rows: StartEndLord[], geo: GeoPos, context
   return { matched, start, end, lords };
 }
 
-export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Chart, refKey: string, contextType: ContextType) => {
+export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Chart, refKey: string, contextType: ContextType, transitMode = 'transit') => {
   const ppData = await panchaPakshiDayNightSet(currJd, geo, chart, true);
   const bird = ppData.get('bird');
   const dayYamas = ppData.get('yamas');
@@ -2117,7 +2119,7 @@ export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Ch
       case 'set':
       case 'ic':
       case 'mc':
-        const { matched, start, end, lords } = await matchGrahaTransitPoint(startEndLords, geo, contextType.key);
+        const { matched, start, end, lords } = await matchGrahaTransitPoint(startEndLords, geo, contextType.key, transitMode, chart);
         if (matched) {
           valid = true;
           yama.start = start;
@@ -2180,7 +2182,7 @@ export const matchPanchaPakshi = async (cond: Condition, chart: Chart, geo: GeoP
       }
       counter++;
     }
-  } else if (mode === 'transit') {
+  } else if (['transit', 'birth'].includes(mode)) {
     const refKey = cond.object1.key.toLocaleLowerCase();
     let counter = 0;
     let matched = false;
@@ -2192,7 +2194,7 @@ export const matchPanchaPakshi = async (cond: Condition, chart: Chart, geo: GeoP
       maxDays = 60;
     }
     while (!matched && counter < maxDays) {
-      const { valid, yama, birdKey, isNight } = await matchPPTransitBirdGraha(currJd + counter, geo, chart, refKey, cond.contextType);
+      const { valid, yama, birdKey, isNight } = await matchPPTransitBirdGraha(currJd + counter, geo, chart, refKey, cond.contextType, mode);
       if (valid) {
         matched = true;
         start = yama.start;
