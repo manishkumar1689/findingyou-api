@@ -252,7 +252,7 @@ export const calcTransposedTransitionPointJd = async (jd = 0, gKey = '', geo: Ge
     if (result instanceof Object) {
       if (result instanceof Array) {
         const trResult = result.find(tr => tr.type === type);
-        if (trResult) {
+        if (trResult instanceof Object) {
           timeSet.jd = trResult.jd;
           timeSet.dt = trResult.isoDate;
         }

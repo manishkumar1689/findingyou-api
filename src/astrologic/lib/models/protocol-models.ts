@@ -2019,6 +2019,7 @@ const matchGrahaTransitPoint = async (rows: StartEndLord[], geo: GeoPos, context
         start = row.start;
         end = row.end;
         lords = row.rulers;
+        console.log(contextKey, rulers);
       }
     }
   }
