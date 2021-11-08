@@ -4,7 +4,15 @@ import { Model, Types } from 'mongoose';
 import { BodySpeed } from './interfaces/body-speed.interface';
 import { Chart } from './interfaces/chart.interface';
 import { BodySpeedDTO } from './dto/body-speed.dto';
-import { calcAcceleration, calcAscendantKakshaSet, calcAscendantTimelineSet, calcCoreKakshaTimeline, calcCoreSignTimeline, calcStation, SignTimelineSet } from './lib/astro-motion';
+import {
+  calcAcceleration,
+  calcAscendantKakshaSet,
+  calcAscendantTimelineSet,
+  calcCoreKakshaTimeline,
+  calcCoreSignTimeline,
+  calcStation,
+  SignTimelineSet,
+} from './lib/astro-motion';
 import { subtractLng360 } from './lib/math-funcs';
 import grahaValues from './lib/settings/graha-values';
 import roddenScaleValues, {
@@ -51,14 +59,23 @@ import {
   SlugNameVocab,
   matchVocabKey,
 } from './lib/settings/vocab-values';
-import { calcAllAspects, calcAyanamsha, calcCompactChartData, calcCoreGrahaPositions } from './lib/core';
+import {
+  calcAllAspects,
+  calcAyanamsha,
+  calcCompactChartData,
+  calcCoreGrahaPositions,
+} from './lib/core';
 import { Chart as ChartClass } from './lib/models/chart';
 import { Kuta } from './lib/kuta';
 import { AspectSet, buildDegreeRange, buildLngRange } from './lib/calc-orbs';
 import { sanitize, smartCastInt } from '../lib/converters';
 import { KeyValue } from './interfaces/key-value';
 import { TagDTO } from './dto/tag.dto';
-import { shortenName, generateNameSearchRegex, calcCoordsDistance } from './lib/helpers';
+import {
+  shortenName,
+  generateNameSearchRegex,
+  calcCoordsDistance,
+} from './lib/helpers';
 import { minRemainingPaired } from '../.config';
 import { calcTropicalAscendantDt } from './lib/calc-ascendant';
 import { GeoLoc } from './lib/models/geo-loc';
@@ -534,7 +551,7 @@ export class AstrologicService {
     k1: string,
     k2: string,
     orb = 1,
-    max = 0
+    max = 0,
   ) {
     const { steps, outFieldProject, conditions } = addOrbRangeMatchStep(
       aspectKey,
@@ -678,35 +695,75 @@ export class AstrologicService {
     return await this.pairedChartModel.aggregate(comboSteps);
   }
 
-  async getGrahaPositions(dt = '', geo = null, addLagna = false, ayanamsha = 'true_citra') {
-    const dateParts = dt.split('.').shift().split(':');
-    const geoKeys = geo instanceof Object? Object.keys(geo) : [];
+  async getGrahaPositions(
+    dt = '',
+    geo = null,
+    addLagna = false,
+    ayanamsha = 'true_citra',
+  ) {
+    const dateParts = dt
+      .split('.')
+      .shift()
+      .split(':');
+    const geoKeys = geo instanceof Object ? Object.keys(geo) : [];
     const hasGeo = geoKeys.includes('lat') && geoKeys.includes('lng');
-    const geoPos = hasGeo ? geo : {lat: 25, lng: 75, alt: 20 };
+    const geoPos = hasGeo ? geo : { lat: 25, lng: 75, alt: 20 };
     let datetime = '';
     if (dateParts.length === 3) {
       dateParts.pop();
       const minutes = Math.floor(parseInt(dateParts[1]) / 5) * 5;
-      const dateKey = dateParts[0].split('-').join('').split('T').join('_') + zero2Pad(minutes);
+      const dateKey =
+        dateParts[0]
+          .split('-')
+          .join('')
+          .split('T')
+          .join('_') + zero2Pad(minutes);
       const { lat, lng } = geoPos;
-      const geoKey = [lat, lng].map(v => Math.round(v * 100) / 100 ).join('_');
+      const geoKey = [lat, lng].map(v => Math.round(v * 100) / 100).join('_');
       const lagnaKey = addLagna ? 'asc' : 'core';
       const ayanamshaKey = notEmptyString(ayanamsha) ? ayanamsha : 'true_citra';
-      const key = ['grahapositions_', dateKey, geoKey, lagnaKey, ayanamshaKey].join('_');
+      const key = [
+        'grahapositions_',
+        dateKey,
+        geoKey,
+        lagnaKey,
+        ayanamshaKey,
+      ].join('_');
       datetime = [dateParts[0], zero2Pad(minutes), '00'].join(':');
       const stored = await this.redisGet(key);
       if (stored instanceof Object) {
-        const {bodies, ayanamsha} = stored;
+        const { bodies, ayanamsha } = stored;
         if (bodies instanceof Array) {
-          return { items: bodies, key, geo: geoPos, ayanamsha, datetime, valid: true, cached: true };
+          return {
+            items: bodies,
+            key,
+            geo: geoPos,
+            ayanamsha,
+            datetime,
+            valid: true,
+            cached: true,
+          };
         }
       } else {
-        const data = await calcCoreGrahaPositions(dt, geoPos, ayanamshaKey, addLagna);
+        const data = await calcCoreGrahaPositions(
+          dt,
+          geoPos,
+          ayanamshaKey,
+          addLagna,
+        );
         if (data instanceof Object) {
-          const {bodies, ayanamsha} = data;
+          const { bodies, ayanamsha } = data;
           if (bodies instanceof Array) {
             this.redisSet(key, data);
-            return { items: bodies, key, geo: geoPos, ayanamsha, datetime, valid: true, cached: false };
+            return {
+              items: bodies,
+              key,
+              geo: geoPos,
+              ayanamsha,
+              datetime,
+              valid: true,
+              cached: false,
+            };
           }
         }
       }
@@ -775,7 +832,7 @@ export class AstrologicService {
       'rows',
     );
   }
-  
+
   async findPredictiveRangeMatch(
     key: string,
     lngs: number[],
@@ -826,7 +883,15 @@ export class AstrologicService {
   ) {
     const $project =
       mode !== 'count'
-        ? { cid: '$_id', "geo.lat": 1, "geo.lng": 1, "ascendant": 1, uid: '$user', lng: 1, ayanamsha: '$ayanamshas.value' }
+        ? {
+            cid: '$_id',
+            'geo.lat': 1,
+            'geo.lng': 1,
+            ascendant: 1,
+            uid: '$user',
+            lng: 1,
+            ayanamsha: '$ayanamshas.value',
+          }
         : { _id: 1 };
     const steps = [
       { $limit: max },
@@ -838,14 +903,31 @@ export class AstrologicService {
     const matchedAyanamsha = await calcAyanamsha(jd, ayanamshaKey);
     const items = await this.chartModel.aggregate(steps);
     const ranges = lngs.map(lng => buildDegreeRange(lng, orb));
-    return items.map(item => {
-      const {lat, lng} = item.geo;
-      const matchedTropicalAscendant = calcTropicalAscendantDt(lat, lng, dateStr);
-      const ascendantLng = subtractLng360(item.ascendant, item.ayanamsha);
-      const matchedAscendant = subtractLng360(matchedTropicalAscendant, matchedAyanamsha);
-      const aspect = subtractLng360(ascendantLng, matchedAscendant);
-      return {...item, ascendantLng, matchedTropicalAscendant, matchedAscendant, aspect };
-    }).filter(item => ranges.some(range => inRange(item.matchedAscendant, range)));
+    return items
+      .map(item => {
+        const { lat, lng } = item.geo;
+        const matchedTropicalAscendant = calcTropicalAscendantDt(
+          lat,
+          lng,
+          dateStr,
+        );
+        const ascendantLng = subtractLng360(item.ascendant, item.ayanamsha);
+        const matchedAscendant = subtractLng360(
+          matchedTropicalAscendant,
+          matchedAyanamsha,
+        );
+        const aspect = subtractLng360(ascendantLng, matchedAscendant);
+        return {
+          ...item,
+          ascendantLng,
+          matchedTropicalAscendant,
+          matchedAscendant,
+          aspect,
+        };
+      })
+      .filter(item =>
+        ranges.some(range => inRange(item.matchedAscendant, range)),
+      );
   }
 
   adjustDatetimeByServerTz(data: any = null) {
@@ -925,65 +1007,70 @@ export class AstrologicService {
 
   async matchExistingPlaceNames(geo: GeoLoc, km = 3, withinKm = 1) {
     const latSize = km / 111;
-    const calcLngScale = (lng) => Math.cos(Math.abs(lng) * (Math.PI / 180));
+    const calcLngScale = lng => Math.cos(Math.abs(lng) * (Math.PI / 180));
     //const lngNeg = geo.lng < 0? -1 : 1;
-    const lngSize = 1 / (calcLngScale(geo.lng) * 111) * km;
-    
+    const lngSize = (1 / (calcLngScale(geo.lng) * 111)) * km;
+
     const latRange = { $gte: geo.lat - latSize, $lte: geo.lat + latSize };
     const lngRange = { $gte: geo.lng - lngSize, $lte: geo.lng + lngSize };
     const steps = [
-      { 
+      {
         $match: {
           $or: [
             {
-              "placenames.geo.lat": latRange,
-              "placenames.geo.lng": lngRange
+              'placenames.geo.lat': latRange,
+              'placenames.geo.lng': lngRange,
             },
             {
-              "geo.lat": latRange,
-              "geo.lng": lngRange
+              'geo.lat': latRange,
+              'geo.lng': lngRange,
             },
-          ]
-        }
+          ],
+        },
       },
-      { 
+      {
         $project: {
-          "tz": 1,
-          "tzOffset": 1,
-          "geo.lat": 1,
-          "geo.lng": 1,
-          "placenames.name": 1,
-          "placenames.fullName": 1,
-          "placenames.geo.lat": 1,
-          "placenames.geo.lng": 1,
-          "placenames.geo.alt": 1,
-          "modifiedAt": 1
-        }
+          tz: 1,
+          tzOffset: 1,
+          'geo.lat': 1,
+          'geo.lng': 1,
+          'placenames.name': 1,
+          'placenames.fullName': 1,
+          'placenames.geo.lat': 1,
+          'placenames.geo.lng': 1,
+          'placenames.geo.alt': 1,
+          modifiedAt: 1,
+        },
       },
       {
         $sort: {
-          modifiedAt: -1
-        }
+          modifiedAt: -1,
+        },
       },
       {
-        $limit: 10
-      }
+        $limit: 10,
+      },
     ];
     const records = await this.chartModel.aggregate(steps);
     const items = [];
     const keys: string[] = [];
     const latLng = geo.latLng;
     records.forEach(rec => {
-      const { placenames, tz, tzOffset} = rec;
+      const { placenames, tz, tzOffset } = rec;
       const chartGeo = rec.geo;
-      const lastIndex = placenames instanceof Array ? placenames.length - 1 : -1;
+      const lastIndex =
+        placenames instanceof Array ? placenames.length - 1 : -1;
       if (lastIndex >= 0) {
         const nearest = placenames[lastIndex];
-        const key = [sanitize(nearest.fullName), nearest.geo.lat, nearest.geo.lng].join('__');
+        const key = [
+          sanitize(nearest.fullName),
+          nearest.geo.lat,
+          nearest.geo.lng,
+        ].join('__');
         if (!keys.includes(key)) {
-            keys.push(key);
-            const distance = calcCoordsDistance(latLng, chartGeo, 'km');
-            items.push({placenames, distance, tz, tzOffset });
+          keys.push(key);
+          const distance = calcCoordsDistance(latLng, chartGeo, 'km');
+          items.push({ placenames, distance, tz, tzOffset });
         }
       }
     });
@@ -1462,9 +1549,10 @@ export class AstrologicService {
     return pairedID;
   }
 
-  async getUserBirthChart(userID = "") {
+  async getUserBirthChart(userID = '') {
     return await this.chartModel
-    .findOne({ user: userID, isDefaultBirthChart: true }).exec();
+      .findOne({ user: userID, isDefaultBirthChart: true })
+      .exec();
   }
 
   async getChartsByUser(
@@ -1473,7 +1561,7 @@ export class AstrologicService {
     limit = 20,
     defaultOnly = false,
     queryParams = null,
-    isAdmin = false
+    isAdmin = false,
   ) {
     const condMap = new Map<string, any>();
     let showUserFirst = start < 1;
@@ -1503,7 +1591,7 @@ export class AstrologicService {
     if (!condMap.has('_id') || !isAdmin) {
       condMap.set('user', userID);
     }
-    
+
     if (defaultOnly) {
       condMap.set('isDefaultBirthChart', true);
     }
@@ -1704,16 +1792,16 @@ export class AstrologicService {
             datetime: 1,
             tzOffset: 1,
             tz: 1,
-            lat: "$geo.lat",
-            alt: "$geo.alt",
-            lng: "$geo.lng",
-            name: "$subject.name",
-            notes: "$subject.notes",
-            gender: "$subject.gender",
-            type: "$subject.type",
-            eventType: "$subject.eventType",
-            roddenValue: "$subject.roddenValue",
-          }
+            lat: '$geo.lat',
+            alt: '$geo.alt',
+            lng: '$geo.lng',
+            name: '$subject.name',
+            notes: '$subject.notes',
+            gender: '$subject.gender',
+            type: '$subject.type',
+            eventType: '$subject.eventType',
+            roddenValue: '$subject.roddenValue',
+          },
         });
       }
       return await this.chartModel
@@ -1734,25 +1822,32 @@ export class AstrologicService {
   Fetch a snapshot of a chart at 0ºN 0ºE as the basis
   for modified charts with geo-sensitive ascendants
   */
-  async getChartSnapshot(dt = "", ayanamshaMode = 'true_citra', skipCache = false) {
+  async getChartSnapshot(
+    dt = '',
+    ayanamshaMode = 'true_citra',
+    skipCache = false,
+  ) {
     const key = ['chartsnap', dt, ayanamshaMode].join('_');
     const stored = skipCache ? null : this.redisGet(key);
-    const hasStored = stored instanceof Object && Object.keys(stored).includes("grahas");
-    const data = hasStored ? stored : await this.fixedChartSnapshot(dt, ayanamshaMode);
+    const hasStored =
+      stored instanceof Object && Object.keys(stored).includes('grahas');
+    const data = hasStored
+      ? stored
+      : await this.fixedChartSnapshot(dt, ayanamshaMode);
     if (!hasStored && data instanceof Object) {
       this.redisSet(key, data);
     }
     return data;
   }
 
-  async fixedChartSnapshot(dt = "", ayanamshaMode = 'true_citra') {
+  async fixedChartSnapshot(dt = '', ayanamshaMode = 'true_citra') {
     let data: any = { valid: false };
     if (validISODateString(dt)) {
       const geo = {
         lat: 0,
-        lng: 0
+        lng: 0,
       };
-      const geoInfo = { 
+      const geoInfo = {
         countryName: '',
         cc: '',
         tz: 'Africa/Accra',
@@ -1761,11 +1856,11 @@ export class AstrologicService {
             name: 'Atlantic',
             fullName: 'Atlantic Ocean',
             type: 'SEA',
-            ...geo
-          }
+            ...geo,
+          },
         ],
-        offset: 0
-      }
+        offset: 0,
+      };
       const dtUtc = applyTzOffsetToDateString(dt, geoInfo.offset);
 
       const ayanamshaKey = notEmptyString(ayanamshaMode, 3)
@@ -1797,13 +1892,7 @@ export class AstrologicService {
       { _id: ObjectId(chartID) },
       { parent: ObjectId(chartID) },
     ]);
-    const items = await this.list(
-      criteria,
-      0,
-      500,
-      true,
-      true
-    );
+    const items = await this.list(criteria, 0, 500, true, true);
     return items.sort((a, b) => a.jd - b.jd);
   }
 
@@ -1878,7 +1967,8 @@ export class AstrologicService {
       const { start, end } = data;
 
       if (i > 0) {
-        const prevSpeedDiv = isNumber(prevSpeed) && prevSpeed !== 0? start.speed / prevSpeed : 0;
+        const prevSpeedDiv =
+          isNumber(prevSpeed) && prevSpeed !== 0 ? start.speed / prevSpeed : 0;
         const sd1: BodySpeedDTO = {
           num,
           speed: start.spd,
@@ -1924,8 +2014,10 @@ export class AstrologicService {
   ): Promise<BodySpeed> {
     const relCondition = prev ? { $lte: jd } : { $gte: jd };
     const sortDir = prev ? -1 : 1;
-    const station = notEmptyString(stationKey, 2)? stationKey : { $nin: ['sample', 'peak', 'retro-peak'] };
-    const criteria: any = { num, jd: relCondition, station }
+    const station = notEmptyString(stationKey, 2)
+      ? stationKey
+      : { $nin: ['sample', 'peak', 'retro-peak'] };
+    const criteria: any = { num, jd: relCondition, station };
     return await this.bodySpeedModel
       .findOne(criteria)
       .sort({ jd: sortDir })
@@ -1936,19 +2028,27 @@ export class AstrologicService {
   async matchStations(key: string, jd: number): Promise<any> {
     const row = grahaValues.find(gr => gr.key === key);
     const num = row instanceof Object ? row.num : -1;
-    const nudge = 1/1440;
+    const nudge = 1 / 1440;
     const prev = await this.nextPrevStation(num, jd, '-', true);
     //const prev2 = await this.nextPrevStation(num, prev.jd - nudge, '-', true);
     const next = await this.nextPrevStation(num, jd, '-', false);
     const next2 = await this.nextPrevStation(num, next.jd + nudge, '-', false);
     const retrograde = prev.station === 'retro-start';
-    const nextDirect =retrograde ? jd : next.jd;
+    const nextDirect = retrograde ? jd : next.jd;
     const nextRetro = retrograde ? jd : next.jd;
     const nextLng = next.lng;
     const prevLng = prev.lng;
     const nextPeriod = next2.jd - next.jd;
     const currPeriod = next.jd - prev.jd;
-    return { retrograde, nextDirect, nextRetro, currPeriod, nextPeriod, prevLng, nextLng };
+    return {
+      retrograde,
+      nextDirect,
+      nextRetro,
+      currPeriod,
+      nextPeriod,
+      prevLng,
+      nextLng,
+    };
   }
 
   async transitionsByPlanet(
@@ -2159,18 +2259,33 @@ export class AstrologicService {
     return results;
   }
 
-  async fetchBavTimeline(geo: LngLat, startJd = 0, endJd = 0): Promise<SignTimelineSet[]> {
+  async fetchBavTimeline(
+    geo: LngLat,
+    startJd = 0,
+    endJd = 0,
+  ): Promise<SignTimelineSet[]> {
     const key = ['bav_timeline', startJd, endJd].join('_');
     const storedResults = await this.redisGet(key);
-    const hasStored = storedResults instanceof Array && storedResults.length > 5;
-    const grahas = hasStored? storedResults : await calcCoreSignTimeline(startJd, endJd);
+    const hasStored =
+      storedResults instanceof Array && storedResults.length > 5;
+    const grahas = hasStored
+      ? storedResults
+      : await calcCoreSignTimeline(startJd, endJd);
     if (!hasStored && grahas instanceof Array && grahas.length > 5) {
       this.redisSet(key, grahas);
     }
-    const ascKey = ['bav_asc_timeline', geo.lat.toFixed(3), geo.lng.toFixed(3), startJd, endJd].join('_');
+    const ascKey = [
+      'bav_asc_timeline',
+      geo.lat.toFixed(3),
+      geo.lng.toFixed(3),
+      startJd,
+      endJd,
+    ].join('_');
     const storedAscResult = await this.redisGet(ascKey);
     const hasAscStored = storedAscResult instanceof Object;
-    const ascSet = hasAscStored ? storedAscResult : await calcAscendantTimelineSet(geo, startJd, endJd);
+    const ascSet = hasAscStored
+      ? storedAscResult
+      : await calcAscendantTimelineSet(geo, startJd, endJd);
     if (ascSet instanceof Object) {
       grahas.push(ascSet);
       if (!hasAscStored) {
@@ -2180,29 +2295,47 @@ export class AstrologicService {
     return grahas;
   }
 
-  async fetchKakshaTimeline(geo: LngLat, startJd = 0, endJd = 0, excludeKeys = []): Promise<SignTimelineSet[]> {
-    const includeAscendant = excludeKeys.includes("as") === false;
+  async fetchKakshaTimeline(
+    geo: LngLat,
+    startJd = 0,
+    endJd = 0,
+    excludeKeys = [],
+  ): Promise<SignTimelineSet[]> {
+    const includeAscendant = excludeKeys.includes('as') === false;
     const keyParts = ['kakshya_tl', startJd, endJd];
-    const excludeMoon = excludeKeys.includes("mo");
+    const excludeMoon = excludeKeys.includes('mo');
     if (excludeMoon) {
-      keyParts.push("ex_mo");
+      keyParts.push('ex_mo');
     }
     const key = keyParts.join('_');
     const storedResults = await this.redisGet(key);
-    const hasStored = storedResults instanceof Array && storedResults.length > 5;
-    const grahas = hasStored? storedResults : await calcCoreKakshaTimeline(startJd, endJd, excludeMoon);
+    const hasStored =
+      storedResults instanceof Array && storedResults.length > 5;
+    const grahas = hasStored
+      ? storedResults
+      : await calcCoreKakshaTimeline(startJd, endJd, excludeMoon);
     if (!hasStored && grahas instanceof Array && grahas.length > 5) {
       this.redisSet(key, grahas);
     }
     if (includeAscendant) {
-      const ascKey = ['kakshya_asc_tl', geo.lat.toFixed(3), geo.lng.toFixed(3), startJd, endJd].join('_');
+      const ascKey = [
+        'kakshya_asc_tl',
+        geo.lat.toFixed(3),
+        geo.lng.toFixed(3),
+        startJd,
+        endJd,
+      ].join('_');
       const storedAscResult = await this.redisGet(ascKey);
       const hasAscStored = storedAscResult instanceof Object;
-      const ascSet = hasAscStored ? storedAscResult : await calcAscendantKakshaSet(geo, startJd, endJd);
+      const ascSet = hasAscStored
+        ? storedAscResult
+        : await calcAscendantKakshaSet(geo, startJd, endJd);
       if (ascSet instanceof Object) {
-        const lng = Object.keys(ascSet).includes("lng")? ascSet.lng : ascSet.longitude;
+        const lng = Object.keys(ascSet).includes('lng')
+          ? ascSet.lng
+          : ascSet.longitude;
         const sign = Math.floor(lng / 30) + 1;
-        grahas.push({...ascSet, lng, sign });
+        grahas.push({ ...ascSet, lng, sign });
         if (!hasAscStored) {
           this.redisSet(ascKey, ascSet);
         }
@@ -2211,62 +2344,88 @@ export class AstrologicService {
     return grahas;
   }
 
-  async fetchKakshaTimelineData(chartID = "", geo: GeoPos , startJd = 0, endJd = 0, excludeKeys = [], ayanamshaKey = "true_citra") {
+  async fetchKakshaTimelineData(
+    chartID = '',
+    geo: GeoPos,
+    startJd = 0,
+    endJd = 0,
+    excludeKeys = [],
+    ayanamshaKey = 'true_citra',
+  ) {
     const chartData = await this.getChart(chartID);
-    const simpleChart = chartData instanceof Object ? simplifyChart(chartData, ayanamshaKey) : null;
-    const birthGrahas = simpleChart instanceof Object ? simpleChart.grahas.map(gr => {
-      const {key, lng, sign } = gr;
-      return { key, lng, sign };
-    }) : [];
+    const simpleChart =
+      chartData instanceof Object
+        ? simplifyChart(chartData, ayanamshaKey)
+        : null;
+    const birthGrahas =
+      simpleChart instanceof Object
+        ? simpleChart.grahas.map(gr => {
+            const { key, lng, sign } = gr;
+            return { key, lng, sign };
+          })
+        : [];
     const ascendantLng = simpleChart.ascendant;
     birthGrahas.push({
-      key: "as",
+      key: 'as',
       lng: ascendantLng,
-      sign: Math.floor(ascendantLng / 30) + 1
+      sign: Math.floor(ascendantLng / 30) + 1,
     });
-    const keys = ['sa','ju','ma','su', 've','me','mo', 'as'];
+    const keys = ['sa', 'ju', 'ma', 'su', 've', 'me', 'mo', 'as'];
     const lngs = keys.map(key => {
       const gr = birthGrahas.find(g => g.key === key);
       const lng = gr instanceof Object ? gr.lng : 0;
       return { key, lng };
     });
     const kakshyaKeys = keys.filter(k => excludeKeys.includes(k) === false);
-    
+
     const bavGrid = getAshtakavargaBodyGrid(lngs, simpleChart.jd);
-    
-    const grahaItems = await this.fetchKakshaTimeline(geo, startJd, endJd, excludeKeys);
-    const times = grahaItems.map(row => {
-      const { key, jd, dt, longitude, sign, nextMatches } = row;
-      const first = { key, jd, dt, lng: longitude, sign }
-      const subs = nextMatches.map(r => {
-        const { jd, dt, lng, sign } = r;
-        return { key, jd, dt, lng, sign }
-      });
-      return [first, ...subs];
-    }).reduce((a, b) => a.concat(b), [])
-    .filter(sub => sub.jd < endJd);
+
+    const grahaItems = await this.fetchKakshaTimeline(
+      geo,
+      startJd,
+      endJd,
+      excludeKeys,
+    );
+    const times = grahaItems
+      .map(row => {
+        const { key, jd, dt, longitude, sign, nextMatches } = row;
+        const first = { key, jd, dt, lng: longitude, sign };
+        const subs = nextMatches.map(r => {
+          const { jd, dt, lng, sign } = r;
+          return { key, jd, dt, lng, sign };
+        });
+        return [first, ...subs];
+      })
+      .reduce((a, b) => a.concat(b), [])
+      .filter(sub => sub.jd < endJd);
     times.sort((a, b) => a.jd - b.jd);
     const rows = [];
     const kakshyaMap: Map<number, any> = new Map();
     const numKeys = kakshyaKeys.length;
-    
+
     times.forEach((row, index) => {
-      const index96 = Math.floor(row.lng / (360/96));
+      const index96 = Math.floor(row.lng / (360 / 96));
       const num = index96 + 1;
       const kakshyaIndex = index96 % 8;
       const kakshyaKey = keys[kakshyaIndex];
       const rowIndex = keys.indexOf(row.key);
       const signIndex = Math.floor(row.lng / 30);
-      const bavRow = signIndex >= 0 && signIndex < bavGrid.length ? bavGrid[signIndex] : null;
-      const bavValueRows = bavRow instanceof Object ? bavRow.values : []
-      const bavKeys = kakshyaIndex < bavValueRows.length ? bavValueRows[kakshyaIndex].values : [];
+      const bavRow =
+        signIndex >= 0 && signIndex < bavGrid.length
+          ? bavGrid[signIndex]
+          : null;
+      const bavValueRows = bavRow instanceof Object ? bavRow.values : [];
+      const bavKeys =
+        kakshyaIndex < bavValueRows.length
+          ? bavValueRows[kakshyaIndex].values
+          : [];
       if (notEmptyString(kakshyaKey)) {
         kakshyaMap.set(rowIndex, {
           lord: kakshyaKey,
           lng: row.lng,
-          hasBindu:  bavKeys.includes(kakshyaKey),
+          hasBindu: bavKeys.includes(kakshyaKey),
           sign: Math.floor(row.lng / 30) + 1,
-          num
+          num,
         });
         if (kakshyaMap.size === numKeys) {
           rows.push({
@@ -2274,7 +2433,7 @@ export class AstrologicService {
             items: [...kakshyaMap.entries()].map(entry => {
               const [subIndex, value] = entry;
               const key = keys[subIndex];
-              return { key, ...value }
+              return { key, ...value };
             }),
           });
         }
