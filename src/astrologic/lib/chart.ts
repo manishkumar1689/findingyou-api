@@ -9,7 +9,7 @@ import {
 } from '../../lib/validators';
 const run = util.promisify(exec);
 
-export const chartData = async (dt = "", loc) => {
+export const chartData = async (dt = '', loc) => {
   const currDir = __dirname.replace('/dist/astrologic/', '/src/astrologic/');
   const scriptDir = path.resolve(currDir + '/../scripts') + '/';
   let datetime = '';

@@ -6,7 +6,6 @@ import {
   Post,
   Body,
   Put,
-  Query,
   NotFoundException,
   Delete,
   Param,
@@ -17,7 +16,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SettingService } from './setting.service';
 import { CreateSettingDTO } from './dto/create-setting.dto';
-import { isNumeric, notEmptyString } from '../lib/validators';
+import { notEmptyString } from '../lib/validators';
 import { extractDocId } from '../lib/entities';
 import { UserService } from '../user/user.service';
 import { exportCollection, listFiles } from '../lib/operations';
@@ -30,7 +29,7 @@ import {
   matchFullPath,
   writeSourceFile,
 } from '../lib/files';
-import moment = require('moment');
+import * as moment from 'moment-timezone';
 import availableLanguages from './sources/languages';
 import defaultLanguageOptions from './sources/lang-options';
 import { AdminGuard } from '../auth/admin.guard';
@@ -85,7 +84,9 @@ export class SettingController {
     let message = 'Invalid key or user ID';
     if (notEmptyString(userID, 9)) {
       const matchedSetting = await this.settingService.getByKey(key);
-      const exists = matchedSetting instanceof Object && Object.keys(matchedSetting).includes('key');
+      const exists =
+        matchedSetting instanceof Object &&
+        Object.keys(matchedSetting).includes('key');
       if (exists) {
         setting = await this.settingService.updateSetting(
           extractDocId(matchedSetting),
@@ -128,12 +129,21 @@ export class SettingController {
   }
 
   @Put('ip-whitelist/save/:userID')
-  saveIpWhitelist(@Res() res, @Param('userID') userID, @Body() ipData: StringsDTO) {
-    const data = {valid: false, ips: [], result: null};
-    if (this.userService.isAdminUser(userID) && ipData.strings instanceof Array) {
+  saveIpWhitelist(
+    @Res() res,
+    @Param('userID') userID,
+    @Body() ipData: StringsDTO,
+  ) {
+    const data = { valid: false, ips: [], result: null };
+    if (
+      this.userService.isAdminUser(userID) &&
+      ipData.strings instanceof Array
+    ) {
       const ipRgx = /^\d+\.\d+\.\d+\.\d+$/;
-      const ips = ipData.strings.map(line => line.trim()).filter(line => ipRgx.test(line));
-      data.result = writeSourceFile('ip-whitelist.txt', ips.join("\n"));
+      const ips = ipData.strings
+        .map(line => line.trim())
+        .filter(line => ipRgx.test(line));
+      data.result = writeSourceFile('ip-whitelist.txt', ips.join('\n'));
       data.ips = ips;
       data.valid = true;
     }
@@ -319,10 +329,7 @@ export class SettingController {
   }
 
   @Get('protocol/single/:itemID')
-  async getRulesCollection(
-    @Res() res,
-    @Param('itemID') itemID
-  ) {
+  async getRulesCollection(@Res() res, @Param('itemID') itemID) {
     const item = await this.settingService.getProtocol(itemID);
     const result: any = { valid: false, item: null, itemID };
     if (item instanceof Object) {
@@ -332,14 +339,24 @@ export class SettingController {
   }
 
   @Post('predictive/save')
-  async savePredictiveRule(@Res() res, @Body() ruleSetDTO: PredictiveRuleSetDTO) {
+  async savePredictiveRule(
+    @Res() res,
+    @Body() ruleSetDTO: PredictiveRuleSetDTO,
+  ) {
     const data = await this.settingService.savePredictiveRuleSet(ruleSetDTO);
     return res.status(HttpStatus.CREATED).send(data);
   }
 
   @Put('predictive/edit/:ruleID')
-  async editPredictiveRule(@Res() res, @Param('ruleID') ruleID, @Body() ruleSetDTO: PredictiveRuleSetDTO) {
-    const data = await this.settingService.savePredictiveRuleSet(ruleSetDTO, ruleID);
+  async editPredictiveRule(
+    @Res() res,
+    @Param('ruleID') ruleID,
+    @Body() ruleSetDTO: PredictiveRuleSetDTO,
+  ) {
+    const data = await this.settingService.savePredictiveRuleSet(
+      ruleSetDTO,
+      ruleID,
+    );
     return res.status(HttpStatus.OK).send(data);
   }
 
@@ -350,9 +367,17 @@ export class SettingController {
   }
 
   @Delete('predictive/delete/:userID/:itemID')
-  async deletePredictiveRule(@Res() res, @Param('userID') userID, @Param('itemID') itemID) {
+  async deletePredictiveRule(
+    @Res() res,
+    @Param('userID') userID,
+    @Param('itemID') itemID,
+  ) {
     const isAdmin = await this.userService.isAdminUser(userID);
-    const data = await this.settingService.deletePredictiveRuleSet(itemID, userID, isAdmin);
+    const data = await this.settingService.deletePredictiveRuleSet(
+      itemID,
+      userID,
+      isAdmin,
+    );
     return res.status(HttpStatus.CREATED).send(data);
   }
 
@@ -364,11 +389,13 @@ export class SettingController {
     @Param('userID') userID,
   ) {
     const data = { valid: false, setting: '' };
-    let statusCode = HttpStatus.OK;
+    let statusCode = HttpStatus.NOT_ACCEPTABLE;
     if (this.userService.isAdminUser(userID)) {
       data.setting = await this.settingService.delete(settingID);
       data.valid = data.setting.toString().length > 6;
-      HttpStatus.NOT_ACCEPTABLE;
+      if (data.valid) {
+        statusCode = HttpStatus.OK;
+      }
     }
     return res.status(statusCode).json(data);
   }
@@ -553,11 +580,9 @@ export class SettingController {
           schemaName = 'user';
           break;
       }
-      const schemas = require('../' +
-        module +
-        '/schemas/' +
-        schemaName +
-        '.schema');
+      const schemaPath = '../' + module + '/schemas/' + schemaName + '.schema';
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const schemas = require(schemaPath);
 
       if (schemas.constructor instanceof Function) {
         Object.entries(schemas).forEach(entry => {

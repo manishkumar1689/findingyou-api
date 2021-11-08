@@ -6,7 +6,7 @@ import { TranslatedItem } from './interfaces/translated-item.interface';
 import { CreateSnippetDTO } from './dto/create-snippet.dto';
 import { BulkSnippetDTO } from './dto/bulk-snippet.dto';
 import { extractDocId, hashMapToObject, extractObject } from '../lib/entities';
-import { v2 }  from '@google-cloud/translate';
+import { v2 } from '@google-cloud/translate';
 import { googleTranslate } from '../.config';
 import { notEmptyString } from '../lib/validators';
 const { Translate } = v2;
@@ -15,7 +15,8 @@ const { Translate } = v2;
 export class SnippetService {
   constructor(
     @InjectModel('Snippet') private readonly snippetModel: Model<Snippet>,
-    @InjectModel('TranslatedItem') private readonly translationModel: Model<TranslatedItem>,
+    @InjectModel('TranslatedItem')
+    private readonly translationModel: Model<TranslatedItem>,
     private http: HttpService,
   ) {}
   // fetch all Snippets
@@ -150,7 +151,10 @@ export class SnippetService {
           const versionRow = snippetObj.values.find(v2 => v2.lang === vl.lang);
           if (versionRow) {
             isNew = false;
-            isEdited = versionRow.text !== vl.text || versionRow.active !== vl.active || versionRow.approved !== vl.approved;
+            isEdited =
+              versionRow.text !== vl.text ||
+              versionRow.active !== vl.active ||
+              versionRow.approved !== vl.approved;
             createdAt = versionRow.createdAt;
             if (!isNew && !isEdited) {
               vl = versionRow;
@@ -252,49 +256,54 @@ export class SnippetService {
     return hashMapToObject(mp);
   }
 
-  async matchTranslation(text: string, to = "", from = "en") {
+  async matchTranslation(text: string, to = '', from = 'en') {
     const rgx = new RegExp('^' + text.trim() + '$', 'i');
     const item = await this.translationModel.findOne({
       from,
       to,
-      source: rgx
+      source: rgx,
     });
-    return item instanceof Object ? item.toObject() : { to, from, source: '', text: ''};
+    return item instanceof Object
+      ? item.toObject()
+      : { to, from, source: '', text: '' };
   }
 
-  async saveTranslation(text: string, source: string, to = "", from = "en") {
+  async saveTranslation(text: string, source: string, to = '', from = 'en') {
     const inData = {
       text,
       source,
       to,
       from,
       createdAt: new Date(),
-    }
+    };
     const translationModel = new this.translationModel(inData);
     return translationModel.save();
   }
 
-  async fetchGoogleTranslation(text = "", target = "", source = "en") {
-    const {key, projectId } = googleTranslate;
-    const translate = new Translate({projectId, key});
-    const [translation] = await translate.translate(text, { to: target, from: source });
+  async fetchGoogleTranslation(text = '', target = '', source = 'en') {
+    const { key, projectId } = googleTranslate;
+    const translate = new Translate({ projectId, key });
+    const [translation] = await translate.translate(text, {
+      to: target,
+      from: source,
+    });
     return { text, translation };
   }
 
-  async translateItem(text = "", target = "", source = "en") {
+  async translateItem(text = '', target = '', source = 'en') {
     const item = await this.matchTranslation(text, target, source);
     if (item instanceof Object && notEmptyString(item.text)) {
       return {
         text,
         translation: item.text,
-        isNew: false
-      }
+        isNew: false,
+      };
     } else {
       const newItem = await this.fetchGoogleTranslation(text, target, source);
       if (notEmptyString(newItem.translation)) {
         this.saveTranslation(newItem.translation, text, target, source);
       }
-      return {...newItem, isNew: true};
+      return { ...newItem, isNew: true };
     }
   }
 }

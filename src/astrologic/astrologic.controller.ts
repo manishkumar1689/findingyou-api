@@ -24,8 +24,17 @@ import {
   isLocationString,
   validLocationParameter,
 } from '../lib/validators';
-import { correctDatetime, latLngParamsToGeo, locStringToGeo } from './lib/converters';
-import { applyAscendantToSimpleChart, simplifyAstroChart, simplifyChart, simplifyConditions } from './lib/member-charts';
+import {
+  correctDatetime,
+  latLngParamsToGeo,
+  locStringToGeo,
+} from './lib/converters';
+import {
+  applyAscendantToSimpleChart,
+  simplifyAstroChart,
+  simplifyChart,
+  simplifyConditions,
+} from './lib/member-charts';
 import {
   calcAllTransitions,
   fetchHouseData,
@@ -47,9 +56,10 @@ import {
   calcAllStars,
   calcDeclination,
 } from './lib/core';
-import { 
+import {
   calcAltitudeSE,
-  calcTransposedObjectTransitionsSimple, } from './lib/point-transitions';
+  calcTransposedObjectTransitionsSimple,
+} from './lib/point-transitions';
 import { sampleBaseObjects } from './lib/custom-transits';
 import {
   calcJulianDate,
@@ -67,8 +77,21 @@ import {
 } from './lib/date-funcs';
 import { chartData } from './lib/chart';
 import { getFuncNames, getConstantVals } from './lib/sweph-test';
-import { calcGrahaSignTimeline, calcRetroGrade, calcStation, matchNextTransitAtLng, matchNextTransitAtLngRanges, RangeSet } from './lib/astro-motion';
-import { toIndianTime, calcTransition, calcSunTransJd, TransitionData, calcTransitionJd } from './lib/transitions';
+import {
+  calcGrahaSignTimeline,
+  calcRetroGrade,
+  calcStation,
+  matchNextTransitAtLng,
+  matchNextTransitAtLngRanges,
+  RangeSet,
+} from './lib/astro-motion';
+import {
+  toIndianTime,
+  calcTransition,
+  calcSunTransJd,
+  TransitionData,
+  calcTransitionJd,
+} from './lib/transitions';
 import { readEpheFiles } from './lib/files';
 import { ChartInputDTO } from './dto/chart-input.dto';
 import {
@@ -79,7 +102,12 @@ import {
   roundNumber,
 } from '../lib/converters';
 import { PairedChartInputDTO } from './dto/paired-chart-input.dto';
-import { midPointSurface, medianLatlng, subtractLng360, approxTransitTimes } from './lib/math-funcs';
+import {
+  midPointSurface,
+  medianLatlng,
+  subtractLng360,
+  approxTransitTimes,
+} from './lib/math-funcs';
 import { PairedChartDTO } from './dto/paired-chart.dto';
 import {
   mapPairedChartInput,
@@ -110,12 +138,23 @@ import { SingleCore } from './interfaces/single-core';
 import { AssignPairedDTO } from './dto/assign-paired.dto';
 import { matchPlanetNum } from './lib/settings/graha-values';
 import { CreateUserDTO } from '../user/dto/create-user.dto';
-import { assignDashaBalances, DashaBalance, matchDashaSubsetFromChart } from './lib/models/dasha-set';
-import { calcAscendantTimelineItems, calcNextAscendantLng, calcOffsetAscendant } from './lib/calc-ascendant';
+import {
+  assignDashaBalances,
+  DashaBalance,
+  matchDashaSubsetFromChart,
+} from './lib/models/dasha-set';
+import {
+  calcAscendantTimelineItems,
+  calcNextAscendantLng,
+  calcOffsetAscendant,
+} from './lib/calc-ascendant';
 import { GeoLoc } from './lib/models/geo-loc';
 import { Graha } from './lib/models/graha-set';
 import ayanamshaValues from './lib/settings/ayanamsha-values';
-import { calcBavGraphData, calcBavSignSamples } from './lib/settings/ashtakavarga-values';
+import {
+  calcBavGraphData,
+  calcBavSignSamples,
+} from './lib/settings/ashtakavarga-values';
 import { GeoPos } from './interfaces/geo-pos';
 import { processPredictiveRuleSet } from './lib/predictions';
 import { panchaPakshiDayNightSet } from './lib/settings/pancha-pakshi';
@@ -233,22 +272,30 @@ export class AstrologicController {
   }
 
   @Get('transitions/:loc/:dt/:modeRef?/:adjustMode?')
-  async transitions(@Res() res, @Param('loc') loc, @Param('dt') dt, @Param('modeRef') modeRef, @Param('adjustMode') adjustMode) {
+  async transitions(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Param('modeRef') modeRef,
+    @Param('adjustMode') adjustMode,
+  ) {
     if (validISODateString(dt) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const adjustRiseBy12 = adjustMode !== 'spot';
       const data = await calcAllTransitions(dt, geo, 0, adjustRiseBy12);
-      const mode = ["basic", "standard", "extended"].includes(modeRef)? modeRef : "standard";
-      const showSunData = ["standard", "extended"].includes(mode);
-      const showGeoData = ["extended"].includes(mode);
-      const sunData = showSunData? await calcSunTransJd(data.jd, geo) : null;
+      const mode = ['basic', 'standard', 'extended'].includes(modeRef)
+        ? modeRef
+        : 'standard';
+      const showSunData = ['standard', 'extended'].includes(mode);
+      const showGeoData = ['extended'].includes(mode);
+      const sunData = showSunData ? await calcSunTransJd(data.jd, geo) : null;
 
       data.transitions = data.transitions.map(row => {
         const { key, rise, set, mc, ic } = row;
         const item: TransitionData = { key, rise, set, mc, ic };
         if (showGeoData && key === 'su') {
           item.prevRise = sunData.prevRise;
-          item.prevSet = sunData.prevSet
+          item.prevSet = sunData.prevSet;
           item.nextRise = sunData.nextRise;
         }
         return item;
@@ -259,9 +306,9 @@ export class AstrologicController {
         const values = ['rise', 'set', 'mc', 'ic'].map(k => {
           const v = keys.includes(k) ? tr[k] : { jd: 0, lng: 0, after: false };
           return [k, v];
-        })
-        return {key, ...Object.fromEntries(values)};
-      }
+        });
+        return { key, ...Object.fromEntries(values) };
+      };
 
       const extraTransitionData = await sampleBaseObjects(data.jd, geo);
       if (extraTransitionData instanceof Object) {
@@ -270,17 +317,23 @@ export class AstrologicController {
           if (tr instanceof Object) {
             data.transitions.push(toTransitSet(k, tr));
           }
-        })
+        });
       }
       if (showGeoData) {
         data.geo = await this.geoService.fetchGeoAndTimezone(
           geo.lat,
           geo.lng,
           dt,
-          'compact'
+          'compact',
         );
-        data.chart = await this.fetchCompactChart(loc, dt, "top", "top", false, true);
-
+        data.chart = await this.fetchCompactChart(
+          loc,
+          dt,
+          'top',
+          'top',
+          false,
+          true,
+        );
       }
       return res.status(HttpStatus.OK).json(data);
     } else {
@@ -293,13 +346,18 @@ export class AstrologicController {
   }
 
   @Get('base-objects/:loc/:dt/:show?')
-  async basObjects(@Res() res, @Param('loc') loc, @Param('dt') dt, @Param('show') show) {
+  async basObjects(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Param('show') show,
+  ) {
     if (validISODateString(dt) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const showSamples = show === 'samples';
       const { dtUtc, jd } = matchJdAndDatetime(dt);
       const data = await sampleBaseObjects(jd, geo, showSamples);
-      return res.status(HttpStatus.OK).json({dtUtc, ...data});
+      return res.status(HttpStatus.OK).json({ dtUtc, ...data });
     } else {
       const result = {
         valid: false,
@@ -310,9 +368,31 @@ export class AstrologicController {
   }
 
   @Get('pancha-pakshi/:chartID/:loc/:dt?/:mode?')
-  async pankshaPanchaDaySet(@Res() res, @Param('chartID') chartID, @Param('loc') loc, @Param('dt') dt, @Param('mode') mode) {
+  async pankshaPanchaDaySet(
+    @Res() res,
+    @Param('chartID') chartID,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Param('mode') mode,
+  ) {
     let status = HttpStatus.BAD_REQUEST;
-    let data: Map<string, any> = new Map(Object.entries({ jd: 0, dtUtc: '', valid: false, geo: null, rise: 0, set: 0, nextRise: 0, riseDt: '', setDt: '', nextRiseDt: '', moon: null, bird: null, yamas: [] }));
+    let data: Map<string, any> = new Map(
+      Object.entries({
+        jd: 0,
+        dtUtc: '',
+        valid: false,
+        geo: null,
+        rise: 0,
+        set: 0,
+        nextRise: 0,
+        riseDt: '',
+        setDt: '',
+        nextRiseDt: '',
+        moon: null,
+        bird: null,
+        yamas: [],
+      }),
+    );
     const fetchNightAndDay = mode === 'dual';
     if (notEmptyString(chartID) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
@@ -326,7 +406,12 @@ export class AstrologicController {
       if (valid) {
         const chartObj = hasChart ? chartData.toObject() : {};
         const chart = new Chart(chartObj);
-        const ppData = await panchaPakshiDayNightSet(jd, geo, chart, fetchNightAndDay);
+        const ppData = await panchaPakshiDayNightSet(
+          jd,
+          geo,
+          chart,
+          fetchNightAndDay,
+        );
         if (ppData.get('valid')) {
           data = new Map([...data, ...ppData]);
           data.set('message', 'valid data set');
@@ -340,10 +425,25 @@ export class AstrologicController {
   }
 
   @Get('pancha-pakshi-pair/:u1/:u2/:dt?')
-  async pankshaPanchaPairDaySet(@Res() res, @Param('u1') u1, @Param('u2') u2, @Param('dt') dt) {
+  async pankshaPanchaPairDaySet(
+    @Res() res,
+    @Param('u1') u1,
+    @Param('u2') u2,
+    @Param('dt') dt,
+  ) {
     let status = HttpStatus.BAD_REQUEST;
-    const data: Map<string, any> = new Map(Object.entries({ jd: 0, dtUtc: '', valid: false, geo1: null, geo2: null, p1: null, p2: null }));
-    
+    const data: Map<string, any> = new Map(
+      Object.entries({
+        jd: 0,
+        dtUtc: '',
+        valid: false,
+        geo1: null,
+        geo2: null,
+        p1: null,
+        p2: null,
+      }),
+    );
+
     if (notEmptyString(u1, 20) && notEmptyString(u2, 12)) {
       if (u1 === u2) {
         data.set('message', 'IDs refer to the same user');
@@ -361,21 +461,32 @@ export class AstrologicController {
           const c1Data = await this.astrologicService.getUserBirthChart(u1);
           const c2Data = await this.astrologicService.getUserBirthChart(u2);
           const hasChart = c1Data instanceof Model && c2Data instanceof Model;
-          const valid = hasChart && c1Data.grahas.length > 1 && c2Data.grahas.length > 1;
+          const valid =
+            hasChart && c1Data.grahas.length > 1 && c2Data.grahas.length > 1;
           if (valid) {
             const c1Obj = hasChart ? c1Data.toObject() : {};
             const c2Obj = hasChart ? c2Data.toObject() : {};
             const chart1 = new Chart(c1Obj);
             const chart2 = new Chart(c2Obj);
-            const ppData1 = await panchaPakshiDayNightSet(jd, geo1, chart1, true);
-            const ppData2 = await panchaPakshiDayNightSet(jd, geo2, chart2, true);
+            const ppData1 = await panchaPakshiDayNightSet(
+              jd,
+              geo1,
+              chart1,
+              true,
+            );
+            const ppData2 = await panchaPakshiDayNightSet(
+              jd,
+              geo2,
+              chart2,
+              true,
+            );
             if (ppData1.get('valid')) {
               data.set('p1', Object.fromEntries(ppData1.entries()));
               data.set('p2', Object.fromEntries(ppData2.entries()));
               data.set('message', 'valid data set');
               data.set('valid', true);
               status = HttpStatus.OK;
-            }  else {
+            } else {
               data.set('message', 'Invalid data');
             }
           } else {
@@ -449,30 +560,53 @@ export class AstrologicController {
     @Param('user') user,
     @Param('ayanamsha') ayanamsha,
   ) {
-    const dtStr = validISODateString(dt)? dt : currentISODate();
+    const dtStr = validISODateString(dt) ? dt : currentISODate();
     const datetime = correctDatetime(dtStr);
-    const geo = isLocationString(loc)? locStringToGeo(loc) : null;
+    const geo = isLocationString(loc) ? locStringToGeo(loc) : null;
     const hasGeo = geo instanceof Object;
     const ayanamshaKey = notEmptyString(ayanamsha) ? ayanamsha : 'true_citra';
-    const result = await this.astrologicService.getGrahaPositions(datetime, geo, hasGeo, ayanamshaKey);
-    const grahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa', 'ra', 'ke', 'ur', 'ne', 'pl'];
+    const result = await this.astrologicService.getGrahaPositions(
+      datetime,
+      geo,
+      hasGeo,
+      ayanamshaKey,
+    );
+    const grahaKeys = [
+      'su',
+      'mo',
+      'ma',
+      'me',
+      'ju',
+      've',
+      'sa',
+      'ra',
+      'ke',
+      'ur',
+      'ne',
+      'pl',
+    ];
     if (hasGeo) {
       grahaKeys.unshift('as');
     }
-    const lngEntries = result.valid? grahaKeys.map(gk => {
-      const row = result.items.find(g => g.key === gk);
-      const lng = row instanceof Object ? row.lng : 0;
-      return [gk, lng];
-    }) : [];
+    const lngEntries = result.valid
+      ? grahaKeys.map(gk => {
+          const row = result.items.find(g => g.key === gk);
+          const lng = row instanceof Object ? row.lng : 0;
+          return [gk, lng];
+        })
+      : [];
     const longitudes = Object.fromEntries(lngEntries);
     const adminIds = await this.userService.getAdminIds();
-    const predictionSets = await this.settingService.getRuleSets(adminIds, true);
+    const predictionSets = await this.settingService.getRuleSets(
+      adminIds,
+      true,
+    );
     const predictions = [];
     if (notEmptyString(user, 20)) {
       const chartData = await this.astrologicService.getUserBirthChart(user);
       if (chartData instanceof Model) {
         const chart = new Chart(chartData.toObject());
-        
+
         for (const rs of predictionSets) {
           const pr = await this.fetchPredictions(rs, chart, geo);
           const { conditionRefs, operator } = rs.conditionSet;
@@ -481,21 +615,32 @@ export class AstrologicController {
             return {
               jd,
               ts: Math.floor(julToUnixTime(jd)),
-              dt: julToISODate(jd)
-            }
-          }
-          const toInfo = (item) => {
-            const entries = Object.entries(item).filter(entry => ['start', 'end', 'valid'].includes(entry[0]) === false);
+              dt: julToISODate(jd),
+            };
+          };
+          const toInfo = item => {
+            const entries = Object.entries(item).filter(
+              entry => ['start', 'end', 'valid'].includes(entry[0]) === false,
+            );
             return Object.fromEntries(entries);
-          }
-          const items = pr.items.filter(pr => pr.valid).map(item => {
-            return {
-              start: toTimes(item.start),
-              end: toTimes(item.end),
-              info: toInfo(item)
-            }
-          })
-          predictions.push({name: rs.name, text: rs.text, ...pr, items, conditions, operator });
+          };
+          const items = pr.items
+            .filter(pr => pr.valid)
+            .map(item => {
+              return {
+                start: toTimes(item.start),
+                end: toTimes(item.end),
+                info: toInfo(item),
+              };
+            });
+          predictions.push({
+            name: rs.name,
+            text: rs.text,
+            ...pr,
+            items,
+            conditions,
+            operator,
+          });
         }
       }
     }
@@ -505,25 +650,43 @@ export class AstrologicController {
       datetime: result.datetime,
       ayanamsha: result.ayanamsha,
       tz: 'UTC',
-      predictions
+      predictions,
     });
   }
 
   @Get('stars/:dt?/:nameRef?/:mode?')
-  async allStars(@Res() res, @Param('dt') dt, @Param('nameRef') nameRef, @Param('mode') mode) {
+  async allStars(
+    @Res() res,
+    @Param('dt') dt,
+    @Param('nameRef') nameRef,
+    @Param('mode') mode,
+  ) {
     const { dtUtc, jd } = matchJdAndDatetime(dt);
-    const funcMode = notEmptyString(mode)? mode : '2ut';
-    const nameList = notEmptyString(nameRef)? nameRef.split(',').map(str => str.trim()) : [];
+    const funcMode = notEmptyString(mode) ? mode : '2ut';
+    const nameList = notEmptyString(nameRef)
+      ? nameRef.split(',').map(str => str.trim())
+      : [];
     const data = await calcAllStars(dtUtc, nameList, funcMode);
     if (data.valid) {
       const { valid, stars, jd, sample } = data;
-      const filteredStars = stars.filter(item => item.valid).map(item => {
-        return { star: item.star, ...item.result }
-      });
+      const filteredStars = stars
+        .filter(item => item.valid)
+        .map(item => {
+          return { star: item.star, ...item.result };
+        });
       const num = stars.length;
-      return res.json({ valid, num, stars: filteredStars, sample, dt: dtUtc, jd});
+      return res.json({
+        valid,
+        num,
+        stars: filteredStars,
+        sample,
+        dt: dtUtc,
+        jd,
+      });
     } else {
-      return res.status(HttpStatus.NOT_ACCEPTABLE).json({ ...data, dt: dtUtc, jd});
+      return res
+        .status(HttpStatus.NOT_ACCEPTABLE)
+        .json({ ...data, dt: dtUtc, jd });
     }
   }
 
@@ -588,8 +751,16 @@ export class AstrologicController {
   ) {
     const fetchFull = smartCastInt(suppress, 0) < 1;
     const simplify = smartCastInt(simple, 0) > 0;
-    const chartData = await this.fetchCompactChart(loc, dt, ayanamshaMode, topList, fetchFull);
-    const data = simplify? simplifyChart(chartData, ayanamshaMode, 'complete', false, false) : chartData;
+    const chartData = await this.fetchCompactChart(
+      loc,
+      dt,
+      ayanamshaMode,
+      topList,
+      fetchFull,
+    );
+    const data = simplify
+      ? simplifyChart(chartData, ayanamshaMode, 'complete', false, false)
+      : chartData;
     return res.status(HttpStatus.OK).json(data);
   }
 
@@ -597,26 +768,41 @@ export class AstrologicController {
    * Fetch previously matched placenames and tz data if within 1km
    * Otherwise search new geo info
    */
-  async fetchGeoInfo(geo = null, dt = "") {
-    const placeMatches = await this.astrologicService.matchExistingPlaceNames(new GeoLoc(geo), 4, 1);
-    let geoInfo = { toponyms: [], tz: "", offset: 0 };
+  async fetchGeoInfo(geo = null, dt = '') {
+    const placeMatches = await this.astrologicService.matchExistingPlaceNames(
+      new GeoLoc(geo),
+      4,
+      1,
+    );
+    let geoInfo = { toponyms: [], tz: '', offset: 0 };
     let distance = 0;
     if (placeMatches.length > 0) {
       const geoPlace = placeMatches[0];
-      const tzOffset = this.geoService.checkLocaleOffset(geoPlace.tz, dt, geoPlace.placenames);
-      distance = geoPlace.distance;
-      geoInfo = { toponyms: geoPlace.placenames, tz: geoPlace.tz, offset: tzOffset};
-    } else {
-      geoInfo = await this.geoService.fetchGeoAndTimezone(
-        geo.lat,
-        geo.lng,
+      const tzOffset = this.geoService.checkLocaleOffset(
+        geoPlace.tz,
         dt,
+        geoPlace.placenames,
       );
+      distance = geoPlace.distance;
+      geoInfo = {
+        toponyms: geoPlace.placenames,
+        tz: geoPlace.tz,
+        offset: tzOffset,
+      };
+    } else {
+      geoInfo = await this.geoService.fetchGeoAndTimezone(geo.lat, geo.lng, dt);
     }
-    return {...geoInfo, distance };
+    return { ...geoInfo, distance };
   }
 
-  async fetchCompactChart(loc: string, dt: string, ayanamshaMode = "true_citra", topList = "", fetchFull = true, addExtraSets = true) {
+  async fetchCompactChart(
+    loc: string,
+    dt: string,
+    ayanamshaMode = 'true_citra',
+    topList = '',
+    fetchFull = true,
+    addExtraSets = true,
+  ) {
     let data: any = { valid: false };
     if (validISODateString(dt) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
@@ -649,38 +835,73 @@ export class AstrologicController {
   }
 
   @Get('current-chart/:loc/:dt?/:mode?')
-  async fetchCurrent(@Res() res, @Param('loc') loc, @Param('dt') dt, @Param('mode') mode) {
-    const dtUtc = validISODateString(dt)? dt : currentISODate();
-    const simplify = mode !== "all";
-    const ayanamshaKey = notEmptyString(mode, 5)? mode : simplify ? "true_citra" : "top";
-    const topList = !simplify ? "top" : ayanamshaKey;
-    const data = await this.fetchCompactChart(loc, dtUtc, "top", topList, false, false);
-    const chart = simplify? simplifyAstroChart(data, true, true) : data;
+  async fetchCurrent(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Param('mode') mode,
+  ) {
+    const dtUtc = validISODateString(dt) ? dt : currentISODate();
+    const simplify = mode !== 'all';
+    const ayanamshaKey = notEmptyString(mode, 5)
+      ? mode
+      : simplify
+      ? 'true_citra'
+      : 'top';
+    const topList = !simplify ? 'top' : ayanamshaKey;
+    const data = await this.fetchCompactChart(
+      loc,
+      dtUtc,
+      'top',
+      topList,
+      false,
+      false,
+    );
+    const chart = simplify ? simplifyAstroChart(data, true, true) : data;
     return res.json(chart);
   }
 
   @Get('snapshot/:loc/:dt?/:mode?')
-  async fetchShapshot(@Res() res, @Param('loc') loc, @Param('dt') dt, @Param('mode') mode) {
-    const dtUtc = validISODateString(dt)? dt : currentISODate();
-    const simplify = mode !== "all";
-    const ayanamshaKey = notEmptyString(mode, 5)? mode : simplify ? "true_citra" : "top";
-    const data = await this.astrologicService.getChartSnapshot(dtUtc, ayanamshaKey);
-    const chart = simplify? simplifyAstroChart(data, false, false) : data;
+  async fetchShapshot(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Param('mode') mode,
+  ) {
+    const dtUtc = validISODateString(dt) ? dt : currentISODate();
+    const simplify = mode !== 'all';
+    const ayanamshaKey = notEmptyString(mode, 5)
+      ? mode
+      : simplify
+      ? 'true_citra'
+      : 'top';
+    const data = await this.astrologicService.getChartSnapshot(
+      dtUtc,
+      ayanamshaKey,
+    );
+    const chart = simplify ? simplifyAstroChart(data, false, false) : data;
     const ayaRow = chart.ayanamshas.find(r => r.key === ayanamshaKey);
-    const ayanamshaVal = ayaRow instanceof Object? ayaRow.value : 0;
+    const ayanamshaVal = ayaRow instanceof Object ? ayaRow.value : 0;
     const geo = locStringToGeo(loc);
     const jd = calcJulDate(dtUtc);
     const asc = calcOffsetAscendant(geo.lat, geo.lng, jd, ayanamshaVal);
     const adjusted = applyAscendantToSimpleChart(chart, geo, ayanamshaKey);
-    return res.json({chart: adjusted, asc });
+    return res.json({ chart: adjusted, asc });
   }
 
   @Get('existing-placenames/:loc/:maxDistance?')
-  async fetchPlacenames(@Res() res, @Param('loc') loc, @Param('maxDistance') maxDistance ) {
+  async fetchPlacenames(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('maxDistance') maxDistance,
+  ) {
     const latLngAlt = locStringToGeo(loc);
     const maxDistanceInt = smartCastInt(maxDistance, 3);
     const geo = new GeoLoc(latLngAlt);
-    const data = await this.astrologicService.matchExistingPlaceNames(geo, maxDistanceInt);
+    const data = await this.astrologicService.matchExistingPlaceNames(
+      geo,
+      maxDistanceInt,
+    );
     return res.json(data);
   }
 
@@ -688,13 +909,14 @@ export class AstrologicController {
   async saveUserChart(@Res() res, @Body() inData: ChartInputDTO) {
     const { _id } = inData;
     const chartID = notEmptyString(_id, 12) ? _id : '';
-    const status = notEmptyString(inData.status)? inData.status : 'user';
-    const data = await this.saveChartData({...inData, status}, true, chartID);
+    const status = notEmptyString(inData.status) ? inData.status : 'user';
+    const data = await this.saveChartData({ ...inData, status }, true, chartID);
     return res.status(HttpStatus.OK).json(data);
   }
 
   @Post('save-member-chart/:ayanamsha?/:mode?')
-  async saveUserChartSimple(@Res() res,
+  async saveUserChartSimple(
+    @Res() res,
     @Body() inData: ChartInputDTO,
     @Param('mode') mode: string,
     @Param('ayanamsha') ayanamsha: string,
@@ -702,12 +924,18 @@ export class AstrologicController {
     const { _id } = inData;
     const chartID = notEmptyString(_id, 12) ? _id : '';
     // basic | simple | complete
-    const ayaKey = notEmptyString(ayanamsha, 5)? ayanamsha : 'true_citra';
-    const simpleMode = notEmptyString(mode, 3)? mode : 'basic';
-    const data = await this.saveChartData({...inData, status: 'member'}, true, chartID, 'true_citra', false);
-    const {valid, shortTz } = data;
+    const ayaKey = notEmptyString(ayanamsha, 5) ? ayanamsha : 'true_citra';
+    const simpleMode = notEmptyString(mode, 3) ? mode : 'basic';
+    const data = await this.saveChartData(
+      { ...inData, status: 'member' },
+      true,
+      chartID,
+      'true_citra',
+      false,
+    );
+    const { valid, shortTz } = data;
     const chart = valid ? simplifyChart(data.chart, ayaKey, simpleMode) : {};
-    return res.status(HttpStatus.OK).json({valid, shortTz, chart});
+    return res.status(HttpStatus.OK).json({ valid, shortTz, chart });
   }
 
   @Get('save-user-birth-chart/:userID/:loc/:dt/:g')
@@ -743,10 +971,19 @@ export class AstrologicController {
   }
 
   @Get('save-test-users-birth-chart/:start?/:limit?')
-  async saveTestUsersBirthChart(@Res() res, @Param('start') start, @Param('limit') limit) {
+  async saveTestUsersBirthChart(
+    @Res() res,
+    @Param('start') start,
+    @Param('limit') limit,
+  ) {
     const startInt = smartCastInt(start, 0);
     const limitInt = smartCastInt(limit, 100);
-    const users = await this.userService.list(startInt, limitInt, {test: true}, true);
+    const users = await this.userService.list(
+      startInt,
+      limitInt,
+      { test: true },
+      true,
+    );
     const chartIds = [];
     const numUsers = users.length;
     const valid = numUsers > 0;
@@ -757,7 +994,10 @@ export class AstrologicController {
           const inData = {
             user: user._id,
             name: user.nickName,
-            datetime: user.dob.toISOString().split('.').shift(),
+            datetime: user.dob
+              .toISOString()
+              .split('.')
+              .shift(),
             lat: geo.lat,
             lng: geo.lng,
             alt: geo.alt,
@@ -769,24 +1009,40 @@ export class AstrologicController {
             eventType: 'birth',
             roddenValue: 100,
           } as ChartInputDTO;
-          const saved = await this.saveChartData(inData, true, '', 'true_citra', false);
+          const saved = await this.saveChartData(
+            inData,
+            true,
+            '',
+            'true_citra',
+            false,
+          );
           if (saved.valid) {
             chartIds.push({
               _id: saved.chart._id,
               uid: user._id,
-              name: user.nickName
+              name: user.nickName,
             });
           }
         }
-         
       }
     }
     const num = chartIds.length;
-    return res.json({ chartIds, num, valid});
+    return res.json({ chartIds, num, valid });
   }
 
-  async saveChartData(inData: ChartInputDTO, save = true, chartID = '', ayanamsha = 'top', fetchFull = true) {
-    const data: any = { valid: false, message: '', chart: null, hasGeoTzData: false  };
+  async saveChartData(
+    inData: ChartInputDTO,
+    save = true,
+    chartID = '',
+    ayanamsha = 'top',
+    fetchFull = true,
+  ) {
+    const data: any = {
+      valid: false,
+      message: '',
+      chart: null,
+      hasGeoTzData: false,
+    };
     const {
       user,
       datetime,
@@ -806,8 +1062,9 @@ export class AstrologicController {
     const userRecord = await this.userService.getUser(user);
     // If user record is matched, proceed
     if (userRecord instanceof Object) {
-      const dob = userRecord.dob instanceof Date? utcDate(userRecord.dob) : null;
-      const dobDtStr = dob instanceof Object ? dob.toISOString() : "";
+      const dob =
+        userRecord.dob instanceof Date ? utcDate(userRecord.dob) : null;
+      const dobDtStr = dob instanceof Object ? dob.toISOString() : '';
       const hasValidDatetime = validISODateString(datetime);
       const useDob = !hasValidDatetime && validISODateString(dobDtStr);
       const refDt = useDob ? dobDtStr : datetime;
@@ -837,16 +1094,14 @@ export class AstrologicController {
           data.hasGeoTzData =
             notEmptyString(tz) &&
             isNumeric(tzOffset) &&
-            placenames instanceof Array && placenames.length > 1;
-          const geoInfo = await this.fetchGeoInfo(
-            geo,
-            refDt,
-          );
+            placenames instanceof Array &&
+            placenames.length > 1;
+          const geoInfo = await this.fetchGeoInfo(geo, refDt);
           const dtUtc = applyTzOffsetToDateString(refDt, geoInfo.offset);
-          const topKeys = (!fetchFull && ayanamsha !== 'top')? [ayanamsha] : [];
+          const topKeys = !fetchFull && ayanamsha !== 'top' ? [ayanamsha] : [];
           // always fetch chart data with tropical grahas, but apply ayanamsha(s)
-          // for derived value sets. For member charts only fetch one set of ayanamsha variants 
-          // as the others will never be used and 
+          // for derived value sets. For member charts only fetch one set of ayanamsha variants
+          // as the others will never be used and
           // tropical values can easily be adjusted by known ayanamsha offsets
           const chartData = await calcCompactChartData(
             dtUtc,
@@ -854,7 +1109,7 @@ export class AstrologicController {
             'top',
             topKeys,
             geoInfo.offset,
-            fetchFull
+            fetchFull,
           );
           if (chartData instanceof Object) {
             data.shortTz = toShortTzAbbr(dtUtc, geoInfo.tz);
@@ -1019,52 +1274,89 @@ export class AstrologicController {
 
   /**
    * Fetch a full set of dashas to given level. PLease note this can be slow beyond the 3rd level (pratyantardasha)
-   * 
+   *
    */
   @Get('dasha-set')
   async fetchDashSet(@Res() res, @Query() query) {
-    const { dt, transitJd, system, key, chartData, maxLevel, durDays } = await this.matchDashaQueryParams(query);
+    const {
+      dt,
+      transitJd,
+      system,
+      key,
+      chartData,
+      maxLevel,
+      durDays,
+    } = await this.matchDashaQueryParams(query);
     const data = { dashas: [], nak: -1, lng: -1 };
     if (chartData instanceof Object) {
       const chart = new Chart(chartData);
-      const { dashas, nak, lng } = matchDashaSubsetFromChart(chart, transitJd, maxLevel, durDays, key, system);
+      const { dashas, nak, lng } = matchDashaSubsetFromChart(
+        chart,
+        transitJd,
+        maxLevel,
+        durDays,
+        key,
+        system,
+      );
       if (dashas instanceof Array) {
         data.dashas = dashas;
         data.nak = nak;
         data.lng = lng;
       }
     }
-    return res.json({...data, dt });
+    return res.json({ ...data, dt });
   }
 
   async matchDashaQueryParams(query) {
     const hasQuery = query instanceof Object && Object.keys(query).length > 1;
-    const criteria: Map<string, string> = hasQuery ? new Map(Object.entries(query)) : new Map();
-    const dt = criteria.has('dt')? criteria.get('dt') : '';
+    const criteria: Map<string, string> = hasQuery
+      ? new Map(Object.entries(query))
+      : new Map();
+    const dt = criteria.has('dt') ? criteria.get('dt') : '';
     const hasDt = validISODateString(dt);
     const hasLoc = criteria.has('loc');
     const hasLatLng = criteria.has('lat') && criteria.has('lng');
-    const geo = hasLoc? locStringToGeo(criteria.get('loc')) : hasLatLng? latLngParamsToGeo(criteria.get('lat'), criteria.get('lng'), criteria.get('alt')) : { lat: 0, lng: 0, alt: 0 };
-    let levelInt = criteria.has('level')? smartCastInt(criteria.get('level'), 4) : 4
-    const transitDt = criteria.has('transit')? criteria.get('transit') : criteria.has('after') ? criteria.get('after') : '';
+    const geo = hasLoc
+      ? locStringToGeo(criteria.get('loc'))
+      : hasLatLng
+      ? latLngParamsToGeo(
+          criteria.get('lat'),
+          criteria.get('lng'),
+          criteria.get('alt'),
+        )
+      : { lat: 0, lng: 0, alt: 0 };
+    let levelInt = criteria.has('level')
+      ? smartCastInt(criteria.get('level'), 4)
+      : 4;
+    const transitDt = criteria.has('transit')
+      ? criteria.get('transit')
+      : criteria.has('after')
+      ? criteria.get('after')
+      : '';
     const hasTransitDt = validISODateString(transitDt);
-    const transitJd = hasTransitDt? calcJulDate(transitDt) : -1;
-    const system = criteria.has('system') ? criteria.get('system') : 'vimshottari';
+    const transitJd = hasTransitDt ? calcJulDate(transitDt) : -1;
+    const system = criteria.has('system')
+      ? criteria.get('system')
+      : 'vimshottari';
     const key = criteria.has('key') ? criteria.get('key') : 'mo';
-    const chartId = criteria.has('chart')? criteria.get('chart') : '';
-    const userId = criteria.has('user')? criteria.get('user') : '';
+    const chartId = criteria.has('chart') ? criteria.get('chart') : '';
+    const userId = criteria.has('user') ? criteria.get('user') : '';
     const hasChartId = notEmptyString(chartId, 16);
     const hasUserId = notEmptyString(userId, 16);
     const validRefs = hasDt && (hasLoc || hasLatLng);
     const balanceRef = new DashaBalance(criteria);
     const duration = criteria.has('duration') ? criteria.get('duration') : '';
-    const durDays = notEmptyString(duration) ? durationStringToDays(duration) : 30;
+    const durDays = notEmptyString(duration)
+      ? durationStringToDays(duration)
+      : 30;
     if (balanceRef.maxLevel > 0) {
       levelInt = balanceRef.maxLevel;
     }
     let chartData: any = null;
     if (hasChartId || hasUserId) {
-      const chartModel = hasUserId ? await this.astrologicService.getUserBirthChart(userId) : await this.astrologicService.getChart(chartId);
+      const chartModel = hasUserId
+        ? await this.astrologicService.getUserBirthChart(userId)
+        : await this.astrologicService.getChart(chartId);
       if (chartModel instanceof Model) {
         chartData = chartModel.toObject();
       }
@@ -1079,24 +1371,43 @@ export class AstrologicController {
         false,
       );
     }
-    return { dt, transitJd, chartId, userId, system, key, maxLevel: levelInt, chartData, balanceRef, durDays };
+    return {
+      dt,
+      transitJd,
+      chartId,
+      userId,
+      system,
+      key,
+      maxLevel: levelInt,
+      chartData,
+      balanceRef,
+      durDays,
+    };
   }
 
   /*
-  * Fetch the dasha balance for a given date or when the mahadasha, antardasha or priantarddasha 
-  * next match specified graha keys
-  * All named parameters are added to the query string
-  * Charts may identified by chart id (chart=[chartID]), user if (user=[userID]) or by location + datetime time (&loc=65.15,-13.4&dt=1967-08-23:04:09:34) or (&lat=65.15&lng-13.4&dt=1967-08-23:04:09:34)
-  * The default system is vimshottari, but other systems may be specified with the system parameter
-  * The default base graha is the mmon, but other grahas may be specified with key and a two letter code (key=ma)
-  * If no target dasha grahas are specified, we need a reference transit date with transit=2021-07-18T12:00:00
-  * The level parameter determines the maximum depth
-  * To find the occurrence of a given dasha graha after a given date, use the lv1, lv2, lv3 and lv4 parameters
-  * in combination with either transit or after, (lv2=ma&after=2021-06-30T00:00:00). The maximum depth is the highest level specified
-  */
+   * Fetch the dasha balance for a given date or when the mahadasha, antardasha or priantarddasha
+   * next match specified graha keys
+   * All named parameters are added to the query string
+   * Charts may identified by chart id (chart=[chartID]), user if (user=[userID]) or by location + datetime time (&loc=65.15,-13.4&dt=1967-08-23:04:09:34) or (&lat=65.15&lng-13.4&dt=1967-08-23:04:09:34)
+   * The default system is vimshottari, but other systems may be specified with the system parameter
+   * The default base graha is the mmon, but other grahas may be specified with key and a two letter code (key=ma)
+   * If no target dasha grahas are specified, we need a reference transit date with transit=2021-07-18T12:00:00
+   * The level parameter determines the maximum depth
+   * To find the occurrence of a given dasha graha after a given date, use the lv1, lv2, lv3 and lv4 parameters
+   * in combination with either transit or after, (lv2=ma&after=2021-06-30T00:00:00). The maximum depth is the highest level specified
+   */
   @Get('dasha-balance')
   async getDashBalance(@Res() res, @Query() query) {
-    const { dt, transitJd, system, key, chartData, balanceRef, maxLevel } = await this.matchDashaQueryParams(query);
+    const {
+      dt,
+      transitJd,
+      system,
+      key,
+      chartData,
+      balanceRef,
+      maxLevel,
+    } = await this.matchDashaQueryParams(query);
     const data: any = {};
     let nak = -1;
     let lng = -1;
@@ -1105,17 +1416,43 @@ export class AstrologicController {
       const chart = new Chart(chartData);
       nak = chart.graha(key).nakshatra27;
       lng = chart.graha(key).longitude;
-      balances = assignDashaBalances(chart, transitJd, maxLevel, balanceRef, system, key);
+      balances = assignDashaBalances(
+        chart,
+        transitJd,
+        maxLevel,
+        balanceRef,
+        system,
+        key,
+      );
     }
-    return res.json({dt, balances, nak, lng, yearLength: data.yearLength, system, key});
+    return res.json({
+      dt,
+      balances,
+      nak,
+      lng,
+      yearLength: data.yearLength,
+      system,
+      key,
+    });
   }
 
   @Get('next-ascendant/:lng/:loc/:dt?')
-  async fetchNextAscendant(@Res() res, @Param('lng') lng, @Param('loc') loc, @Param('dt') dt) {
+  async fetchNextAscendant(
+    @Res() res,
+    @Param('lng') lng,
+    @Param('loc') loc,
+    @Param('dt') dt,
+  ) {
     const { dtUtc, jd } = matchJdAndDatetime(dt);
     const geo = locStringToGeo(loc);
-    const lngFl = smartCastFloat(lng, 0)
-    const data = await calcNextAscendantLng(lngFl, geo.lat, geo.lng, jd, "true_citra")
+    const lngFl = smartCastFloat(lng, 0);
+    const data = await calcNextAscendantLng(
+      lngFl,
+      geo.lat,
+      geo.lng,
+      jd,
+      'true_citra',
+    );
     return res.json({ ...data, dtUtc });
   }
 
@@ -1126,17 +1463,31 @@ export class AstrologicController {
     const dt = keys.includes('dt') ? params.dt : '';
     const loc = keys.includes('loc') ? params.loc : '';
     const hasLoc = validLocationParameter(loc);
-    const hasChartId = keys.includes('chart') && notEmptyString(params.chart, 16);
-    const hasBirthLoc = keys.includes('bloc') && validLocationParameter(params.bloc);
+    const hasChartId =
+      keys.includes('chart') && notEmptyString(params.chart, 16);
+    const hasBirthLoc =
+      keys.includes('bloc') && validLocationParameter(params.bloc);
     const hasBirthDt = keys.includes('bdt') && validISODateString(params.bdt);
-    const sameLocTime = hasLoc && keys.includes('auto') && smartCastInt(params.auto, 0) > 0;
-    
+    const sameLocTime =
+      hasLoc && keys.includes('auto') && smartCastInt(params.auto, 0) > 0;
+
     const { dtUtc, jd } = matchJdAndDatetime(dt);
     const chartId = hasChartId ? params.chart : '';
     const useGeneratedChart = hasBirthDt && hasBirthLoc && !hasChartId;
     const loadCustom = useGeneratedChart || sameLocTime;
-    
-    const result = { valid: false, message: '', dt: dtUtc, jd, birthJd: 0, birthDt: '', geo: { lat: 0, lng: 0 }, birthGeo: { lat: 0, lng: 0 },  items: [], chart: null };
+
+    const result = {
+      valid: false,
+      message: '',
+      dt: dtUtc,
+      jd,
+      birthJd: 0,
+      birthDt: '',
+      geo: { lat: 0, lng: 0 },
+      birthGeo: { lat: 0, lng: 0 },
+      items: [],
+      chart: null,
+    };
     let cData = null;
     if (hasChartId) {
       cData = await this.astrologicService.getChart(chartId);
@@ -1155,50 +1506,70 @@ export class AstrologicController {
     if (cData instanceof Object) {
       const cObj = cData instanceof Model ? cData.toObject() : cData;
       const chart = new Chart(cObj);
-      chart.setAyanamshaItemByKey("true_citra");
+      chart.setAyanamshaItemByKey('true_citra');
       result.birthJd = chart.jd;
       const hasTransitGeo = validLocationParameter(loc);
       const geo = hasTransitGeo ? locStringToGeo(loc) : chart.geo;
       result.chart = chart;
       result.valid = true;
-      result.geo = hasTransitGeo? geo : chart.geo;
+      result.geo = hasTransitGeo ? geo : chart.geo;
       if (chart.grahas.length > 0) {
         result.birthGeo = chart.geo;
-        result.birthDt = julToISODate(chart.jd).split('.').shift();
+        result.birthDt = julToISODate(chart.jd)
+          .split('.')
+          .shift();
         const sourceTransitions = chart.getTransitions();
         for (const gr of chart.bodies) {
           const dV = await calcDeclination(chart.jd, gr.num);
-          const altitude = await calcAltitudeSE(jd, chart.geo, gr.longitude, gr.lat, false);
+          const altitude = await calcAltitudeSE(
+            jd,
+            chart.geo,
+            gr.longitude,
+            gr.lat,
+            false,
+          );
           const approxTimes = approxTransitTimes(geo, 0, jd, dV.ra, dV.value);
           const cTransItem = sourceTransitions.find(tr => tr.key === gr.key);
-          const hasCTrans = cTransItem instanceof Object && Object.keys(cTransItem).includes("rise");
-          const sourceEntries = hasCTrans ? Object.entries(cTransItem).filter(entry => ['rise', 'set', 'mc', 'ic'].includes(entry[0])).map(([k, v]) => {
-            const { jd } = v;
-            return [k, { jd, dt: julToISODate(jd) }];
-          }) : [];
+          const hasCTrans =
+            cTransItem instanceof Object &&
+            Object.keys(cTransItem).includes('rise');
+          const sourceEntries = hasCTrans
+            ? Object.entries(cTransItem)
+                .filter(entry => ['rise', 'set', 'mc', 'ic'].includes(entry[0]))
+                .map(([k, v]) => {
+                  const { jd } = v;
+                  return [k, { jd, dt: julToISODate(jd) }];
+                })
+            : [];
           const source = Object.fromEntries(sourceEntries);
           const sourceKeys = sourceEntries.map(entry => entry[0]);
-          
+
           const entries = Object.entries(approxTimes).map(([k, v]) => {
             const item = {
               jd: v,
               dt: julToISODate(v),
-              bJd: sourceKeys.includes(k)? source[k].jd : 0,
-              bDt: sourceKeys.includes(k)? source[k].dt : '',
-            }
+              bJd: sourceKeys.includes(k) ? source[k].jd : 0,
+              bDt: sourceKeys.includes(k) ? source[k].dt : '',
+            };
             return [k, item];
           });
           const transSet = Object.fromEntries(entries);
-          result.items.push({key: gr.key, ...dV, ...transSet, altitude, longitude: gr.longitude, tropLng: gr.lng });
+          result.items.push({
+            key: gr.key,
+            ...dV,
+            ...transSet,
+            altitude,
+            longitude: gr.longitude,
+            tropLng: gr.lng,
+          });
         }
       }
-
     } else {
       if (result.message.length < 3) {
         result.message = 'Invalid parameters';
       }
     }
-    return res.json({...result, chartId});
+    return res.json({ ...result, chartId });
   }
 
   @Get('day-transits')
@@ -1212,7 +1583,9 @@ export class AstrologicController {
     const planetNum = hasGrahaKey ? matchPlanetNum(grahaKey) : -1;
     const fromCurrentGraha = planetNum >= 0;
     const hasLoc = validLocationParameter(loc);
-    const topoMode = keys.includes('topo') ? smartCastInt(params.topo) === 1 : false;
+    const topoMode = keys.includes('topo')
+      ? smartCastInt(params.topo) === 1
+      : false;
     const { dtUtc, jd } = matchJdAndDatetime(dt);
     const geo = locStringToGeo(loc);
     let seTransits = [];
@@ -1221,14 +1594,26 @@ export class AstrologicController {
     let lat = 0;
     let lngSpeed = 0;
     if (fromCurrentGraha) {
-      const result = await calcTransitionJd(jd, geo, planetNum, true, true, true);
+      const result = await calcTransitionJd(
+        jd,
+        geo,
+        planetNum,
+        true,
+        true,
+        true,
+      );
       const adjustMode = keys.includes('adjust') ? params.adjust : '';
       const useRefSpeed = adjustMode === 'spd';
       if (result.valid) {
         seTransits = ['rise', 'set', 'mc', 'ic'].map(k => {
           const item = result[k];
-          return { type: k, lng: item.lng, jd: item.jd, dt: julToISODate(item. jd)};
-        })
+          return {
+            type: k,
+            lng: item.lng,
+            jd: item.jd,
+            dt: julToISODate(item.jd),
+          };
+        });
         const body = await calcBodyJd(jd, grahaKey, false, topoMode);
         switch (adjustMode) {
           case 'rise':
@@ -1243,7 +1628,7 @@ export class AstrologicController {
             lng = body.lng;
             break;
         }
-        
+
         lat = body.lat;
         if (useRefSpeed) {
           lngSpeed = body.lngSpeed;
@@ -1257,25 +1642,55 @@ export class AstrologicController {
       lngSpeed = keys.includes('speed') ? smartCastInt(params.lat, 0) : 0;
     }
     const mins = keys.includes('mins') ? smartCastInt(params.mins, 1) : 0;
-    const multiplier = mins > 0 ? mins : grahaKey === 'mo'? 1 : 5;
-    const filterStr = keys.includes('types') ? notEmptyString(params.types, 1) ? params.types : '' : '';
+    const multiplier = mins > 0 ? mins : grahaKey === 'mo' ? 1 : 5;
+    const filterStr = keys.includes('types')
+      ? notEmptyString(params.types, 1)
+        ? params.types
+        : ''
+      : '';
     const filterKeys = filterStr.length > 1 ? filterStr.split(',') : [];
     const sampleKey = grahaKey === 'mo' ? grahaKey : '';
-    const data = hasLoc ? await calcTransposedObjectTransitionsSimple(jd, geo, lng, lat, lngSpeed, multiplier, filterKeys, sampleKey) : [];
-    return res.json({jd, dtUtc, lat, lng, lngSpeed, grahaKey, multiplier, seTransits, ...data });
+    const data = hasLoc
+      ? await calcTransposedObjectTransitionsSimple(
+          jd,
+          geo,
+          lng,
+          lat,
+          lngSpeed,
+          multiplier,
+          filterKeys,
+          sampleKey,
+        )
+      : [];
+    return res.json({
+      jd,
+      dtUtc,
+      lat,
+      lng,
+      lngSpeed,
+      grahaKey,
+      multiplier,
+      seTransits,
+      ...data,
+    });
   }
-  
+
   @Get('predictive-rule-check/:ruleID/:chartID/:loc?')
-  async checkRulesetForChart(@Res() res, @Param('ruleID') ruleID, @Param('chartID') chartID, @Param('loc') loc) {
+  async checkRulesetForChart(
+    @Res() res,
+    @Param('ruleID') ruleID,
+    @Param('chartID') chartID,
+    @Param('loc') loc,
+  ) {
     const ruleData = await this.settingService.getRuleSet(ruleID);
-    const result = { valid: false , matches: false, items: [] };
+    const result = { valid: false, matches: false, items: [] };
     const hasRuleData = ruleData instanceof Model;
     const chartRecord = await this.astrologicService.getChart(chartID);
     const hasChart = chartRecord instanceof Model;
     if (hasChart && hasRuleData) {
-      const chartData = hasChart? chartRecord.toObject() : {};
+      const chartData = hasChart ? chartRecord.toObject() : {};
       const chart = new Chart(chartData);
-      const geo = isLocationString(loc)? locStringToGeo(loc) : chart.geo;
+      const geo = isLocationString(loc) ? locStringToGeo(loc) : chart.geo;
       const data = await this.fetchPredictions(ruleData, chart, geo);
       if (data.valid) {
         result.valid = data.items.length > 0;
@@ -1289,20 +1704,30 @@ export class AstrologicController {
   async fetchPredictions(ruleData = null, chart: Chart, geo: GeoPos) {
     const rule = new PredictiveRule(ruleData);
     const settings = await this.settingService.getProtocolSettings();
-    
-    const andMode = rule.conditionSet.operator  !== "or";
-    const outerConditions = rule.conditionSet.conditionRefs.filter(cr => !cr.isSet);
+
+    const andMode = rule.conditionSet.operator !== 'or';
+    const outerConditions = rule.conditionSet.conditionRefs.filter(
+      cr => !cr.isSet,
+    );
     const outerItems = [];
     for (const cond of outerConditions) {
       if (cond instanceof Condition) {
-        const newOuterItem = await processPredictiveRuleSet(cond, rule.type, chart, geo, settings);
+        const newOuterItem = await processPredictiveRuleSet(
+          cond,
+          rule.type,
+          chart,
+          geo,
+          settings,
+        );
         outerItems.push(newOuterItem);
       }
     }
     const valid = chart.grahas.length > 6;
     const numOuterValid = outerItems.filter(oi => oi.valid).length;
-    const matches = andMode ? numOuterValid === outerItems.length : numOuterValid > 0;
-    return { valid , matches, items: outerItems }
+    const matches = andMode
+      ? numOuterValid === outerItems.length
+      : numOuterValid > 0;
+    return { valid, matches, items: outerItems };
   }
 
   @Get('recalc-charts/:start?/:limit?')
@@ -1332,10 +1757,7 @@ export class AstrologicController {
   @Get('life-events/:chartID')
   async getRelated(@Res() res, @Param('chartID') chartID) {
     const criteria: Map<string, any> = new Map();
-    criteria.set('$or', [
-      { _id: chartID },
-      { parent: chartID },
-    ]);
+    criteria.set('$or', [{ _id: chartID }, { parent: chartID }]);
     const items = await this.astrologicService.relatedChartSubjects(chartID);
     const num = items.length;
     return res.json({
@@ -1596,7 +2018,7 @@ export class AstrologicController {
       k1,
       k2,
       orbDouble,
-      maxInt
+      maxInt,
     );
     return res.status(200).send({
       valid: data.length > 0,
@@ -1639,9 +2061,7 @@ export class AstrologicController {
   /*
     Discover charts with a planet within specified degree range
   */
-  @Get(
-    'discover-degree-range-matches/:key/:lng/:orb?/:ayanamshaKey?/:max?',
-  )
+  @Get('discover-degree-range-matches/:key/:lng/:orb?/:ayanamshaKey?/:max?')
   async discoverDegreeRangeMatches(
     @Res() res,
     @Param('key') key,
@@ -1651,9 +2071,14 @@ export class AstrologicController {
     @Param('max') max,
   ) {
     const maxInt = smartCastInt(max, 100);
-    const lngs = notEmptyString(lng)? lng.split(',').filter(lng => isNumeric(lng)).map(parseFloat) : [];
+    const lngs = notEmptyString(lng)
+      ? lng
+          .split(',')
+          .filter(lng => isNumeric(lng))
+          .map(parseFloat)
+      : [];
     const aKey = notEmptyString(ayanamshaKey, 3) ? ayanamshaKey : 'true_citra';
-    const orbDouble = isNumeric(orb)? parseFloat(orb) : 1;
+    const orbDouble = isNumeric(orb) ? parseFloat(orb) : 1;
     const items = await this.astrologicService.findPredictiveRangeMatch(
       key,
       lngs,
@@ -1666,9 +2091,7 @@ export class AstrologicController {
     });
   }
 
-  @Get(
-    'discover-ascendant-matches/:dt?/:lng?/:orb?/:ayanamshaKey?/:max?',
-  )
+  @Get('discover-ascendant-matches/:dt?/:lng?/:orb?/:ayanamshaKey?/:max?')
   async discoverAscendantMatches(
     @Res() res,
     @Param('dt') dt,
@@ -1678,13 +2101,18 @@ export class AstrologicController {
     @Param('max') max,
   ) {
     const maxInt = smartCastInt(max, 100);
-    
-    const orbDouble = isNumeric(orb)? parseFloat(orb) : 1;
 
-    const lngs = notEmptyString(lng)? lng.split(',').filter(lng => isNumeric(lng)).map(parseFloat) : [];
-    
+    const orbDouble = isNumeric(orb) ? parseFloat(orb) : 1;
+
+    const lngs = notEmptyString(lng)
+      ? lng
+          .split(',')
+          .filter(lng => isNumeric(lng))
+          .map(parseFloat)
+      : [];
+
     const aKey = notEmptyString(ayanamshaKey, 3) ? ayanamshaKey : 'true_citra';
-    
+
     const items = await this.astrologicService.matchAscendantsbyDate(
       dt,
       lngs,
@@ -2645,7 +3073,7 @@ export class AstrologicController {
           limitVal,
           isDefaultBirthChart,
           query,
-          isAdmin
+          isAdmin,
         );
         if (charts instanceof Array) {
           data.items = charts;
@@ -2893,7 +3321,7 @@ export class AstrologicController {
 
   @Get('tzdata/:loc/:dt?')
   async timeZoneByGeo(@Res() res, @Param('loc') loc, @Param('dt') dt) {
-    const refDt = validISODateString(dt)? dt : currentISODate();
+    const refDt = validISODateString(dt) ? dt : currentISODate();
     if (notEmptyString(refDt, 6) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const data = await this.geoService.fetchTzData(geo, refDt);
@@ -2939,12 +3367,7 @@ export class AstrologicController {
   }
 
   @Get('direction/:key/:dt?')
-  async sampleStationByGraha(
-    @Res() res,
-    @Param('key') key,
-    @Param('dt') dt,
-  ) {
-    
+  async sampleStationByGraha(@Res() res, @Param('key') key, @Param('dt') dt) {
     const { dtUtc, jd } = matchJdAndDatetime(dt);
     const data: any = { valid: false, dtUtc, jd, result: null };
     data.result = await this.astrologicService.matchStations(key, jd);
@@ -2953,83 +3376,189 @@ export class AstrologicController {
   }
 
   @Get('predictive/:key/:lng/:start?/:ayanamsha?')
-  async predictiveGrahaLng(@Res() res, @Param('key') key, @Param('lng') lng, @Param('start') start, @Param('ayanamsha') ayanamsha) {
+  async predictiveGrahaLng(
+    @Res() res,
+    @Param('key') key,
+    @Param('lng') lng,
+    @Param('start') start,
+    @Param('ayanamsha') ayanamsha,
+  ) {
     const { dtUtc, jd } = matchJdAndDatetime(start);
-    const lngFl = isNumeric(lng)? parseInt(lng) : 0;
+    const lngFl = isNumeric(lng) ? parseInt(lng) : 0;
     const data = await matchNextTransitAtLng(key, lngFl, jd, ayanamsha);
     const targetDt = julToISODate(data.targetJd);
-    return res.status(HttpStatus.OK).json({...data, startDt: dtUtc, targetDt});
+    return res
+      .status(HttpStatus.OK)
+      .json({ ...data, startDt: dtUtc, targetDt });
   }
 
   @Get('predictive-ranges/:key/:range/:start?/:ayanamsha?')
-  async predictiveGrahaLngRanges(@Res() res, @Param('key') key, @Param('range') range, @Param('start') start, @Param('ayanamsha') ayanamsha) {
+  async predictiveGrahaLngRanges(
+    @Res() res,
+    @Param('key') key,
+    @Param('range') range,
+    @Param('start') start,
+    @Param('ayanamsha') ayanamsha,
+  ) {
     const { dtUtc, jd } = matchJdAndDatetime(start);
-    const rangeItems = range.split(',').filter(row => /^\d+(\.\d+)?:\d+(\.\d+)?(:-?[01])?$/.test(row)).map(row => row.split(':').map(parseFloat));
+    const rangeItems = range
+      .split(',')
+      .filter(row => /^\d+(\.\d+)?:\d+(\.\d+)?(:-?[01])?$/.test(row))
+      .map(row => row.split(':').map(parseFloat));
     const rangeSets = rangeItems.map(row => {
-      const dirFlag = row.length > 2? row[2] : 0;
+      const dirFlag = row.length > 2 ? row[2] : 0;
       const dir = dirFlag < 0 ? -1 : dirFlag > 0 ? 1 : 0;
       return new RangeSet(row.slice(0, 2), dir);
-    })
-    const data = await matchNextTransitAtLngRanges(key, rangeSets, jd, ayanamsha);
+    });
+    const data = await matchNextTransitAtLngRanges(
+      key,
+      rangeSets,
+      jd,
+      ayanamsha,
+    );
     const targetDt = julToISODate(data.targetJd);
-    return res.status(HttpStatus.OK).json({...data, key, startDt: dtUtc, targetDt, rangeSets });
+    return res
+      .status(HttpStatus.OK)
+      .json({ ...data, key, startDt: dtUtc, targetDt, rangeSets });
   }
 
   @Get('ayanamsha/:dt?/:ayanamsha?')
   async ayanamsha(@Res() res, @Param('dt') dt, @Param('ayanamsha') ayanamsha) {
     const { dtUtc, jd } = matchJdAndDatetime(dt);
-    const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
+    const ayanamshaKey = notEmptyString(ayanamsha, 5)
+      ? ayanamsha
+      : 'true_citra';
     const ayaRow = ayanamshaValues.find(row => row.key === ayanamshaKey);
-    const ayaItem = ayaRow instanceof Object ? ayaRow : {key: "", value: 0, name: "" };
-    const { name}  = ayaItem;
+    const ayaItem =
+      ayaRow instanceof Object ? ayaRow : { key: '', value: 0, name: '' };
+    const { name } = ayaItem;
     const value = await calcAyanamsha(jd, ayanamshaKey);
-    return res.status(HttpStatus.OK).json({ dt: dtUtc, jd: jd, value, num: ayaItem.value, name, key: ayanamshaKey });
+    return res
+      .status(HttpStatus.OK)
+      .json({
+        dt: dtUtc,
+        jd: jd,
+        value,
+        num: ayaItem.value,
+        name,
+        key: ayanamshaKey,
+      });
   }
 
   @Get('sign-timeline/:loc/:start?/:end?/:ayanamsha?')
-  async signSwitches(@Res() res, @Param('loc') loc, @Param('start') start, @Param('end') end, @Param('ayanamsha') ayanamsha) {
+  async signSwitches(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('start') start,
+    @Param('end') end,
+    @Param('ayanamsha') ayanamsha,
+  ) {
     const { dtUtc, jd } = matchJdAndDatetime(start);
     const startJd = jd;
     const { endJd, endDt } = matchEndJdAndDatetime(end, jd);
     const geo = locStringToGeo(loc);
-    const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
-    const grahas = await calcGrahaSignTimeline(geo, startJd, endJd, ayanamshaKey);
+    const ayanamshaKey = notEmptyString(ayanamsha, 5)
+      ? ayanamsha
+      : 'true_citra';
+    const grahas = await calcGrahaSignTimeline(
+      geo,
+      startJd,
+      endJd,
+      ayanamshaKey,
+    );
     return res.status(HttpStatus.OK).json({ start: dtUtc, end: endDt, grahas });
   }
 
-  @Get('kaksha-transit-timeline/:chartID/:loc/:start?/:end?/:exclude?/:ayanamsha?')
-  async kakshaTimeline(@Res() res, @Param('chartID') chartID, @Param('loc') loc, @Param('start') start, @Param('end') end, @Param('exclude') exclude, @Param('ayanamsha') ayanamsha) {
+  @Get(
+    'kaksha-transit-timeline/:chartID/:loc/:start?/:end?/:exclude?/:ayanamsha?',
+  )
+  async kakshaTimeline(
+    @Res() res,
+    @Param('chartID') chartID,
+    @Param('loc') loc,
+    @Param('start') start,
+    @Param('end') end,
+    @Param('exclude') exclude,
+    @Param('ayanamsha') ayanamsha,
+  ) {
     const { dtUtc, jd } = matchJdAndDatetime(start);
     const startJd = jd;
     const { endJd, endDt } = matchEndJdAndDatetime(end, jd);
-    const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
-    const excludeKeys = notEmptyString(exclude)? exclude.split(',').filter(p => p.length === 2) : []; 
+    const ayanamshaKey = notEmptyString(ayanamsha, 5)
+      ? ayanamsha
+      : 'true_citra';
+    const excludeKeys = notEmptyString(exclude)
+      ? exclude.split(',').filter(p => p.length === 2)
+      : [];
     const currGeo: GeoPos = locStringToGeo(loc);
-    const {rows, datetime, geo } = await this.astrologicService.fetchKakshaTimelineData(chartID, currGeo, startJd, endJd, excludeKeys, ayanamshaKey);
-    return res.status(HttpStatus.OK).json({ dt: datetime, geo: geo, currGeo,  start: dtUtc, end: endDt, rows });
+    const {
+      rows,
+      datetime,
+      geo,
+    } = await this.astrologicService.fetchKakshaTimelineData(
+      chartID,
+      currGeo,
+      startJd,
+      endJd,
+      excludeKeys,
+      ayanamshaKey,
+    );
+    return res
+      .status(HttpStatus.OK)
+      .json({
+        dt: datetime,
+        geo: geo,
+        currGeo,
+        start: dtUtc,
+        end: endDt,
+        rows,
+      });
   }
 
   @Get('kaksha-transit-graph/:chartID/:loc/:start?/:end?/:ayanamsha?')
-  async kakshaTimelineGraph(@Res() res, @Param('chartID') chartID, @Param('loc') loc, @Param('start') start, @Param('end') end, @Param('exclude') exclude, @Param('ayanamsha') ayanamsha) {
+  async kakshaTimelineGraph(
+    @Res() res,
+    @Param('chartID') chartID,
+    @Param('loc') loc,
+    @Param('start') start,
+    @Param('end') end,
+    @Param('exclude') exclude,
+    @Param('ayanamsha') ayanamsha,
+  ) {
     const { dtUtc, jd } = matchJdAndDatetime(start);
     const startJd = jd;
     const { endJd, endDt } = matchEndJdAndDatetime(end, jd);
-    const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
-    const excludeKeys = []; 
+    const ayanamshaKey = notEmptyString(ayanamsha, 5)
+      ? ayanamsha
+      : 'true_citra';
+    const excludeKeys = [];
     const currGeo: GeoPos = locStringToGeo(loc);
-    const {rows, datetime, geo } = await this.astrologicService.fetchKakshaTimelineData(chartID, currGeo, startJd, endJd, excludeKeys, ayanamshaKey);
+    const {
+      rows,
+      datetime,
+      geo,
+    } = await this.astrologicService.fetchKakshaTimelineData(
+      chartID,
+      currGeo,
+      startJd,
+      endJd,
+      excludeKeys,
+      ayanamshaKey,
+    );
     const samples = [];
-    const hasAscendant = excludeKeys.includes("as") === false;
-    const hasMoon = excludeKeys.includes("mo") === false;
+    const hasAscendant = excludeKeys.includes('as') === false;
+    const hasMoon = excludeKeys.includes('mo') === false;
     const stepsPerDay = hasAscendant ? 192 : hasMoon ? 48 : 12;
     const sampleInterval = 1 / stepsPerDay;
     const numSteps = Math.ceil(endJd - startJd) * stepsPerDay;
     for (let i = 0; i < numSteps; i++) {
-      const refJd = startJd + (i * sampleInterval);
+      const refJd = startJd + i * sampleInterval;
       const rowIndex = i < 1 ? 0 : rows.findIndex(row => row.jd >= refJd);
       if (rowIndex >= 0) {
         const row = rows[rowIndex];
-        const bindus = row.items.filter(item => item.hasBindu).map(item => item.key);
+        const bindus = row.items
+          .filter(item => item.hasBindu)
+          .map(item => item.key);
         const total = bindus.length;
         const lords = row.items.map(item => item.lord);
         samples.push({
@@ -3040,11 +3569,27 @@ export class AstrologicController {
         });
       }
     }
-    return res.status(HttpStatus.OK).json({ dt: datetime, geo: geo, currGeo,  start: dtUtc, end: endDt, items: samples, numSteps, stepsPerDay });
+    return res
+      .status(HttpStatus.OK)
+      .json({
+        dt: datetime,
+        geo: geo,
+        currGeo,
+        start: dtUtc,
+        end: endDt,
+        items: samples,
+        numSteps,
+        stepsPerDay,
+      });
   }
 
   @Get('object-sign-timeline/:loc/:start?/:end?')
-  async fetchObjectTimeline(@Res() res, @Param('loc') loc, @Param('start') start, @Param('end') end) {
+  async fetchObjectTimeline(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('start') start,
+    @Param('end') end,
+  ) {
     const geo = locStringToGeo(loc);
     const { jd } = matchJdAndDatetime(start);
     const { endJd } = matchEndJdAndDatetime(end, jd);
@@ -3053,21 +3598,30 @@ export class AstrologicController {
   }
 
   @Get('kaksha-timeline/:loc/:start?/:end?')
-  async fetchKakshaTimeline(@Res() res, @Param('loc') loc, @Param('start') start, @Param('end') end) {
+  async fetchKakshaTimeline(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('start') start,
+    @Param('end') end,
+  ) {
     const geo = locStringToGeo(loc);
     const { jd } = matchJdAndDatetime(start);
     const { endJd } = matchEndJdAndDatetime(end, jd);
-    const data = await this.astrologicService.fetchKakshaTimeline(geo, jd, endJd);
+    const data = await this.astrologicService.fetchKakshaTimeline(
+      geo,
+      jd,
+      endJd,
+    );
     return res.status(HttpStatus.OK).json(data);
   }
 
   @Get('bav-sign-timeline/:loc/:dt?')
   async fetchBavTimeline(
-      @Res() res,
-      @Param('loc') loc,
-      @Param('dt') dt,
-      @Query() query
-    ) {
+    @Res() res,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Query() query,
+  ) {
     const geo = locStringToGeo(loc);
     const queryEntries = query instanceof Object ? Object.entries(query) : [];
     const queryKeys = queryEntries.map(entry => entry[0]);
@@ -3075,50 +3629,92 @@ export class AstrologicController {
     const span = queryKeys.includes('span') ? query.span : 28;
     const sample = queryKeys.includes('sample') ? query.sample : 8;
     const isMidMode = ['start', 'start-sample'].includes(mode) === false;
-    const returnGrahaRefValues = ['start-sample','sample'].includes(mode);
+    const returnGrahaRefValues = ['start-sample', 'sample'].includes(mode);
     const { jd } = matchJdAndDatetime(dt, -1, true, isMidMode);
     const spanJd = smartCastInt(span, 28);
-    const offset = isMidMode ? 0 - (spanJd / 2) : 0;
+    const offset = isMidMode ? 0 - spanJd / 2 : 0;
     const startJd = jd + offset;
-    const coreKeys = ['sa', 'ju', 'ma', 'su', 've', 'me', 'mo', 'as', 'ke', 'ra'];
+    const coreKeys = [
+      'sa',
+      'ju',
+      'ma',
+      'su',
+      've',
+      'me',
+      'mo',
+      'as',
+      'ke',
+      'ra',
+    ];
     const refBodies: Map<string, number> = new Map();
-    queryEntries.filter(entry => coreKeys.includes(entry[0]) && isNumeric(entry[1])).forEach(entry => {
-      const [key, val] = entry;
-      refBodies.set(key, smartCastInt(val.toString(), 0));
-    });
-    const endJd = jd + + spanJd + offset;
+    queryEntries
+      .filter(entry => coreKeys.includes(entry[0]) && isNumeric(entry[1]))
+      .forEach(entry => {
+        const [key, val] = entry;
+        refBodies.set(key, smartCastInt(val.toString(), 0));
+      });
+    const endJd = jd + +spanJd + offset;
     const sampleRate = smartCastInt(sample, 8);
-    const data = await this.astrologicService.fetchBavTimeline(geo, startJd, endJd);
-    const graphData = returnGrahaRefValues? calcBavSignSamples(data, startJd, endJd, sampleRate, refBodies) : calcBavGraphData(data, refBodies, startJd, endJd, sampleRate);
-    return res.status(HttpStatus.OK).json({ items: graphData, valid: graphData.length > 0 });
+    const data = await this.astrologicService.fetchBavTimeline(
+      geo,
+      startJd,
+      endJd,
+    );
+    const graphData = returnGrahaRefValues
+      ? calcBavSignSamples(data, startJd, endJd, sampleRate, refBodies)
+      : calcBavGraphData(data, refBodies, startJd, endJd, sampleRate);
+    return res
+      .status(HttpStatus.OK)
+      .json({ items: graphData, valid: graphData.length > 0 });
   }
 
   @Get('ascendant-timeline/:loc/:start?/:end?/:ayanamsha?')
-  async fetchAscendantTimeline(@Res() res, @Param('loc') loc, @Param('start') start, @Param('end') end, @Param('ayanamsha') ayanamsha) {
+  async fetchAscendantTimeline(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('start') start,
+    @Param('end') end,
+    @Param('ayanamsha') ayanamsha,
+  ) {
     const geo = locStringToGeo(loc);
     const { dtUtc, jd } = matchJdAndDatetime(start);
     const startJd = jd;
     const { lat, lng } = geo;
-    const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
+    const ayanamshaKey = notEmptyString(ayanamsha, 5)
+      ? ayanamsha
+      : 'true_citra';
     const ayanamshaVal = await calcAyanamsha(startJd, ayanamshaKey);
     const { endJd, endDt } = matchEndJdAndDatetime(end, jd);
-    const data = calcAscendantTimelineItems(12, lat, lng, startJd, endJd, ayanamshaVal);
-    return res.status(HttpStatus.OK).json({startDt: dtUtc, endDt, ...data});
+    const data = calcAscendantTimelineItems(
+      12,
+      lat,
+      lng,
+      startJd,
+      endJd,
+      ayanamshaVal,
+    );
+    return res.status(HttpStatus.OK).json({ startDt: dtUtc, endDt, ...data });
   }
 
   @Get('ascendant/:loc/:dt?/:ayanamsha?')
-  async fetchAscendant(@Res() res, @Param('loc') loc, @Param('dt') dt, @Param('ayanamsha') ayanamsha) {
+  async fetchAscendant(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Param('ayanamsha') ayanamsha,
+  ) {
     const geo = locStringToGeo(loc);
     const { dtUtc, jd } = matchJdAndDatetime(dt);
     const { lat, lng } = geo;
-    const ayanamshaKey = notEmptyString(ayanamsha, 5)? ayanamsha : "true_citra";
+    const ayanamshaKey = notEmptyString(ayanamsha, 5)
+      ? ayanamsha
+      : 'true_citra';
     const ayanamshaVal = await calcAyanamsha(jd, ayanamshaKey);
     const ascendant = calcOffsetAscendant(lat, lng, jd, ayanamshaVal);
     const hd = await fetchHouseDataJd(jd, geo);
     const lagna = subtractLng360(hd.ascendant, ayanamshaVal);
     return res.status(HttpStatus.OK).json({ ascendant, lagna, dt: dtUtc });
   }
-    
 
   @Get('speed-patterns/:planet')
   async motionPatternsByPlanet(@Res() res, @Param('planet') planet) {
@@ -3139,7 +3735,7 @@ export class AstrologicController {
     @Param('endYear') endYear,
   ) {
     const data: any = { valid: false, values: [] };
-    const num = isNumeric(planet)? parseInt(planet) : matchPlanetNum(planet);
+    const num = isNumeric(planet) ? parseInt(planet) : matchPlanetNum(planet);
     if (num >= 0) {
       const startYearInt = isNumeric(startYear)
         ? parseInt(startYear, 10)
@@ -3151,24 +3747,31 @@ export class AstrologicController {
         endYearInt,
       );
     }
-    return res.status(HttpStatus.OK).json({...data, planet, num});
+    return res.status(HttpStatus.OK).json({ ...data, planet, num });
   }
 
   @Get('calc-body/:key/:dt/:ayanamsha?')
-  async calcBodyPosition(@Res() res, @Param('key') key: string, @Param('dt') dt: string, @Param('ayanamsha') ayanamsha) {
+  async calcBodyPosition(
+    @Res() res,
+    @Param('key') key: string,
+    @Param('dt') dt: string,
+    @Param('ayanamsha') ayanamsha,
+  ) {
     const isJd = /^\d+(\.\d+)?$/.test(dt);
-    const jd = isJd? smartCastInt(dt) : calcJulDate(dt);
-    const ayanamshaKey = notEmptyString(ayanamsha, 2)? ayanamsha : "true_citra";
+    const jd = isJd ? smartCastInt(dt) : calcJulDate(dt);
+    const ayanamshaKey = notEmptyString(ayanamsha, 2)
+      ? ayanamsha
+      : 'true_citra';
     let ayaVal = 0;
-    if (["raw", "tropical"].includes(ayanamshaKey) === false) {
+    if (['raw', 'tropical'].includes(ayanamshaKey) === false) {
       ayaVal = await calcAyanamsha(jd, ayanamshaKey);
     }
     const data = await calcBodyJd(jd, key, true);
     const graha = new Graha(data);
     const ayaRow = ayanamshaValues.find(av => av.key === ayanamshaKey);
-    const ayaItem = {...ayaRow, num: ayaRow.value, value: ayaVal};
+    const ayaItem = { ...ayaRow, num: ayaRow.value, value: ayaVal };
     graha.setAyanamshaItem(ayaItem);
-    return res.json({longitude: graha.longitude, ...graha});
+    return res.json({ longitude: graha.longitude, ...graha });
   }
 
   @Get('planet-station-test/:planet/:startDt/:station')

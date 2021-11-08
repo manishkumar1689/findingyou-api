@@ -3,24 +3,57 @@ import { inRange, isNumeric, notEmptyString } from '../../../lib/validators';
 import { smartCastFloat, smartCastInt } from '../../../lib/converters';
 import { contextTypes } from '../settings/compatibility-sets';
 import { calcOrb, calcAllAspectRanges } from '../calc-orbs';
-import { subtractLng360, addLng360, calcDist360, nakshatra28, numbersToNakshatraDegreeRanges } from '../helpers';
+import {
+  subtractLng360,
+  addLng360,
+  calcDist360,
+  nakshatra28,
+  numbersToNakshatraDegreeRanges,
+} from '../helpers';
 import ayanamshaValues from '../settings/ayanamsha-values';
 import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
-import { calcInclusiveSignPositions, calcInclusiveTwelfths } from '../math-funcs';
-import { Chart, matchGrahaEquivalent, matchSignNums, PairedChart } from './chart';
+import {
+  calcInclusiveSignPositions,
+  calcInclusiveTwelfths,
+} from '../math-funcs';
+import {
+  Chart,
+  matchGrahaEquivalent,
+  matchSignNums,
+  PairedChart,
+} from './chart';
 import { currentJulianDay } from '../julian-date';
-import { assignDashaBalances, DashaBalance, matchCurrentDashaLord, matchDashaSubsetFromChart } from './dasha-set';
-import { matchNextTransitAtLng, matchNextTransitAtLngRanges, RangeSet } from '../astro-motion';
+import {
+  assignDashaBalances,
+  DashaBalance,
+  matchCurrentDashaLord,
+  matchDashaSubsetFromChart,
+} from './dasha-set';
+import {
+  matchNextTransitAtLng,
+  matchNextTransitAtLngRanges,
+  RangeSet,
+} from '../astro-motion';
 import { GeoPos } from '../../interfaces/geo-pos';
 import { calcNextAscendantLng } from '../calc-ascendant';
-import { buildFunctionalBMMap, naturalBenefics, naturalMalefics } from '../settings/graha-values';
+import {
+  buildFunctionalBMMap,
+  naturalBenefics,
+  naturalMalefics,
+} from '../settings/graha-values';
 import { coreIndianGrahaKeys } from './graha-set';
 import { mapRelationships } from '../map-relationships';
 import { matchKotaCakraSection } from '../settings/nakshatra-values';
-import { matchBirdKeyRulers, panchaPakshiDayNightSet } from '../settings/pancha-pakshi';
+import {
+  matchBirdKeyRulers,
+  panchaPakshiDayNightSet,
+} from '../settings/pancha-pakshi';
 import { fetchChartObject, filterBmMatchRow } from '../chart-funcs';
 import { julToISODate } from '../date-funcs';
-import { calcTransitionPointJd, calcTransposedTransitionPointJd } from '../transitions';
+import {
+  calcTransitionPointJd,
+  calcTransposedTransitionPointJd,
+} from '../transitions';
 import { buildGrahaPositionsFromChart } from '../point-transitions';
 
 interface StartEndLord {
@@ -44,8 +77,6 @@ export interface KeyNumPair {
   pair: number[];
 }
 
-
-
 export const matchOrbFromGrid = (
   aspect: string,
   k1: string,
@@ -67,12 +98,18 @@ export const matchOrbFromGrid = (
   return orbDouble;
 };
 
-
-export const  matchAspectOrb = (aspect: string, k1: string, k2: string, aspectData = null, orbs: KeyOrbs[] = [], customOrb = -1) => {
+export const matchAspectOrb = (
+  aspect: string,
+  k1: string,
+  k2: string,
+  aspectData = null,
+  orbs: KeyOrbs[] = [],
+  customOrb = -1,
+) => {
   let orbDouble = 1;
   if (orbs.length > 0) {
     orbDouble = matchOrbFromGrid(aspect, k1, k2, orbs);
-  } else  if (customOrb > 0) {
+  } else if (customOrb > 0) {
     orbDouble = smartCastFloat(customOrb, 0);
   }
   if (orbDouble < 0) {
@@ -81,7 +118,7 @@ export const  matchAspectOrb = (aspect: string, k1: string, k2: string, aspectDa
     orbDouble = matchedOrbData.orb;
   }
   return orbDouble;
-}
+};
 
 export class BooleanMatch {
   matched = false;
@@ -264,7 +301,7 @@ export class ContextType {
   }
 
   get isSign() {
-    return this.key === "in_sign";
+    return this.key === 'in_sign';
   }
 
   get bySign() {
@@ -367,11 +404,11 @@ export const matchContextType = (context: string) => {
       isKuta: false,
       c2groups: [],
       type: '',
-      name: context.split('_').join(' ')
-    }
+      name: context.split('_').join(' '),
+    };
   }
   return new ContextType(matched);
-}
+};
 
 export class SectionScore {
   type = '';
@@ -409,15 +446,19 @@ export class SectionScore {
   }
 }
 
-export const funcBmMap = (chart: Chart, build = true): Map<string, Array<string>> => {
+export const funcBmMap = (
+  chart: Chart,
+  build = true,
+): Map<string, Array<string>> => {
   const hsRows = build ? chart.buildSignHouseRows() : [];
-  return build
-    ? buildFunctionalBMMap(coreIndianGrahaKeys, hsRows)
-    : new Map();
-}
+  return build ? buildFunctionalBMMap(coreIndianGrahaKeys, hsRows) : new Map();
+};
 
-export const matchBmGrahaKeys = (key: string, condition: Condition, chart: Chart) => {
-
+export const matchBmGrahaKeys = (
+  key: string,
+  condition: Condition,
+  chart: Chart,
+) => {
   if (key.length === 2) {
     return [key];
   } else {
@@ -443,24 +484,32 @@ export const matchBmGrahaKeys = (key: string, condition: Condition, chart: Chart
     }
   }
   return [];
-}
+};
 
-export const matchDrishti = (grahaKey: string, signNum = 0, drishtiMap: Map<string, number[]> = new Map()) => {
+export const matchDrishti = (
+  grahaKey: string,
+  signNum = 0,
+  drishtiMap: Map<string, number[]> = new Map(),
+) => {
   const aspects = drishtiMap.get(grahaKey);
   if (aspects instanceof Array && signNum > 0 && signNum <= 12) {
     const index = signNum - 1;
     return aspects[index];
   }
   return 0;
-}
+};
 
-export const matchRashiDrishti = (sign1 = 0, sign2 = 0, drishtiMap: Map<number, number[]> = new Map()) => {
+export const matchRashiDrishti = (
+  sign1 = 0,
+  sign2 = 0,
+  drishtiMap: Map<number, number[]> = new Map(),
+) => {
   const aspects = drishtiMap.get(sign1);
   if (aspects instanceof Array && sign2 > 0 && sign2 <= 12) {
     return aspects.indexOf(sign2);
   }
   return 0;
-}
+};
 
 export class Condition {
   isTrue = true;
@@ -560,7 +609,7 @@ export class Condition {
   }
 
   get contextType() {
-    return matchContextType(this.context)
+    return matchContextType(this.context);
   }
 
   get object1() {
@@ -588,7 +637,7 @@ export class Condition {
   }
 
   get matchBirthSign() {
-    return this.c1Key.endsWith("birth_asc")
+    return this.c1Key.endsWith('birth_asc');
   }
 
   get usesMidChart() {
@@ -709,7 +758,9 @@ export class Condition {
   }
 
   get isNatural() {
-    return this.c1Key.startsWith('natbm_') || this.context.endsWith('kartari_yoga');
+    return (
+      this.c1Key.startsWith('natbm_') || this.context.endsWith('kartari_yoga')
+    );
   }
 
   get sendsDrishti() {
@@ -938,15 +989,14 @@ export class RuleSet {
 }
 
 export class PredictiveRule extends RuleSet {
-  
-  type = "";
-  text = "";
-  userId = "";
+  type = '';
+  text = '';
+  userId = '';
 
   constructor(inData = null) {
     super(inData);
     if (inData instanceof Object) {
-      const {type, text, user} = inData;
+      const { type, text, user } = inData;
       if (typeof type === 'string') {
         this.type = type;
       }
@@ -1154,7 +1204,7 @@ export class Protocol {
   }
 
   matchOrbValue(aspect: string, k1: string, k2: string, customOrb = -1) {
-    return customOrb >= 0? customOrb : this.fetchOrbValue(aspect, k1, k2);
+    return customOrb >= 0 ? customOrb : this.fetchOrbValue(aspect, k1, k2);
   }
 
   kutaMax(kutaType = '', variantKey = '') {
@@ -1308,8 +1358,13 @@ const useRuleSet = (
   return filterByRuleSet === false || ruleSetIndex === filterIndex;
 };
 
-
-export const matchAspectRange = (aspect: string, k1: string, k2: string, orbs: KeyOrbs[] = [], customOrb = -1) => {
+export const matchAspectRange = (
+  aspect: string,
+  k1: string,
+  k2: string,
+  orbs: KeyOrbs[] = [],
+  customOrb = -1,
+) => {
   const aspectData = calcOrb(aspect, k1, k2);
   const orb = matchAspectOrb(aspect, k1, k2, aspectData, orbs, customOrb);
   const range =
@@ -1317,13 +1372,19 @@ export const matchAspectRange = (aspect: string, k1: string, k2: string, orbs: K
       ? [subtractLng360(aspectData.deg, orb), (aspectData.deg + orb) % 360]
       : aspectData.range;
   return range;
-}
+};
 
-export const matchAspectRanges = (aspect: string, k1: string, k2: string, orbs: KeyOrbs[] = [], customOrb = -1) => {
+export const matchAspectRanges = (
+  aspect: string,
+  k1: string,
+  k2: string,
+  orbs: KeyOrbs[] = [],
+  customOrb = -1,
+) => {
   const isSign = isNumeric(k1);
   if (isSign) {
     const signNum = parseInt(k1, 10);
-    return [[((signNum - 1) * 30), (signNum * 30)]];
+    return [[(signNum - 1) * 30, signNum * 30]];
   } else {
     const aspectData = calcOrb(aspect, k1, k2);
     const orb = matchAspectOrb(aspect, k1, k2, aspectData, orbs, customOrb);
@@ -1336,7 +1397,7 @@ export const matchAspectRanges = (aspect: string, k1: string, k2: string, orbs: 
         : [aspectData.range];
     return ranges;
   }
-}
+};
 
 export const assessChart = (
   protocol: Protocol,
@@ -1473,20 +1534,30 @@ export const compatibilityResultSetHasScores = (row: any = null) => {
   return false;
 };
 
-export const matchGrahaInTargetRanges = async (targetRanges: number[][], startJd = 0, gkTransit = "", geo: GeoPos) => {
+export const matchGrahaInTargetRanges = async (
+  targetRanges: number[][],
+  startJd = 0,
+  gkTransit = '',
+  geo: GeoPos,
+) => {
   const nextMatches = [];
   const isAscendant = gkTransit === 'as';
   for (const range of targetRanges) {
     for (const lng of range) {
-      const next = isAscendant ? await calcNextAscendantLng(lng, geo.lat, geo.lng, startJd) : await matchNextTransitAtLng(gkTransit, lng, startJd);
+      const next = isAscendant
+        ? await calcNextAscendantLng(lng, geo.lat, geo.lng, startJd)
+        : await matchNextTransitAtLng(gkTransit, lng, startJd);
       nextMatches.push(next.targetJd);
     }
   }
   return nextMatches;
-}
+};
 
 export const matchRelationshipType = (key = '') => {
-  const baseKey = key.replace(/_signs?$/, '').toLowerCase().replace(/_/, '');
+  const baseKey = key
+    .replace(/_signs?$/, '')
+    .toLowerCase()
+    .replace(/_/, '');
   switch (baseKey) {
     case 'greatfriend':
     case 'bestfriend':
@@ -1511,10 +1582,14 @@ export const matchRelationshipType = (key = '') => {
     case 'directionalstrength':
       return { key: 'directionalStrengthSign', type: 'method' };
   }
-}
+};
 
-export const matchSpecialRanges = (chart: Chart, typeKey = "", grahaKey = "") => {
-  chart.setAyanamshaItemByKey('true_citra')
+export const matchSpecialRanges = (
+  chart: Chart,
+  typeKey = '',
+  grahaKey = '',
+) => {
+  chart.setAyanamshaItemByKey('true_citra');
   const graha = chart.graha(grahaKey);
   const signs: number[] = [];
   if (grahaKey.length === 2) {
@@ -1534,7 +1609,7 @@ export const matchSpecialRanges = (chart: Chart, typeKey = "", grahaKey = "") =>
         if (graha[type] instanceof Array) {
           graha[type].forEach(sign => {
             signs.push(sign);
-          })
+          });
         }
       } else if (type === 'attr') {
         if (typeof graha[type] === 'number') {
@@ -1547,13 +1622,12 @@ export const matchSpecialRanges = (chart: Chart, typeKey = "", grahaKey = "") =>
       }
     }
   }
-  return signs.map(signNum => [((signNum -1) * 30), (signNum * 30)]);
-}
+  return signs.map(signNum => [(signNum - 1) * 30, signNum * 30]);
+};
 
-export const matchDignity = (chart: Chart, typeKey = "", grahaKey = "") => {
+export const matchDignity = (chart: Chart, typeKey = '', grahaKey = '') => {
   chart.setAyanamshaItemByKey('true_citra');
 
-  
   const graha = chart.graha(grahaKey);
   if (grahaKey.length === 2) {
     const { key, type } = matchRelationshipType(typeKey);
@@ -1576,9 +1650,7 @@ export const matchDignity = (chart: Chart, typeKey = "", grahaKey = "") => {
     }
   }
   return false;
-}
-
-
+};
 
 export const matchDrishtiCondition = (
   condition: Condition,
@@ -1586,7 +1658,7 @@ export const matchDrishtiCondition = (
   toLng: number,
   k1 = '',
   k2 = '',
-  settings: ProtocolSettings
+  settings: ProtocolSettings,
 ) => {
   const grKeys1 = matchBmGrahaKeys(k1, condition, fromChart);
   const grKeys2 = matchBmGrahaKeys(k2, condition, fromChart);
@@ -1597,10 +1669,7 @@ export const matchDrishtiCondition = (
       const gr1 = fromChart.graha(gk1);
       if (gr1 instanceof Object) {
         const sign2 = Math.floor(toLng / 30) + 1;
-        const sendsDiff = calcInclusiveSignPositions(
-          gr1.signNum,
-          sign2,
-        );
+        const sendsDiff = calcInclusiveSignPositions(gr1.signNum, sign2);
         const applyRashi = condition.isRashiDrishti;
         // sends drishti
         const sendsVal = applyRashi
@@ -1623,90 +1692,130 @@ export const matchDrishtiCondition = (
     });
   });
   return bmRows.some(row => filterBmMatchRow(row, condition));
-}
+};
 
 export const matchDrishtiConditionSignLngs = (
   condition: Condition,
   fromChart: Chart,
   k1 = '',
   k2 = '',
-  settings: ProtocolSettings
+  settings: ProtocolSettings,
 ) => {
   const degs = [];
   for (let i = 0; i < 12; i++) {
     const deg = i * 30;
-    const matched = matchDrishtiCondition(condition, fromChart, deg, k1, k2, settings);
+    const matched = matchDrishtiCondition(
+      condition,
+      fromChart,
+      deg,
+      k1,
+      k2,
+      settings,
+    );
     if (matched) {
       degs.push(deg);
     }
   }
   return degs;
-}
+};
 
-export const processTransitMatch = async (cond: Condition, chart: Chart, geo: GeoPos, settings = null) => {
-  const ayaItem = chart.setAyanamshaItemByKey("true_citra");
+export const processTransitMatch = async (
+  cond: Condition,
+  chart: Chart,
+  geo: GeoPos,
+  settings = null,
+) => {
+  const ayaItem = chart.setAyanamshaItemByKey('true_citra');
   const startJd = currentJulianDay();
   const gkTransit = matchGrahaEquivalent(cond.object1, chart);
-  const gkBirth = matchGrahaEquivalent(cond.object2, chart);  
+  const gkBirth = matchGrahaEquivalent(cond.object2, chart);
   const g1 = chart.graha(gkBirth);
   g1.setAyanamshaItem(ayaItem);
   let nextMatches = [];
   const ct = matchContextType(cond.context);
   let addEnd = false;
   if (ct.isAspect) {
-    const ranges = matchAspectRanges(cond.context, gkBirth, gkTransit, [], cond.orb);
-    const targetRanges = ranges.map(range => range.map(num => addLng360(num,g1.longitude)));
-    nextMatches = await matchGrahaInTargetRanges(targetRanges, startJd, gkTransit, geo);
+    const ranges = matchAspectRanges(
+      cond.context,
+      gkBirth,
+      gkTransit,
+      [],
+      cond.orb,
+    );
+    const targetRanges = ranges.map(range =>
+      range.map(num => addLng360(num, g1.longitude)),
+    );
+    nextMatches = await matchGrahaInTargetRanges(
+      targetRanges,
+      startJd,
+      gkTransit,
+      geo,
+    );
     if (nextMatches.length > 1) {
       const diff = Math.abs(nextMatches[1] - nextMatches[0]);
       addEnd = diff < 30;
     }
   } else if (ct.isDrishtiAspect) {
-    const ranges = matchDrishtiConditionSignLngs(cond, chart, gkBirth, gkTransit, settings).map(deg => [deg, deg + 30]);
-    nextMatches = await matchGrahaInTargetRanges(ranges, startJd, gkTransit, geo);
+    const ranges = matchDrishtiConditionSignLngs(
+      cond,
+      chart,
+      gkBirth,
+      gkTransit,
+      settings,
+    ).map(deg => [deg, deg + 30]);
+    nextMatches = await matchGrahaInTargetRanges(
+      ranges,
+      startJd,
+      gkTransit,
+      geo,
+    );
   }
   nextMatches.sort((a, b) => a - b);
   const valid = nextMatches.length > 0;
   const start = nextMatches.length > 0 ? nextMatches[0] : 0;
-  const end = addEnd && nextMatches.length > 1? nextMatches[1] : start;
-  return {valid, start, end };
-}
+  const end = addEnd && nextMatches.length > 1 ? nextMatches[1] : start;
+  return { valid, start, end };
+};
 
 export const processByBirthSign = (condition: Condition, fromChart: Chart) => {
   const signs = matchSignNums(condition.c2Key);
-  fromChart.setAyanamshaItemByKey("true_citra");
+  fromChart.setAyanamshaItemByKey('true_citra');
   const ascSign = Math.floor(fromChart.lagna / 30) + 1;
   const valid = signs.includes(ascSign);
   const start = fromChart.jd;
-  const end = fromChart.jd + (200 * 365.25);
+  const end = fromChart.jd + 200 * 365.25;
   return { valid, start, end };
-}
+};
 
 export const matchByBirthSign = (cond: Condition, chart: Chart) => {
   const refKey = matchGrahaEquivalent(cond.object1, chart);
-  chart.setAyanamshaItemByKey("true_citra");
+  chart.setAyanamshaItemByKey('true_citra');
   const graha = chart.graha(refKey);
   const signNums = matchSignNums(cond.c2Key);
   return signNums.includes(graha.signNum);
-}
+};
 
 const flipEntryKey = (key: string) => {
   const flipkeys = ['exit', 'entry'];
-  return flipkeys.includes(key)? key === 'entry' ? 'exit' : 'entry' : key;
-}
+  return flipkeys.includes(key) ? (key === 'entry' ? 'exit' : 'entry') : key;
+};
 
-export const matchKotaChakra = async (cond: Condition, chart: Chart, geo: GeoPos = {lat: 0, lng: 0}) => {
+export const matchKotaChakra = async (
+  cond: Condition,
+  chart: Chart,
+  geo: GeoPos = { lat: 0, lng: 0 },
+) => {
   chart.setAyanamshaItemByNum(27);
   const ayaKey = 'true_citra';
   let refGrKey = matchGrahaEquivalent(cond.object1, chart);
   const currJd = currentJulianDay();
   // set default max JD to years hence
-  let maxJd = currJd + (10 * 365.25);
+  let maxJd = currJd + 10 * 365.25;
   if (refGrKey.length > 2) {
     switch (cond.object1.key) {
       case 'lord_dasha':
       case 'lord_bhukti':
-        const depth = cond.c1Key.includes('bhukti')? 2 : 1;
+        const depth = cond.c1Key.includes('bhukti') ? 2 : 1;
         const dsSpan = matchCurrentDashaLord(chart, currJd, depth);
         refGrKey = dsSpan.key;
         maxJd = dsSpan.endJd;
@@ -1714,50 +1823,62 @@ export const matchKotaChakra = async (cond: Condition, chart: Chart, geo: GeoPos
     }
   }
   const moon = chart.graha('mo');
-  
+
   const nakIndex = nakshatra28(moon.longitude) - 1;
-  const kotaOffset = ((27 - nakIndex + 28) % 28);
+  const kotaOffset = (27 - nakIndex + 28) % 28;
   const applySpeedMode = ['entry', 'exit'].includes(cond.c2Key);
   const flipDir = cond.context === 'retrograde';
-  const alwaysNeg = ['ke', 'ra'].includes(refGrKey)
+  const alwaysNeg = ['ke', 'ra'].includes(refGrKey);
   const alwaysPos = ['mo', 'su'].includes(refGrKey);
-  const filterKey = alwaysNeg &&  applySpeedMode ? flipEntryKey(cond.c2Key) : cond.c2Key;
-  const dir1 = applySpeedMode? alwaysNeg? -1 : flipDir? -1 : 1 : 0;
-  const dir2 = applySpeedMode? flipDir ? 1 : -1 : 0;
+  const filterKey =
+    alwaysNeg && applySpeedMode ? flipEntryKey(cond.c2Key) : cond.c2Key;
+  const dir1 = applySpeedMode ? (alwaysNeg ? -1 : flipDir ? -1 : 1) : 0;
+  const dir2 = applySpeedMode ? (flipDir ? 1 : -1) : 0;
   const fetchMore = applySpeedMode && !alwaysNeg && !alwaysPos;
-  
+
   const nums = matchKotaCakraSection(filterKey);
-  
-  const rangeSets = numbersToNakshatraDegreeRanges(nums, kotaOffset).map(rng => {
-    return new RangeSet(rng, dir1);
-  });
+
+  const rangeSets = numbersToNakshatraDegreeRanges(nums, kotaOffset).map(
+    rng => {
+      return new RangeSet(rng, dir1);
+    },
+  );
   if (fetchMore) {
     const reverseKey = flipEntryKey(cond.c2Key);
     const nums2 = matchKotaCakraSection(reverseKey);
     const ranges2 = numbersToNakshatraDegreeRanges(nums2, kotaOffset);
     if (ranges2.length > 0) {
       ranges2.forEach(rng => {
-        rangeSets.push( new RangeSet(rng, dir2) );
-      })
+        rangeSets.push(new RangeSet(rng, dir2));
+      });
     }
   }
-  const nextMatch = await matchNextTransitAtLngRanges(refGrKey, rangeSets, currJd, geo, ayaKey);
+  const nextMatch = await matchNextTransitAtLngRanges(
+    refGrKey,
+    rangeSets,
+    currJd,
+    geo,
+    ayaKey,
+  );
   const isBeforeMaxEndJd = nextMatch.targetJd <= maxJd;
   const valid = nextMatch.valid && isBeforeMaxEndJd;
   const start = valid ? nextMatch.targetJd : 0;
   const items = [nextMatch];
   return { valid, start, items };
-}
+};
 
 const calcCellNum = (num = 1, sunOffset = 0) => {
   return ((num - 1 - sunOffset + 28) % 28) + 1;
-}
+};
 
-export const translateShulaChakraNums = (key = "") => {
+export const translateShulaChakraNums = (key = '') => {
   const tridentCells = [1, 2, 4, 6, 7, 8, 20, 22, 23, 24, 26, 28];
   const nearTridentCells = [3, 5, 19, 21, 25, 27];
   const otherCells = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
-  const baseKey = key.split('__').pop().toLowerCase();
+  const baseKey = key
+    .split('__')
+    .pop()
+    .toLowerCase();
   switch (baseKey) {
     case 'trident':
       return tridentCells;
@@ -1767,13 +1888,16 @@ export const translateShulaChakraNums = (key = "") => {
     default:
       return otherCells;
   }
-}
+};
 
-export const translateKalanalaChandraNums = (key = "") => {
+export const translateKalanalaChandraNums = (key = '') => {
   const tridentCells = [1, 2, 3, 8, 9, 10, 15, 16, 17, 22, 23, 24];
   const innerCircleCells = [4, 7, 11, 14, 18, 21, 26, 28];
   const outerCircleCells = [5, 6, 12, 13, 19, 20, 26, 27];
-  const baseKey = key.split('__').pop().toLowerCase();
+  const baseKey = key
+    .split('__')
+    .pop()
+    .toLowerCase();
   switch (baseKey) {
     case 'trident':
       return tridentCells;
@@ -1782,28 +1906,27 @@ export const translateKalanalaChandraNums = (key = "") => {
     default:
       return innerCircleCells;
   }
-}
+};
 
-
-export const translateChakraNums = (type = "shula", key = "") => {
+export const translateChakraNums = (type = 'shula', key = '') => {
   switch (type) {
-    case "kalanala":
+    case 'kalanala':
     case 'chandra_kalanala':
     case 'kalanala_chandra':
       return translateKalanalaChandraNums(key);
     default:
       return translateShulaChakraNums(key);
   }
-}
+};
 
 const nakashatraGroupStartOffsetKey = (key: string): string => {
   switch (key) {
-    case "shula":
-      return "su";
+    case 'shula':
+      return 'su';
     default:
-      return "";
+      return '';
   }
-}
+};
 
 const nakashatraGroupInnerOffsetKey = (key: string): string => {
   switch (key) {
@@ -1815,47 +1938,77 @@ const nakashatraGroupInnerOffsetKey = (key: string): string => {
     default:
       return '';
   }
-}
+};
 
-export const matchNakshatraGroups = async (type = 'shula', cond: Condition, chart: Chart, geo: GeoPos = { lat: 0, lng: 0 } ) => {
+export const matchNakshatraGroups = async (
+  type = 'shula',
+  cond: Condition,
+  chart: Chart,
+  geo: GeoPos = { lat: 0, lng: 0 },
+) => {
   const currJd = currentJulianDay();
-  const maxJd = currJd + (20 * 365.25);
+  const maxJd = currJd + 20 * 365.25;
   const ayaKey = 'true_citra';
   chart.setAyanamshaItemByKey(ayaKey);
   const refGrKey = matchGrahaEquivalent(cond.object1, chart);
   const startOffsetKey = nakashatraGroupStartOffsetKey(type);
-  const startOffset = notEmptyString(startOffsetKey, 1)? chart.graha(startOffsetKey).nakshatra28 - 1 : 0;
+  const startOffset = notEmptyString(startOffsetKey, 1)
+    ? chart.graha(startOffsetKey).nakshatra28 - 1
+    : 0;
   const innerOffsetKey = nakashatraGroupInnerOffsetKey(type);
   const nums = translateChakraNums(type, cond.context);
-  const rangeSets = numbersToNakshatraDegreeRanges(nums, startOffset).map(rng => {
-    return new RangeSet(rng, 0);
-  });
-  const nextMatch = await matchNextTransitAtLngRanges(refGrKey, rangeSets, currJd, geo, innerOffsetKey, ayaKey);
+  const rangeSets = numbersToNakshatraDegreeRanges(nums, startOffset).map(
+    rng => {
+      return new RangeSet(rng, 0);
+    },
+  );
+  const nextMatch = await matchNextTransitAtLngRanges(
+    refGrKey,
+    rangeSets,
+    currJd,
+    geo,
+    innerOffsetKey,
+    ayaKey,
+  );
   const isBeforeMaxEndJd = nextMatch.targetJd <= maxJd;
   const valid = nextMatch.valid && isBeforeMaxEndJd;
   const start = valid ? nextMatch.targetJd : 0;
   const items = [nextMatch];
   return { valid, start, items };
-}
-
-
+};
 
 export const matchShulaChakra = async (cond: Condition, chart: Chart) => {
-  return await matchNakshatraGroups("shula", cond, chart);
-}
+  return await matchNakshatraGroups('shula', cond, chart);
+};
 
-export const matchKalanalaChandra = async (cond: Condition, chart: Chart, geo: GeoPos) => {
-  return await matchNakshatraGroups("kalanala", cond, chart, geo);
-}
+export const matchKalanalaChandra = async (
+  cond: Condition,
+  chart: Chart,
+  geo: GeoPos,
+) => {
+  return await matchNakshatraGroups('kalanala', cond, chart, geo);
+};
 
-export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Chart, settings = null) => {
+export const processTransitDashaRuleSet = (
+  cond: Condition,
+  level = 1,
+  chart: Chart,
+  settings = null,
+) => {
   const transitJd = currentJulianDay();
-  const [t1, k1] = cond.c1Key.split("__");
+  const [t1, k1] = cond.c1Key.split('__');
   const criteria: Map<string, any> = new Map();
   criteria.set(`lv${level}`, k1);
   criteria.set(`maxLevel`, level);
-  const balanceRef = new DashaBalance(criteria)
-  const results = assignDashaBalances(chart, transitJd, level, balanceRef, 'vimshottari', 'mo');
+  const balanceRef = new DashaBalance(criteria);
+  const results = assignDashaBalances(
+    chart,
+    transitJd,
+    level,
+    balanceRef,
+    'vimshottari',
+    'mo',
+  );
   let start = 0;
   let end = 0;
   const validPeriod = results.length > 0;
@@ -1864,7 +2017,7 @@ export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Ch
     start = last.startJd;
     end = last.endJd;
   }
-  const ayaItem = chart.setAyanamshaItemByKey("true_citra");
+  const ayaItem = chart.setAyanamshaItemByKey('true_citra');
   const ct = matchContextType(cond.context);
   const gkTransit = matchGrahaEquivalent(cond.object1, chart);
   const gkBirth = matchGrahaEquivalent(cond.object2, chart);
@@ -1877,7 +2030,13 @@ export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Ch
   let valid = false;
   for (const bKey of birthKeys) {
     if (ct.isAspect) {
-      const ranges = matchAspectRanges(cond.context, bKey, gkTransit, [], cond.orb);
+      const ranges = matchAspectRanges(
+        cond.context,
+        bKey,
+        gkTransit,
+        [],
+        cond.orb,
+      );
       const dist = calcDist360(g1.longitude, g2.longitude);
       ranges.forEach(range => {
         const inOrb = inRange(dist, range);
@@ -1886,7 +2045,13 @@ export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Ch
         }
       });
     } else if (ct.isDrishtiAspect) {
-      const ranges = matchDrishtiConditionSignLngs(cond, chart, bKey, gkTransit, settings).map(deg => [deg, deg + 30]);
+      const ranges = matchDrishtiConditionSignLngs(
+        cond,
+        chart,
+        bKey,
+        gkTransit,
+        settings,
+      ).map(deg => [deg, deg + 30]);
       valid = ranges.some(range => {
         const [start, end] = range;
         return g1.longitude >= start && g1.longitude < end;
@@ -1899,7 +2064,10 @@ export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Ch
       chart.setAyanamshaItemByNum(27);
       const keys = matchBmGrahaKeys(ct.bmKey, cond, chart);
       const refGr = chart.graha(gkTransit);
-      const adjacentSignIndices =  [(refGr.signIndex + 11) % 12, (refGr.signIndex + 1) % 12];
+      const adjacentSignIndices = [
+        (refGr.signIndex + 11) % 12,
+        (refGr.signIndex + 1) % 12,
+      ];
       const filtered = keys.filter(k => {
         const gr = chart.graha(k);
         return adjacentSignIndices.includes(gr.signIndex);
@@ -1911,21 +2079,32 @@ export const processTransitDashaRuleSet = (cond: Condition, level = 1, chart: Ch
     }
   }
   return { valid, start, end };
-}
+};
 
 const translateActionToGerund = (action: string) => {
-  const suffix = action.split('_').pop().trim().toLowerCase();
+  const suffix = action
+    .split('_')
+    .pop()
+    .trim()
+    .toLowerCase();
   switch (suffix) {
-    case "dies":
-      return "dying";
-    case "rules":
-      return "ruling";
+    case 'dies':
+      return 'dying';
+    case 'rules':
+      return 'ruling';
     default:
-      return suffix.replace(/s$/i, "ing");
+      return suffix.replace(/s$/i, 'ing');
   }
-}
+};
 
-const matchPanchaPakshiBirdAction = async (currJd = 0, geo: GeoPos, chart: Chart, refKey: string, action: string, isDayAction = false) => {
+const matchPanchaPakshiBirdAction = async (
+  currJd = 0,
+  geo: GeoPos,
+  chart: Chart,
+  refKey: string,
+  action: string,
+  isDayAction = false,
+) => {
   const ppData = await panchaPakshiDayNightSet(currJd, geo, chart, true);
   const bird = ppData.get('bird');
   const dayYamas = ppData.get('yamas');
@@ -1950,26 +2129,30 @@ const matchPanchaPakshiBirdAction = async (currJd = 0, geo: GeoPos, chart: Chart
     const refDayBird = refBirds[0];
     const refNightBird = refBirds.length > 1 ? refBirds[1] : refBirds[0];
     if (isDayAction) {
-      const actionKey = action.includes("ruling")? "ruling" : "dying";
+      const actionKey = action.includes('ruling') ? 'ruling' : 'dying';
       valid = bird.current[actionKey].key === refDayBird;
       if (valid) {
         matchedYama = { start: dayYamas[0].start, end: dayYamas[4].end };
       }
     } else {
-      matchedYama = dayYamas.find(ym => ym.subs[0].bird === refDayBird && action === ym.subs[0].key); 
+      matchedYama = dayYamas.find(
+        ym => ym.subs[0].bird === refDayBird && action === ym.subs[0].key,
+      );
     }
     if (matchedYama instanceof Object) {
       birdKey = refDayBird;
     }
     if (!matchedYama) {
       if (isDayAction) {
-        const actionKey = refKey.includes("ruling")? "ruling" : "dying";
+        const actionKey = refKey.includes('ruling') ? 'ruling' : 'dying';
         valid = bird.current[actionKey].key === refDayBird;
         if (valid) {
           matchedYama = { start: nightYamas[0].start, end: nightYamas[4].end };
         }
       } else {
-        matchedYama = nightYamas.find(ym => ym.subs[0].bird === refNightBird && action === ym.subs[0].key);
+        matchedYama = nightYamas.find(
+          ym => ym.subs[0].bird === refNightBird && action === ym.subs[0].key,
+        );
       }
       isNight = matchedYama instanceof Object;
       if (isNight) {
@@ -1978,55 +2161,89 @@ const matchPanchaPakshiBirdAction = async (currJd = 0, geo: GeoPos, chart: Chart
     }
     valid = matchedYama instanceof Object;
   }
-  return {valid, yama: matchedYama, isNight, birdKey };
-}
+  return { valid, yama: matchedYama, isNight, birdKey };
+};
 
-const matchDashaLord = async (transitJd = 0, chart: Chart, rulers : string[] = [], contextKey = '') => {
-  const [dashaKey, matchType] = contextKey.split("_");
+const matchDashaLord = async (
+  transitJd = 0,
+  chart: Chart,
+  rulers: string[] = [],
+  contextKey = '',
+) => {
+  const [dashaKey, matchType] = contextKey.split('_');
   let level = 1;
   switch (dashaKey) {
-    case "antardasha":
+    case 'antardasha':
       level = 2;
       break;
   }
   const { dashas } = matchDashaSubsetFromChart(chart, transitJd, level, 1000);
-  let refDasha = dashas.find(ds => transitJd >= ds.startJd && transitJd < ds.endJd);
+  let refDasha = dashas.find(
+    ds => transitJd >= ds.startJd && transitJd < ds.endJd,
+  );
   if (level > 1 && refDasha instanceof Object) {
-    refDasha = refDasha.children.find(ds => transitJd >= ds.startJd && transitJd < ds.endJd);
+    refDasha = refDasha.children.find(
+      ds => transitJd >= ds.startJd && transitJd < ds.endJd,
+    );
   }
   const lordKey = refDasha instanceof Object ? refDasha.key : '--';
   return rulers.includes(lordKey);
-}
+};
 
 const filterSubYamaByAction = (ym, action = '', currJd = 0) => {
-  return ym.subs.some(sub => sub.key === action) && ym.start >= (currJd - 0.5)
-}
+  return ym.subs.some(sub => sub.key === action) && ym.start >= currJd - 0.5;
+};
 
-const matchGrahaTransitPoint = async (rows: StartEndLord[], geo: GeoPos, contextKey = '', transitMode = 'transit', chart: Chart) => {
+const matchGrahaTransitPoint = async (
+  rows: StartEndLord[],
+  geo: GeoPos,
+  contextKey = '',
+  transitMode = 'transit',
+  chart: Chart,
+) => {
   let matched = false;
   let start = 0;
   let end = 0;
   let lords = [];
   const transposedMode = transitMode === 'birth';
-  const rulers = rows.length > 0 ? rows.map(r => r.rulers).reduce((a, b) => b.concat(a)) : [];
-  const grahaPositions = transposedMode ? buildGrahaPositionsFromChart(rulers, chart) : [];
+  const rulers =
+    rows.length > 0
+      ? rows.map(r => r.rulers).reduce((a, b) => b.concat(a))
+      : [];
+  const grahaPositions = transposedMode
+    ? buildGrahaPositionsFromChart(rulers, chart)
+    : [];
   for (const row of rows) {
     for (const gk of row.rulers) {
-      const trData = transposedMode ? await calcTransposedTransitionPointJd(row.start - 0.5, gk, geo, contextKey, grahaPositions) : await calcTransitionPointJd(row.start - 0.5, gk, geo, contextKey);
+      const trData = transposedMode
+        ? await calcTransposedTransitionPointJd(
+            row.start - 0.5,
+            gk,
+            geo,
+            contextKey,
+            grahaPositions,
+          )
+        : await calcTransitionPointJd(row.start - 0.5, gk, geo, contextKey);
       const itemValid = trData.jd >= row.start && trData.jd <= row.end;
       if (itemValid) {
         matched = true;
         start = row.start;
         end = row.end;
         lords = row.rulers;
-        console.log(contextKey, rulers);
       }
     }
   }
   return { matched, start, end, lords };
-}
+};
 
-export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Chart, refKey: string, contextType: ContextType, transitMode = 'transit') => {
+export const matchPPTransitBirdGraha = async (
+  currJd = 0,
+  geo: GeoPos,
+  chart: Chart,
+  refKey: string,
+  contextType: ContextType,
+  transitMode = 'transit',
+) => {
   const ppData = await panchaPakshiDayNightSet(currJd, geo, chart, true);
   const bird = ppData.get('bird');
   const dayYamas = ppData.get('yamas');
@@ -2055,8 +2272,12 @@ export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Ch
       break;
     case 'day_ruler_bird_graha':
     case 'day_dying_bird_graha':
-      const actPart = refKey.split('_bird_').shift().split('_').pop();
-      const actKey = actPart.includes('rul')? 'ruling' : 'dying';
+      const actPart = refKey
+        .split('_bird_')
+        .shift()
+        .split('_')
+        .pop();
+      const actKey = actPart.includes('rul') ? 'ruling' : 'dying';
       const { key } = bird.current[actKey];
       birdKey = key;
       rulers = matchBirdKeyRulers(key, isDayTime, actKey);
@@ -2070,7 +2291,9 @@ export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Ch
     case 'yama_sleeping_graha':
     case 'yama_dying_graha':
       const action = refKey.split('_')[1];
-      matchedYama = dayYamas.find(ym => filterSubYamaByAction(ym, action, currJd));
+      matchedYama = dayYamas.find(ym =>
+        filterSubYamaByAction(ym, action, currJd),
+      );
       startEndLords.pop();
       if (matchedYama) {
         const sub = matchedYama.subs.find(sn => sn.key === action);
@@ -2079,18 +2302,20 @@ export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Ch
           startEndLords.push({ start, end, rulers });
         }
       }
-      matchedNightYama = nightYamas.find(ym => filterSubYamaByAction(ym, action, currJd));
+      matchedNightYama = nightYamas.find(ym =>
+        filterSubYamaByAction(ym, action, currJd),
+      );
       if (matchedNightYama) {
         const sub = matchedNightYama.subs.find(sn => sn.key === action);
         if (sub instanceof Object) {
-          const {start, end } = sub;
+          const { start, end } = sub;
           rulers = sub.rulers;
           startEndLords.push({ start, end, rulers });
         }
       }
       break;
   }
-  
+
   const dtUtc = julToISODate(currJd);
   const yama = matchedYama instanceof Object ? matchedYama : matchedNightYama;
   valid = yama instanceof Object;
@@ -2105,7 +2330,10 @@ export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Ch
     }
     switch (contextType.key) {
       case 'yoga_karaka':
-        valid = transitChart instanceof Chart? rulers.includes(transitChart.yogaKaraka) : false;
+        valid =
+          transitChart instanceof Chart
+            ? rulers.includes(transitChart.yogaKaraka)
+            : false;
         break;
       case 'dasha_lord':
       case 'antardasha_lord':
@@ -2120,7 +2348,14 @@ export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Ch
       case 'set':
       case 'ic':
       case 'mc':
-        const { matched, start, end, lords } = await matchGrahaTransitPoint(startEndLords, geo, contextType.key, transitMode, chart);
+        valid = false;
+        const { matched, start, end, lords } = await matchGrahaTransitPoint(
+          startEndLords,
+          geo,
+          contextType.key,
+          transitMode,
+          chart,
+        );
         if (matched) {
           valid = true;
           yama.start = start;
@@ -2128,27 +2363,35 @@ export const matchPPTransitBirdGraha = async (currJd = 0, geo: GeoPos, chart: Ch
           rulers = lords;
         }
         break;
-      case "avayogi_graha":
-      case "yogi_graha":
-        const [ key, _ ] = contextType.key.split("_");
+      case 'avayogi_graha':
+      case 'yogi_graha':
+        const [key, _] = contextType.key.split('_');
         const lord = transitChart.matchObject(key);
         if (lord) {
           valid = rulers.includes(lord);
         }
         break;
-
     }
-    if (contextType.key.startsWith("lord_")) {
-      const lords = contextType.key.split('_').slice(1).map(smartCastInt);
+    if (contextType.key.startsWith('lord_')) {
+      const lords = contextType.key
+        .split('_')
+        .slice(1)
+        .map(smartCastInt);
       const transitChart = await fetchChartObject(dtUtc, geo);
-      const lordKeys = lords.map(houseNum => transitChart.matchHouseSignRuler(houseNum));
+      const lordKeys = lords.map(houseNum =>
+        transitChart.matchHouseSignRuler(houseNum),
+      );
       valid = rulers.some(gk => lordKeys.includes(gk));
     }
   }
-  return { valid, yama, birdKey, isNight, rulers }
-}
+  return { valid, yama, birdKey, isNight, rulers };
+};
 
-export const matchPanchaPakshi = async (cond: Condition, chart: Chart, geo: GeoPos) => {
+export const matchPanchaPakshi = async (
+  cond: Condition,
+  chart: Chart,
+  geo: GeoPos,
+) => {
   let mode = '';
   switch (cond.fromMode) {
     case 'transit':
@@ -2169,11 +2412,23 @@ export const matchPanchaPakshi = async (cond: Condition, chart: Chart, geo: GeoP
   let nightMatched = false;
   if (isAction && mode === 'pp') {
     const refKey = cond.object1.key;
-    const isDayAction = context.includes("_is_");
+    const isDayAction = context.includes('_is_');
     let matched = false;
     let counter = 0;
     while (!matched && counter < 20) {
-      const { valid, yama, birdKey, isNight } = await matchPanchaPakshiBirdAction(currJd + counter, geo, chart, refKey, action, isDayAction);
+      const {
+        valid,
+        yama,
+        birdKey,
+        isNight,
+      } = await matchPanchaPakshiBirdAction(
+        currJd + counter,
+        geo,
+        chart,
+        refKey,
+        action,
+        isDayAction,
+      );
       if (valid && yama instanceof Object) {
         matched = true;
         start = yama.start;
@@ -2189,13 +2444,24 @@ export const matchPanchaPakshi = async (cond: Condition, chart: Chart, geo: GeoP
     let matched = false;
     let maxDays = 20;
     if (cond.context.includes('dasha')) {
-      //maxDays = cond.context.includes('antardasha') ? 366 * 3 : 366 * 20; 
+      //maxDays = cond.context.includes('antardasha') ? 366 * 3 : 366 * 20;
       maxDays = 40;
-    } else if (['as', 'rise', 'asc', 'ds', 'set', 'desc', 'dsc', 'mc', 'ic'].includes(cond.contextType.key)) {
-      maxDays = 60;
+    } else if (
+      ['as', 'rise', 'asc', 'ds', 'set', 'desc', 'dsc', 'mc', 'ic'].includes(
+        cond.contextType.key,
+      )
+    ) {
+      maxDays = mode === 'transit' ? 60 : 120;
     }
     while (!matched && counter < maxDays) {
-      const { valid, yama, birdKey, isNight } = await matchPPTransitBirdGraha(currJd + counter, geo, chart, refKey, cond.contextType, mode);
+      const { valid, yama, birdKey, isNight } = await matchPPTransitBirdGraha(
+        currJd + counter,
+        geo,
+        chart,
+        refKey,
+        cond.contextType,
+        mode,
+      );
       if (valid) {
         matched = true;
         start = yama.start;
@@ -2209,4 +2475,4 @@ export const matchPanchaPakshi = async (cond: Condition, chart: Chart, geo: GeoP
 
   const valid = start > 0 && end > start;
   return { start, end, action, matchedBird, isNight: nightMatched, valid };
-}
+};

@@ -61,12 +61,15 @@ export const matchTransData = async (
   transType = 0,
   transKey = 'rise',
   adjustRise = false,
-  startJd = -1
+  startJd = -1,
 ): Promise<TimeSet> => {
   let data = { valid: false, transitTime: -1 };
   inData.transType = transType;
   // set the rise offset to 12 hrs ago
-  const riseOffset = transKey !== 'set' && inData.planetNum === swisseph.SE_SUN && adjustRise ? -0.5 : 0;
+  const riseOffset =
+    transKey !== 'set' && inData.planetNum === swisseph.SE_SUN && adjustRise
+      ? -0.5
+      : 0;
   const jd = inData.jd;
   const jdIndex = Object.keys(inData).indexOf('jd');
   const args = Object.values(inData);
@@ -74,7 +77,7 @@ export const matchTransData = async (
   const hasStartJd = startJd > 0;
   if (riseOffset !== 0 || hasStartJd) {
     if (hasStartJd) {
-      args[jdIndex] = startJd;  
+      args[jdIndex] = startJd;
     } else {
       args[jdIndex] += riseOffset;
     }
@@ -87,7 +90,7 @@ export const matchTransData = async (
       data.valid = false;
     }
   });
-  let result:TimeSet = { jd: -1, after: false };
+  let result: TimeSet = { jd: -1, after: false };
   if (data.valid) {
     if (data.transitTime >= 0) {
       result = {
@@ -106,7 +109,6 @@ const centerDiscRising = () => {
     swisseph.SE_BIT_GEOCTR_NO_ECL_LAT
   );
 };
-
 
 export const calcTransitionJd = async (
   jd: number,
@@ -155,32 +157,42 @@ export const calcTransitionJd = async (
     let set = await matchTransData(
       inData,
       swisseph.SE_CALC_SET + offset,
-      'set'
+      'set',
     );
     if (showIcMc) {
-      mc = await matchTransData(inData, swisseph.SE_CALC_MTRANSIT, 'mc', adjustRise);
-      ic = await matchTransData(inData, swisseph.SE_CALC_ITRANSIT, 'ic', adjustRise);
+      mc = await matchTransData(
+        inData,
+        swisseph.SE_CALC_MTRANSIT,
+        'mc',
+        adjustRise,
+      );
+      ic = await matchTransData(
+        inData,
+        swisseph.SE_CALC_ITRANSIT,
+        'ic',
+        adjustRise,
+      );
     }
     let rise = await matchTransData(
       inData,
       swisseph.SE_CALC_RISE + offset,
       'rise',
-      adjustRise
+      adjustRise,
     );
     if (!adjustRise && rise.jd > set.jd) {
       rise = await matchTransData(
         inData,
         swisseph.SE_CALC_RISE + offset,
         'rise',
-        true
+        true,
       );
-      
+
       set = await matchTransData(
         inData,
         swisseph.SE_CALC_SET + offset,
         'set',
         false,
-        rise.jd
+        rise.jd,
       );
     }
     if (rise.jd >= -1) {
@@ -192,7 +204,7 @@ export const calcTransitionJd = async (
       data = { valid, rise, set };
     }
     if (showLng) {
-      const sKeys = showIcMc? ['rise', 'set', 'mc', 'ic'] : ['rise', 'set'];
+      const sKeys = showIcMc ? ['rise', 'set', 'mc', 'ic'] : ['rise', 'set'];
       for (const sk of sKeys) {
         data[sk].lng = await calcGrahaLng(data[sk].jd, planetNum);
       }
@@ -205,30 +217,35 @@ export const matchSwissEphTransType = (type = 'rise') => {
   switch (type) {
     case 'set':
     case 'ds':
-      return { key: 'set', num: swisseph.SE_CALC_SET }
+      return { key: 'set', num: swisseph.SE_CALC_SET };
     case 'mc':
     case 'highest':
       return {
         key: 'mc',
-        num: swisseph.SE_CALC_MTRANSIT
-      }
+        num: swisseph.SE_CALC_MTRANSIT,
+      };
     case 'ic':
     case 'lowest':
       return {
         key: 'ic',
-        num: swisseph.SE_CALC_ITRANSIT
-      }
+        num: swisseph.SE_CALC_ITRANSIT,
+      };
     default:
       return {
         key: 'rise',
-        num: swisseph.SE_CALC_RISE
-      }
+        num: swisseph.SE_CALC_RISE,
+      };
   }
-}
+};
 
-export const calcTransitionPointJd = async (jd = 0, gKey = '', geo: GeoPos, type = 'rise'): Promise<TimeSet> => {
+export const calcTransitionPointJd = async (
+  jd = 0,
+  gKey = '',
+  geo: GeoPos,
+  type = 'rise',
+): Promise<TimeSet> => {
   const planetNum = matchPlanetNum(gKey);
-  const { key, num} = matchSwissEphTransType(type);
+  const { key, num } = matchSwissEphTransType(type);
   const inData = {
     jd,
     planetNum,
@@ -242,25 +259,31 @@ export const calcTransitionPointJd = async (jd = 0, gKey = '', geo: GeoPos, type
     temperature: 10,
   } as TransitionInput;
   return await matchTransData(inData, num, key, false, jd);
-}
+};
 
-export const calcTransposedTransitionPointJd = async (jd = 0, gKey = '', geo: GeoPos, type = 'rise', gPositions: GrahaPos[] = []): Promise<TimeSet> => {
+export const calcTransposedTransitionPointJd = async (
+  jd = 0,
+  gKey = '',
+  geo: GeoPos,
+  type = 'rise',
+  gPositions: GrahaPos[] = [],
+): Promise<TimeSet> => {
   const grahaPos = gPositions.find(gp => gp.key === gKey);
-  const timeSet = { jd: 0, lng: grahaPos.lng, dt: '', after: false }
+  const { key } = matchSwissEphTransType(type);
+  const timeSet = { jd: 0, lng: 0, dt: '', after: false };
   if (grahaPos instanceof Object) {
-    const result = await calcTransposedGrahaTransition(jd, geo, grahaPos, type)
-    if (result instanceof Object) {
-      if (result instanceof Array) {
-        const trResult = result.find(tr => tr.type === type);
-        if (trResult instanceof Object) {
-          timeSet.jd = trResult.jd;
-          timeSet.dt = trResult.isoDate;
-        }
+    const result = await calcTransposedGrahaTransition(jd, geo, grahaPos, key);
+    if (result instanceof Array) {
+      const trResult = result.find(tr => tr.type === key);
+      if (trResult instanceof Object) {
+        timeSet.jd = trResult.jd;
+        timeSet.dt = trResult.isoDate;
+        timeSet.lng = grahaPos.lng;
       }
     }
   }
   return timeSet;
-}
+};
 
 export const calcTransition = async (
   datetime,
@@ -273,18 +296,16 @@ export const calcTransition = async (
   return { jd, ...data };
 };
 
-
-
 export const offsetToMidNight = (jd = 0, geoLat = 0): number => {
-	const offset = geoLat / 360;
-	const utcMN = Math.floor(jd + 0.5) - 0.5;
-	return utcMN - offset;
-}
+  const offset = geoLat / 360;
+  const utcMN = Math.floor(jd + 0.5) - 0.5;
+  return utcMN - offset;
+};
 
 export const calcSunTransJd = async (
   jd,
   geo: GeoLoc,
-  offsetToPrevMidNight = true
+  offsetToPrevMidNight = true,
 ): Promise<SunTransitionData> => {
   const offsetJd = offsetToPrevMidNight ? offsetToMidNight(jd, geo.lat) : jd;
   const curr = await calcTransitionJd(offsetJd, geo, 0, false, false);
@@ -318,7 +339,11 @@ export const calcJyotishSunRise = async (datetime, geo: GeoPos) => {
   return jyotishDay.toObject();
 };
 
-export const fetchIndianTimeData = async (datetime, geo: GeoPos, tzOffset = 0) => {
+export const fetchIndianTimeData = async (
+  datetime,
+  geo: GeoPos,
+  tzOffset = 0,
+) => {
   const jyotishDay = await calcJyotishDay(datetime, geo, tzOffset);
   return new IndianTime(jyotishDay);
 };
@@ -333,4 +358,4 @@ export const toIndianTimeJd = async (jd = 0, geo: GeoPos) => {
   const jyotishDay = new JyotishDay(sunData);
   const iTime = new IndianTime(jyotishDay);
   return iTime.toObject();
-}
+};
