@@ -21,6 +21,7 @@ import {
   fetchIndianTimeData,
   SunTransitionData,
   TransitionData,
+  calcSunTransJd,
 } from './transitions';
 import starValues from './settings/star-values';
 import asteroidValues from './settings/asteroid-values';
@@ -68,6 +69,8 @@ import {
 } from './models/chart';
 import { capitalize } from './helpers';
 import houseTypeData from './settings/house-type-data';
+import { sampleBaseObjects } from './custom-transits';
+import { GeoLoc } from './models/geo-loc';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 
@@ -645,6 +648,53 @@ export const calcAllTransitions = async (
     geo,
     chart: null,
   };
+};
+
+export const buildExtendedTransitions = async (
+  geo: GeoLoc,
+  dt = '',
+  modeRef = 'basic',
+  adjustMode = '',
+) => {
+  const adjustRiseBy12 = adjustMode !== 'spot';
+  const data = await calcAllTransitions(dt, geo, 0, adjustRiseBy12);
+  const mode = ['basic', 'standard', 'extended'].includes(modeRef)
+    ? modeRef
+    : 'standard';
+  const showSunData = ['standard', 'extended'].includes(mode);
+  const showGeoData = ['extended'].includes(mode);
+  const sunData = showSunData ? await calcSunTransJd(data.jd, geo) : null;
+
+  data.transitions = data.transitions.map(row => {
+    const { key, rise, set, mc, ic } = row;
+    const item: TransitionData = { key, rise, set, mc, ic };
+    if (showGeoData && key === 'su') {
+      item.prevRise = sunData.prevRise;
+      item.prevSet = sunData.prevSet;
+      item.nextRise = sunData.nextRise;
+    }
+    return item;
+  });
+
+  const toTransitSet = (key, tr = null) => {
+    const keys = tr instanceof Object ? Object.keys(tr) : [];
+    const values = ['rise', 'set', 'mc', 'ic'].map(k => {
+      const v = keys.includes(k) ? tr[k] : { jd: 0, lng: 0, after: false };
+      return [k, v];
+    });
+    return { key, ...Object.fromEntries(values) };
+  };
+
+  const extraTransitionData = await sampleBaseObjects(data.jd, geo);
+  if (extraTransitionData instanceof Object) {
+    Object.entries(extraTransitionData.transits).forEach(entry => {
+      const [k, tr] = entry;
+      if (tr instanceof Object) {
+        data.transitions.push(toTransitSet(k, tr));
+      }
+    });
+  }
+  return { ...data, showGeoData, showSunData };
 };
 
 const calcStarPosJd = async (jd: number, starname: string, mode = '2ut') => {
@@ -1479,33 +1529,37 @@ export const calcCompactChartData = async (
         ayanamsha.key = ak;
         prevAyaVal = ar.value;
         const aya = ayanamshaValues.find(a => a.key === ak);
-        const av = calcCompactVariantSet(
-          ayanamsha,
-          grahaSet,
-          hdP,
-          indianTimeData,
-          upagrahas,
-          sunAtSunRise,
-          fetchFull,
-        );
-        av.grahas.forEach(gr => {
-          const variant = mapToVariantMap(gr, aya.value);
-          variants.push(variant);
-        });
-        if (addExtraSets) {
-          sphutaSet.push({ num: aya.value, items: av.sphutas });
-          objectSets.push({ num: aya.value, items: av.objects });
-          if (extraDataAyanamshas.includes(ak)) {
-            rashiSets.push({ num: aya.value, items: av.rashis });
+        if (aya instanceof Object) {
+          const av = calcCompactVariantSet(
+            ayanamsha,
+            grahaSet,
+            hdP,
+            indianTimeData,
+            upagrahas,
+            sunAtSunRise,
+            fetchFull,
+          );
+          av.grahas.forEach(gr => {
+            const variant = mapToVariantMap(gr, aya.value);
+            variants.push(variant);
+          });
+          if (addExtraSets) {
+            sphutaSet.push({ num: aya.value, items: av.sphutas });
+            objectSets.push({ num: aya.value, items: av.objects });
+            if (extraDataAyanamshas.includes(ak)) {
+              rashiSets.push({ num: aya.value, items: av.rashis });
+            }
           }
         }
       }
     });
   } else if (addExtraSets) {
     const aya = ayanamshaValues.find(a => a.key === ayanamsaKey);
-    sphutaSet.push({ num: aya.value, items: sphutas });
-    rashiSets.push({ num: aya.value, items: rashis });
-    objectSets.push({ num: aya.value, items: objects });
+    if (aya instanceof Object) {
+      sphutaSet.push({ num: aya.value, items: sphutas });
+      rashiSets.push({ num: aya.value, items: rashis });
+      objectSets.push({ num: aya.value, items: objects });
+    }
   }
 
   const chartData = {

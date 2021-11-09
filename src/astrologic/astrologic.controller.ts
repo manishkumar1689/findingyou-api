@@ -55,9 +55,11 @@ import {
   calcCoreGrahaPositions,
   calcAllStars,
   calcDeclination,
+  buildExtendedTransitions,
 } from './lib/core';
 import {
   calcAltitudeSE,
+  calcTransposedGrahaTransitions,
   calcTransposedObjectTransitionsSimple,
 } from './lib/point-transitions';
 import { sampleBaseObjects } from './lib/custom-transits';
@@ -150,7 +152,9 @@ import {
 } from './lib/calc-ascendant';
 import { GeoLoc } from './lib/models/geo-loc';
 import { Graha } from './lib/models/graha-set';
-import ayanamshaValues from './lib/settings/ayanamsha-values';
+import ayanamshaValues, {
+  matchAyanamshaKey,
+} from './lib/settings/ayanamsha-values';
 import {
   calcBavGraphData,
   calcBavSignSamples,
@@ -281,45 +285,8 @@ export class AstrologicController {
   ) {
     if (validISODateString(dt) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
-      const adjustRiseBy12 = adjustMode !== 'spot';
-      const data = await calcAllTransitions(dt, geo, 0, adjustRiseBy12);
-      const mode = ['basic', 'standard', 'extended'].includes(modeRef)
-        ? modeRef
-        : 'standard';
-      const showSunData = ['standard', 'extended'].includes(mode);
-      const showGeoData = ['extended'].includes(mode);
-      const sunData = showSunData ? await calcSunTransJd(data.jd, geo) : null;
-
-      data.transitions = data.transitions.map(row => {
-        const { key, rise, set, mc, ic } = row;
-        const item: TransitionData = { key, rise, set, mc, ic };
-        if (showGeoData && key === 'su') {
-          item.prevRise = sunData.prevRise;
-          item.prevSet = sunData.prevSet;
-          item.nextRise = sunData.nextRise;
-        }
-        return item;
-      });
-
-      const toTransitSet = (key, tr = null) => {
-        const keys = tr instanceof Object ? Object.keys(tr) : [];
-        const values = ['rise', 'set', 'mc', 'ic'].map(k => {
-          const v = keys.includes(k) ? tr[k] : { jd: 0, lng: 0, after: false };
-          return [k, v];
-        });
-        return { key, ...Object.fromEntries(values) };
-      };
-
-      const extraTransitionData = await sampleBaseObjects(data.jd, geo);
-      if (extraTransitionData instanceof Object) {
-        Object.entries(extraTransitionData.transits).forEach(entry => {
-          const [k, tr] = entry;
-          if (tr instanceof Object) {
-            data.transitions.push(toTransitSet(k, tr));
-          }
-        });
-      }
-      if (showGeoData) {
+      const data = await buildExtendedTransitions(geo, dt, modeRef, adjustMode);
+      if (data.showGeoData) {
         data.geo = await this.geoService.fetchGeoAndTimezone(
           geo.lat,
           geo.lng,
@@ -367,13 +334,14 @@ export class AstrologicController {
     }
   }
 
-  @Get('pancha-pakshi/:chartID/:loc/:dt?/:mode?')
+  @Get('pancha-pakshi/:chartID/:loc/:dt?/:mode?/:showTrans?')
   async pankshaPanchaDaySet(
     @Res() res,
     @Param('chartID') chartID,
     @Param('loc') loc,
     @Param('dt') dt,
     @Param('mode') mode,
+    @Param('showTrans') showTrans,
   ) {
     let status = HttpStatus.BAD_REQUEST;
     let data: Map<string, any> = new Map(
@@ -394,6 +362,7 @@ export class AstrologicController {
       }),
     );
     const fetchNightAndDay = mode === 'dual';
+    const showTransitions = showTrans === 'trans';
     if (notEmptyString(chartID) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const { dtUtc, jd } = matchJdAndDatetime(dt);
@@ -416,8 +385,44 @@ export class AstrologicController {
           data = new Map([...data, ...ppData]);
           data.set('message', 'valid data set');
         }
+        if (showTransitions) {
+          const result = await buildExtendedTransitions(geo, dtUtc, 'extended');
+
+          data.set('transitions', result.transitions);
+          const gps = chart.bodies.map(({ lng, lat, lngSpeed, key }) => {
+            return { lng, lat, lngSpeed, key };
+          });
+          if (chart.objects instanceof Array) {
+            if (chart.sphutas.length > 0) {
+              const sphutaSet = chart.sphutas[0];
+              const ayaNum = sphutaSet.num;
+              const ayanamshaKey = matchAyanamshaKey(ayaNum);
+              const aya = chart.ayanamshas.find(
+                row => row.key === ayanamshaKey,
+              );
+              const sphutaKeys = {
+                lotOfFortune: 'lotOfFortune',
+                lotOfSpirit: 'lotOfSpirit',
+                yogi: 'yogiSphuta',
+                avaYogi: 'avayogiSphuta',
+                brghuBindu: 'brghuBindu',
+              };
+              if (aya instanceof Object && sphutaSet instanceof Object) {
+                Object.entries(sphutaKeys).forEach(([k1, k2]) => {
+                  const item = sphutaSet.items.find(item => item.key === k2);
+                  if (item instanceof Object) {
+                    const lng = (item.value + aya.value) % 360;
+                    gps.push({ lng, lat: 0, lngSpeed: 0, key: k1 });
+                  }
+                });
+              }
+            }
+          }
+          const ds = await calcTransposedGrahaTransitions(jd, geo, gps);
+          data.set('birthTransitions', ds);
+        }
+        status = HttpStatus.OK;
       }
-      status = HttpStatus.OK;
     } else {
       data.set('message', 'Invalid parameters');
     }
@@ -3433,16 +3438,14 @@ export class AstrologicController {
       ayaRow instanceof Object ? ayaRow : { key: '', value: 0, name: '' };
     const { name } = ayaItem;
     const value = await calcAyanamsha(jd, ayanamshaKey);
-    return res
-      .status(HttpStatus.OK)
-      .json({
-        dt: dtUtc,
-        jd: jd,
-        value,
-        num: ayaItem.value,
-        name,
-        key: ayanamshaKey,
-      });
+    return res.status(HttpStatus.OK).json({
+      dt: dtUtc,
+      jd: jd,
+      value,
+      num: ayaItem.value,
+      name,
+      key: ayanamshaKey,
+    });
   }
 
   @Get('sign-timeline/:loc/:start?/:end?/:ayanamsha?')
@@ -3503,16 +3506,14 @@ export class AstrologicController {
       excludeKeys,
       ayanamshaKey,
     );
-    return res
-      .status(HttpStatus.OK)
-      .json({
-        dt: datetime,
-        geo: geo,
-        currGeo,
-        start: dtUtc,
-        end: endDt,
-        rows,
-      });
+    return res.status(HttpStatus.OK).json({
+      dt: datetime,
+      geo: geo,
+      currGeo,
+      start: dtUtc,
+      end: endDt,
+      rows,
+    });
   }
 
   @Get('kaksha-transit-graph/:chartID/:loc/:start?/:end?/:ayanamsha?')
@@ -3569,18 +3570,16 @@ export class AstrologicController {
         });
       }
     }
-    return res
-      .status(HttpStatus.OK)
-      .json({
-        dt: datetime,
-        geo: geo,
-        currGeo,
-        start: dtUtc,
-        end: endDt,
-        items: samples,
-        numSteps,
-        stepsPerDay,
-      });
+    return res.status(HttpStatus.OK).json({
+      dt: datetime,
+      geo: geo,
+      currGeo,
+      start: dtUtc,
+      end: endDt,
+      items: samples,
+      numSteps,
+      stepsPerDay,
+    });
   }
 
   @Get('object-sign-timeline/:loc/:start?/:end?')

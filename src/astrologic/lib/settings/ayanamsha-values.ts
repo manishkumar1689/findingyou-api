@@ -19,9 +19,14 @@ const ayanamshaValues = [
   { key: 'jn_bhasin', value: 8, name: 'J.N. Bhasin' },
 ];
 
-export const matchAyanamshaNum = (key = "true_citra") => {
+export const matchAyanamshaNum = (key = 'true_citra') => {
   const row = ayanamshaValues.find(r => r.key === key);
   return row instanceof Object ? row.value : -1;
-}
+};
+
+export const matchAyanamshaKey = (num = 0) => {
+  const row = ayanamshaValues.find(r => r.value === num);
+  return row instanceof Object ? row.key : '';
+};
 
 export default ayanamshaValues;
