@@ -654,20 +654,25 @@ export const calcAllTransitions = async (
 
 export const buildExtendedTransitions = async (
   geo: GeoLoc,
-  dt = '',
+  jd = 0,
   modeRef = 'basic',
   adjustMode = '',
 ) => {
   const adjustRiseBy12 = adjustMode !== 'spot';
-  const data = await calcAllTransitions(dt, geo, 0, adjustRiseBy12);
+  const coreTransitions = await calcAllTransitionsJd(
+    jd,
+    geo,
+    0,
+    adjustRiseBy12,
+  );
   const mode = ['basic', 'standard', 'extended'].includes(modeRef)
     ? modeRef
     : 'standard';
   const showSunData = ['standard', 'extended'].includes(mode);
   const showGeoData = ['extended'].includes(mode);
-  const sunData = showSunData ? await calcSunTransJd(data.jd, geo) : null;
+  const sunData = showSunData ? await calcSunTransJd(jd, geo) : null;
 
-  data.transitions = data.transitions.map(row => {
+  const transitions = coreTransitions.map(row => {
     const { key, rise, set, mc, ic } = row;
     const item: TransitionData = { key, rise, set, mc, ic };
     if (showGeoData && key === 'su') {
@@ -687,24 +692,24 @@ export const buildExtendedTransitions = async (
     return { key, ...Object.fromEntries(values) };
   };
 
-  const extraTransitionData = await sampleBaseObjects(data.jd, geo);
+  const extraTransitionData = await sampleBaseObjects(jd, geo);
   if (extraTransitionData instanceof Object) {
     Object.entries(extraTransitionData.transits).forEach(entry => {
       const [k, tr] = entry;
       if (tr instanceof Object) {
-        data.transitions.push(toTransitSet(k, tr));
+        transitions.push(toTransitSet(k, tr));
       }
     });
   }
-  return { ...data, showGeoData, showSunData };
+  return { jd, transitions, showGeoData, showSunData };
 };
 
 export const builldCurrentAndBirthExtendedTransitions = async (
   chart: Chart,
   geo: GeoLoc,
-  dtUtc = '',
+  jd = 0,
 ) => {
-  const result = await buildExtendedTransitions(geo, dtUtc, 'extended');
+  const result = await buildExtendedTransitions(geo, jd, 'extended');
   const { transitions } = result;
   const gps = chart.bodies.map(({ lng, lat, lngSpeed, key }) => {
     return { lng, lat, lngSpeed, key };

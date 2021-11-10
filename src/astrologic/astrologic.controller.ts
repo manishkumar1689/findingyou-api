@@ -90,8 +90,6 @@ import {
 import {
   toIndianTime,
   calcTransition,
-  calcSunTransJd,
-  TransitionData,
   calcTransitionJd,
 } from './lib/transitions';
 import { readEpheFiles } from './lib/files';
@@ -283,12 +281,18 @@ export class AstrologicController {
   ) {
     if (validISODateString(dt) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
-      const data = await buildExtendedTransitions(geo, dt, modeRef, adjustMode);
+      const { dtUtc, jd } = matchJdAndDatetime(dt);
+      const data: any = await buildExtendedTransitions(
+        geo,
+        jd,
+        modeRef,
+        adjustMode,
+      );
       if (data.showGeoData) {
         data.geo = await this.geoService.fetchGeoAndTimezone(
           geo.lat,
           geo.lng,
-          dt,
+          dtUtc,
           'compact',
         );
         data.chart = await this.fetchCompactChart(
@@ -387,7 +391,7 @@ export class AstrologicController {
           const {
             transitions,
             birthTransitions,
-          } = await builldCurrentAndBirthExtendedTransitions(chart, geo, dtUtc);
+          } = await builldCurrentAndBirthExtendedTransitions(chart, geo, jd);
 
           data.set('transitions', transitions);
           data.set('birthTransitions', birthTransitions);
