@@ -625,13 +625,12 @@ export const calcAllTransitionsJd = async (
   return bodies;
 };
 
-export const calcAllTransitions = async (
-  datetime: string,
+export const calcAllTransitionsFromJd = async (
+  jd = 0,
   geo: GeoPos,
   jdOffset = 0,
   showLng = false,
 ) => {
-  const jd = calcJulDate(datetime);
   const items = await calcAllTransitionsJd(
     jd,
     geo,
@@ -652,6 +651,16 @@ export const calcAllTransitions = async (
   };
 };
 
+export const calcAllTransitions = async (
+  datetime: string,
+  geo: GeoPos,
+  jdOffset = 0,
+  showLng = false,
+) => {
+  const jd = calcJulDate(datetime);
+  return await calcAllTransitionsFromJd(jd, geo, jdOffset, showLng);
+};
+
 export const buildExtendedTransitions = async (
   geo: GeoLoc,
   jd = 0,
@@ -659,12 +668,7 @@ export const buildExtendedTransitions = async (
   adjustMode = '',
 ) => {
   const adjustRiseBy12 = adjustMode !== 'spot';
-  const coreTransitions = await calcAllTransitionsJd(
-    jd,
-    geo,
-    0,
-    adjustRiseBy12,
-  );
+  const coreData = await calcAllTransitionsFromJd(jd, geo, 0, adjustRiseBy12);
   const mode = ['basic', 'standard', 'extended'].includes(modeRef)
     ? modeRef
     : 'standard';
@@ -672,7 +676,7 @@ export const buildExtendedTransitions = async (
   const showGeoData = ['extended'].includes(mode);
   const sunData = showSunData ? await calcSunTransJd(jd, geo) : null;
 
-  const transitions = coreTransitions.map(row => {
+  const transitions = coreData.transitions.map(row => {
     const { key, rise, set, mc, ic } = row;
     const item: TransitionData = { key, rise, set, mc, ic };
     if (showGeoData && key === 'su') {
