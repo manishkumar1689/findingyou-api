@@ -419,7 +419,21 @@ export class AstrologicController {
             }
           }
           const ds = await calcTransposedGrahaTransitions(jd, geo, gps);
-          data.set('birthTransitions', ds);
+          const bTrans = ds
+            .filter(
+              gSet =>
+                gSet instanceof Object &&
+                Object.keys(gSet).includes('transitions'),
+            )
+            .map(gSet => {
+              const { key, transitions } = gSet;
+              const rise = transitions.find(item => item.type === 'rise');
+              const set = transitions.find(item => item.type === 'set');
+              const mc = transitions.find(item => item.type === 'mc');
+              const ic = transitions.find(item => item.type === 'ic');
+              return { key, rise, set, mc, ic };
+            });
+          data.set('birthTransitions', bTrans);
         }
         status = HttpStatus.OK;
       }
