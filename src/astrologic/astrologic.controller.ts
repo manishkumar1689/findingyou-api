@@ -56,10 +56,10 @@ import {
   calcAllStars,
   calcDeclination,
   buildExtendedTransitions,
+  builldCurrentAndBirthExtendedTransitions,
 } from './lib/core';
 import {
   calcAltitudeSE,
-  calcTransposedGrahaTransitions,
   calcTransposedObjectTransitionsSimple,
 } from './lib/point-transitions';
 import { sampleBaseObjects } from './lib/custom-transits';
@@ -152,9 +152,7 @@ import {
 } from './lib/calc-ascendant';
 import { GeoLoc } from './lib/models/geo-loc';
 import { Graha } from './lib/models/graha-set';
-import ayanamshaValues, {
-  matchAyanamshaKey,
-} from './lib/settings/ayanamsha-values';
+import ayanamshaValues from './lib/settings/ayanamsha-values';
 import {
   calcBavGraphData,
   calcBavSignSamples,
@@ -386,54 +384,13 @@ export class AstrologicController {
           data.set('message', 'valid data set');
         }
         if (showTransitions) {
-          const result = await buildExtendedTransitions(geo, dtUtc, 'extended');
+          const {
+            transitions,
+            birthTransitions,
+          } = await builldCurrentAndBirthExtendedTransitions(chart, geo, dtUtc);
 
-          data.set('transitions', result.transitions);
-          const gps = chart.bodies.map(({ lng, lat, lngSpeed, key }) => {
-            return { lng, lat, lngSpeed, key };
-          });
-          if (chart.objects instanceof Array) {
-            if (chart.sphutas.length > 0) {
-              const sphutaSet = chart.sphutas[0];
-              const ayaNum = sphutaSet.num;
-              const ayanamshaKey = matchAyanamshaKey(ayaNum);
-              const aya = chart.ayanamshas.find(
-                row => row.key === ayanamshaKey,
-              );
-              const sphutaKeys = {
-                lotOfFortune: 'lotOfFortune',
-                lotOfSpirit: 'lotOfSpirit',
-                yogi: 'yogiSphuta',
-                avaYogi: 'avayogiSphuta',
-                brghuBindu: 'brghuBindu',
-              };
-              if (aya instanceof Object && sphutaSet instanceof Object) {
-                Object.entries(sphutaKeys).forEach(([k1, k2]) => {
-                  const item = sphutaSet.items.find(item => item.key === k2);
-                  if (item instanceof Object) {
-                    const lng = (item.value + aya.value) % 360;
-                    gps.push({ lng, lat: 0, lngSpeed: 0, key: k1 });
-                  }
-                });
-              }
-            }
-          }
-          const ds = await calcTransposedGrahaTransitions(jd, geo, gps);
-          const bTrans = ds
-            .filter(
-              gSet =>
-                gSet instanceof Object &&
-                Object.keys(gSet).includes('transitions'),
-            )
-            .map(gSet => {
-              const { key, transitions } = gSet;
-              const rise = transitions.find(item => item.type === 'rise');
-              const set = transitions.find(item => item.type === 'set');
-              const mc = transitions.find(item => item.type === 'mc');
-              const ic = transitions.find(item => item.type === 'ic');
-              return { key, rise, set, mc, ic };
-            });
-          data.set('birthTransitions', bTrans);
+          data.set('transitions', transitions);
+          data.set('birthTransitions', birthTransitions);
         }
         status = HttpStatus.OK;
       }

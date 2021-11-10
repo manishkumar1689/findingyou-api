@@ -38,6 +38,7 @@ import ghatiValues from './settings/ghati-values';
 import caughadiaData from './settings/caughadia-data';
 import muhurtaValues from './settings/muhurta-values';
 import ayanamshaValues, {
+  matchAyanamshaKey,
   matchAyanamshaNum,
 } from './settings/ayanamsha-values';
 import kalamData from './settings/kalam-data';
@@ -71,6 +72,7 @@ import { capitalize } from './helpers';
 import houseTypeData from './settings/house-type-data';
 import { sampleBaseObjects } from './custom-transits';
 import { GeoLoc } from './models/geo-loc';
+import { calcTransposedGrahaTransitions } from './point-transitions';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 
@@ -695,6 +697,57 @@ export const buildExtendedTransitions = async (
     });
   }
   return { ...data, showGeoData, showSunData };
+};
+
+export const builldCurrentAndBirthExtendedTransitions = async (
+  chart: Chart,
+  geo: GeoLoc,
+  dtUtc = '',
+) => {
+  const result = await buildExtendedTransitions(geo, dtUtc, 'extended');
+  const { transitions } = result;
+  const gps = chart.bodies.map(({ lng, lat, lngSpeed, key }) => {
+    return { lng, lat, lngSpeed, key };
+  });
+  if (chart.objects instanceof Array) {
+    if (chart.sphutas.length > 0) {
+      const sphutaSet = chart.sphutas[0];
+      const ayaNum = sphutaSet.num;
+      const ayanamshaKey = matchAyanamshaKey(ayaNum);
+      const aya = chart.ayanamshas.find(row => row.key === ayanamshaKey);
+      const sphutaKeys = {
+        lotOfFortune: 'lotOfFortune',
+        lotOfSpirit: 'lotOfSpirit',
+        yogi: 'yogiSphuta',
+        avaYogi: 'avayogiSphuta',
+        brghuBindu: 'brghuBindu',
+      };
+      if (aya instanceof Object && sphutaSet instanceof Object) {
+        Object.entries(sphutaKeys).forEach(([k1, k2]) => {
+          const item = sphutaSet.items.find(item => item.key === k2);
+          if (item instanceof Object) {
+            const lng = (item.value + aya.value) % 360;
+            gps.push({ lng, lat: 0, lngSpeed: 0, key: k1 });
+          }
+        });
+      }
+    }
+  }
+  const ds = await calcTransposedGrahaTransitions(jd, geo, gps);
+  const birthTransitions = ds
+    .filter(
+      gSet =>
+        gSet instanceof Object && Object.keys(gSet).includes('transitions'),
+    )
+    .map(gSet => {
+      const { key, transitions } = gSet;
+      const rise = transitions.find(item => item.type === 'rise');
+      const set = transitions.find(item => item.type === 'set');
+      const mc = transitions.find(item => item.type === 'mc');
+      const ic = transitions.find(item => item.type === 'ic');
+      return { key, rise, set, mc, ic };
+    });
+  return { transitions, birthTransitions };
 };
 
 const calcStarPosJd = async (jd: number, starname: string, mode = '2ut') => {
