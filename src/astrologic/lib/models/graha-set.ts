@@ -98,7 +98,7 @@ export class Graha extends BaseObject {
     super();
     if (body instanceof Object) {
       const row = grahaValues.find(g => g.key === body.key);
-      const obj = row instanceof Object ? { ...row, ...body} : body;
+      const obj = row instanceof Object ? { ...row, ...body } : body;
       Object.entries(obj).forEach(entry => {
         const [key, value] = entry;
         switch (key) {
@@ -219,7 +219,7 @@ export class Graha extends BaseObject {
   directionalStrengthSign(firstSignNum = 1): number {
     if (Object.keys(directionalStrengthMap).includes(this.key)) {
       const house = directionalStrengthMap[this.key];
-      return ((house - 1) + (firstSignNum - 1) % 12) + 1;
+      return house - 1 + ((firstSignNum - 1) % 12) + 1;
     } else {
       return 0;
     }
