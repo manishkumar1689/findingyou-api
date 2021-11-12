@@ -1,10 +1,6 @@
 import * as swisseph from 'swisseph';
 import * as moment from 'moment-timezone';
-import {
-  isNumeric,
-  isInteger,
-  validISODateString,
-} from '../../lib/validators';
+import { isNumeric, isInteger, validISODateString } from '../../lib/validators';
 import { Moment } from 'moment';
 import { zeroPad } from '../../lib/converters';
 
@@ -39,12 +35,19 @@ export const buildIsoDateFromParts = dp => {
 };
 
 export const toDateParts = (strDate: string) => {
-  const [dtPart, remainder] = strDate.trim().replace(' ', 'T').split("T");
-  const timeStr = remainder.split(".").shift();
+  const [dtPart, remainder] = strDate
+    .trim()
+    .replace(' ', 'T')
+    .split('T');
+  const timeStr = remainder.split('.').shift();
   const isNeg = dtPart.startsWith('-');
-  const dtStr = isNeg? dtPart.substring(1) : dtPart;
-  const [years, months, days] = dtStr.split("-").map(part => parseInt(part, 10));
-  const [hours, minutes, secs] = timeStr.split(":").map(part => parseInt(part, 10));
+  const dtStr = isNeg ? dtPart.substring(1) : dtPart;
+  const [years, months, days] = dtStr
+    .split('-')
+    .map(part => parseInt(part, 10));
+  const [hours, minutes, secs] = timeStr
+    .split(':')
+    .map(part => parseInt(part, 10));
   const seconds = typeof secs === 'number' ? secs : 0;
   const minSecs = minutes * 60 + seconds;
   const decHrs = hours + minSecs / 3600;
@@ -138,58 +141,70 @@ export const julToISODate = (jd: number, tzOffset = 0): string => {
 export const currentISODate = (fromDayStart = false) => {
   const dt = moment.utc().format();
   return fromDayStart ? dt.split('T').shift() + 'T00:00:00' : dt;
-}
+};
 
-export const matchJdAndDatetime = (dtRef = "", startJd = -1, fromDayStart = false, fromNoon = false) => {
-  const strRef = typeof dtRef === "string" ? dtRef.trim().replace(/\s+/, 'T') : dtRef;
+export const matchJdAndDatetime = (
+  dtRef = '',
+  startJd = -1,
+  fromDayStart = false,
+  fromNoon = false,
+) => {
+  const strRef =
+    typeof dtRef === 'string' ? dtRef.trim().replace(/\s+/, 'T') : dtRef;
   const isValidDate = validISODateString(strRef);
-  const flVal = !isValidDate && isNumeric(strRef)? parseFloat(strRef) : -1;
+  const flVal = !isValidDate && isNumeric(strRef) ? parseFloat(strRef) : -1;
   const hasFl = flVal > 0;
   const refFl = startJd <= 0 || flVal > startJd ? flVal : startJd + flVal;
-  
-  const dtUtcRaw = isValidDate? strRef : hasFl ? julToISODate(refFl) : currentISODate(fromDayStart);
+
+  const dtUtcRaw = isValidDate
+    ? strRef
+    : hasFl
+    ? julToISODate(refFl)
+    : currentISODate(fromDayStart);
   const startHourDigits = fromNoon ? '12' : '00';
-  const dtUtc = fromDayStart? dtUtcRaw.split('T').shift() + `T${startHourDigits}:00:00` : dtUtcRaw;
+  const dtUtc = fromDayStart
+    ? dtUtcRaw.split('T').shift() + `T${startHourDigits}:00:00`
+    : dtUtcRaw;
   const jd = hasFl ? refFl : calcJulDate(dtUtc);
   return { dtUtc, jd };
-}
+};
 
-export const matchEndJdAndDatetime = (strRef = "", startJd = 0) => {
+export const matchEndJdAndDatetime = (strRef = '', startJd = 0) => {
   const { jd, dtUtc } = matchJdAndDatetime(strRef, startJd);
-  return { endJd: jd, endDt: dtUtc.split(".").shift() };
-}
+  return { endJd: jd, endDt: dtUtc.split('.').shift() };
+};
 
 export const jdToDateParts = (jd, gregFlag = 1) => {
   return swisseph.swe_revjul(jd, gregFlag);
 };
 
-export const convertUnitValsToDays = (numVal: number, unit = ""): number => {
+export const convertUnitValsToDays = (numVal: number, unit = ''): number => {
   switch (unit) {
-      case 'y':
-      case 'year':
-      case 'yr':
-      case 'yrs':
-      case 'years':
-        return numVal * 366;
-      case 'm':
-      case 'mon':
-      case 'mons':
-      case 'mns':
-      case 'month':
-      case 'months':
-        return numVal * 31;
-      case 'w':
-      case 'week':
-      case 'weeks':
-      case 'wk':
-      case 'wks':
-        return numVal * 7;
-      default:
-        return numVal;
-    }
-}
+    case 'y':
+    case 'year':
+    case 'yr':
+    case 'yrs':
+    case 'years':
+      return numVal * 366;
+    case 'm':
+    case 'mon':
+    case 'mons':
+    case 'mns':
+    case 'month':
+    case 'months':
+      return numVal * 31;
+    case 'w':
+    case 'week':
+    case 'weeks':
+    case 'wk':
+    case 'wks':
+      return numVal * 7;
+    default:
+      return numVal;
+  }
+};
 
-export const durationStringToDays = (str = ""): number => {
+export const durationStringToDays = (str = ''): number => {
   const m = typeof str === 'string' ? str.trim().match(/^(\d+)([a-z]+)$/i) : [];
   let days = 0;
   if (m instanceof Array && m.length > 2) {
@@ -283,7 +298,7 @@ export const yearsAgoString = (years = 1): string => {
   const yr = dt.getFullYear();
   const wholeYears = Math.floor(years);
   const remainder = years % 1;
-  const months = Math.floor(remainder * 12)
+  const months = Math.floor(remainder * 12);
   let newYear = yr - wholeYears;
   if (months > 0) {
     const m = dt.getMonth();
@@ -295,11 +310,26 @@ export const yearsAgoString = (years = 1): string => {
     }
   }
   dt.setFullYear(newYear);
-  return dt.toISOString().split('.').shift();
-}
+  return dt
+    .toISOString()
+    .split('.')
+    .shift();
+};
 
 export const utcDate = (dt: Date | string) => {
   return moment.utc(dt);
+};
+
+export const dateAgo = (numAgo = 31, unit = 'days') => {
+  const days = convertUnitValsToDays(numAgo, unit);
+  return moment().subtract({ days });
+};
+
+export const dateAgoString = (numAgo = 31, unit = 'days') => {
+  return dateAgo(numAgo, unit)
+    .toISOString()
+    .split('.')
+    .shift();
 };
 
 export const toShortTzAbbr = (dt, timezoneRef: string) =>
@@ -355,13 +385,9 @@ export const decimalYear = (strDate = '') => {
   return years + yearProgress;
 };
 
-export const julRangeToAge = (
-  startJd: number,
-  endJd: number,
-  tzOffset = 0
-) => {
+export const julRangeToAge = (startJd: number, endJd: number, tzOffset = 0) => {
   const firstDate = julToISODateObj(startJd, tzOffset);
   const secondDate = julToISODateObj(endJd, tzOffset);
-  const yearDiff = firstDate.diff(secondDate, "year", true);
+  const yearDiff = firstDate.diff(secondDate, 'year', true);
   return yearDiff;
 };

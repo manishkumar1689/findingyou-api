@@ -168,6 +168,9 @@ export class AstrologicController {
     private settingService: SettingService,
   ) {}
 
+  /*
+  #astrotesting
+  */
   @Get('juldate/:isodate?')
   async juldate(@Res() res, @Param('isodate') isodate, @Query() query) {
     const params = validISODateString(isodate) ? { dt: isodate } : query;
@@ -175,6 +178,9 @@ export class AstrologicController {
     res.send(data);
   }
 
+  /*
+  #astrotesting
+  */
   @Get('swisseph/constants')
   async listConstants(@Res() res) {
     const constants = getConstantVals();
@@ -184,6 +190,9 @@ export class AstrologicController {
     res.send(data);
   }
 
+  /*
+  #astrotesting
+  */
   @Get('swisseph/functions')
   async showFunctions(@Res() res) {
     const functions = getFuncNames();
@@ -193,6 +202,9 @@ export class AstrologicController {
     res.send(data);
   }
 
+  /*
+  #astrotesting
+  */
   @Post('create-chart')
   async createChart(@Res() res, @Body() chartDTO: CreateChartDTO) {
     const chart = await this.astrologicService.createChart(chartDTO);
@@ -202,6 +214,10 @@ export class AstrologicController {
     });
   }
 
+  /*
+    #mobile
+    #astrotesting
+  */
   @Put('edit-chart/:chartID')
   async updateChart(
     @Res() res,
@@ -233,6 +249,9 @@ export class AstrologicController {
     });
   }
 
+  /*
+    #astrotesting
+  */
   @Get('swisseph/files/:subDir?')
   async ephemerisFiles(@Res() res, @Param('subDir') subDir) {
     const subDirRef = notEmptyString(subDir, 2) ? subDir : '';
@@ -240,6 +259,10 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  /*
+    #mobile
+    #astrotesting
+  */
   @Get('chart/:loc/:dt')
   async chart(@Res() res, @Param('loc') loc, @Param('dt') dt) {
     if (validISODateString(dt) && notEmptyString(loc, 3)) {
@@ -254,6 +277,10 @@ export class AstrologicController {
     }
   }
 
+  /*
+    #mobile
+    #astrotesting
+  */
   @Get('transition/:loc/:dt/:planet')
   async transition(
     @Res() res,
@@ -271,6 +298,10 @@ export class AstrologicController {
     res.send(data);
   }
 
+  /*
+    #mobile
+    #astrotesting
+  */
   @Get('transitions/:loc/:dt/:modeRef?/:adjustMode?')
   async transitions(
     @Res() res,
@@ -314,6 +345,9 @@ export class AstrologicController {
     }
   }
 
+  /*
+    #astrotesting
+  */
   @Get('base-objects/:loc/:dt/:show?')
   async basObjects(
     @Res() res,
@@ -336,6 +370,9 @@ export class AstrologicController {
     }
   }
 
+  /*
+    #mobile
+  */
   @Get('pancha-pakshi/:chartID/:loc/:dt?/:mode?/:showTrans?')
   async pankshaPanchaDaySet(
     @Res() res,
@@ -404,6 +441,9 @@ export class AstrologicController {
     return res.status(status).json(Object.fromEntries(data));
   }
 
+  /*
+    #astrotesting
+  */
   @Get('pancha-pakshi-pair/:u1/:u2/:dt?')
   async pankshaPanchaPairDaySet(
     @Res() res,
@@ -482,6 +522,9 @@ export class AstrologicController {
     return res.status(status).json(Object.fromEntries(data));
   }
 
+  /*
+    #astrotesting
+  */
   @Get('houses/:loc/:dt/:system?')
   async housesByDateGeo(
     @Res() res,
@@ -498,6 +541,9 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  /*
+    #astrotesting
+  */
   @Get('bodies-in-houses/:loc/:dt/:system?/:ayanamsha?')
   async bodiesInhousesByDateGeo(
     @Res() res,
@@ -532,6 +578,10 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  /*
+    #mobile
+    #astrotesting
+  */
   @Get('position-data/:loc?/:dt?/:user?/:ayanamsha?')
   async corePositionsAndPredictions(
     @Res() res,
@@ -634,6 +684,9 @@ export class AstrologicController {
     });
   }
 
+  /*
+    #astrotesting
+  */
   @Get('stars/:dt?/:nameRef?/:mode?')
   async allStars(
     @Res() res,
@@ -670,6 +723,9 @@ export class AstrologicController {
     }
   }
 
+  /*
+    #astrotesting
+  */
   @Get('all/:loc/:dt/:system?')
   async allByDateGeo(
     @Res() res,
@@ -719,6 +775,9 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  /*
+    #astrotesting
+  */
   @Get('compact/:loc/:dt/:ayanamshaMode?/:topList?/:suppress?/:simple?')
   async compactDataSet(
     @Res() res,
@@ -747,6 +806,8 @@ export class AstrologicController {
   /**
    * Fetch previously matched placenames and tz data if within 1km
    * Otherwise search new geo info
+   * #mobile
+   * #astrotesting
    */
   async fetchGeoInfo(geo = null, dt = '') {
     const placeMatches = await this.astrologicService.matchExistingPlaceNames(
@@ -775,6 +836,10 @@ export class AstrologicController {
     return { ...geoInfo, distance };
   }
 
+  /*
+    #astrotesting
+    #mobile
+  */
   async fetchCompactChart(
     loc: string,
     dt: string,
@@ -814,6 +879,10 @@ export class AstrologicController {
     return data;
   }
 
+  /*
+    #mobile
+    #astrotesting
+  */
   @Get('current-chart/:loc/:dt?/:mode?')
   async fetchCurrent(
     @Res() res,
@@ -841,6 +910,10 @@ export class AstrologicController {
     return res.json(chart);
   }
 
+  /*
+    #mobile
+    #astrotesting
+  */
   @Get('snapshot/:loc/:dt?/:mode?')
   async fetchShapshot(
     @Res() res,
@@ -869,6 +942,10 @@ export class AstrologicController {
     return res.json({ chart: adjusted, asc });
   }
 
+  /*
+    #mobile
+    #astrotesting
+  */
   @Get('existing-placenames/:loc/:maxDistance?')
   async fetchPlacenames(
     @Res() res,
@@ -885,6 +962,10 @@ export class AstrologicController {
     return res.json(data);
   }
 
+  /*
+    #mobile
+    #astrotesting
+  */
   @Post('save-user-chart')
   async saveUserChart(@Res() res, @Body() inData: ChartInputDTO) {
     const { _id } = inData;
@@ -894,6 +975,9 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  /*
+    #mobile
+  */
   @Post('save-member-chart/:ayanamsha?/:mode?')
   async saveUserChartSimple(
     @Res() res,
@@ -918,6 +1002,10 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json({ valid, shortTz, chart });
   }
 
+  /*
+    #mobile
+    #astrotesting
+  */
   @Get('save-user-birth-chart/:userID/:loc/:dt/:g')
   async saveUserBirthChart(
     @Res() res,
@@ -950,6 +1038,9 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  /*
+    #astrotesting
+  */
   @Get('save-test-users-birth-chart/:start?/:limit?')
   async saveTestUsersBirthChart(
     @Res() res,
@@ -1010,6 +1101,10 @@ export class AstrologicController {
     return res.json({ chartIds, num, valid });
   }
 
+  /*
+    #astrotesting
+    #mobile
+  */
   async saveChartData(
     inData: ChartInputDTO,
     save = true,
@@ -1552,6 +1647,10 @@ export class AstrologicController {
     return res.json({ ...result, chartId });
   }
 
+  /*
+  #astrotesting
+  check rules sets
+  */
   @Get('day-transits')
   async dayTransits(@Res() res, @Query() query) {
     const params = query instanceof Object ? query : {};
@@ -1655,6 +1754,10 @@ export class AstrologicController {
     });
   }
 
+  /*
+  #astrotesting
+  check rules sets
+  */
   @Get('predictive-rule-check/:ruleID/:chartID/:loc?')
   async checkRulesetForChart(
     @Res() res,
@@ -3898,6 +4001,9 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  /*
+   * development
+   */
   async mapAstroDatabankRecord(
     rec: Record,
     rows: Array<Record>,
@@ -3933,6 +4039,9 @@ export class AstrologicController {
     }
   }
 
+  /*
+   * development
+   */
   @Get('test-records/match/:userID')
   async matchTestRecords(@Res() res, @Param('userID') userID) {
     const result = await parseAstroBankJSON();
@@ -3961,6 +4070,9 @@ export class AstrologicController {
     return res.send(Object.fromEntries(result.entries()));
   }
 
+  /*
+   * development
+   */
   @Get('migrate-rodden/:start?/:limit?')
   async migrateRoddenScale(
     @Res() res,
@@ -3974,6 +4086,9 @@ export class AstrologicController {
     return res.json(data);
   }
 
+  /*
+   * development
+   */
   @Get('build-charts/:start?/:limit?')
   async bulkBuildCharts(
     @Res() res,
@@ -4007,6 +4122,9 @@ export class AstrologicController {
     return res.json({ users });
   }
 
+  /*
+   * development
+   */
   @Get('paired-duplicates/:start?/:limit?/:remove?')
   async listPairedDuplicates(
     @Res() res,
@@ -4069,6 +4187,9 @@ export class AstrologicController {
     return res.json({ num: items.length, numDuplicates, items: rows });
   }
 
+  /*
+   * development
+   */
   @Get('single-duplicates/:start?/:limit?/:remove?')
   async listSingleDuplicates(
     @Res() res,
@@ -4142,6 +4263,9 @@ export class AstrologicController {
     });
   }
 
+  /*
+   * development
+   */
   @Get('paired-flat/:start?/:limit?')
   async pairedFlatList(
     @Res() res,

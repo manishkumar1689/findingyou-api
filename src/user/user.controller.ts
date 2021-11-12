@@ -20,10 +20,20 @@ import { SettingService } from '../setting/setting.service';
 import { GeoService } from '../geo/geo.service';
 import { CreateUserDTO } from './dto/create-user.dto';
 import { LoginDTO } from './dto/login.dto';
-import { validEmail, notEmptyString, isNumeric } from '../lib/validators';
+import {
+  validEmail,
+  notEmptyString,
+  isNumeric,
+  validISODateString,
+} from '../lib/validators';
 import { smartCastInt, toStartRef } from '../lib/converters';
 import { Request } from 'express';
-import { fromBase64, match6DigitsToken, toBase64, tokenTo6Digits } from '../lib/hash';
+import {
+  fromBase64,
+  match6DigitsToken,
+  toBase64,
+  tokenTo6Digits,
+} from '../lib/hash';
 import { maxResetMinutes } from '../.config';
 import * as bcrypt from 'bcrypt';
 import {
@@ -47,15 +57,27 @@ import { SnippetService } from '../snippet/snippet.service';
 import { FeedbackService } from '../feedback/feedback.service';
 import { ProfileDTO } from './dto/profile.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { deleteFile, generateFileName, matchFileTypeAndMime, mediaPath, readRawFile, uploadMediaFile } from '../lib/files';
+import {
+  deleteFile,
+  generateFileName,
+  matchFileTypeAndMime,
+  mediaPath,
+  readRawFile,
+  uploadMediaFile,
+} from '../lib/files';
 import { PreferenceDTO } from './dto/preference.dto';
 import { SampleDataDTO } from './dto/sample-data.dto';
 import { SampleRecordDTO } from './dto/sample-record.dto';
 import { simplifyChart } from '../astrologic/lib/member-charts';
 import { MediaItemDTO } from './dto/media-item.dto';
-import { filterLikeabilityContext, IFlag, mapLikeabilityRelations } from '../lib/notifications';
+import {
+  filterLikeabilityContext,
+  IFlag,
+  mapLikeabilityRelations,
+} from '../lib/notifications';
 import { Model } from 'mongoose';
 import { ActiveStatusDTO } from './dto/active-status.dto';
+import { dateAgoString } from 'src/astrologic/lib/date-funcs';
 
 @Controller('user')
 export class UserController {
@@ -103,7 +125,11 @@ export class UserController {
     });
   }
 
-  // add a user
+  /*
+    #mobile
+    #admin
+    #astrotesting
+  */
   @Post('auth-user')
   async authUser(@Res() res, @Body() createUserDTO: CreateUserDTO) {
     let msg = 'N/A';
@@ -130,16 +156,22 @@ export class UserController {
       if (charts.length > 0) {
         ud.set('chart', simplifyChart(charts[0]));
       }
-      const flagItems = await this.feedbackService.getAllUserInteractions(userID, 3/12);
-      const flags = flagItems instanceof Object ? flagItems : { to: [], from: [], likeability: { to: [], from: [] } };
+      const flagItems = await this.feedbackService.getAllUserInteractions(
+        userID,
+        3 / 12,
+      );
+      const flags =
+        flagItems instanceof Object
+          ? flagItems
+          : { to: [], from: [], likeability: { to: [], from: [] } };
       const { to, from, likeability } = flags;
       ud.set('flags', {
         to,
-        from
+        from,
       });
       ud.set('likeability', {
         to: likeability.to,
-        from: likeability.from
+        from: likeability.from,
       });
       userData = hashMapToObject(ud);
     }
@@ -164,6 +196,11 @@ export class UserController {
     });
   }
 
+  /*
+    #mobile
+    #admin
+    #astrotesting
+  */
   @Put('edit/:userID')
   async editUser(
     @Res() res,
@@ -171,17 +208,28 @@ export class UserController {
     @Body() createUserDTO: CreateUserDTO,
   ) {
     const roles = await this.getRoles();
-    const {user, keys, message } = await this.userService.updateUser(userID, createUserDTO, roles);
-    const status = user instanceof Object && keys.length > 0 ? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
-    
+    const { user, keys, message } = await this.userService.updateUser(
+      userID,
+      createUserDTO,
+      roles,
+    );
+    const status =
+      user instanceof Object && keys.length > 0
+        ? HttpStatus.OK
+        : HttpStatus.NOT_ACCEPTABLE;
+
     return res.status(status).json({
       message,
       user,
-      editedKeys: keys
+      editedKeys: keys,
     });
   }
 
-  // Retrieve users list
+  /*
+    #mobile
+    #admin
+    #astrotesting
+  */
   @Get('list/:start?/:limit?')
   async getUsersByCriteria(
     @Res() res,
@@ -212,6 +260,41 @@ export class UserController {
     });
   }
 
+  @Get('list-csv/:startDt?/:endDt?')
+  async listCsv(
+    @Res() res,
+    @Param('startDt') startDt,
+    @Param('endDt') endDt,
+    @Req() request: Request,
+  ) {
+    const startDate = validISODateString(startDt) ? startDt : dateAgoString(92);
+    const endDate = validISODateString(endDt) ? endDt : '';
+    const hasEndDate = notEmptyString(endDate);
+    const { query } = request;
+    const filter: Map<string, any> = new Map();
+    const activeOnly = true;
+    const createdRange = hasEndDate
+      ? {
+          $gte: new Date(startDate),
+          $lte: new Date(endDate),
+        }
+      : {
+          $gte: new Date(startDate),
+        };
+    filter.set('createdAt', createdRange);
+    if (query instanceof Object) {
+      Object.entries(query).map(([k, v]) => {
+        filter.set(k, v);
+      });
+    }
+    const criteria = Object.fromEntries(filter.entries());
+    const users = await this.userService.list(0, 10, criteria, activeOnly);
+    return res.status(HttpStatus.OK).json({
+      num: users.length,
+      items: users,
+    });
+  }
+
   /**
    * Optional query string parameters include:
    * roles: comma-separated list of role keys
@@ -222,6 +305,8 @@ export class UserController {
     age: comma-separated age range, e.g. 20,30
     near: [lat],[lng],[km] e.g. 77,28,5 => within a 5km radius of 77º E 28º N
     baseurl/members/0/100?gender=f&age=30,40&near=19.2726,76.38363,50
+    #mobile
+    #admin
    * @param res 
    * @param start 
    * @param limit 
@@ -249,34 +334,67 @@ export class UserController {
     const queryKeys = Object.keys(query);
     let filterIds = [];
     let hasFilterIds = false;
-    const notLiked = queryKeys.includes("notliked")
-    const hasUser = (queryKeys.includes("user") && notEmptyString(query.user, 16));
+    const notLiked = queryKeys.includes('notliked');
+    const hasUser =
+      queryKeys.includes('user') && notEmptyString(query.user, 16);
     const userId = hasUser ? query.user : '';
-    const isPaidMember = hasUser ? await this.userService.isPaidMember(userId) : false;
-    const context = queryKeys.includes("context")? query.context : "";
+    const isPaidMember = hasUser
+      ? await this.userService.isPaidMember(userId)
+      : false;
+    const context = queryKeys.includes('context') ? query.context : '';
     const hasContext = hasUser && notEmptyString(context, 2);
     const params = hasContext ? filterLikeabilityContext(context) : query;
     const searchMode = context === 'search';
     const paramKeys = Object.keys(params);
     // filter ids by members who have liked or superliked the referenced user
-    const likeabilityKeys = ['liked', 'liked1','liked2','passed', 'likeability', 'likability'];
+    const likeabilityKeys = [
+      'liked',
+      'liked1',
+      'liked2',
+      'passed',
+      'likeability',
+      'likability',
+    ];
 
-    if (queryKeys.includes('user') && paramKeys.some(k => likeabilityKeys.includes(k))) {
+    if (
+      queryKeys.includes('user') &&
+      paramKeys.some(k => likeabilityKeys.includes(k))
+    ) {
       const matchedKey = paramKeys.find(k => likeabilityKeys.includes(k));
       const filterByLikeability = notEmptyString(matchedKey);
       if (filterByLikeability) {
         const { refNum, gte } = filterLikeabilityKey(matchedKey);
         const startDate = toStartRef(params[matchedKey]);
-        const mutual = paramKeys.includes("mutual") && parseInt(params.mutual, 10) > 0;
-        const unrated = !mutual && paramKeys.includes("unrated") && parseInt(params.unrated, 10) > 0;
-        const mutualMode = mutual? 1 : unrated ? -1 : 0;
-        const flags = await this.feedbackService.fetchByLikeability(query.user, startDate, refNum, gte, mutualMode);
+        const mutual =
+          paramKeys.includes('mutual') && parseInt(params.mutual, 10) > 0;
+        const unrated =
+          !mutual &&
+          paramKeys.includes('unrated') &&
+          parseInt(params.unrated, 10) > 0;
+        const mutualMode = mutual ? 1 : unrated ? -1 : 0;
+        const flags = await this.feedbackService.fetchByLikeability(
+          query.user,
+          startDate,
+          refNum,
+          gte,
+          mutualMode,
+        );
         const skipMutuality = !mutual && !unrated;
-        filterIds = flags instanceof Array ? flags.filter(fl => skipMutuality || (mutual && fl.isMutual) || (unrated && !fl.isMutual)).map(fl => fl.user) : [];
+        filterIds =
+          flags instanceof Array
+            ? flags
+                .filter(
+                  fl =>
+                    skipMutuality ||
+                    (mutual && fl.isMutual) ||
+                    (unrated && !fl.isMutual),
+                )
+                .map(fl => fl.user)
+            : [];
         hasFilterIds = true;
       }
     }
-    if (queryKeys.includes("mode") && notEmptyString(query.mode)) {
+    if (queryKeys.includes('mode') && notEmptyString(query.mode)) {
       switch (query.mode) {
         case 'simple':
         case 'complete':
@@ -284,7 +402,7 @@ export class UserController {
           break;
       }
     }
-    if (queryKeys.includes("ayanamsha") && notEmptyString(query.ayanamsha)) {
+    if (queryKeys.includes('ayanamsha') && notEmptyString(query.ayanamsha)) {
       switch (query.ayanamsha) {
         case 'raw':
         case 'tropical':
@@ -292,9 +410,9 @@ export class UserController {
           break;
       }
     }
-    const filterFlagsByUser = (item: IFlag, userId = "") => {
-      return item.user.toString() === userId
-    }
+    const filterFlagsByUser = (item: IFlag, userId = '') => {
+      return item.user.toString() === userId;
+    };
     let notFlags = [];
     let trueFlags = [];
     if (hasContext && searchMode) {
@@ -306,15 +424,33 @@ export class UserController {
         notFlags.push('notliked2');
       }
     } else {
-      const notFlagStr = queryKeys.includes("nf") ? query.nf : queryKeys.includes("not")? query.not : "";
-      const trueFlagStr = queryKeys.includes("tf") ? query.tf : queryKeys.includes("flags")? query.not : "";
+      const notFlagStr = queryKeys.includes('nf')
+        ? query.nf
+        : queryKeys.includes('not')
+        ? query.not
+        : '';
+      const trueFlagStr = queryKeys.includes('tf')
+        ? query.tf
+        : queryKeys.includes('flags')
+        ? query.not
+        : '';
       notFlags = notEmptyString(notFlagStr) ? notFlagStr.split(',') : [];
       trueFlags = notEmptyString(trueFlagStr) ? trueFlagStr.split(',') : [];
     }
-    
+
     const preFetchFlags = notFlags.length > 0 || trueFlags.length > 0;
     const prefOptions = await this.settingService.getPreferences();
-    const { userFlags, excludedIds, includedIds } = await this.feedbackService.fetchFilteredUserInteractions(userId, notFlags, trueFlags, preFetchFlags, searchMode);
+    const {
+      userFlags,
+      excludedIds,
+      includedIds,
+    } = await this.feedbackService.fetchFilteredUserInteractions(
+      userId,
+      notFlags,
+      trueFlags,
+      preFetchFlags,
+      searchMode,
+    );
     if (includedIds instanceof Array && trueFlags.length > 0) {
       filterIds = includedIds;
       hasFilterIds = true;
@@ -323,59 +459,113 @@ export class UserController {
     if (hasUser) {
       excludedIds.push(userId);
     }
-    const data = await this.userService.members(startInt, limitInt, queryParams, excludedIds); 
+    const data = await this.userService.members(
+      startInt,
+      limitInt,
+      queryParams,
+      excludedIds,
+    );
     const users = this.userService.filterByPreferences(
       data,
       query,
-      prefOptions
+      prefOptions,
     );
     const otherUserIds = preFetchFlags ? users.map(u => u._id) : [];
     const items = [];
-    
-    const flags = (hasUser && !preFetchFlags)? await this.feedbackService.getAllUserInteractions(userId, 1, otherUserIds) : userFlags;
-    
+
+    const flags =
+      hasUser && !preFetchFlags
+        ? await this.feedbackService.getAllUserInteractions(
+            userId,
+            1,
+            otherUserIds,
+          )
+        : userFlags;
+
     for (const user of users) {
       const chartObj = await this.astrologicService.getUserBirthChart(user._id);
       const hasChart = chartObj instanceof Object;
-      const chart = hasChart ? simplifyChart(chartObj, ayanamshaKey, simpleMode) : {};
+      const chart = hasChart
+        ? simplifyChart(chartObj, ayanamshaKey, simpleMode)
+        : {};
       const refUserId = user._id.toString();
       let preferences = [];
       if (user.preferences instanceof Array && user.preferences.length > 0) {
-          preferences = await this.settingService.processPreferences(user.preferences);
+        preferences = await this.settingService.processPreferences(
+          user.preferences,
+        );
       }
-     const filteredFlags = hasUser? { 
-        from: flags.from.filter(fl => filterFlagsByUser(fl, refUserId)).map(fl => extractSimplified(fl, ['user'])),
-        to: flags.to.filter(fl => filterFlagsByUser(fl, refUserId)).map(fl => extractSimplified(fl, ['user']))
-      } : {};
-      const filteredLikes = hasUser? { 
-        from: mapLikeabilityRelations(flags.likeability.from, refUserId),
-        to: mapLikeabilityRelations(flags.likeability.to, refUserId)
-      } : {};
-      items.push({...user, preferences, chart, hasChart, flags: filteredFlags, likeability: filteredLikes });
+      const filteredFlags = hasUser
+        ? {
+            from: flags.from
+              .filter(fl => filterFlagsByUser(fl, refUserId))
+              .map(fl => extractSimplified(fl, ['user'])),
+            to: flags.to
+              .filter(fl => filterFlagsByUser(fl, refUserId))
+              .map(fl => extractSimplified(fl, ['user'])),
+          }
+        : {};
+      const filteredLikes = hasUser
+        ? {
+            from: mapLikeabilityRelations(flags.likeability.from, refUserId),
+            to: mapLikeabilityRelations(flags.likeability.to, refUserId),
+          }
+        : {};
+      items.push({
+        ...user,
+        preferences,
+        chart,
+        hasChart,
+        flags: filteredFlags,
+        likeability: filteredLikes,
+      });
     }
-    items.sort((a,b) => b.hasChart ? 1 : -1);
+    items.sort((a, b) => (b.hasChart ? 1 : -1));
     return items;
   }
 
+  /*
+    #mobile
+    #admin
+  */
   @Get('likes/:userID/:startRef?/:mode?/:fullMode')
-  async getLikesToUser(@Res() res, @Param('userID') userID, @Param('startRef') startRef, @Param('mode') mode, @Param('fullMode') fullMode) {
+  async getLikesToUser(
+    @Res() res,
+    @Param('userID') userID,
+    @Param('startRef') startRef,
+    @Param('mode') mode,
+    @Param('fullMode') fullMode,
+  ) {
     const monthRef = /^\d+m$/i;
-    const startDate = isNumeric(startRef) ? parseFloat(startRef) : monthRef.test(startRef) ? parseInt(startRef.replace(/[^0-9]\./, ''), 10) / 12 : startRef;
+    const startDate = isNumeric(startRef)
+      ? parseFloat(startRef)
+      : monthRef.test(startRef)
+      ? parseInt(startRef.replace(/[^0-9]\./, ''), 10) / 12
+      : startRef;
     const returnFullObjects = fullMode === 'full';
-    const { refNum, gte} = filterLikeabilityKey(mode);
-    const flags = await this.feedbackService.fetchByLikeability(userID, startDate, refNum, gte);
+    const { refNum, gte } = filterLikeabilityKey(mode);
+    const flags = await this.feedbackService.fetchByLikeability(
+      userID,
+      startDate,
+      refNum,
+      gte,
+    );
     if (!returnFullObjects) {
-      return res.status(HttpStatus.OK).json(flags)
+      return res.status(HttpStatus.OK).json(flags);
     } else {
       const items = await this.fetchMembers(0, flags.length, {
         ids: flags.map(f => f.user),
-        user: userID
+        user: userID,
       });
       return res.json(items);
     }
   }
 
-  // Fetch a particular user using ID
+  /*
+    Fetch role options and merge related payment options
+    #mobile
+    #admin    
+  */
   @Get('role-options')
   async listRoles(@Res() res) {
     const paymentOpts = await this.getPaymentOptions();
@@ -389,7 +579,11 @@ export class UserController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  // Fetch a particular user using ID
+  /*
+    #mobile
+    #admin
+    Fetch a particular user using ID
+  */
   @Get('payment-options')
   async listPaymentOptions(@Res() res) {
     const items = await this.getPaymentOptions();
@@ -405,29 +599,45 @@ export class UserController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  /*
+  #admin
+  #mobile
+  */
   @Get('permissions')
   async listPermissions(@Res() res) {
     const data = await this.settingService.getPermissionData();
     return res.status(HttpStatus.OK).json(data);
   }
 
+  /*
+  #admin
+  #mobile
+  */
   @Get('max-upload/:userID')
   async maxUpload(@Res() res, @Param('userID') userID) {
     const uploadData = await this.maxUploadByUser(userID);
     return res.status(HttpStatus.OK).json(uploadData);
   }
 
+  /*
+  #admin
+  #mobile
+  */
   async maxUploadByUser(userID: string) {
     const permData = await this.settingService.getPermissionData(true);
     return await this.userService.fetchMaxImages(userID, permData);
   }
 
-  // Fetch a particular user using ID
+  /*
+    #admin
+    #mobile
+    Fetch a particular user using ID
+  */
   @Get('item/:userID/:mode?')
   async getUser(@Res() res, @Param('userID') userID, @Param('mode') mode) {
     const result: Map<string, any> = new Map();
     result.set('user', null);
-    const validUserId =  userID.length === 24 && /^[0-9a-f]+$/i.test(userID);
+    const validUserId = userID.length === 24 && /^[0-9a-f]+$/i.test(userID);
     const user = validUserId ? await this.userService.getUser(userID) : null;
     let errorMsg = '';
     const valid = user instanceof Model;
@@ -436,15 +646,17 @@ export class UserController {
     }
     const userObj: any = user instanceof Model ? user.toObject() : {};
     result.set('valid', valid);
-    const strMode = notEmptyString(mode,1)? mode : "";
-    const postProcessPreferences = ['full','detailed'].includes(strMode);
-    const addUserChart = ['member','chart', 'full'].includes(strMode);
+    const strMode = notEmptyString(mode, 1) ? mode : '';
+    const postProcessPreferences = ['full', 'detailed'].includes(strMode);
+    const addUserChart = ['member', 'chart', 'full'].includes(strMode);
     let preferences: any[] = [];
     if (postProcessPreferences && user instanceof Object) {
       if (user.preferences instanceof Array && user.preferences.length > 0) {
-        if (user.constructor.name === "model") {
+        if (user.constructor.name === 'model') {
           const userObj = user.toObject();
-          preferences = await this.settingService.processPreferences(userObj.preferences);
+          preferences = await this.settingService.processPreferences(
+            userObj.preferences,
+          );
           result.set('preferences', user);
         }
       }
@@ -464,7 +676,11 @@ export class UserController {
     return res.status(status).json(Object.fromEntries(result.entries()));
   }
 
-  // Fetch preference options
+  /**
+   * #mobile
+   * #admin
+   * Fetch preference options
+   */
   @Get('survey-list/:mode?')
   async listSurveys(@Res() res, @Param('mode') mode) {
     const setting = await this.settingService.getByKey('survey_list');
@@ -483,23 +699,35 @@ export class UserController {
         let scaleParams: any = {};
         const { multiscales } = item;
         if (notEmptyString(multiscales)) {
-          const multiscaleOptions = multiscaleTypes.find(item => item.key === multiscales);
+          const multiscaleOptions = multiscaleTypes.find(
+            item => item.key === multiscales,
+          );
           if (multiscaleOptions instanceof Object) {
             scaleParams = multiscaleOptions;
           }
         }
         return { ...item, scaleParams };
-      })
+      });
     }
     return res.status(HttpStatus.OK).json(data);
   }
 
+  /**
+   * #mobile
+   * #admin
+   * Fetch multiscale preference options
+   */
   @Get('survey-multiscales')
   async getSurveryMultiscales(@Res() res) {
     const dataWithOptions = await this.settingService.surveyMultiscales();
     return res.status(HttpStatus.OK).json(dataWithOptions);
   }
 
+  /**
+   * #mobile
+   * #admin
+   * Fetch preferences by key
+   */
   async getPreferencesByKey(surveyKey = '', key = '') {
     const prefOpts = await this.settingService.getPreferenceOptions(surveyKey);
     const data = { valid: false, num: 0, items: [] };
@@ -542,7 +770,11 @@ export class UserController {
     return data;
   }
 
-  // Fetch preference options
+  /*
+    #mobile
+    #admin
+    Fetch preference options
+  */
   @Get('preferences/:key?')
   async listPreferenceOptions(@Res() res, @Param('key') key) {
     const showAll = key === 'all';
@@ -569,7 +801,7 @@ export class UserController {
       data = await this.getPreferencesByKey(refSurveyKey, refKey);
       if (isSimple) {
         data.items = data.items.map(item => {
-          const {key, type} = item;
+          const { key, type } = item;
           let value: any = 'plain text';
           switch (type) {
             case 'range_number':
@@ -591,7 +823,7 @@ export class UserController {
               value = 2.5;
               break;
             case 'key_scale':
-              value = { never: 0};
+              value = { never: 0 };
               break;
             case 'scale':
               value = 2;
@@ -603,14 +835,14 @@ export class UserController {
               value = true;
               break;
             case 'multiple_key_scales':
-              value = { 
+              value = {
                 key: 'optimistic',
                 values: {
                   happiness: 4,
                   success: 2,
                   reliability: 1,
-                  aspiration: 2
-                }
+                  aspiration: 2,
+                },
               };
               break;
             case 'array_float':
@@ -620,37 +852,46 @@ export class UserController {
               value = [30, 40, 12];
               break;
             case 'text':
-              value = "Cambridge University";
+              value = 'Cambridge University';
               break;
           }
           return { key, type, value };
-        })
+        });
       }
     }
     return res.status(HttpStatus.OK).json(data);
   }
 
-  // Fetch a particular user using ID
+  /*
+    #mobile
+    #admin
+  */
   @Post('login')
   async login(@Res() res, @Body() loginDTO: LoginDTO) {
     const data = await this.processLogin(loginDTO);
-    const status = data.valid? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
+    const status = data.valid ? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
     return res.status(status).json(data);
   }
-
+  /*
+    #mobile
+  */
   @Post('member-login')
   async memberLogin(@Res() res, @Body() loginDTO: LoginDTO) {
     const data = await this.processLogin(loginDTO, 'member');
-    const status = data.valid? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
+    const status = data.valid ? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
     return res.status(status).json(data);
   }
 
+  /*
+    #mobile
+    #admin
+  */
   async processLogin(loginDTO: LoginDTO, mode = 'editor') {
     const user = await this.userService.findOneByEmail(loginDTO.email, false);
     const userData = new Map<string, any>();
     let valid = false;
     const isMemberLogin = mode === 'member';
-    const maxCharts = isMemberLogin? 10 : 100;
+    const maxCharts = isMemberLogin ? 10 : 100;
     if (!user) {
       userData.set('msg', 'User not found');
       userData.set('key', 'not-found');
@@ -676,17 +917,23 @@ export class UserController {
         extractObjectAndMerge(user, userData, ['password', 'status', 'token']);
         const userID = extractDocId(user);
         const { deviceToken } = loginDTO;
-        const loginDt = await this.userService.registerLogin(userID, deviceToken);
+        const loginDt = await this.userService.registerLogin(
+          userID,
+          deviceToken,
+        );
         userData.set('login', loginDt);
         if (notEmptyString(deviceToken, 5)) {
           userData.set('deviceToken', deviceToken);
         }
-        const flagItems = await this.feedbackService.getAllUserInteractions(userID, 3/12);
+        const flagItems = await this.feedbackService.getAllUserInteractions(
+          userID,
+          3 / 12,
+        );
         const flags = flagItems instanceof Object ? flagItems : [];
         userData.set('flags', flags);
         const chart = await this.astrologicService.getUserBirthChart(userID);
         if (chart instanceof Object) {
-          const chartObj = isMemberLogin? simplifyChart(chart) : chart;
+          const chartObj = isMemberLogin ? simplifyChart(chart) : chart;
           userData.set('chart', chartObj);
         }
       }
@@ -695,7 +942,11 @@ export class UserController {
     return hashMapToObject(userData);
   }
 
-  // Edit user status to update role with optional payment data
+  /*
+    #mobile
+    #admin
+    Edit user status to update role with optional payment data
+  */
   @Post('edit-status')
   async editStatus(@Res() res, @Body() editStatusDTO: EditStatusDTO) {
     const roles = await this.getRoles();
@@ -718,21 +969,36 @@ export class UserController {
       );
       let userObj = userData instanceof Model ? userData.toObject() : {};
       const keys = Object.keys(userObj);
-      if (keys.includes("password")) {
-        userObj = extractSimplified(userObj, ['coords','password', 'preferences', 'profiles', 'contacts', 'placenames']);
+      if (keys.includes('password')) {
+        userObj = extractSimplified(userObj, [
+          'coords',
+          'password',
+          'preferences',
+          'profiles',
+          'contacts',
+          'placenames',
+        ]);
         delete userObj.geo._id;
       }
-      data = { 
+      data = {
         valid: keys.length > 3,
-        ...userObj
-      }
+        ...userObj,
+      };
     }
     return res.status(HttpStatus.OK).json(data);
   }
 
+  /*
+    #mobile
+    #admin
+  */
   @Put('toggle-active/:userID')
-  async toggleActive(@Res() res, @Param('userID') userID, @Body() activeStatusDTO: ActiveStatusDTO) {
-    const { active, reason, expiryDate, removeBlockHistory  } = activeStatusDTO;
+  async toggleActive(
+    @Res() res,
+    @Param('userID') userID,
+    @Body() activeStatusDTO: ActiveStatusDTO,
+  ) {
+    const { active, reason, expiryDate, removeBlockHistory } = activeStatusDTO;
     let expiryDt = null;
     let HStatus = HttpStatus.NOT_ACCEPTABLE;
     if (expiryDate) {
@@ -743,7 +1009,7 @@ export class UserController {
       active,
       reason,
       expiryDt,
-      removeBlockHistory === true
+      removeBlockHistory === true,
     );
     if (userData instanceof Object) {
       HStatus = HttpStatus.OK;
@@ -751,30 +1017,46 @@ export class UserController {
     const keys = Object.keys(userData);
     let userObj: any = {};
     if (keys.length > 0) {
-      userObj = extractSimplified(userData, ['coords','password', 'preferences', 'profiles', 'contacts', 'placenames']);
+      userObj = extractSimplified(userData, [
+        'coords',
+        'password',
+        'preferences',
+        'profiles',
+        'contacts',
+        'placenames',
+      ]);
       delete userObj.geo._id;
     }
-    const data = { 
+    const data = {
       valid: keys.length > 3,
-      ...userObj
-    }
+      ...userObj,
+    };
     return res.status(HStatus).json(data);
   }
 
-
+  /*
+    #mobile
+  */
   @Get('member-status/:userID/:mode?')
   async memberStatus(@Res() res, @Param('userID') userID, @Param('mode') mode) {
     const data = await this.userService.getUserStatus(userID);
     const keys = Object.keys(data);
-    const statusItems = keys.includes('status') && data.status instanceof Array? data.status : [];
-    const nowTs = new Date().getTime();
+    const statusItems =
+      keys.includes('status') && data.status instanceof Array
+        ? data.status
+        : [];
+    //const nowTs = new Date().getTime();
     const status = statusItems.filter(st => {
       return st.current;
     });
-    return res.status(HttpStatus.OK).json({...data, status});
+    return res.status(HttpStatus.OK).json({ ...data, status });
   }
 
-  // Fetch a particular user using ID
+  /*
+    #mobile
+    #admin
+    Remove a role from the status history
+  */
   @Post('remove-status')
   async removeStatus(@Res() res, @Body() removeStatusDTO: RemoveStatusDTO) {
     const { user, role } = removeStatusDTO;
@@ -787,14 +1069,18 @@ export class UserController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  async matchUserByHash(hash: string, email = "") {
+  /*
+    #mobile
+    #admin
+  */
+  async matchUserByHash(hash: string, email = '') {
     let idStr = fromBase64(hash);
     let user = null;
     let matched = false;
     // digit mode is for use with the mobile app
     const digitMode = isNumeric(hash) && validEmail(email);
     if (digitMode) {
-      user =  await this.userService.findOneByEmail(email);
+      user = await this.userService.findOneByEmail(email);
       if (user instanceof Object) {
         const tokenMatches = match6DigitsToken(user.token, hash);
         if (tokenMatches) {
@@ -823,6 +1109,9 @@ export class UserController {
     return { user, matched };
   }
 
+  /*
+    #mobile
+  */
   @Get('reset/:hash')
   async resetMatch(@Res() res, @Param('hash') hash) {
     const { user, matched } = await this.matchUserByHash(hash);
@@ -847,6 +1136,9 @@ export class UserController {
     return res.status(HttpStatus.OK).json(hashMapToObject(userData));
   }
 
+  /*
+    #mobile
+  */
   @Put('reset-pass/:hash')
   async resetPassword(
     @Res() res,
@@ -881,13 +1173,21 @@ export class UserController {
         }
       }
       if (valid) {
-        extractObjectAndMerge(editedUser, userData, ['password', 'status','preferences', 'coords']);
+        extractObjectAndMerge(editedUser, userData, [
+          'password',
+          'status',
+          'preferences',
+          'coords',
+        ]);
       }
     }
     userData.set('valid', valid);
     return res.status(HttpStatus.OK).json(hashMapToObject(userData));
   }
 
+  /*
+    #mobile
+  */
   async triggerResetRequest(userID: string, @Res() res, webMode = false) {
     const user = await this.userService.requestReset(userID, 'forgotten');
     const data = new Map<string, any>();
@@ -898,7 +1198,7 @@ export class UserController {
         data.set('token', user.token);
         const resetNumber = tokenTo6Digits(user.token);
         data.set('number', resetNumber);
-        
+
         if (webMode) {
           data.set('link', resetLink);
         } else {
@@ -913,11 +1213,17 @@ export class UserController {
     return res.status(HttpStatus.OK).json(hashMapToObject(data));
   }
 
+  /*
+    #mobile
+  */
   @Put('reset/:userID')
   async reset(@Res() res, @Param('userID') userID) {
     return this.triggerResetRequest(userID, res);
   }
 
+  /*
+    #mobile
+  */
   @Post('reset-request')
   async resetRequest(@Res() res, @Body() loginDTO: LoginDTO) {
     const user = await this.userService.findOneByEmail(loginDTO.email);
@@ -985,6 +1291,9 @@ export class UserController {
     return data;
   }
 
+  /*
+    #mobile
+  */
   async getPaymentOptions(): Promise<Array<PaymentOption>> {
     const setting = await this.settingService.getByKey('payments');
     let data: Array<PaymentOption> = [];
@@ -1006,6 +1315,10 @@ export class UserController {
     return data;
   }
 
+  /*
+    #mobile
+    #admin
+  */
   async getCountryOptions(): Promise<Array<CountryOption>> {
     const setting = await this.settingService.getByKey('countries');
     let data: Array<CountryOption> = [];
@@ -1019,6 +1332,9 @@ export class UserController {
     return data;
   }
 
+  /*
+    #mobile
+  */
   @Put('profile/save/:userID')
   async saveProfile(
     @Res() res,
@@ -1029,6 +1345,9 @@ export class UserController {
     return res.json(data);
   }
 
+  /*
+    #admin
+  */
   @Put('preference/save/:userID')
   async savePreference(
     @Res() res,
@@ -1039,6 +1358,9 @@ export class UserController {
     return res.json(data);
   }
 
+  /*
+    #admin
+  */
   @Put('preferences/save/:userID')
   async savePreferences(
     @Res() res,
@@ -1049,6 +1371,9 @@ export class UserController {
     return res.json(data);
   }
 
+  /*
+    #development
+  */
   @Get('fix-preferences/:start?/:limit?')
   async fixPreferences(
     @Res() res,
@@ -1066,6 +1391,9 @@ export class UserController {
     return res.json(data);
   }
 
+  /*
+    #mobile
+  */
   @Post('profile-upload/:userID/:type/:mediaRef?/:title?')
   @UseInterceptors(FileInterceptor('file'))
   async upload(
@@ -1076,7 +1404,12 @@ export class UserController {
     @Param('title') title = '',
     @UploadedFile() file,
   ) {
-    let data: any = { valid: false, fileData: null, message: 'no file data', remaining: 0 };
+    let data: any = {
+      valid: false,
+      fileData: null,
+      message: 'no file data',
+      remaining: 0,
+    };
     let status = HttpStatus.NOT_ACCEPTABLE;
     let remaining = 0;
     if (file instanceof Object) {
@@ -1084,7 +1417,7 @@ export class UserController {
       if (!uploadAuth.valid) {
         data.message = 'unmatched user';
       } else if (!uploadAuth.mayUploadMore) {
-        data.message = `User has reached maximum upload limit of ${uploadAuth.limit}`
+        data.message = `User has reached maximum upload limit of ${uploadAuth.limit}`;
       } else {
         remaining = uploadAuth.limit - uploadAuth.numUploaded;
         data.remaining = remaining;
@@ -1100,8 +1433,8 @@ export class UserController {
           source: 'local',
           size,
           title,
-          attributes:{},
-          variants: []
+          attributes: {},
+          variants: [],
         };
         data = { valid: false, fileData };
         const intSize = parseInt(size, 10);
@@ -1121,7 +1454,7 @@ export class UserController {
             userID,
             type,
             fileData,
-            mediaRef
+            mediaRef,
           );
           if (savedSub.valid) {
             data.user = savedSub.user;
@@ -1134,11 +1467,13 @@ export class UserController {
           data.message = 'File upload failed';
         }
       }
-      
     }
     return res.status(status).json(data);
   }
 
+  /*
+    #mobile
+  */
   @Delete('media-item/delete/:userID/:mediaRef')
   async deleteMediaItem(
     @Res() res,
@@ -1146,7 +1481,10 @@ export class UserController {
     @Param('mediaRef') mediaRef,
   ) {
     const data: any = { valid: false, item: null, fileDeleted: false };
-    const result = await this.userService.deleteMediaItemByRef(userID, mediaRef);
+    const result = await this.userService.deleteMediaItemByRef(
+      userID,
+      mediaRef,
+    );
     if (result.deleted) {
       if (result.item instanceof Object) {
         data.item = result.item;
@@ -1157,9 +1495,12 @@ export class UserController {
             data.item.variants.forEach(suffix => {
               const parts = data.item.filename.split('.');
               const extension = parts.pop();
-              const variantFn = [[parts.join('.'), suffix].join('-'), extension].join('.');
+              const variantFn = [
+                [parts.join('.'), suffix].join('-'),
+                extension,
+              ].join('.');
               deleteFile(variantFn, 'media');
-            })
+            });
           }
         }
       }
@@ -1167,12 +1508,18 @@ export class UserController {
     return res.json(data);
   }
 
+  /*
+    #admin
+  */
   @Get('media-path/:type')
   async mediaPathInfo(@Res() res, @Param('type') type) {
     const path = mediaPath(type);
-    return res.json({path});
+    return res.json({ path });
   }
 
+  /*
+    #mobile
+  */
   @Put('media-item/edit/:userID/:mediaRef?/:type?')
   async editMediaItem(
     @Res() res,
@@ -1181,12 +1528,20 @@ export class UserController {
     @Param('type') type,
     @Body() mediaItem: MediaItemDTO,
   ) {
-    const profileType = notEmptyString(type, 2)? type : 'public';
-    const mediaRefName = notEmptyString(mediaRef, 5)? mediaRef : '';
-    const result = await this.userService.editMediaItemByRef(userID, mediaRefName, mediaItem, profileType);
+    const profileType = notEmptyString(type, 2) ? type : 'public';
+    const mediaRefName = notEmptyString(mediaRef, 5) ? mediaRef : '';
+    const result = await this.userService.editMediaItemByRef(
+      userID,
+      mediaRefName,
+      mediaItem,
+      profileType,
+    );
     return res.json(result);
   }
 
+  /*
+    #development
+  */
   @Post('bulk/sample-import')
   async bulkSampleImprt(@Res() res, @Body() sampleDataDTO: SampleDataDTO) {
     const data: Map<string, any> = new Map();
@@ -1198,6 +1553,9 @@ export class UserController {
     return res.status(HttpStatus.OK).json(hashMapToObject(data));
   }
 
+  /*
+    #development
+  */
   @Get('bulk/test-import')
   async bulkTestImport(@Res() res) {
     const items = [];

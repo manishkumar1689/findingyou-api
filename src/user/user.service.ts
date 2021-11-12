@@ -5,11 +5,22 @@ import { InjectModel } from '@nestjs/mongoose';
 import { MailerService } from '@nest-modules/mailer';
 import { User } from './interfaces/user.interface';
 import { CreateUserDTO } from './dto/create-user.dto';
-import { hashMapToObject, extractObject, extractSimplified } from '../lib/entities';
+import {
+  hashMapToObject,
+  extractObject,
+  extractSimplified,
+} from '../lib/entities';
 import * as bcrypt from 'bcrypt';
 import { generateHash } from '../lib/hash';
 import * as moment from 'moment-timezone';
-import { inRange, isNumeric, isSystemFileName, notEmptyString, validISODateString, validUri } from '../lib/validators';
+import {
+  inRange,
+  isNumeric,
+  isSystemFileName,
+  notEmptyString,
+  validISODateString,
+  validUri,
+} from '../lib/validators';
 import { Role } from './interfaces/role.interface';
 import { Payment } from './interfaces/payment.interface';
 import { PaymentOption } from './interfaces/payment-option.interface';
@@ -62,6 +73,7 @@ export class UserService {
     activeOnly = true,
   ): Promise<User[]> {
     const filterCriteria = this.buildCriteria(criteria, activeOnly);
+    console.log(filterCriteria);
     return await this.userModel
       .find(filterCriteria)
       .select(userSelectPaths.join(' '))
@@ -70,11 +82,8 @@ export class UserService {
       .sort({ createdAt: -1 });
   }
   // count users by criteria
-  
-  async count(
-    criteria: any = null,
-    activeOnly = true,
-  ): Promise<number> {
+
+  async count(criteria: any = null, activeOnly = true): Promise<number> {
     const filterCriteria = this.buildCriteria(criteria, activeOnly);
     return await this.userModel.count(filterCriteria).exec();
   }
@@ -114,12 +123,15 @@ export class UserService {
             filter.set('coords', this.buildNearQuery(val));
             break;
           case 'test':
-            const boolVal = smartCastBool(val)
+            const boolVal = smartCastBool(val);
             filter.set('test', boolVal);
             if (boolVal) {
               filter.set('test', boolVal);
               filter.set('dob', { $exists: true });
             }
+            break;
+          case 'createdAt':
+            filter.set('createdAt', val);
             break;
         }
       }
@@ -130,7 +142,10 @@ export class UserService {
     return hashMapToObject(filter);
   };
 
-  buildMemberCriteria = (criteria: object, excludedIds: string[] = []): object => {
+  buildMemberCriteria = (
+    criteria: object,
+    excludedIds: string[] = [],
+  ): object => {
     const filter = new Map<string, any>();
     if (criteria instanceof Object) {
       const keys = Object.keys(criteria);
@@ -163,21 +178,25 @@ export class UserService {
             filter.set('dob', this.translateAgeRange(val));
             break;
           case 'genders':
-            filter.set('preferences', this.translateTargetGenders(val))
+            filter.set('preferences', this.translateTargetGenders(val));
             break;
           case 'age_range':
-            filter.set('preferences', this.translateAgeRangeWithin(val))
+            filter.set('preferences', this.translateAgeRangeWithin(val));
             break;
           case 'ids':
             if (val instanceof Array) {
-              filter.set('_id', { $in: val.filter(id => excludedIds.some(exId => exId === id) === false) });
+              filter.set('_id', {
+                $in: val.filter(
+                  id => excludedIds.some(exId => exId === id) === false,
+                ),
+              });
             }
             break;
         }
       }
     }
     filter.set('active', true);
-    filter.set('roles', { $nin: ['superadmin', 'admin', 'blocked', 'editor']});
+    filter.set('roles', { $nin: ['superadmin', 'admin', 'blocked', 'editor'] });
     if (excludedIds.length > 0) {
       if (!filter.has('_id')) {
         filter.set('_id', { $nin: excludedIds.map(_id => new ObjectId(_id)) });
@@ -188,7 +207,10 @@ export class UserService {
 
   // Get a single User
   async getUser(userID: string, overrideSelectPaths = []): Promise<User> {
-    const fields = (overrideSelectPaths instanceof Array && overrideSelectPaths.length > 0)? overrideSelectPaths : userSelectPaths;
+    const fields =
+      overrideSelectPaths instanceof Array && overrideSelectPaths.length > 0
+        ? overrideSelectPaths
+        : userSelectPaths;
     const user = await this.userModel
       .findById(userID)
       .select(fields.join(' '))
@@ -196,8 +218,8 @@ export class UserService {
     return user;
   }
 
-   // Get a single User
-   async memberRoles(userID: string): Promise<string[]> {
+  // Get a single User
+  async memberRoles(userID: string): Promise<string[]> {
     const fields = ['roles'];
     const user = await this.userModel
       .findById(userID)
@@ -210,11 +232,15 @@ export class UserService {
   async getUserDeviceToken(userID: string): Promise<string> {
     const tokenData = await this.getUser(userID, ['deviceToken']);
     const tokenRef = tokenData instanceof Object ? tokenData.deviceToken : '';
-    return notEmptyString(tokenRef, 5)? tokenRef : '';
+    return notEmptyString(tokenRef, 5) ? tokenRef : '';
   }
 
   async getUserStatus(userID: string): Promise<any> {
-    const statusData = await this.getUser(userID, ['active', 'roles','status']);
+    const statusData = await this.getUser(userID, [
+      'active',
+      'roles',
+      'status',
+    ]);
     return statusData instanceof Model ? statusData.toObject() : {};
   }
 
@@ -224,10 +250,7 @@ export class UserService {
   }
 
   // Get a single User
-  async findOneByEmail(
-    email: string,
-    activeOnly = true,
-  ): Promise<User> {
+  async findOneByEmail(email: string, activeOnly = true): Promise<User> {
     const filter = new Map<string, any>();
     filter.set('identifier', email);
     if (activeOnly) {
@@ -237,10 +260,7 @@ export class UserService {
     return user;
   }
 
-  async findByCriteria(
-    criteria: any,
-    activeOnly = true,
-  ): Promise<string[]> {
+  async findByCriteria(criteria: any, activeOnly = true): Promise<string[]> {
     let users = [];
     if (criteria instanceof Object) {
       const filter = new Map<string, any>();
@@ -319,7 +339,13 @@ export class UserService {
     createUserDTO: CreateUserDTO,
     roles: Array<Role> = [],
   ): Promise<User> {
-    const userObj = this.transformUserDTO(createUserDTO, true, roles, null, true);
+    const userObj = this.transformUserDTO(
+      createUserDTO,
+      true,
+      roles,
+      null,
+      true,
+    );
     const newUser = new this.userModel(userObj);
     return newUser.save();
   }
@@ -337,9 +363,8 @@ export class UserService {
     isNew = false,
     roles: Array<Role> = [],
     currentUser = null,
-    mayEditPassword = false
+    mayEditPassword = false,
   ) {
-    
     const hasCurrentUser = currentUser instanceof Object;
     const userObj = hasCurrentUser ? currentUser.toObject() : {};
     const userData = new Map<string, any>();
@@ -379,10 +404,10 @@ export class UserService {
         case 'mode':
           userData.set(key, val);
           break;
-          case 'identifier':
-          case 'email':
-            userData.set('identifier', val);
-            break;
+        case 'identifier':
+        case 'email':
+          userData.set('identifier', val);
+          break;
         case 'geo':
           if (val instanceof Object) {
             const map = new Map(Object.entries(val));
@@ -429,31 +454,57 @@ export class UserService {
   }
 
   // Edit User details
-  async updateUser(userID: string, createUserDTO: CreateUserDTO, roles: Role[] = []): Promise<{user: User, keys: string[], message: string}> {
+  async updateUser(
+    userID: string,
+    createUserDTO: CreateUserDTO,
+    roles: Role[] = [],
+  ): Promise<{ user: User; keys: string[]; message: string }> {
     const user = await this.userModel.findById(userID);
     let message = 'User has been updated successfully';
     const hasPassword = notEmptyString(createUserDTO.password);
     let hasOldPassword = false;
-    let mayEditPassword = user instanceof Object && notEmptyString(user.password);
+    let mayEditPassword =
+      user instanceof Object && notEmptyString(user.password);
     if (hasPassword) {
       hasOldPassword = notEmptyString(createUserDTO.oldPassword, 6);
       if (hasOldPassword) {
-        mayEditPassword = bcrypt.compareSync(createUserDTO.oldPassword, user.password);
+        mayEditPassword = bcrypt.compareSync(
+          createUserDTO.oldPassword,
+          user.password,
+        );
       } else {
         const hasAdmin = notEmptyString(createUserDTO.admin, 12);
-        mayEditPassword = hasAdmin? await this.isAdminUser(createUserDTO.admin) : false;
+        mayEditPassword = hasAdmin
+          ? await this.isAdminUser(createUserDTO.admin)
+          : false;
       }
     }
     if (hasPassword && !mayEditPassword) {
-      message = hasOldPassword? `May not edit password as the old password could not be matched` : `Not authorised to edit the password`;
+      message = hasOldPassword
+        ? `May not edit password as the old password could not be matched`
+        : `Not authorised to edit the password`;
     }
-    const userObj = this.transformUserDTO(createUserDTO, false, roles, user, mayEditPassword);
-    const hasProfileText = Object.keys(createUserDTO).includes("publicProfileText") && notEmptyString(createUserDTO.publicProfileText, 2);
+    const userObj = this.transformUserDTO(
+      createUserDTO,
+      false,
+      roles,
+      user,
+      mayEditPassword,
+    );
+    const hasProfileText =
+      Object.keys(createUserDTO).includes('publicProfileText') &&
+      notEmptyString(createUserDTO.publicProfileText, 2);
     if (hasProfileText) {
-      const profile = { type: 'public', text: createUserDTO.publicProfileText} as ProfileDTO;
+      const profile = {
+        type: 'public',
+        text: createUserDTO.publicProfileText,
+      } as ProfileDTO;
       await this.saveProfile(userID, profile);
     }
-    const hasPreferences = Object.keys(createUserDTO).includes("preferences") && createUserDTO.preferences instanceof Array && createUserDTO.preferences.length > 0;
+    const hasPreferences =
+      Object.keys(createUserDTO).includes('preferences') &&
+      createUserDTO.preferences instanceof Array &&
+      createUserDTO.preferences.length > 0;
     if (hasPreferences) {
       const user = await this.userModel.findById(userID);
       const prefs = this.mergePreferences(user, createUserDTO.preferences);
@@ -464,13 +515,13 @@ export class UserService {
       userObj,
       { new: true },
     );
-    
-    return { 
+
+    return {
       keys: Object.keys(userObj).filter(k => {
-        return k === 'status'? userObj[k].length > 0 : true
+        return k === 'status' ? userObj[k].length > 0 : true;
       }),
       user: this.removeHiddenFields(updatedUser),
-      message
+      message,
     };
   }
 
@@ -586,24 +637,42 @@ export class UserService {
     }
   }
 
-  async updateActive(userID = "", active = false, reason = "", expiryDate = null, removeLastBlock = false) {
+  async updateActive(
+    userID = '',
+    active = false,
+    reason = '',
+    expiryDate = null,
+    removeLastBlock = false,
+  ) {
     const user = await this.userModel.findById(userID);
     if (user instanceof Model) {
       const userObj = user.toObject();
       const { status } = userObj;
       const statusItems = status instanceof Array ? status : [];
       const numItems = statusItems.length;
-      const reverseBlockIndex = statusItems.map(st => st).reverse().findIndex(st => st.role === "block");
-      const lastBlockIndex = reverseBlockIndex >= 0? (numItems - 1) - reverseBlockIndex : -1;
+      const reverseBlockIndex = statusItems
+        .map(st => st)
+        .reverse()
+        .findIndex(st => st.role === 'block');
+      const lastBlockIndex =
+        reverseBlockIndex >= 0 ? numItems - 1 - reverseBlockIndex : -1;
       const dt = new Date();
-      const expiresAt = expiryDate instanceof Date ? expiryDate : validISODateString(expiryDate)? new Date(expiryDate) : new Date(dt.getTime() + 7 * 24 * 60 * 60 * 1000);
-      const block = lastBlockIndex >= 0 ? statusItems[lastBlockIndex] : {
-        role: "block",
-        current: active,
-        expiresAt,
-        createdAt: dt,
-        modifiedAt: dt
-      }
+      const expiresAt =
+        expiryDate instanceof Date
+          ? expiryDate
+          : validISODateString(expiryDate)
+          ? new Date(expiryDate)
+          : new Date(dt.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const block =
+        lastBlockIndex >= 0
+          ? statusItems[lastBlockIndex]
+          : {
+              role: 'block',
+              current: active,
+              expiresAt,
+              createdAt: dt,
+              modifiedAt: dt,
+            };
       if (notEmptyString(reason)) {
         block.reason = reason;
       }
@@ -613,8 +682,8 @@ export class UserService {
             statusItems.splice(lastBlockIndex, 1);
           } else {
             block.current = false;
-            block.expiresAt = new Date(dt.getTime() - (3600 * 1000))
-            block.reason = "unblocked";
+            block.expiresAt = new Date(dt.getTime() - 3600 * 1000);
+            block.reason = 'unblocked';
           }
         }
       } else {
@@ -626,7 +695,7 @@ export class UserService {
         }
       }
       if (lastBlockIndex < 0 && !active) {
-        statusItems.push(block)
+        statusItems.push(block);
       } else if (!removeLastBlock) {
         statusItems[lastBlockIndex] = block;
       }
@@ -634,9 +703,9 @@ export class UserService {
         active,
         roles: statusItems.filter(st => st.current).map(st => st.role),
         status: statusItems,
-        modifiedAt: dt
+        modifiedAt: dt,
       });
-      return {...userObj, active, status: statusItems, modifiedAt: dt};
+      return { ...userObj, active, status: statusItems, modifiedAt: dt };
     }
     return {};
   }
@@ -685,7 +754,7 @@ export class UserService {
     }
   }
 
-  async registerLogin(userID: string, deviceToken = ""): Promise<string> {
+  async registerLogin(userID: string, deviceToken = ''): Promise<string> {
     const login = new Date().toISOString();
     const hasDeviceToken = notEmptyString(deviceToken, 5);
     const edited = hasDeviceToken ? { login, deviceToken } : { login };
@@ -711,7 +780,12 @@ export class UserService {
     return false;
   }
 
-  async members(start = 0, limit = 100, criteria = null, excludedIds: string[] = []) {
+  async members(
+    start = 0,
+    limit = 100,
+    criteria = null,
+    excludedIds: string[] = [],
+  ) {
     //const userID = Object.keys(criteria).includes('user')? criteria.user : '';
     const matchCriteria = this.buildMemberCriteria(criteria, excludedIds);
     let nearStage = null;
@@ -753,7 +827,7 @@ export class UserService {
           profiles: 1,
           'preferences.key': 1,
           'preferences.value': 1,
-          gender: 1
+          gender: 1,
         },
       },
       {
@@ -792,9 +866,14 @@ export class UserService {
     return data;
   }
 
-  async savePreferences(userID: string, prefItems:PreferenceDTO[] = []) {
+  async savePreferences(userID: string, prefItems: PreferenceDTO[] = []) {
     const user = await this.userModel.findById(userID);
-    const profileTextTypes = ['profileText', 'profile_text', 'publicProfileText', 'bio'];
+    const profileTextTypes = [
+      'profileText',
+      'profile_text',
+      'publicProfileText',
+      'bio',
+    ];
     const otherTypes = [...profileTextTypes, 'user'];
     const stringFields = ['fullName', 'nickName'];
     const dtFields = ['dob'];
@@ -803,12 +882,19 @@ export class UserService {
       valid: false,
     };
     if (user instanceof Object && prefItems instanceof Array) {
-      const prefs = this.mergePreferences(user, prefItems.filter(pr => pr instanceof Object && otherTypes.includes(pr.type) === false));
+      const prefs = this.mergePreferences(
+        user,
+        prefItems.filter(
+          pr => pr instanceof Object && otherTypes.includes(pr.type) === false,
+        ),
+      );
       const dt = new Date();
       const editMap: Map<string, any> = new Map();
       editMap.set('preferences', prefs);
       editMap.set('modifiedAt', dt);
-      const userOpts = prefItems.filter(pr => pr instanceof Object && pr.type === 'user');
+      const userOpts = prefItems.filter(
+        pr => pr instanceof Object && pr.type === 'user',
+      );
       if (userOpts.length > 0) {
         userOpts.forEach(row => {
           const { key, value } = row;
@@ -816,29 +902,45 @@ export class UserService {
           if (key === 'gender' && dataType === 'string') {
             editMap.set('gender', value);
           } else if (key === 'geo' && dataType === 'object') {
-            const {lat, lng, altVal } = value;
-            if (isNumeric(lat) && isNumeric(lng) && inRange(lng, [-180, 180]) && inRange(lat, [-90, 90])) {
+            const { lat, lng, altVal } = value;
+            if (
+              isNumeric(lat) &&
+              isNumeric(lng) &&
+              inRange(lng, [-180, 180]) &&
+              inRange(lat, [-90, 90])
+            ) {
               const alt = smartCastFloat(altVal, 10);
-              editMap.set('geo', { lat, lng, alt});
+              editMap.set('geo', { lat, lng, alt });
               editMap.set('coords', [lng, lat]);
             }
           } else if (stringFields.includes(key)) {
             editMap.set(key, value);
-          }  else if (dtFields.includes(key)) {
+          } else if (dtFields.includes(key)) {
             if (validISODateString(value)) {
               editMap.set(key, value);
             }
           }
         });
       }
-      const profileItem = prefItems.find(pr => pr instanceof Object && profileTextTypes.includes(pr.type));
+      const profileItem = prefItems.find(
+        pr => pr instanceof Object && profileTextTypes.includes(pr.type),
+      );
       if (profileItem instanceof Object) {
-        const profileType = ['private', 'protected'].includes(profileItem.type)? profileItem.type : 'public';
-        const pubProfile = { type: profileType, text: profileItem.value } as ProfileDTO;
+        const profileType = ['private', 'protected'].includes(profileItem.type)
+          ? profileItem.type
+          : 'public';
+        const pubProfile = {
+          type: profileType,
+          text: profileItem.value,
+        } as ProfileDTO;
         const userObj = user.toObject();
-        const profiles = userObj.profiles instanceof Array ? userObj.profiles : [];
-        const currProfileIndex = profiles.findIndex(pr => pr.type === profileType);
-        const currProfile = currProfileIndex < 0 ? null : profiles[currProfileIndex];
+        const profiles =
+          userObj.profiles instanceof Array ? userObj.profiles : [];
+        const currProfileIndex = profiles.findIndex(
+          pr => pr.type === profileType,
+        );
+        const currProfile =
+          currProfileIndex < 0 ? null : profiles[currProfileIndex];
         const profile = this.updateProfile(pubProfile, currProfile, dt);
         if (currProfileIndex < 0) {
           profiles.unshift(profile);
@@ -848,13 +950,9 @@ export class UserService {
         editMap.set('profiles', profiles);
       }
       const edited = Object.fromEntries(editMap.entries());
-      const savedUser = await this.userModel.findByIdAndUpdate(
-        userID,
-        edited,
-        {
-          new: true,
-        },
-      );
+      const savedUser = await this.userModel.findByIdAndUpdate(userID, edited, {
+        new: true,
+      });
       data.user = this.removeHiddenFields(savedUser);
       data.valid = true;
     }
@@ -877,19 +975,19 @@ export class UserService {
     const userData = user.toObject();
     const { preferences } = userData;
     const prefs = preferences instanceof Array ? preferences : [];
-    const filteredPreferences = prefItems.filter(pr => pr instanceof Object && pr.type !== 'user');
+    const filteredPreferences = prefItems.filter(
+      pr => pr instanceof Object && pr.type !== 'user',
+    );
     for (const prefItem of filteredPreferences) {
       const pKeys = Object.keys(prefItem);
       if (
-          pKeys.includes('key') &&
-          pKeys.includes('value') &&
-          pKeys.includes('type')
-        ) {
+        pKeys.includes('key') &&
+        pKeys.includes('value') &&
+        pKeys.includes('type')
+      ) {
         const key = prefItem.key.split('__').pop();
-        const edited = { ...prefItem, key};
-        const currPreferenceIndex = preferences.findIndex(
-          pr => pr.key === key,
-        );
+        const edited = { ...prefItem, key };
+        const currPreferenceIndex = preferences.findIndex(pr => pr.key === key);
         if (currPreferenceIndex >= 0) {
           prefs[currPreferenceIndex].value = prefItem.value;
         } else {
@@ -915,7 +1013,11 @@ export class UserService {
         );
         if (profileIndex >= 0) {
           //const { createdAt } = userData.profiles[profileIndex];
-          const editedProfile = this.updateProfile(profile, userData.profiles[profileIndex], dt);
+          const editedProfile = this.updateProfile(
+            profile,
+            userData.profiles[profileIndex],
+            dt,
+          );
           userData.profiles[profileIndex] = { ...editedProfile };
         } else {
           userData.profiles.push(profile);
@@ -935,18 +1037,22 @@ export class UserService {
     return data;
   }
 
-  updateProfile(profile: ProfileDTO, currentProfile: any = null, modifiedAt = null) {
+  updateProfile(
+    profile: ProfileDTO,
+    currentProfile: any = null,
+    modifiedAt = null,
+  ) {
     const hasCurrent = currentProfile instanceof Object;
     if (hasCurrent) {
       const edited = Object.assign({}, currentProfile);
-      Object.entries(profile).forEach( entry => {
+      Object.entries(profile).forEach(entry => {
         const [key, value] = entry;
         switch (key) {
           case 'text':
             edited.text = value;
             break;
         }
-      })
+      });
       if (modifiedAt) {
         edited.modifiedAt = modifiedAt;
       }
@@ -956,7 +1062,12 @@ export class UserService {
     }
   }
 
-  async saveProfileImage(userID: string, type: string, fileRef = null, mediaRef = '') {
+  async saveProfileImage(
+    userID: string,
+    type: string,
+    fileRef = null,
+    mediaRef = '',
+  ) {
     const user = await this.userModel.findById(userID);
     const data = {
       user: null,
@@ -978,14 +1089,20 @@ export class UserService {
     return data;
   }
 
-  /** 
+  /**
    * aux. method to assign extra profile data
    * @param user User,
    * profileRef Object | string either the profile type or profile object
    * mediaItemRef Object
-   * mediaRef string name of file to be replaced 
-  */
-  assignProfile(user: User, profileRef = null, mediaItemRef = null, mediaRef = '', dtRef = '') {
+   * mediaRef string name of file to be replaced
+   */
+  assignProfile(
+    user: User,
+    profileRef = null,
+    mediaItemRef = null,
+    mediaRef = '',
+    dtRef = '',
+  ) {
     const userData = user.toObject();
     let profile: any = {};
     let hasProfileData = false;
@@ -1034,10 +1151,11 @@ export class UserService {
             let items = editedProfile.get('mediaItems');
             let itemIndex = -1;
             if (items instanceof Array) {
-              const fileName = isSystemFileName(mediaRef) || validUri(mediaRef) ? mediaRef : mediaItem.filename;
-              itemIndex = items.findIndex(
-                mi => mi.filename === fileName,
-              );
+              const fileName =
+                isSystemFileName(mediaRef) || validUri(mediaRef)
+                  ? mediaRef
+                  : mediaItem.filename;
+              itemIndex = items.findIndex(mi => mi.filename === fileName);
             } else {
               items = [];
             }
@@ -1070,28 +1188,32 @@ export class UserService {
     return userData;
   }
 
-  async deleteMediaItemByRef(userID: string, mediaRef = "") {
+  async deleteMediaItemByRef(userID: string, mediaRef = '') {
     const user = await this.getUser(userID);
-    const data = { 
+    const data = {
       item: null,
       user: null,
       valid: user instanceof Object,
-      deleted: false
+      deleted: false,
     };
     if (data.valid) {
       const userObj = user.toObject();
       const { profiles } = userObj;
       if (profiles instanceof Array) {
         profiles.forEach((profile, index) => {
-          const {mediaItems} = profile;
+          const { mediaItems } = profile;
           if (mediaItems instanceof Array && mediaItems.length > 0) {
-            const mediaIndex = mediaItems.findIndex(mi => mi.filename === mediaRef);
+            const mediaIndex = mediaItems.findIndex(
+              mi => mi.filename === mediaRef,
+            );
             if (mediaIndex >= 0) {
               data.item = Object.assign({}, mediaItems[mediaIndex]);
               userObj.profiles[index].mediaItems.splice(mediaIndex, 1);
-              this.userModel.findByIdAndUpdate(userID, {
-                profiles: userObj.profiles,
-              }).exec();
+              this.userModel
+                .findByIdAndUpdate(userID, {
+                  profiles: userObj.profiles,
+                })
+                .exec();
               data.deleted = true;
             }
           }
@@ -1102,14 +1224,19 @@ export class UserService {
     return data;
   }
 
-  async editMediaItemByRef(userID: string, mediaRef = "", item: MediaItemDTO, profileType = '') {
+  async editMediaItemByRef(
+    userID: string,
+    mediaRef = '',
+    item: MediaItemDTO,
+    profileType = '',
+  ) {
     const user = await this.getUser(userID);
-    const data = { 
+    const data = {
       item: null,
       user: null,
       valid: user instanceof Object,
       new: false,
-      edited: false
+      edited: false,
     };
     if (data.valid && item instanceof Object) {
       const userObj = user.toObject();
@@ -1118,20 +1245,27 @@ export class UserService {
       let matched = false;
       if (profiles instanceof Array) {
         profiles.forEach((profile, index) => {
-          const {mediaItems} = profile;
+          const { mediaItems } = profile;
           if (mediaItems instanceof Array && mediaItems.length > 0) {
-            const mediaIndex = mediaItems.findIndex(mi => mi.filename === mediaRef || mi._id.toString() === mediaRef);
+            const mediaIndex = mediaItems.findIndex(
+              mi => mi.filename === mediaRef || mi._id.toString() === mediaRef,
+            );
             if (mediaIndex >= 0) {
               matched = true;
-              userObj.profiles[index].mediaItems[mediaIndex] = this.assignMediaItem(item, mediaItems[mediaIndex]);
+              userObj.profiles[index].mediaItems[
+                mediaIndex
+              ] = this.assignMediaItem(item, mediaItems[mediaIndex]);
             }
           }
         });
         if (!matched && hasProfile) {
-          const profileIndex = profiles.findIndex(pr => pr.type === profileType);
+          const profileIndex = profiles.findIndex(
+            pr => pr.type === profileType,
+          );
           const newMediaItem = this.assignMediaItem(item);
           const itemKeys = Object.keys(newMediaItem);
-          const valid = itemKeys.includes('filename') && itemKeys.includes('mime');
+          const valid =
+            itemKeys.includes('filename') && itemKeys.includes('mime');
           if (valid) {
             if (profileIndex >= 0) {
               userObj.profiles[profileIndex].mediaItems.push(newMediaItem);
@@ -1139,17 +1273,19 @@ export class UserService {
               const newProfile = {
                 type: profileType,
                 text: '',
-                mediaItems: [newMediaItem]
-              }
+                mediaItems: [newMediaItem],
+              };
               userObj.profiles.push(newProfile);
             }
             matched = true;
           }
         }
         if (matched) {
-          this.userModel.findByIdAndUpdate(userID, {
-            profiles: userObj.profiles,
-          }).exec();
+          this.userModel
+            .findByIdAndUpdate(userID, {
+              profiles: userObj.profiles,
+            })
+            .exec();
           data.edited = true;
         }
         data.new = !matched;
@@ -1160,13 +1296,15 @@ export class UserService {
   }
 
   assignMediaItem(item: MediaItemDTO, current: any = null) {
-    const fields = ['filename',
-    'mime',
-    'source',
-    'size',
-    'attributes',
-    'type',
-    'title'];
+    const fields = [
+      'filename',
+      'mime',
+      'source',
+      'size',
+      'attributes',
+      'type',
+      'title',
+    ];
     const hasCurrent = current instanceof Object && current !== null;
     const currentKeys = hasCurrent ? Object.keys(current) : [];
     const newKeys = Object.keys(item);
@@ -1178,10 +1316,14 @@ export class UserService {
         mp.set(key, current[key]);
       }
     });
-    const filename = mp.has('filename')? mp.get('filename') : '';
-    const mime = mp.has('mime')? mp.get('mime') : ''
+    const filename = mp.has('filename') ? mp.get('filename') : '';
+    const mime = mp.has('mime') ? mp.get('mime') : '';
     const valid = notEmptyString(filename, 5) && notEmptyString(mime, 3);
-    const matchedSource = valid ? /^\w+:\/\/?/.test(filename)? 'remote' : 'local' : '';
+    const matchedSource = valid
+      ? /^\w+:\/\/?/.test(filename)
+        ? 'remote'
+        : 'local'
+      : '';
     if (valid) {
       fields.forEach(field => {
         if (!mp.has(field)) {
@@ -1222,17 +1364,28 @@ export class UserService {
 
   async isPaidMember(userID: string): Promise<boolean> {
     const roles = await this.getRoles(userID);
-    return roles.length > 0 && roles.filter(rk => rk.includes('member')).length > 0;
+    return (
+      roles.length > 0 && roles.filter(rk => rk.includes('member')).length > 0
+    );
   }
 
   async getRoles(userID: string): Promise<string[]> {
     const user = await this.userModel.findById(userID).select('active roles');
-    return user instanceof Model ? user.active? user.roles : [] : [];
+    return user instanceof Model ? (user.active ? user.roles : []) : [];
   }
 
   async getAdminIds(): Promise<string[]> {
-    const users = await this.userModel.find({ roles: 'superadmin', active: true }).select('roles');
-    return users instanceof Array ? users.filter(u => u.roles instanceof Array && u.roles.includes('blocked') === false).map(u => u._id) : [];
+    const users = await this.userModel
+      .find({ roles: 'superadmin', active: true })
+      .select('roles');
+    return users instanceof Array
+      ? users
+          .filter(
+            u =>
+              u.roles instanceof Array && u.roles.includes('blocked') === false,
+          )
+          .map(u => u._id)
+      : [];
   }
 
   async isBlocked(userID: string): Promise<boolean> {
@@ -1298,8 +1451,13 @@ export class UserService {
 
   translateTargetGenders(val = null) {
     const availableKeys = ['f', 'm', 'nb'];
-    const opts = typeof val === 'string' ? val.split(',') : val instanceof Array ? val.filter(s => typeof s === 'string') : [];
-    const matchedOpts = opts.filter(k => availableKeys.includes(k))
+    const opts =
+      typeof val === 'string'
+        ? val.split(',')
+        : val instanceof Array
+        ? val.filter(s => typeof s === 'string')
+        : [];
+    const matchedOpts = opts.filter(k => availableKeys.includes(k));
     const optList: string[][] = [matchedOpts];
     if (matchedOpts.length > 1) {
       optList.push([matchedOpts[0]]);
@@ -1318,45 +1476,64 @@ export class UserService {
     }
     return {
       $elemMatch: {
-        "key": { $in: ["gender", "genders"]},
-        "value": { $in: optList }
-        }
-    }
+        key: { $in: ['gender', 'genders'] },
+        value: { $in: optList },
+      },
+    };
   }
 
   translateAgeRangeWithin(val = null) {
     const age = smartCastInt(val, 0);
-    return  {
+    return {
       $elemMatch: {
-        key: "age_range",
-        value: { $gte: age, $lte: age } 
-    }
-}
+        key: 'age_range',
+        value: { $gte: age, $lte: age },
+      },
+    };
   }
 
   async fetchMaxImages(userID = '', permData = null) {
-    const user = await this.userModel.findById(userID).select('active roles profiles');
+    const user = await this.userModel
+      .findById(userID)
+      .select('active roles profiles');
     const hasUser = user instanceof Model;
-    const userObj = hasUser? user.toObject() : {};
+    const userObj = hasUser ? user.toObject() : {};
     const roles = hasUser ? userObj.roles : [];
     const active = hasUser ? userObj.active : false;
     const permKeys = permData instanceof Object ? Object.keys(permData) : [];
     const isAdmin = roles.some(rk => ['superadmin', 'admin'].includes(rk));
-    const permRoles = !isAdmin && permKeys.includes("roles") && permData.roles instanceof Array ? permData.roles.filter(r => roles.includes(r.key)).map(r => r.permissions) : [];
-    const permLimits = !isAdmin && permKeys.includes("limits") && permData.limits instanceof Array ? permData.limits.map(r => {
-      const value = smartCastInt(r.value);
-      return { ...r, value };
-    }) : [];
-    
-    const perms = permRoles.reduce((a, b) => a.concat(b), []).filter(key => key.endsWith('image_upload'));
+    const permRoles =
+      !isAdmin && permKeys.includes('roles') && permData.roles instanceof Array
+        ? permData.roles
+            .filter(r => roles.includes(r.key))
+            .map(r => r.permissions)
+        : [];
+    const permLimits =
+      !isAdmin &&
+      permKeys.includes('limits') &&
+      permData.limits instanceof Array
+        ? permData.limits.map(r => {
+            const value = smartCastInt(r.value);
+            return { ...r, value };
+          })
+        : [];
+
+    const perms = permRoles
+      .reduce((a, b) => a.concat(b), [])
+      .filter(key => key.endsWith('image_upload'));
     const limits = permLimits.filter(pl => perms.includes(pl.key));
     limits.sort((a, b) => b.value - a.value);
-    const limit = limits.length > 0 ? limits[0].value : 0;    
+    const limit = limits.length > 0 ? limits[0].value : 0;
     let numUploaded = 0;
     if (active && roles.length > 0 && roles.includes('blocked') === false) {
-      const profiles = userObj.profiles instanceof Array ? userObj.profiles : [];
+      const profiles =
+        userObj.profiles instanceof Array ? userObj.profiles : [];
       profiles.forEach(pr => {
-        if (pr instanceof Object && Object.keys(pr).includes('mediaItems') && pr.mediaItems instanceof Array) {
+        if (
+          pr instanceof Object &&
+          Object.keys(pr).includes('mediaItems') &&
+          pr.mediaItems instanceof Array
+        ) {
           pr.mediaItems.forEach(mi => {
             const { fileType } = matchFileTypeAndMime(mi.filename, mi.mime);
             if (fileType === 'image') {
@@ -1367,7 +1544,15 @@ export class UserService {
       });
     }
     const mayUploadMore = isAdmin || numUploaded < limit;
-    return { limit, isAdmin, numUploaded, active, roles, mayUploadMore, valid: hasUser };
+    return {
+      limit,
+      isAdmin,
+      numUploaded,
+      active,
+      roles,
+      mayUploadMore,
+      valid: hasUser,
+    };
   }
 
   mapPreferenceKey(key: string) {
@@ -1392,7 +1577,7 @@ export class UserService {
     matchByDefault = true,
   ) {
     if (query instanceof Object) {
-      const excludeKeys = ['age', 'near', 'gender','genders', 'age_range'];
+      const excludeKeys = ['age', 'near', 'gender', 'genders', 'age_range'];
       const matchedOptions: MatchedOption[] = Object.entries(query)
         .filter(entry => excludeKeys.includes(entry[0]) == false)
         .map(entry => {
