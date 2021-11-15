@@ -73,7 +73,6 @@ export class UserService {
     activeOnly = true,
   ): Promise<User[]> {
     const filterCriteria = this.buildCriteria(criteria, activeOnly);
-    console.log(filterCriteria);
     return await this.userModel
       .find(filterCriteria)
       .select(userSelectPaths.join(' '))
