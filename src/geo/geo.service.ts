@@ -6,7 +6,12 @@ import { geonamesApiBase, timezonedbApiBase } from './api';
 import { objectToQueryString, mapToQueryString } from '../lib/converters';
 import { AxiosResponse } from 'axios';
 import * as moment from 'moment-timezone';
-import { notEmptyString, isNumeric, validISODateString, emptyString } from '../lib/validators';
+import {
+  notEmptyString,
+  isNumeric,
+  validISODateString,
+  emptyString,
+} from '../lib/validators';
 import {
   filterDefaultName,
   filterToponyms,
@@ -22,7 +27,10 @@ import {
 import * as Redis from 'ioredis';
 import { RedisService } from 'nestjs-redis';
 import { GeoName } from './interfaces/geo-name.interface';
-import { generateNameSearchRegex, toLocationString } from '../astrologic/lib/helpers';
+import {
+  generateNameSearchRegex,
+  toLocationString,
+} from '../astrologic/lib/helpers';
 import { Toponym } from '../astrologic/lib/interfaces';
 import { toShortTzAbbr } from '../astrologic/lib/date-funcs';
 
@@ -165,16 +173,16 @@ export class GeoService {
 
   matchStandardTzOffset(tz: string, year = 2000) {
     const defVal = -86400;
-    switch (tz) { 
+    switch (tz) {
       case 'Asia/Kolkata':
-        return year >= 1946? 19800 : defVal;
+        return year >= 1946 ? 19800 : defVal;
       case 'Asia/Shanghai':
       case 'Asia/Beijing':
       case 'Asia/Hong_Kong':
       case 'Asia/Macau':
-        return year >= 1949? 28800 : defVal;
+        return year >= 1949 ? 28800 : defVal;
       case 'Asia/Tokyo':
-        return year >= 1952? 32400 : defVal;
+        return year >= 1952 ? 32400 : defVal;
       default:
         return defVal;
     }
@@ -187,16 +195,28 @@ export class GeoService {
     return places instanceof Array? places.filter(pl => pl instanceof Object).map(mapGooglePlace) : [];
   } */
 
-  async fetchGeoAndTimezone(lat: number, lng: number, datetime: string, mode = 'standard') {
+  async fetchGeoAndTimezone(
+    lat: number,
+    lng: number,
+    datetime: string,
+    mode = 'standard',
+  ) {
     const data = await this.fetchGeoData(lat, lng);
     const offset = this.checkLocaleOffset(data.tz, datetime, data.toponyms);
     const shortTz = toShortTzAbbr(datetime, data.tz);
-    const { countryName, cc, tz, toponyms	} = data;
-    const obj: any = mode === 'compact'? { countryName, cc, tz, location: toLocationString(toponyms)	} : { countryName, cc, tz, toponyms	};
+    const { countryName, cc, tz, toponyms } = data;
+    const obj: any =
+      mode === 'compact'
+        ? { countryName, cc, tz, location: toLocationString(toponyms) }
+        : { countryName, cc, tz, toponyms };
     return { ...obj, offset, shortTz };
   }
 
-  checkLocaleOffset(timeZone: string, datetime: string, toponyms: Toponym[] = []) {
+  checkLocaleOffset(
+    timeZone: string,
+    datetime: string,
+    toponyms: Toponym[] = [],
+  ) {
     const offset = this.checkGmtOffset(timeZone, datetime);
     return correctOceanTz(toponyms, offset);
   }
@@ -286,7 +306,10 @@ export class GeoService {
         if (data instanceof Array) {
           result = { valid: true, values: data };
         } else if (data instanceof Object) {
-          const endTs = data.dstEnd > 1000 ? data.dstEnd * 1000 : new Date().getTime() + (100 * 365.25 * 24 * 60 * 60 * 1000);
+          const endTs =
+            data.dstEnd > 1000
+              ? data.dstEnd * 1000
+              : new Date().getTime() + 100 * 365.25 * 24 * 60 * 60 * 1000;
           if (data.status === 'FAILED') {
             if (zoneRef instanceof Object) {
               data.gmtOffset = Math.floor((zoneRef.lng + 7.5) / 15) * 3600;
@@ -309,7 +332,9 @@ export class GeoService {
   checkGmtOffset(zoneName: string, datetime: any): number {
     let gmtOffset = 0;
     if (notEmptyString(zoneName, 4)) {
-      const year = validISODateString(datetime)? parseInt(datetime.split('-').shift()) : 2000;
+      const year = validISODateString(datetime)
+        ? parseInt(datetime.split('-').shift())
+        : 2000;
       const standardHGmtOffset = this.matchStandardTzOffset(zoneName, year);
       if (standardHGmtOffset > -86400) {
         gmtOffset = standardHGmtOffset;
@@ -348,7 +373,7 @@ export class GeoService {
     return data;
   }
 
-  buildAltNames(name = "", placename = "") {
+  buildAltNames(name = '', placename = '') {
     const altNames = [];
     const nameLength = name.length;
     const searchLength = placename.length;
@@ -394,13 +419,12 @@ export class GeoService {
     }
     if (output.valid) {
       if (output.items instanceof Array && output.items.length > 0) {
-        
         for (const item of output.items) {
           const altNames = this.buildAltNames(item.name, placename);
           const cData = await this.fetchGeoData(item.lat, item.lng);
           if (cData.valid && cData.toponyms.length > 0) {
             const country = cData.toponyms[0].name;
-            this.saveGeoName({ ...item, altNames, fcode: item.type, country }); 
+            this.saveGeoName({ ...item, altNames, fcode: item.type, country });
           }
         }
       }
@@ -411,14 +435,12 @@ export class GeoService {
   async matchStoredGeoName(search: string) {
     const searchPattern = generateNameSearchRegex(search);
     const letterRgx = new RegExp('^' + searchPattern, 'i');
-    const orConditions: any[] = [
-      { 'altNames.name': letterRgx }
-    ];
+    const orConditions: any[] = [{ 'altNames.name': letterRgx }];
     if (search.length > 4) {
       const nameRgx = new RegExp('\\b' + searchPattern, 'i');
-      orConditions.push({ 'name': nameRgx });
+      orConditions.push({ name: nameRgx });
     }
-    const criteria = { $or: orConditions};
+    const criteria = { $or: orConditions };
     const records = await this.geoNameModel
 
       .find(criteria)
@@ -445,7 +467,7 @@ export class GeoService {
         lat: inData.lat,
       });
       const keys = Object.keys(inData);
-      
+
       if (keys.includes('type') && keys.includes('fcode') === false) {
         inData.fcode = inData.type;
         delete inData.type;
@@ -486,13 +508,13 @@ export class GeoService {
     return {
       region,
       country,
-      fcode : "PPL",
+      fcode: 'PPL',
       lat,
       lng,
-      pop : 0,
+      pop: 0,
       name,
       fullName: name,
-    }
+    };
   }
 
   async extractSuggestedItems(data = null, placename = '') {
@@ -506,33 +528,57 @@ export class GeoService {
         const placeIds: string[] = [];
         for (const pred of predictions) {
           const predKeys = Object.keys(pred);
-          if (predKeys.includes("description") && predKeys.includes("types") && predKeys.includes("place_id")) {
-            if (pred.types instanceof Array && placeIds.includes(pred.place_id) === false) {
+          if (
+            predKeys.includes('description') &&
+            predKeys.includes('types') &&
+            predKeys.includes('place_id')
+          ) {
+            if (
+              pred.types instanceof Array &&
+              placeIds.includes(pred.place_id) === false
+            ) {
               placeIds.push(pred.place_id);
               if (pred.types.some(type => placeTypes.includes(type))) {
                 const pl = await this.getPlaceByGooglePlaceId(pred.place_id);
                 if (pl instanceof Object) {
-                  if (Object.keys(pl).includes("address_components")) {
+                  if (Object.keys(pl).includes('address_components')) {
                     const { geometry } = pl;
-                    const {lat, lng} = geometry.location;
-                    if (pl.address_components instanceof Array) { 
-                      const matchedItems = pl.address_components.map(row => mapExternalPlaceName({name: row.long_name, lat, lng, type: row.types[0]}));
+                    const { lat, lng } = geometry.location;
+                    if (pl.address_components instanceof Array) {
+                      const matchedItems = pl.address_components.map(row =>
+                        mapExternalPlaceName({
+                          name: row.long_name,
+                          lat,
+                          lng,
+                          type: row.types[0],
+                        }),
+                      );
                       const lastIndex = matchedItems.length - 1;
                       if (lastIndex > 0) {
                         const firstItem = matchedItems[0];
                         const cc = matchedItems[lastIndex].name;
-                        const rg = lastIndex > 1? matchedItems[(lastIndex-1)].name : ""; 
-                        const altNames = this.buildAltNames(firstItem.name, placename);
-                        const newItem = { ...firstItem, fcode: firstItem.type, country: cc, region: rg, altNames };
+                        const rg =
+                          lastIndex > 1 ? matchedItems[lastIndex - 1].name : '';
+                        const altNames = this.buildAltNames(
+                          firstItem.name,
+                          placename,
+                        );
+                        const newItem = {
+                          ...firstItem,
+                          fcode: firstItem.type,
+                          country: cc,
+                          region: rg,
+                          altNames,
+                        };
                         items.push(newItem);
                         this.saveGeoName(newItem);
                       }
-                    };
+                    }
                   }
                 }
               }
             }
-          } else if (predKeys.includes("structured_formatting")) {
+          } else if (predKeys.includes('structured_formatting')) {
             const results = await this.searchByPlaceName(
               pred.structured_formatting.main_text,
               '',
@@ -598,17 +644,22 @@ export class GeoService {
     }
   }
 
-  matchGoogleRegionCode(code = "") {
+  matchGoogleRegionCode(code = '') {
     const codeStr = typeof code === 'string' ? code.trim() : '';
     const isCountryCode = /^[A-Z][A-Z]$/.test(codeStr);
     const compStr = isCountryCode ? code : code.toLocaleLowerCase();
-    return {code: this.normalizeGoogleRegionCode(compStr), regionType: isCountryCode ? 'country' : 'region' };
+    return {
+      code: this.normalizeGoogleRegionCode(compStr),
+      regionType: isCountryCode ? 'country' : 'region',
+    };
   }
 
   async googleNearby(nearby = '', regionCode = '') {
     const key = googleGeo.apiKey;
     const { code, regionType } = this.matchGoogleRegionCode(regionCode);
-    const extraParams = notEmptyString(code)? `&components=${regionType}:${code}` : '';
+    const extraParams = notEmptyString(code)
+      ? `&components=${regionType}:${code}`
+      : '';
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${nearby}${extraParams}&key=${key}`;
     const output: any = { valid: false, results: [] };
     await this.getHttp(url).then(response => {

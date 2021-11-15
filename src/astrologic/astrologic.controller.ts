@@ -158,6 +158,7 @@ import {
 import { GeoPos } from './interfaces/geo-pos';
 import { processPredictiveRuleSet } from './lib/predictions';
 import { panchaPakshiDayNightSet } from './lib/settings/pancha-pakshi';
+import { PairsSetDTO } from './dto/pairs-set.dto';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -3051,6 +3052,7 @@ export class AstrologicController {
       const kutaBuilder = new Kuta(c1, c2);
       const kutaSet = await this.settingService.getKutas();
       kutaBuilder.loadCompatibility(kutaSet);
+
       const aspects = calcAllAspects(c1, c2);
       result.set('aspects', aspects);
       const simpleC1 = simplifyChart(paired.c1, 'true_citra');
@@ -3059,6 +3061,28 @@ export class AstrologicController {
       result.set('c2', simpleC2);
     }
     return res.json(Object.fromEntries(result));
+  }
+
+  @Post('aspects-grid')
+  async getAspectGrid(@Res() res, @Body() pairsSet: PairsSetDTO) {
+    const ids = pairsSet.pairs
+      .map(p => [p.c1, p.c2])
+      .reduce((a, b) => a.concat(b));
+    const cds = await this.astrologicService.getChartsByIds(ids);
+    const charts = cds.map(cd => {
+      return new Chart(cd.toObject());
+    });
+
+    const aspectGrid = pairsSet.pairs
+      .map(pair => {
+        const c1 = charts.find(c => c._id === pair.c1);
+        const c2 = charts.find(c => c._id === pair.c2);
+        if (c1 instanceof Chart && c2 instanceof Chart) {
+          return calcAllAspects(c1, c2);
+        }
+      })
+      .filter(row => row !== null);
+    return res.json({ grid: aspectGrid });
   }
 
   @Get('paired-by-chart/:chartID/:max?')

@@ -54,15 +54,11 @@ import {
   matchBmGrahaKeys,
 } from './protocol-models';
 import { calcInclusiveSignPositions } from '../math-funcs';
-import {
-  naturalBenefics,
-  naturalMalefics,
-} from '../settings/graha-values';
+import { naturalBenefics, naturalMalefics } from '../settings/graha-values';
 import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
 import { Kuta } from '../kuta';
 import { matchKotaPala } from '../settings/kota-values';
 import { combineCharts, filterBmMatchRow } from '../chart-funcs';
-
 
 export interface Subject {
   name: string;
@@ -408,7 +404,7 @@ export class Chart {
     return numVal;
   }
 
-  matchObject(key: string) {
+  matchObject(key: string): string {
     const row = this.objects.find(
       spSet => spSet.num === this.ayanamshaItem.num,
     );
@@ -448,7 +444,11 @@ export class Chart {
     const bm = this.funcBmMap(isFunctional);
     const isMalefic = type.includes('malef');
     const letter = isMalefic ? 'm' : 'b';
-    return isFunctional ? bm.get(letter) : isMalefic ? naturalMalefics : naturalBenefics;
+    return isFunctional
+      ? bm.get(letter)
+      : isMalefic
+      ? naturalMalefics
+      : naturalBenefics;
   }
 
   get kotaSvami() {
@@ -897,7 +897,7 @@ export class Chart {
 
   get tithi() {
     if (this.hasIndianTime) {
-      return calcTithi(this.sun.longitude, this.moon.longitude)
+      return calcTithi(this.sun.longitude, this.moon.longitude);
     } else {
       return {
         num: 0,
@@ -1336,13 +1336,17 @@ export class Tag {
   }
 }
 
-const matchBMKey = (chart: Chart, key = "") => {
+const matchBMKey = (chart: Chart, key = '') => {
   const [mode, type] = key.split('_').pop();
   const isFunctional = mode.startsWith('fun');
   return chart.matchBM(type, isFunctional).join(',');
-}
+};
 
-export const matchGrahaEquivalent = (obj: ObjectType, chart: Chart, ayanamshaNum = 27) => {
+export const matchGrahaEquivalent = (
+  obj: ObjectType,
+  chart: Chart,
+  ayanamshaNum = 27,
+) => {
   const { key, type } = obj;
   let matchedKey = key;
   if (key.length > 2) {
@@ -1392,7 +1396,7 @@ export const matchGrahaEquivalent = (obj: ObjectType, chart: Chart, ayanamshaNum
     }
   }
   return matchedKey;
-}
+};
 
 export const matchSignNums = (key: string) => {
   const tail = key.split('__').pop();
@@ -1401,33 +1405,38 @@ export const matchSignNums = (key: string) => {
     signs = [parseInt(tail, 10)];
   } else {
     switch (tail) {
-      case "odd":
-        signs = [1,3,5,7,9,11];
+      case 'odd':
+        signs = [1, 3, 5, 7, 9, 11];
         break;
-      case "even":
-        signs = [2,4,6,8,10,12];
+      case 'even':
+        signs = [2, 4, 6, 8, 10, 12];
         break;
-      case "fire":
-      case "earth":
-      case "air":
-      case "water":
-        signs =rashiValues.filter(rv => rv.element === tail).map(rv => rv.num);
+      case 'fire':
+      case 'earth':
+      case 'air':
+      case 'water':
+        signs = rashiValues.filter(rv => rv.element === tail).map(rv => rv.num);
         break;
-      case "movable":
-      case "fixed":
-        signs = rashiValues.filter(rv => rv.mobility === tail).map(rv => rv.num);
+      case 'movable':
+      case 'fixed':
+        signs = rashiValues
+          .filter(rv => rv.mobility === tail)
+          .map(rv => rv.num);
         break;
-      case "head_rising":
-      case "back_rising":
-      case "both_rising":
-          const risingBase = tail.split("_").shift();
-          const risingKeys = risingBase === "both" ? ['head','back'] : [risingBase];
-          signs = rashiValues.filter(rv => risingKeys.every(rk => rv.rising.includes(rk))).map(rv => rv.num);
-          break;
+      case 'head_rising':
+      case 'back_rising':
+      case 'both_rising':
+        const risingBase = tail.split('_').shift();
+        const risingKeys =
+          risingBase === 'both' ? ['head', 'back'] : [risingBase];
+        signs = rashiValues
+          .filter(rv => risingKeys.every(rk => rv.rising.includes(rk)))
+          .map(rv => rv.num);
+        break;
     }
   }
   return signs;
-}
+};
 
 export class PairedChart {
   _id?: string;
@@ -1693,7 +1702,6 @@ export class PairedChart {
     k1: string,
     k2: string,
   ) {
-    
     const orbRef = condition.orb > 0 ? condition.orb : -1;
     const orb = protocol.matchOrbValue(condition.context, k1, k2, orbRef);
     const { parallel, incontraParallel } = this.matchDeclination(
@@ -1763,8 +1771,6 @@ export class PairedChart {
       ? numMatches >= condition.c2Num
       : numMatches > 0;
   }
-
-  
 
   /*
 
@@ -1846,7 +1852,7 @@ export class PairedChart {
   matchPanchangaCondition(
     condition: Condition,
     fromChart: Chart,
-    toChart: Chart
+    toChart: Chart,
   ) {
     let matched = this.matchPanangaType(fromChart, condition.object1);
     if (!condition.singleMode && matched) {
@@ -2042,7 +2048,7 @@ export class PairedChart {
         condition,
         fromChart,
         toChart,
-        k1
+        k1,
       );
     } else if (condition.isDrishtiAspect) {
       matched = this.matchDrishtiCondition(
@@ -2054,11 +2060,7 @@ export class PairedChart {
         k2,
       );
     } else if (condition.object1.isPanchanga) {
-      matched = this.matchPanchangaCondition(
-        condition,
-        fromChart,
-        toChart,
-      );
+      matched = this.matchPanchangaCondition(condition, fromChart, toChart);
     }
     // If isTrue is false, matched state is inverted
     return matched === condition.isTrue;

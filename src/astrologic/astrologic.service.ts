@@ -1005,6 +1005,11 @@ export class AstrologicService {
     return chart;
   }
 
+  // get chart by ID
+  async getChartsByIds(ids: string[]): Promise<Chart[]> {
+    return await this.chartModel.find({ _id: { $in: ids } });
+  }
+
   async matchExistingPlaceNames(geo: GeoLoc, km = 3, withinKm = 1) {
     const latSize = km / 111;
     const calcLngScale = lng => Math.cos(Math.abs(lng) * (Math.PI / 180));
@@ -1093,7 +1098,7 @@ export class AstrologicService {
         kutaSet,
       );
       if (aspects.length > 0) {
-        const saved = await this.pairedChartModel.findByIdAndUpdate(
+        await this.pairedChartModel.findByIdAndUpdate(
           record._id,
           { aspects, kutas },
           {
@@ -1349,6 +1354,14 @@ export class AstrologicService {
     const charts = await this.getPairedByChart(c1, 'modifiedAt', 1, c2);
     if (charts.length > 0) {
       return charts[0];
+    } else {
+      const chart1 = await this.getChart(c1);
+      const inData = {
+        user: chart1.user,
+        c1,
+        c2,
+      } as PairedChartDTO;
+      return await this.savePaired(inData);
     }
   }
 
@@ -1935,7 +1948,7 @@ export class AstrologicService {
           }
         }
       });
-      const updated = await this.pairedChartModel
+      await this.pairedChartModel
         .findByIdAndUpdate(_id, {
           relType: newRelType,
           tags: newTags,
