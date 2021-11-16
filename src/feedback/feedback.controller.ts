@@ -9,6 +9,7 @@ import {
   Put,
   Query,
   Param,
+  Delete,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { FeedbackService } from './feedback.service';
@@ -46,13 +47,8 @@ export class FeedbackController {
   }
 
   @Get('flags-by-user/:user?')
-  async getAllFlagsByUser(
-    @Res() res,
-    @Param('user') user
-  ) {
-    const data = await this.feedbackService.getAllUserInteractions(
-      user
-    );
+  async getAllFlagsByUser(@Res() res, @Param('user') user) {
+    const data = await this.feedbackService.getAllUserInteractions(user);
     return res.json(data);
   }
 
@@ -80,7 +76,7 @@ export class FeedbackController {
     let type = 'boolean';
     let isRating = false;
     let data: any = { valid: false };
-    const isValidValue = (value = null, type = "") => {
+    const isValidValue = (value = null, type = '') => {
       switch (type) {
         case 'boolean':
         case 'bool':
@@ -91,7 +87,7 @@ export class FeedbackController {
         default:
           return false;
       }
-    }
+    };
     if (flag instanceof Object) {
       type = flag.type;
       isRating = flag.isRating === true;
@@ -117,9 +113,11 @@ export class FeedbackController {
   }
 
   async sendNotification(createFlagDTO: CreateFlagDTO) {
-    const targetDeviceToken = await this.userService.getUserDeviceToken(createFlagDTO.targetUser);
+    const targetDeviceToken = await this.userService.getUserDeviceToken(
+      createFlagDTO.targetUser,
+    );
     let fcm: any = { valid: false, reason: 'missing device token' };
-    const {key, type, value, user, targetUser} = createFlagDTO;
+    const { key, type, value, user, targetUser } = createFlagDTO;
     if (notEmptyString(targetDeviceToken, 5)) {
       fcm = await pushFlag(targetDeviceToken, {
         key,
@@ -135,21 +133,26 @@ export class FeedbackController {
   // Fetch a particular user using ID
   @Post('swipe')
   async saveSwipe(@Res() res, @Body() swipeDTO: SwipeDTO) {
-    const {to, from, value, context} = swipeDTO;
+    const { to, from, value, context } = swipeDTO;
     const minRatingValue = await this.settingService.minPassValue();
-    const contextKey = notEmptyString(context)? sanitize(context, '_') : 'swipe';
+    const contextKey = notEmptyString(context)
+      ? sanitize(context, '_')
+      : 'swipe';
     const prevSwipe = await this.feedbackService.prevSwipe(from, to);
     const recipSwipe = await this.feedbackService.prevSwipe(to, from);
     let intValue = smartCastInt(value, 0);
     const maxKey = ['swipe', mapLikeability(intValue, true)].join('_');
     const hasLimits = notEmptyString(maxKey);
-    let numSwipes = await this.feedbackService.countRecentLikeability(from, value);
+    let numSwipes = await this.feedbackService.countRecentLikeability(
+      from,
+      value,
+    );
     const roles = await this.userService.memberRoles(from);
-    const perms = await this .settingService.getPermissions(roles);
+    const perms = await this.settingService.getPermissions(roles);
     const likePerms = Object.keys(perms).filter(p => p === maxKey);
-    const maxRating = hasLimits && likePerms.length > 0? perms[maxKey] : 1;
+    const maxRating = hasLimits && likePerms.length > 0 ? perms[maxKey] : 1;
     const hasPaidRole = roles.some(rk => rk.includes('member'));
-    let data: any = {valid: false}
+    let data: any = { valid: false };
     const hasPrevPass = prevSwipe.valid && prevSwipe.value < 1;
     const isPass = intValue <= 0;
     // for free members set pass value to 0 if the other has liked them
@@ -173,24 +176,61 @@ export class FeedbackController {
         key: 'likeability',
         type: 'int',
         isRating: true,
-        value: intValue
+        value: intValue,
       } as CreateFlagDTO;
       const flag = await this.feedbackService.saveFlag(flagData);
       const valid = Object.keys(flag).includes('value');
-      data = { 
+      data = {
         valid,
         flag,
         fcm: await this.sendNotification(flagData),
         count: numSwipes,
         roles,
         maxRating,
-        prevSwipe
-      }
+        prevSwipe,
+      };
       if (valid) {
         numSwipes++;
       }
     }
-    return res.status(HttpStatus.OK).json({...data, recipSwipe, hasPaidRole });
+    return res.status(HttpStatus.OK).json({ ...data, recipSwipe, hasPaidRole });
+  }
+
+  @Delete('delete-flag/:key/:user/:user2/:mutual?')
+  async deleteFlag(
+    @Res() res,
+    @Param('key') key,
+    @Param('user') user,
+    @Param('user2') user2,
+    @Param('mutual') mutual,
+  ) {
+    const isMutual = smartCastInt(mutual, 0) > 0;
+    const { result, result2 } = await this.feedbackService.deleteFlag(
+      key,
+      user,
+      user2,
+      isMutual,
+    );
+    const deleted = [];
+    let delValue: any = null;
+    let delValueRecip: any = null;
+    if (result instanceof Object) {
+      delValue = result.value;
+      deleted.push('from');
+    }
+    if (result2 instanceof Object) {
+      delValueRecip = result.value;
+      deleted.push('to');
+    }
+    return res.json({
+      user,
+      user2,
+      isMutual,
+      key,
+      deleted,
+      delValue,
+      delValueRecip,
+    });
   }
 
   @Get('deactivate/:user?/?')

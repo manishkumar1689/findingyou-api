@@ -7,7 +7,11 @@ import { notEmptyString, validISODateString } from '../lib/validators';
 import { CreateFlagDTO } from './dto/create-flag.dto';
 import { Feedback } from './interfaces/feedback.interface';
 import { Flag, SimpleFlag } from './interfaces/flag.interface';
-import { filterLikeabilityFlags, mapFlagItems, mapUserFlag } from '../lib/notifications';
+import {
+  filterLikeabilityFlags,
+  mapFlagItems,
+  mapUserFlag,
+} from '../lib/notifications';
 
 @Injectable()
 export class FeedbackService {
@@ -16,11 +20,7 @@ export class FeedbackService {
     @InjectModel('Flag') private flagModel: Model<Flag>,
   ) {}
 
-  async getByTargetUserOrKey(
-    userRef = '',
-    keyRef = '',
-    otherCriteria = null,
-  ) {
+  async getByTargetUserOrKey(userRef = '', keyRef = '', otherCriteria = null) {
     const criteria = this.buildFilterCriteria(userRef, keyRef, otherCriteria);
     return await this.flagModel.find(criteria).select({ _id: 0, __v: 0 });
   }
@@ -44,95 +44,190 @@ export class FeedbackService {
     return await this.flagModel.find(criteria);
   }
 
-  async getAllUserInteractions(user: string, startDate = null, otherUserIds = []) {
-    const dt = validISODateString(startDate)? startDate : typeof startDate === 'number' ? yearsAgoString(startDate) : yearsAgoString(1);
+  async getAllUserInteractions(
+    user: string,
+    startDate = null,
+    otherUserIds = [],
+  ) {
+    const dt = validISODateString(startDate)
+      ? startDate
+      : typeof startDate === 'number'
+      ? yearsAgoString(startDate)
+      : yearsAgoString(1);
     const criteria: Map<string, any> = new Map();
     if (otherUserIds.length > 0) {
-      criteria.set('$or', [{user: user, targetUser: { $in: otherUserIds }}, {targetUser: user, user: { $in: otherUserIds } }]);
+      criteria.set('$or', [
+        { user: user, targetUser: { $in: otherUserIds } },
+        { targetUser: user, user: { $in: otherUserIds } },
+      ]);
     } else {
-      criteria.set('$or', [{user: user}, {targetUser: user}]);
+      criteria.set('$or', [{ user: user }, { targetUser: user }]);
     }
     criteria.set('active', true);
     criteria.set('modifiedAt', { $gte: dt });
     const criteriaObj = Object.fromEntries(criteria.entries());
-    const rows = await this.flagModel.find(criteriaObj).select({ _id: 0, __v: 0, isRating: 0, options: 0, active: 0 });
+    const rows = await this.flagModel
+      .find(criteriaObj)
+      .select({ _id: 0, __v: 0, isRating: 0, options: 0, active: 0 });
     const hasRows = rows instanceof Array && rows.length > 0;
     const userID = user.toString();
     const likeKey = 'likeability';
     const excludeKeys = [likeKey];
     const likeRows = rows.filter(row => row.key === likeKey);
     const hasLikeRows = likeRows.length > 0;
-    
-    const likeability = { 
-      from: hasLikeRows? likeRows.filter(row => row.user.toString() === userID).map(row => mapUserFlag(row, false, true)) : [],
-      to: hasLikeRows? likeRows.filter(row => row.targetUser.toString() === userID).map(row => mapUserFlag(row, true, true)) : [],
-    }
+
+    const likeability = {
+      from: hasLikeRows
+        ? likeRows
+            .filter(row => row.user.toString() === userID)
+            .map(row => mapUserFlag(row, false, true))
+        : [],
+      to: hasLikeRows
+        ? likeRows
+            .filter(row => row.targetUser.toString() === userID)
+            .map(row => mapUserFlag(row, true, true))
+        : [],
+    };
     return {
-      from: hasRows? rows.filter(row => row.user.toString() === userID && excludeKeys.includes(row.key) === false).map(row => mapUserFlag(row)) : [],
-      to: hasRows? rows.filter(row => row.targetUser.toString() === userID && excludeKeys.includes(row.key) === false).map(row => mapUserFlag(row, true)) : [],
-      likeability
-    }
+      from: hasRows
+        ? rows
+            .filter(
+              row =>
+                row.user.toString() === userID &&
+                excludeKeys.includes(row.key) === false,
+            )
+            .map(row => mapUserFlag(row))
+        : [],
+      to: hasRows
+        ? rows
+            .filter(
+              row =>
+                row.targetUser.toString() === userID &&
+                excludeKeys.includes(row.key) === false,
+            )
+            .map(row => mapUserFlag(row, true))
+        : [],
+      likeability,
+    };
   }
 
-  async fetchByLikeability(userId = '', startDate = null, refNum = 1, gte = false, mutualMode = 0) {
+  async fetchByLikeability(
+    userId = '',
+    startDate = null,
+    refNum = 1,
+    gte = false,
+    mutualMode = 0,
+  ) {
     const valueFilter = gte ? { $gte: refNum } : refNum;
-    const dt = validISODateString(startDate)? startDate : typeof startDate === 'number' ? yearsAgoString(startDate) : yearsAgoString(1);
+    const dt = validISODateString(startDate)
+      ? startDate
+      : typeof startDate === 'number'
+      ? yearsAgoString(startDate)
+      : yearsAgoString(1);
     const criteriaObj = {
       key: 'likeability',
       value: valueFilter,
-      modifiedAt: { $gte: dt }
+      modifiedAt: { $gte: dt },
     };
-    const criteriaObj1 = {...criteriaObj, targetUser: userId };
-    const rows = await this.flagModel.find(criteriaObj1).select({ _id: 0, __v: 0, type: 0, isRating: 0, options: 0, active: 0, targetUser: 0 });
+    const criteriaObj1 = { ...criteriaObj, targetUser: userId };
+    const rows = await this.flagModel.find(criteriaObj1).select({
+      _id: 0,
+      __v: 0,
+      type: 0,
+      isRating: 0,
+      options: 0,
+      active: 0,
+      targetUser: 0,
+    });
     const filterMutual = mutualMode !== 0;
     if (filterMutual) {
       const mutualValueFilter = mutualMode > 0 ? valueFilter : { $ne: 0 };
       const criteriaObj2 = {
-        targetUser: { $in: rows.map(r => r.user )},
+        targetUser: { $in: rows.map(r => r.user) },
         user: userId,
-        value: mutualValueFilter
+        value: mutualValueFilter,
       };
-      const mutualRows = await this.flagModel.find(criteriaObj2).select({_id: 0, __v: 0, key: 0, type: 0, isRating: 0, options: 0, active: 0 });
+      const mutualRows = await this.flagModel.find(criteriaObj2).select({
+        _id: 0,
+        __v: 0,
+        key: 0,
+        type: 0,
+        isRating: 0,
+        options: 0,
+        active: 0,
+      });
       const mutualIds = mutualRows.map(r => r.targetUser.toString());
       return rows.map(r => {
         const isMutual = mutualIds.includes(r.user.toString());
-        return { ...r.toObject(), isMutual }
+        return { ...r.toObject(), isMutual };
       });
     } else {
-      return rows
-    };
+      return rows;
+    }
   }
 
-  async fetchFilteredUserInteractions(userId = "", notFlags = [], trueFlags = [], preFetchFlags = false, searchMode = false) {
-    const userFlags = preFetchFlags? await this.getAllUserInteractions(userId, 1) : { to: [], from: [], likeability: { to: [], from: [] } };
+  async fetchFilteredUserInteractions(
+    userId = '',
+    notFlags = [],
+    trueFlags = [],
+    preFetchFlags = false,
+    searchMode = false,
+  ) {
+    const userFlags = preFetchFlags
+      ? await this.getAllUserInteractions(userId, 1)
+      : { to: [], from: [], likeability: { to: [], from: [] } };
     const hasNotFlags = notFlags instanceof Array && notFlags.length > 0;
     const hasTrueFlags = trueFlags instanceof Array && trueFlags.length > 0;
-    const notFlagItems = hasNotFlags ? notFlags.filter(k => k.startsWith('notliked') === false).map(mapFlagItems) : [];
+    const notFlagItems = hasNotFlags
+      ? notFlags
+          .filter(k => k.startsWith('notliked') === false)
+          .map(mapFlagItems)
+      : [];
     const trueFlagItems = hasTrueFlags ? trueFlags.map(mapFlagItems) : [];
     const filterLiked2 = preFetchFlags && notFlags.includes('notliked2');
     const filterLiked1 = preFetchFlags && notFlags.includes('notliked');
     const filterByLiked = filterLiked2 || filterLiked1;
     const { from, to, likeability } = userFlags;
     const fromLikeFlags = likeability.from.map(fi => {
-      return {...fi, key: 'likeability' }
+      return { ...fi, key: 'likeability' };
     });
     const toLikeFlags = likeability.to.map(fi => {
-      return {...fi, key: 'likeability' }
+      return { ...fi, key: 'likeability' };
     });
-    
-    const fromFlags = preFetchFlags? [...fromLikeFlags, ...from] : [];
-    
-    const toFlags = preFetchFlags? [...toLikeFlags, ...to] : [];
-    
-    const excludeLikedMinVal = filterLiked2? 2 : filterLiked1 ? 1 : 3;
-    const excludedIds = !preFetchFlags || searchMode? fromFlags.filter(flag => filterLikeabilityFlags(flag, notFlagItems)).map(flag => flag.user) : [];
-    const includedIds = !preFetchFlags || searchMode? fromFlags.filter(flag => filterLikeabilityFlags(flag, trueFlagItems)).map(flag => flag.user) : [];
-    const extraExcludedIds = filterByLiked? toFlags.filter(fl => fl.value >= excludeLikedMinVal).map(fl => fl.user) : [];
+
+    const fromFlags = preFetchFlags ? [...fromLikeFlags, ...from] : [];
+
+    const toFlags = preFetchFlags ? [...toLikeFlags, ...to] : [];
+
+    const excludeLikedMinVal = filterLiked2 ? 2 : filterLiked1 ? 1 : 3;
+    const excludedIds =
+      !preFetchFlags || searchMode
+        ? fromFlags
+            .filter(flag => filterLikeabilityFlags(flag, notFlagItems))
+            .map(flag => flag.user)
+        : [];
+
+    const includedIds =
+      !preFetchFlags || searchMode
+        ? fromFlags
+            .filter(flag => filterLikeabilityFlags(flag, trueFlagItems))
+            .map(flag => flag.user)
+        : [];
+    const extraExcludedIds = filterByLiked
+      ? toFlags.filter(fl => fl.value >= excludeLikedMinVal).map(fl => fl.user)
+      : [];
+    if (filterByLiked && searchMode) {
+      likeability.from.forEach(fl => {
+        if (fl.value > 0 || fl.value <= -3) {
+          extraExcludedIds.push(fl.user);
+        }
+      });
+    }
     //const extraExcludedIds = filterByLiked? toFlags.filter(fl => fl.value >= excludeLikedMinVal).map(fl => fl.user) : [];
     if (extraExcludedIds.length > 0) {
       extraExcludedIds.forEach(id => {
         excludedIds.push(id);
-      })
+      });
     }
     return { userFlags, excludedIds, includedIds };
   }
@@ -174,11 +269,24 @@ export class FeedbackService {
     };
   }
 
-  buildFilterCriteria(
-    userRef = '',
-    keyRef = '',
-    otherCriteria = null,
-  ) {
+  async deleteFlag(key: string, u1: string, u2: string, mutual = false) {
+    const result = await this.flagModel.findOneAndDelete({
+      key,
+      user: u1,
+      targetUser: u2,
+    });
+    let result2 = null;
+    if (mutual) {
+      result2 = await this.flagModel.findOneAndDelete({
+        key,
+        user: u2,
+        targetUser: u1,
+      });
+    }
+    return { result, result2 };
+  }
+
+  buildFilterCriteria(userRef = '', keyRef = '', otherCriteria = null) {
     const filterByUser = notEmptyString(userRef, 8);
     const filterByKey = notEmptyString(keyRef, 2);
     const filter = new Map<string, any>();
@@ -237,22 +345,23 @@ export class FeedbackService {
       data = await newFB.save();
     }
     const hasData = data instanceof Object;
-    const result = hasData? extractSimplified(data, ['_id', '__v', 'active']) : { valid: false, value: 0 };
+    const result = hasData
+      ? extractSimplified(data, ['_id', '__v', 'active'])
+      : { valid: false, value: 0 };
     if (hasData) {
       result.value = value;
     }
     return result;
-
   }
 
   async countRecentLikeability(userId: string, refNum = 1) {
     const nowTs = new Date().getTime();
-    const oneDayAgo = new Date(nowTs - (24 * 60 * 60 * 1000));
+    const oneDayAgo = new Date(nowTs - 24 * 60 * 60 * 1000);
     const criteria = {
       key: 'likeability',
       user: userId,
       value: refNum,
-      modifiedAt: { $gte: oneDayAgo }
+      modifiedAt: { $gte: oneDayAgo },
     };
     return await this.flagModel.count(criteria);
   }
@@ -264,7 +373,9 @@ export class FeedbackService {
       targetUser: otherUserId,
     };
     const flag = await this.flagModel.findOne(criteria);
-    return flag instanceof Model ? {...flag.toObject(), valid: true } : { valid: false, value: 0 };
+    return flag instanceof Model
+      ? { ...flag.toObject(), valid: true }
+      : { valid: false, value: 0 };
   }
 
   matchLikeabilityKey(keyRef = 'like') {

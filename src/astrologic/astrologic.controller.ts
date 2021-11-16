@@ -3065,24 +3065,40 @@ export class AstrologicController {
 
   @Post('aspects-grid')
   async getAspectGrid(@Res() res, @Body() pairsSet: PairsSetDTO) {
-    const ids = pairsSet.pairs
-      .map(p => [p.c1, p.c2])
-      .reduce((a, b) => a.concat(b));
-    const cds = await this.astrologicService.getChartsByIds(ids);
-    const charts = cds.map(cd => {
-      return new Chart(cd.toObject());
-    });
-
-    const aspectGrid = pairsSet.pairs
-      .map(pair => {
-        const c1 = charts.find(c => c._id === pair.c1);
-        const c2 = charts.find(c => c._id === pair.c2);
-        if (c1 instanceof Chart && c2 instanceof Chart) {
-          return calcAllAspects(c1, c2);
-        }
-      })
-      .filter(row => row !== null);
-    return res.json({ grid: aspectGrid });
+    const pairedCds = [];
+    for (const pair of pairsSet.pairs) {
+      const paired = await this.astrologicService.getPairedByChartIDs(
+        pair.c1,
+        pair.c2,
+      );
+      if (paired instanceof Object) {
+        const {
+          status,
+          timespace,
+          surfaceGeo,
+          surfaceAscendant,
+          surfaceTzOffset,
+          midMode,
+          relType,
+          tags,
+          startYear,
+          endYear,
+          span,
+        } = paired;
+        const c1 = new Chart(paired.c1);
+        const c2 = new Chart(paired.c2);
+        const aspects = calcAllAspects(c1, c2);
+        pairedCds.push({
+          name1: c1.subject.name,
+          name2: c2.subject.name,
+          relType,
+          startYear,
+          endYear,
+          aspects,
+        });
+      }
+    }
+    return res.json({ grid: pairedCds });
   }
 
   @Get('paired-by-chart/:chartID/:max?')
