@@ -53,6 +53,7 @@ import { julToISODate } from '../date-funcs';
 import {
   calcTransitionPointJd,
   calcTransposedTransitionPointJd,
+  matchSwissEphTransType,
 } from '../transitions';
 import { buildGrahaPositionsFromChart } from '../point-transitions';
 
@@ -2387,21 +2388,22 @@ export const matchPPTransitBirdGraha = async (
   return { valid, yama, birdKey, isNight, rulers };
 };
 
+const matchPPMode = (cond: Condition) => {
+  switch (cond.fromMode) {
+    case 'transit':
+    case 'birth':
+      return cond.fromMode;
+    default:
+      return 'pp';
+  }
+};
+
 export const matchPanchaPakshi = async (
   cond: Condition,
   chart: Chart,
   geo: GeoPos,
 ) => {
-  let mode = '';
-  switch (cond.fromMode) {
-    case 'transit':
-    case 'birth':
-      mode = cond.fromMode;
-      break;
-    default:
-      mode = 'pp';
-      break;
-  }
+  const mode = matchPPMode(cond);
   const { context } = cond;
   let start = 0;
   let end = 0;
@@ -2475,4 +2477,63 @@ export const matchPanchaPakshi = async (
 
   const valid = start > 0 && end > start;
   return { start, end, action, matchedBird, isNight: nightMatched, valid };
+};
+
+export const matchPanchaPakshiPoint = async (
+  cond: Condition,
+  chart: Chart,
+  geo: GeoPos,
+) => {
+  const mode = matchPPMode(cond);
+  const refKey = cond.object1.key;
+  const useBirthRef = mode === 'birth';
+
+  const transType = matchSwissEphTransType(refKey);
+  const transKey = transType.key;
+  const jd = currentJulianDay();
+  let lat = 0;
+  let lngSpeed = 0;
+  let lng = 0;
+  console.log(chart, refKey);
+
+  if (useBirthRef) {
+  }
+  const gPositions = [
+    {
+      key: refKey,
+      lat,
+      lng,
+      lngSpeed,
+    },
+  ];
+  const transData = await calcTransposedTransitionPointJd(
+    jd,
+    refKey,
+    geo,
+    transKey,
+    gPositions,
+  );
+
+  return {
+    start: 0,
+    end: 0,
+    action: 'point',
+    matchedBird: '-',
+    isNight: false,
+    valid: false,
+  };
+};
+
+export const matchPanchaPakshiOptions = async (
+  cond: Condition,
+  chart: Chart,
+  geo: GeoPos,
+) => {
+  const refKey = cond.object1.key;
+  console.log(refKey);
+  if (refKey.startsWith('yama_') || refKey.endsWith('_graha')) {
+    return await matchPanchaPakshi(cond, chart, geo);
+  } else {
+    return await matchPanchaPakshiPoint(cond, chart, geo);
+  }
 };

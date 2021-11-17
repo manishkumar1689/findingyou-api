@@ -1,24 +1,50 @@
-import { GeoPos } from "../interfaces/geo-pos";
-import { ProtocolSettings } from "./interfaces";
-import { Chart } from "./models/chart";
-import { Condition, matchKalanalaChandra, matchKotaChakra, matchPanchaPakshi, matchShulaChakra, processByBirthSign, processTransitDashaRuleSet, processTransitMatch } from "./models/protocol-models";
+import { GeoPos } from '../interfaces/geo-pos';
+import { ProtocolSettings } from './interfaces';
+import { Chart } from './models/chart';
+import {
+  Condition,
+  matchKalanalaChandra,
+  matchKotaChakra,
+  matchPanchaPakshi,
+  matchPanchaPakshiOptions,
+  matchShulaChakra,
+  processByBirthSign,
+  processTransitDashaRuleSet,
+  processTransitMatch,
+} from './models/protocol-models';
 
-export const processTransitRuleSet = async (cond: Condition, chart: Chart, geo: GeoPos, settings: ProtocolSettings) => {
-  const [fromCat, subType] = cond.fromMode.split("_");
+export const processTransitRuleSet = async (
+  cond: Condition,
+  chart: Chart,
+  geo: GeoPos,
+  settings: ProtocolSettings,
+) => {
+  const [fromCat, subType] = cond.fromMode.split('_');
   const refCat = cond.matchBirthSign ? 'birth_asc' : fromCat;
   switch (refCat) {
-    case "birth_asc":
+    case 'birth_asc':
       return processByBirthSign(cond, chart);
-    case "level":
-      return await processTransitDashaRuleSet(cond, parseInt(subType, 10), chart, settings);
-    case "transit":
+    case 'level':
+      return await processTransitDashaRuleSet(
+        cond,
+        parseInt(subType, 10),
+        chart,
+        settings,
+      );
+    case 'transit':
       return await processTransitMatch(cond, chart, geo, settings);
     default:
       return { valid: false };
   }
-}
+};
 
-export const processPredictiveRuleSet = async (cond: Condition, ruleType = "", chart: Chart, geo: GeoPos, settings: ProtocolSettings) => {
+export const processPredictiveRuleSet = async (
+  cond: Condition,
+  ruleType = '',
+  chart: Chart,
+  geo: GeoPos,
+  settings: ProtocolSettings,
+) => {
   const result: any = { valid: false, start: null, end: null, score: 0 };
   switch (ruleType) {
     case 'transit':
@@ -31,8 +57,8 @@ export const processPredictiveRuleSet = async (cond: Condition, ruleType = "", c
     case 'chandra_kalanala':
       return matchKalanalaChandra(cond, chart, geo);
     case 'panchapakshi':
-      return await matchPanchaPakshi(cond, chart, geo);
+      return await matchPanchaPakshiOptions(cond, chart, geo);
     default:
       return result;
   }
-}
+};

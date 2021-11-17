@@ -3072,19 +3072,7 @@ export class AstrologicController {
         pair.c2,
       );
       if (paired instanceof Object) {
-        const {
-          status,
-          timespace,
-          surfaceGeo,
-          surfaceAscendant,
-          surfaceTzOffset,
-          midMode,
-          relType,
-          tags,
-          startYear,
-          endYear,
-          span,
-        } = paired;
+        const { relType, tags, startYear, endYear, span } = paired;
         const c1 = new Chart(paired.c1);
         const c2 = new Chart(paired.c2);
         const aspects = calcAllAspects(c1, c2);
@@ -3094,6 +3082,8 @@ export class AstrologicController {
           relType,
           startYear,
           endYear,
+          span,
+          tags,
           aspects,
         });
       }
