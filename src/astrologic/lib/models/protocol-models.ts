@@ -2289,6 +2289,14 @@ export const matchPPTransitBirdGraha = async (
         startEndLords[0].start = ppData.get('rise');
         startEndLords[0].end = ppData.get('nextRise');
         startEndLords[0].rulers = rulers;
+        matchedYama = dayYamas.find(ym =>
+          filterSubYamaByAction(ym, actKey, currJd),
+        );
+        if (!matchedYama) {
+          matchedYama = nightYamas.find(ym =>
+            filterSubYamaByAction(ym, actKey, currJd),
+          );
+        }
       }
       break;
     case 'yama_ruling_graha':
