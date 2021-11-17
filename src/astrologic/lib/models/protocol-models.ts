@@ -51,11 +51,14 @@ import {
 import { fetchChartObject, filterBmMatchRow } from '../chart-funcs';
 import { julToISODate } from '../date-funcs';
 import {
+  calcSunTransJd,
   calcTransitionPointJd,
   calcTransposedTransitionPointJd,
   matchSwissEphTransType,
 } from '../transitions';
 import { buildGrahaPositionsFromChart } from '../point-transitions';
+import { calcBaseChart } from '../core';
+import { GeoLoc } from './geo-loc';
 
 interface StartEndLord {
   start: number;
@@ -2282,9 +2285,11 @@ export const matchPPTransitBirdGraha = async (
       const { key } = bird.current[actKey];
       birdKey = key;
       rulers = matchBirdKeyRulers(key, isDayTime, actKey);
-      startEndLords[0].start = ppData.get('rise');
-      startEndLords[0].end = ppData.get('nextRise');
-      startEndLords[0].rulers = rulers;
+      if (rulers.length > 0) {
+        startEndLords[0].start = ppData.get('rise');
+        startEndLords[0].end = ppData.get('nextRise');
+        startEndLords[0].rulers = rulers;
+      }
       break;
     case 'yama_ruling_graha':
     case 'yama_eating_graha':
@@ -2455,6 +2460,7 @@ export const matchPanchaPakshi = async (
     ) {
       maxDays = mode === 'transit' ? 60 : 120;
     }
+
     while (!matched && counter < maxDays) {
       const { valid, yama, birdKey, isNight } = await matchPPTransitBirdGraha(
         currJd + counter,
@@ -2474,9 +2480,25 @@ export const matchPanchaPakshi = async (
       counter += 1;
     }
   }
-
   const valid = start > 0 && end > start;
   return { start, end, action, matchedBird, isNight: nightMatched, valid };
+};
+
+const matchPPObjectKey = (refKey = '') => {
+  switch (refKey) {
+    case 'yogi_point':
+      return { subKey: 'yogiSphuta', subType: 'sphutas' };
+    case 'avayogi_point':
+      return { subKey: 'yogiSphuta', subType: 'sphutas' };
+    case 'brighu_bindu':
+      return { subKey: 'brghuBindu', subType: 'sphutas' };
+    case 'fortune':
+      return { subKey: 'lotOfFortune', subType: 'sphutas' };
+    case 'spirit':
+      return { subKey: 'lotOfSpirit', subType: 'sphutas' };
+    default:
+      return { subKey: '', subType: '' };
+  }
 };
 
 export const matchPanchaPakshiPoint = async (
@@ -2491,19 +2513,27 @@ export const matchPanchaPakshiPoint = async (
   const transType = matchSwissEphTransType(refKey);
   const transKey = transType.key;
   const jd = currentJulianDay();
-  let lat = 0;
-  let lngSpeed = 0;
   let lng = 0;
-  console.log(chart, refKey);
 
-  if (useBirthRef) {
+  const dt = julToISODate(jd);
+  const relChart = useBirthRef
+    ? chart
+    : await calcBaseChart(dt, geo, true, true);
+  const { subKey } = matchPPObjectKey(refKey);
+  if (subKey.length > 2) {
+    const aya = chart.ayanamshas.find(row => row.key === 'true_citra');
+    const sphuta = relChart.getSphutaValue(refKey, 27);
+    if (sphuta >= 0) {
+      lng = (sphuta + aya.value) % 360;
+    }
   }
+
   const gPositions = [
     {
       key: refKey,
-      lat,
       lng,
-      lngSpeed,
+      lat: 0,
+      lngSpeed: 0,
     },
   ];
   const transData = await calcTransposedTransitionPointJd(
@@ -2513,14 +2543,16 @@ export const matchPanchaPakshiPoint = async (
     transKey,
     gPositions,
   );
-
+  const sunData = await calcSunTransJd(jd, new GeoLoc(geo), true);
+  const isNight =
+    transData.jd > sunData.rise.jd && transData.jd < sunData.set.jd;
   return {
-    start: 0,
-    end: 0,
+    start: transData.jd,
+    end: transData.jd,
     action: 'point',
-    matchedBird: '-',
-    isNight: false,
-    valid: false,
+    matchedBird: 'none',
+    isNight,
+    valid: transData.jd > 0 && subKey.length > 1,
   };
 };
 
@@ -2530,7 +2562,6 @@ export const matchPanchaPakshiOptions = async (
   geo: GeoPos,
 ) => {
   const refKey = cond.object1.key;
-  console.log(refKey);
   if (refKey.startsWith('yama_') || refKey.endsWith('_graha')) {
     return await matchPanchaPakshi(cond, chart, geo);
   } else {

@@ -2139,6 +2139,7 @@ export class AstrologicController {
     return res.status(200).send({
       num: items.length,
       items,
+      maxInt,
     });
   }
 
@@ -2172,6 +2173,7 @@ export class AstrologicController {
     return res.status(200).send({
       num: items.length,
       items,
+      maxInt,
     });
   }
 
@@ -2637,10 +2639,10 @@ export class AstrologicController {
     const c1 = await this.astrologicService.getChart(inData.c1);
     const c2 = await this.astrologicService.getChart(inData.c2);
     const midMode = inData.mode === 'surface' ? 'surface' : 'median';
-    if (c1 && c2) {
+    /* if (c1 && c2) {
       const midJd = (c1.jd + c2.jd) / 2;
       const midLng = midPointSurface(c1.geo, c2.geo);
-    }
+    } */
     const validC1 = c1 instanceof Object;
     const validC2 = c2 instanceof Object;
     let surfaceGeo = { lat: 0, lng: 0 };
@@ -2788,12 +2790,12 @@ export class AstrologicController {
     const addToNotes = notes === true;
     const validInput =
       hasSource && (hasTarget || yearSpan > 0 || addToNotes || removeTag);
-    const data = {
+    /* const data = {
       source: sourceTag,
       target: targetTag,
       years: yearSpan,
       validInput,
-    };
+    }; */
     let ids: string[] = [];
     if (validInput) {
       ids = await this.astrologicService.reassignTags(
@@ -2920,6 +2922,7 @@ export class AstrologicController {
         },
         c2: { jd: jd2, geo: geo2 },
         timespace: data,
+        tz,
       });
     } else {
       return res.json({
@@ -2981,7 +2984,7 @@ export class AstrologicController {
         const chart = await this.astrologicService.getChart(item._id);
         if (chart instanceof Object) {
           const obj = chart.toObject();
-          const { subject, geo } = obj;
+          const { subject } = obj;
           const inData = {
             _id: item._id,
             isDefaultBirthChart: item.isDefaultBirthChart,

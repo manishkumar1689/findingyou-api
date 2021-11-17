@@ -1679,6 +1679,24 @@ const matchTithiNum = (bodies, multiplier = 1) => {
   return Math.floor(tithiVal) + 1;
 };
 
+export const calcBaseChart = async (
+  dt = '',
+  geo: GeoPos,
+  fetchFull = false,
+  extraSets = false,
+): Promise<Chart> => {
+  const cd = await calcCompactChartData(
+    dt,
+    geo,
+    'top',
+    ['true_citra'],
+    0,
+    fetchFull,
+    extraSets,
+  );
+  return new Chart(cd);
+};
+
 /*
 Calculate Aprakasa values from the the sun's longitude
 */

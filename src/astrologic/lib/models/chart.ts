@@ -1015,6 +1015,12 @@ export class Chart {
     return items;
   }
 
+  getSphutaValue(key: string, ayanamshaNum: number) {
+    const items = this.getSphutaValues(ayanamshaNum);
+    const item = items.find(row => row.key === key);
+    return item instanceof Object ? item.value : -1;
+  }
+
   signHouse(houseNum: number, system = 'W') {
     switch (system) {
       case 'W':
@@ -1744,6 +1750,7 @@ export class PairedChart {
       } else if (condition.contextType.byNakshatra) {
         matched = graha.nakshatra27Num === condition.c2Num;
       }
+      return matched;
     });
     const numMatched = matches.filter(m => m).length;
     if (condition.matchesMultiple1) {
