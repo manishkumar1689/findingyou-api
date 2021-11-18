@@ -2494,6 +2494,10 @@ export const matchPanchaPakshi = async (
 
 const matchPPObjectKey = (refKey = '') => {
   switch (refKey) {
+    case 'yogi_graha':
+      return { subKey: 'yogi', subType: 'objects' };
+    case 'avayogi_graha':
+      return { subKey: 'avayogi', subType: 'objects' };
     case 'yogi_point':
       return { subKey: 'yogiSphuta', subType: 'sphutas' };
     case 'avayogi_point':
@@ -2527,12 +2531,19 @@ export const matchPanchaPakshiPoint = async (
   const relChart = useBirthRef
     ? chart
     : await calcBaseChart(dt, geo, true, true);
-  const { subKey } = matchPPObjectKey(refKey);
+  const { subKey, subType } = matchPPObjectKey(refKey);
   if (subKey.length > 2) {
     const aya = chart.ayanamshas.find(row => row.key === 'true_citra');
-    const sphuta = relChart.getSphutaValue(refKey, 27);
-    if (sphuta >= 0) {
-      lng = (sphuta + aya.value) % 360;
+    if (subType === 'sphutas') {
+      const sphuta = relChart.getSphutaValue(refKey, 27);
+      if (sphuta >= 0) {
+        lng = (sphuta + aya.value) % 360;
+      }
+    } else {
+      const item = relChart.getObjectItem(refKey, 27);
+      if (item.value.length === 2) {
+        lng = (item.refVal + aya.value) % 360;
+      }
     }
   }
 
@@ -2570,7 +2581,10 @@ export const matchPanchaPakshiOptions = async (
   geo: GeoPos,
 ) => {
   const refKey = cond.object1.key;
-  if (refKey.startsWith('yama_') || refKey.endsWith('_graha')) {
+  if (
+    refKey.startsWith('yama_') ||
+    (refKey.endsWith('_graha') && !refKey.endsWith('yogi_graha'))
+  ) {
     return await matchPanchaPakshi(cond, chart, geo);
   } else {
     return await matchPanchaPakshiPoint(cond, chart, geo);

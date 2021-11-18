@@ -1015,6 +1015,14 @@ export class Chart {
     return items;
   }
 
+  getObjectItem(key: string, ayanamshaNum: number) {
+    const items = this.getObjects(ayanamshaNum);
+    const item = items.find(row => row.key === key);
+    return item instanceof Object
+      ? item
+      : { key: '', value: '', refVal: -1, type: '' };
+  }
+
   getSphutaValue(key: string, ayanamshaNum: number) {
     const items = this.getSphutaValues(ayanamshaNum);
     const item = items.find(row => row.key === key);
