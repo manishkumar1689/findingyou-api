@@ -2540,7 +2540,7 @@ export const matchPanchaPakshiPoint = async (
         lng = (sphuta + aya.value) % 360;
       }
     } else {
-      const item = relChart.getObjectItem(refKey, 27);
+      const item = relChart.getObjectItem(refKey.replace(/_graha$/, ''), 27);
       if (item.value.length === 2) {
         lng = (item.refVal + aya.value) % 360;
       }
