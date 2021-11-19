@@ -159,6 +159,10 @@ import { GeoPos } from './interfaces/geo-pos';
 import { processPredictiveRuleSet } from './lib/predictions';
 import { panchaPakshiDayNightSet } from './lib/settings/pancha-pakshi';
 import { PairsSetDTO } from './dto/pairs-set.dto';
+import {
+  compatibilityTexts,
+  randomCompatibilityText,
+} from './lib/settings/compatibility-texts';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -909,6 +913,48 @@ export class AstrologicController {
     );
     const chart = simplify ? simplifyAstroChart(data, true, true) : data;
     return res.json(chart);
+  }
+
+  @Get('compare-chart/:loc/:dt/:userID')
+  async compareWithChart(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Param('userID') userID,
+  ) {
+    const geo = locStringToGeo(loc);
+    const refDt = validISODateString(dt) ? dt : currentISODate();
+    const geoInfo = await this.fetchGeoInfo(geo, refDt);
+    const dtUtc = applyTzOffsetToDateString(refDt, geoInfo.offset);
+    const data = await this.fetchCompactChart(
+      loc,
+      dtUtc,
+      'top',
+      'true_citra',
+      false,
+      false,
+    );
+    const otherChart = simplifyAstroChart(data, true, true);
+
+    let userChart = null;
+    if (notEmptyString(userID, 16)) {
+      const chartData = await this.astrologicService.getUserBirthChart(userID);
+      if (chartData instanceof Model) {
+        userChart = simplifyAstroChart(chartData, true, true);
+      }
+    }
+    const hasUserChart = userChart instanceof Object;
+    const percent = hasUserChart
+      ? Math.round(Math.random() * 80 + Math.random() * 10 + 10)
+      : 0;
+    const text = hasUserChart ? randomCompatibilityText() : '';
+    const compatibility = {
+      general: {
+        percent,
+        text,
+      },
+    };
+    return res.json({ compatibility, otherChart, userChart });
   }
 
   /*
