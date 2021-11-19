@@ -38,6 +38,8 @@ import { GeoPos } from '../../interfaces/geo-pos';
 import { calcNextAscendantLng } from '../calc-ascendant';
 import {
   buildFunctionalBMMap,
+  hasDikBala,
+  matchDikBalaTransition,
   naturalBenefics,
   naturalMalefics,
 } from '../settings/graha-values';
@@ -2240,6 +2242,25 @@ const matchGrahaTransitPoint = async (
   return { matched, start, end, lords };
 };
 
+export const matchSubYamaSetByAction = (
+  dayYamas = [],
+  nightYamas = [],
+  actKey = '',
+  currJd = 0,
+) => {
+  let isNight = false;
+  let matchedYama = dayYamas.find(ym =>
+    filterSubYamaByAction(ym, actKey, currJd),
+  );
+  if (!matchedYama) {
+    matchedYama = nightYamas.find(ym =>
+      filterSubYamaByAction(ym, actKey, currJd),
+    );
+    isNight = true;
+  }
+  return { ...matchedYama, isNight };
+};
+
 export const matchPPTransitBirdGraha = async (
   currJd = 0,
   geo: GeoPos,
@@ -2275,6 +2296,7 @@ export const matchPPTransitBirdGraha = async (
       birdKey = bird.birth;
       break;
     case 'day_ruler_bird_graha':
+    case 'day_ruling_bird_graha':
     case 'day_dying_bird_graha':
       const actPart = refKey
         .split('_bird_')
@@ -2289,14 +2311,12 @@ export const matchPPTransitBirdGraha = async (
         startEndLords[0].start = ppData.get('rise');
         startEndLords[0].end = ppData.get('nextRise');
         startEndLords[0].rulers = rulers;
-        matchedYama = dayYamas.find(ym =>
-          filterSubYamaByAction(ym, actKey, currJd),
+        matchedYama = matchSubYamaSetByAction(
+          dayYamas,
+          nightYamas,
+          actKey,
+          currJd,
         );
-        if (!matchedYama) {
-          matchedYama = nightYamas.find(ym =>
-            filterSubYamaByAction(ym, actKey, currJd),
-          );
-        }
       }
       break;
     case 'yama_ruling_graha':
@@ -2430,7 +2450,7 @@ export const matchPanchaPakshi = async (
     const isDayAction = context.includes('_is_');
     let matched = false;
     let counter = 0;
-    while (!matched && counter < 20) {
+    while (!matched && counter < 60) {
       const {
         valid,
         yama,
@@ -2513,6 +2533,195 @@ const matchPPObjectKey = (refKey = '') => {
   }
 };
 
+const option1MatchesYama = (refKey = '') => {
+  return (
+    refKey.startsWith('yama_') ||
+    (refKey.endsWith('_graha') && !refKey.endsWith('yogi_graha'))
+  );
+};
+
+const matchPPRangeWithinRulers = async (
+  currJd = 0,
+  rulers = [],
+  geo: GeoPos,
+  refPeriod = null,
+  actKey = '',
+  birdKey = '',
+  isNight = false,
+) => {
+  const hasRefPeriod = refPeriod instanceof Object;
+  const refStart = hasRefPeriod ? refPeriod.start : 0;
+  const refEnd = hasRefPeriod ? refPeriod.end : 0;
+  let matched = false;
+  let start = 0;
+  let end = 0;
+  let matchedBird = '';
+  let action = '';
+  let nightMatched = false;
+  let valid = false;
+  for (const rk of rulers) {
+    const transType = matchDikBalaTransition(rk);
+    const transData = await calcTransitionPointJd(currJd, rk, geo, transType);
+    if (transData.jd >= refStart && transData.jd <= refEnd) {
+      console.log(rk, transType, transData);
+      start = refStart;
+      end = refEnd;
+      matched = true;
+      valid = true;
+      action = actKey;
+      matchedBird = birdKey;
+      nightMatched = isNight;
+    }
+  }
+  return {
+    matched,
+    valid,
+    start,
+    end,
+    nightMatched,
+    action,
+    bird: matchedBird,
+  };
+};
+
+export const matchDikBalaWithGraha = async (
+  cond: Condition,
+  chart: Chart,
+  geo: GeoPos,
+) => {
+  const mode = matchPPMode(cond);
+  const refKey = cond.object1.key;
+  const useBirthRef = mode === 'birth';
+  const useYama = option1MatchesYama(refKey);
+  const jd = currentJulianDay();
+  let actKey = 'ruling';
+  let matchMode = 'segment';
+  if (refKey.includes('day_')) {
+    actKey = refKey.includes('rul') ? 'ruling' : 'dying';
+  } else if (refKey.includes('yama_') && refKey.endsWith('_graha')) {
+    actKey = refKey.split('_')[1];
+    matchMode = 'subyama';
+  }
+  /* const dt = julToISODate(jd);
+  const relChart = useBirthRef
+    ? chart
+    : await calcBaseChart(dt, geo, true, true); */
+  let matched = false;
+  let counter = 0;
+  let valid = false;
+  let action = '';
+  let matchedBird = '';
+  let start = 0;
+  let end = 0;
+  let nightMatched = false;
+  while (!matched && counter < 60) {
+    const currJd = jd + counter;
+    if (useYama) {
+      const ppData = await panchaPakshiDayNightSet(currJd, geo, chart, true);
+      if (matchMode === 'segment') {
+        const bd = ppData.get('bird');
+        const birdKeys = useBirthRef
+          ? [bd.birth]
+          : [bd.current[actKey].key, bd.next[actKey].key];
+
+        if (birdKeys.length > 1 && birdKeys[0] === birdKeys[1]) {
+          birdKeys.pop();
+        }
+        const rulerBirds = birdKeys.map((bird, bi) => {
+          return {
+            bird,
+            rulers: matchBirdKeyRulers(bird, bi > 0, actKey),
+          };
+        });
+        let keyIndex = 0;
+        const rise = ppData.get('rise');
+        const set = ppData.get('set');
+        const nextRise = ppData.get('nextRise');
+        for (const rSet of rulerBirds) {
+          const isNight = keyIndex > 0;
+          const period = isNight
+            ? { start: rise, end: set }
+            : { start: set, end: nextRise };
+          const matchData = await matchPPRangeWithinRulers(
+            currJd,
+            rSet.rulers,
+            geo,
+            period,
+            actKey,
+            rSet.bird,
+            isNight,
+          );
+          if (matchData.matched) {
+            matched = true;
+            valid = true;
+            action = actKey;
+            matchedBird = matchData.bird;
+            start = matchData.start;
+            end = matchData.end;
+            nightMatched = matchData.nightMatched;
+          }
+          keyIndex += 1;
+        }
+      } else {
+        const dayYamas = ppData.get('yamas');
+        const nightYamas = ppData.get('yamas2');
+
+        const matchedYama = matchSubYamaSetByAction(
+          dayYamas,
+          nightYamas,
+          actKey,
+          currJd,
+        );
+        if (matchedYama) {
+          const sub = matchedYama.subs.find(sub => sub.key === actKey);
+          if (sub) {
+            const { rulers } = sub;
+            /* for (const rk of rulers) {
+              const transType = matchDikBalaTransition(rk);
+              const transData = await calcTransitionPointJd(
+                currJd,
+                rk,
+                geo,
+                transType,
+              );
+              if (transData.jd >= sub.start && transData.jd <= sub.end) {
+                console.log(rk, transType, transData);
+                start = sub.start;
+                end = sub.end;
+                matched = true;
+                valid = true;
+                action = actKey;
+                matchedBird = sub.key;
+                nightMatched = matchedYama.isNight;
+              }
+            } */
+            const matchData = await matchPPRangeWithinRulers(
+              currJd,
+              rulers,
+              geo,
+              sub,
+              actKey,
+              sub.bird,
+              matchedYama.isNight,
+            );
+            if (matchData.matched) {
+              matched = true;
+              valid = true;
+              action = actKey;
+              matchedBird = matchData.bird;
+              start = matchData.start;
+              end = matchData.end;
+              nightMatched = matchData.nightMatched;
+            }
+          }
+        }
+      }
+    }
+    counter++;
+  }
+  return { start, end, action, matchedBird, isNight: nightMatched, valid };
+};
+
 export const matchPanchaPakshiPoint = async (
   cond: Condition,
   chart: Chart,
@@ -2581,10 +2790,9 @@ export const matchPanchaPakshiOptions = async (
   geo: GeoPos,
 ) => {
   const refKey = cond.object1.key;
-  if (
-    refKey.startsWith('yama_') ||
-    (refKey.endsWith('_graha') && !refKey.endsWith('yogi_graha'))
-  ) {
+  if (cond.context === 'dik_bala_transition') {
+    return await matchDikBalaWithGraha(cond, chart, geo);
+  } else if (option1MatchesYama(refKey)) {
     return await matchPanchaPakshi(cond, chart, geo);
   } else {
     return await matchPanchaPakshiPoint(cond, chart, geo);

@@ -455,4 +455,26 @@ export const buildFunctionalBMMap = (
 export const matchPlanetNum = (key: string): number => {
   const row = grahaValues.find(gr => gr.key === key);
   return row instanceof Object ? row.num : -1;
-}
+};
+
+export const directionalStrengthToTransitionMap = {
+  su: 'mc',
+  mo: 'ic',
+  ma: 'mc',
+  me: 'rise',
+  ju: 'rise',
+  ve: 'ic',
+  sa: 'set',
+};
+
+export const hasDikBala = (key = 'su', type = 'rise') => {
+  return Object.keys(directionalStrengthToTransitionMap).includes(key)
+    ? directionalStrengthToTransitionMap[key] === type
+    : false;
+};
+
+export const matchDikBalaTransition = (key = '') => {
+  return Object.keys(directionalStrengthToTransitionMap).includes(key)
+    ? directionalStrengthToTransitionMap[key]
+    : '';
+};
