@@ -2576,7 +2576,6 @@ const matchPPRangeWithinRulers = async (
         )
       : await calcTransitionPointJd(currJd, rk, geo, transType);
     if (transData.jd >= refStart && transData.jd <= refEnd) {
-      console.log(rk, transType, transData);
       start = refStart;
       end = refEnd;
       matched = true;
