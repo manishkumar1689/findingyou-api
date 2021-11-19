@@ -30,6 +30,7 @@ import * as Redis from 'ioredis';
 import { ProtocolSettings } from '../astrologic/lib/models/protocol-models';
 import { smartCastInt } from '../lib/converters';
 import permissionValues from '../user/settings/permissions';
+import { transformUserPreferences } from './lib/mappers';
 
 @Injectable()
 export class SettingService {
@@ -183,48 +184,7 @@ export class SettingService {
     const surveys = await this.getSurveys();
     return preferences
       .filter(pref => pref instanceof Object)
-      .map(pref => {
-        let score: any = {};
-        const { key, value } = pref;
-        const survey = surveys.find(s => s.items.some(opt => opt.key === key));
-        const hasSurvey = survey instanceof Object;
-        const question = hasSurvey
-          ? survey.items.find(opt => opt.key === key)
-          : null;
-        const surveyKey = hasSurvey ? survey.key : '';
-        if (question instanceof Object) {
-          const { type } = question;
-          if (notEmptyString(type) && type.startsWith('multiple_key_scale')) {
-            const optData = question.options.find(opt => opt.key === value);
-            if (optData instanceof Object) {
-              if (optData.valueOpts instanceof Array) {
-                const category = optData.valueOpts[0].category;
-                const row = multiscaleData.find(item => item.key === category);
-                const values = optData.valueOpts.map(op => {
-                  const keyEnd = op.key
-                    .split('_')
-                    .splice(1)
-                    .join('_');
-                  return [keyEnd, op.value];
-                });
-                const num = values.length;
-                const total = values
-                  .map(entry => entry[1])
-                  .reduce((a, b) => a + b, 0);
-                const max = row.range[1] * num;
-                const min = row.range[0] * num;
-                score = {
-                  scales: Object.fromEntries(values),
-                  max,
-                  min,
-                  total,
-                };
-              }
-            }
-          }
-        }
-        return { survey: surveyKey, ...pref, score };
-      });
+      .map(pref => transformUserPreferences(pref, surveys, multiscaleData));
   }
 
   async getSurveys() {
