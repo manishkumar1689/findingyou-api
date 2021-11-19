@@ -2676,25 +2676,6 @@ export const matchDikBalaWithGraha = async (
           const sub = matchedYama.subs.find(sub => sub.key === actKey);
           if (sub) {
             const { rulers } = sub;
-            /* for (const rk of rulers) {
-              const transType = matchDikBalaTransition(rk);
-              const transData = await calcTransitionPointJd(
-                currJd,
-                rk,
-                geo,
-                transType,
-              );
-              if (transData.jd >= sub.start && transData.jd <= sub.end) {
-                console.log(rk, transType, transData);
-                start = sub.start;
-                end = sub.end;
-                matched = true;
-                valid = true;
-                action = actKey;
-                matchedBird = sub.key;
-                nightMatched = matchedYama.isNight;
-              }
-            } */
             const matchData = await matchPPRangeWithinRulers(
               currJd,
               rulers,
