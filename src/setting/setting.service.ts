@@ -9,12 +9,20 @@ import { Protocol } from './interfaces/protocol.interface';
 import { ProtocolDTO } from './dto/protocol.dto';
 import { mergeRoddenValues } from '../astrologic/lib/settings/rodden-scale-values';
 import { KeyName } from '../astrologic/lib/interfaces';
-import { extractDocId, extractFromRedisClient, extractFromRedisMap, storeInRedis } from '../lib/entities';
+import {
+  extractDocId,
+  extractFromRedisClient,
+  extractFromRedisMap,
+  storeInRedis,
+} from '../lib/entities';
 import { defaultPairedTagOptionSets } from '../astrologic/lib/settings/vocab-values';
 import { RuleSetDTO } from './dto/rule-set.dto';
 import { PredictiveRuleSet } from './interfaces/predictive-rule-set.interface';
 import { PredictiveRuleSetDTO } from './dto/predictive-rule-set.dto';
-import getDefaultPreferences, { buildSurveyOptions, translateItemKey } from '../user/settings/preference-options';
+import getDefaultPreferences, {
+  buildSurveyOptions,
+  translateItemKey,
+} from '../user/settings/preference-options';
 import multipleKeyScales from '../user/settings/multiscales';
 import { PreferenceOption } from '../user/interfaces/preference-option.interface';
 import { RedisService } from 'nestjs-redis';
@@ -29,7 +37,8 @@ export class SettingService {
     @InjectModel('Setting') private readonly settingModel: Model<Setting>,
     @InjectModel('Protocol')
     private readonly protocolModel: Model<Protocol>,
-    @InjectModel('PredictiveRuleSet') private readonly predictiveRuleSetModel: Model<PredictiveRuleSet>,
+    @InjectModel('PredictiveRuleSet')
+    private readonly predictiveRuleSetModel: Model<PredictiveRuleSet>,
     private readonly redisService: RedisService,
   ) {}
 
@@ -152,10 +161,15 @@ export class SettingService {
     } else {
       if (setting.value instanceof Array) {
         data = setting.value.map(row => {
-          if (row instanceof Object && row.type === 'multiple_key_scale' && Object.keys(row).includes("options") && row.options instanceof Array) {
+          if (
+            row instanceof Object &&
+            row.type === 'multiple_key_scale' &&
+            Object.keys(row).includes('options') &&
+            row.options instanceof Array
+          ) {
             row.options = row.options.map(opt => {
-              return { ...opt,name: translateItemKey(opt.key) }
-            }) ;
+              return { ...opt, name: translateItemKey(opt.key) };
+            });
           }
           return row;
         });
@@ -170,44 +184,52 @@ export class SettingService {
     return preferences
       .filter(pref => pref instanceof Object)
       .map(pref => {
-      const {key, type, value } = pref;
-      let score: any = {};
-      if (notEmptyString(type) && type.startsWith("multiple_key_scale")) {
-        const survey = surveys.find(s => s.items.some(opt =>opt.key === key));
-        if (survey instanceof Object) {
-          const question = survey.items.find(opt => opt.key === key);
-          if (question instanceof Object ) {
+        let score: any = {};
+        const { key, value } = pref;
+        const survey = surveys.find(s => s.items.some(opt => opt.key === key));
+        const hasSurvey = survey instanceof Object;
+        const question = hasSurvey
+          ? survey.items.find(opt => opt.key === key)
+          : null;
+        const surveyKey = hasSurvey ? survey.key : '';
+        if (question instanceof Object) {
+          const { type } = question;
+          if (notEmptyString(type) && type.startsWith('multiple_key_scale')) {
             const optData = question.options.find(opt => opt.key === value);
             if (optData instanceof Object) {
               if (optData.valueOpts instanceof Array) {
                 const category = optData.valueOpts[0].category;
                 const row = multiscaleData.find(item => item.key === category);
                 const values = optData.valueOpts.map(op => {
-                  const keyEnd = op.key.split("_").splice(1).join("_");
-                  return [keyEnd, op.value]
+                  const keyEnd = op.key
+                    .split('_')
+                    .splice(1)
+                    .join('_');
+                  return [keyEnd, op.value];
                 });
                 const num = values.length;
-                const total = values.map(entry => entry[1]).reduce((a, b) => a + b, 0);
+                const total = values
+                  .map(entry => entry[1])
+                  .reduce((a, b) => a + b, 0);
                 const max = row.range[1] * num;
                 const min = row.range[0] * num;
-                score = { 
+                score = {
                   scales: Object.fromEntries(values),
                   max,
                   min,
-                  total
-                }
+                  total,
+                };
               }
             }
           }
         }
-      }
-      return {...pref, score } 
-    });
+        return { survey: surveyKey, ...pref, score };
+      });
   }
 
   async getSurveys() {
     const key = 'preference_surveys';
-    const stored = await this.redisGet(key); 
+    const stored = await this.redisGet(key);
     const hasStored = stored instanceof Array && stored.length > 0;
     const rows = hasStored ? stored : await this.getAllSurveys();
     if (!hasStored && rows.length > 0) {
@@ -226,7 +248,7 @@ export class SettingService {
         if (value instanceof Array) {
           const num = value.length;
           const valid = num > 0;
-          surveys.push({key, items: value, num, valid });
+          surveys.push({ key, items: value, num, valid });
         }
       }
     }
@@ -260,15 +282,13 @@ export class SettingService {
         data = setting.value;
       }
     }
-    
+
     const dataWithOptions = data.map(item => {
       const valueOpts = buildSurveyOptions(item.key);
-      return { ...item, options: valueOpts};
+      return { ...item, options: valueOpts };
     });
     return dataWithOptions;
   }
-
-
 
   async getPermissionData(skipCache = false) {
     const key = 'permissions';
@@ -296,37 +316,41 @@ export class SettingService {
     }
     const entries = permKeys.map(key => {
       const limitRow = data.limits.find(lm => lm.key === key);
-      const value = limitRow instanceof Object? smartCastInt(limitRow.value, 0) : true;
+      const value =
+        limitRow instanceof Object ? smartCastInt(limitRow.value, 0) : true;
       return [key, value];
     });
-    const otherKeys = permissionValues.map(pm => pm.key).filter(k => permKeys.includes(k) === false).map(k => {
-      const limitRow = data.limits.find(lm => lm.key === k);
-      const value = limitRow instanceof Object? 0 : false;
-      return [k, value];
-    });
+    const otherKeys = permissionValues
+      .map(pm => pm.key)
+      .filter(k => permKeys.includes(k) === false)
+      .map(k => {
+        const limitRow = data.limits.find(lm => lm.key === k);
+        const value = limitRow instanceof Object ? 0 : false;
+        return [k, value];
+      });
     const rgx = /^(basic|extended|premium)_/;
-    const coreEntries = [...entries, ...otherKeys].filter(([k,v]) => {
-       return rgx.test(k) === false && typeof v === 'boolean';
+    const coreEntries = [...entries, ...otherKeys].filter(([k, v]) => {
+      return rgx.test(k) === false && typeof v === 'boolean';
     });
-    const limitEntries = [...entries, ...otherKeys].filter(([k,v]) => {
+    const limitEntries = [...entries, ...otherKeys].filter(([k, v]) => {
       return rgx.test(k) && typeof v === 'number';
-   });
-     const limitRows:any[][] = [];
-     limitEntries.forEach(([k,v]) => {
-       const key = k.replace(rgx, '');
-       const mIndex = limitRows.findIndex(([k,v]) => k === key);
-       if (mIndex >= 0) {
-         if (limitRows[mIndex][1] < v) {
+    });
+    const limitRows: any[][] = [];
+    limitEntries.forEach(([k, v]) => {
+      const key = k.replace(rgx, '');
+      const mIndex = limitRows.findIndex(([k, v]) => k === key);
+      if (mIndex >= 0) {
+        if (limitRows[mIndex][1] < v) {
           limitRows[mIndex][1] = v;
-         }
-       } else {
+        }
+      } else {
         limitRows.push([key, smartCastInt(v)]);
       }
-     })
+    });
     return Object.fromEntries([...limitRows, ...coreEntries]);
   }
 
-  filterOverrides(permKeys: string[] = [], permData = null, roleKey = "") {
+  filterOverrides(permKeys: string[] = [], permData = null, roleKey = '') {
     if (permData instanceof Object) {
       const excludeKeys = ['all'];
       const { roles, limits } = permData;
@@ -345,15 +369,18 @@ export class SettingService {
             }
           }
           permissions.forEach(pk => {
-            if (permKeys.includes(pk) === false && excludeKeys.includes(pk) === false) {
+            if (
+              permKeys.includes(pk) === false &&
+              excludeKeys.includes(pk) === false
+            ) {
               permKeys.push(pk);
             }
-          })
+          });
         }
         if (overrides instanceof Array) {
           overrides.forEach(rk => {
             this.filterOverrides(permKeys, permData, rk);
-          })
+          });
         }
       }
     }
@@ -480,7 +507,7 @@ export class SettingService {
   async getFlags(skipCache = false) {
     let flags = defaultFlags;
     const cKey = 'flags';
-    const stored = skipCache? null : await this.redisGet(cKey);
+    const stored = skipCache ? null : await this.redisGet(cKey);
     if (stored instanceof Array && stored.length > 0) {
       return stored;
     } else {
@@ -495,20 +522,18 @@ export class SettingService {
     return flags;
   }
 
-
-
-  async getFlagInfo(key = "") {
+  async getFlagInfo(key = '') {
     const flags = await this.getFlags();
-    const flag = flags.find(fl =>fl.key === key);
-    let defaultFlag = {
-      key: "",
-      type : "boolean",
+    const flag = flags.find(fl => fl.key === key);
+    const defaultFlag = {
+      key: '',
+      type: 'boolean',
       defaultValue: false,
       range: [],
       options: [],
-      valid: false
-    }
-    return flag instanceof Object ? {...flag, valid: true } : defaultFlag;
+      valid: false,
+    };
+    return flag instanceof Object ? { ...flag, valid: true } : defaultFlag;
   }
 
   async minPassValue() {
@@ -621,7 +646,7 @@ export class SettingService {
     return result;
   }
 
-  async getRuleSet(ruleID = "") {
+  async getRuleSet(ruleID = '') {
     return await this.predictiveRuleSetModel.findById(ruleID);
   }
 
@@ -672,7 +697,9 @@ export class SettingService {
         result.item = rule;
         result.valid = true;
         if (isAdmin || rule.user === userID) {
-          const deleted = await this.predictiveRuleSetModel.deleteOne({_id: id})
+          const deleted = await this.predictiveRuleSetModel.deleteOne({
+            _id: id,
+          });
           if (deleted.ok) {
             result.deleted = true;
           }
@@ -689,13 +716,13 @@ export class SettingService {
     if (byUsers) {
       filter.set('user', { $in: userRef });
     } else if (byUser) {
-      filter.set('user', userRef );
+      filter.set('user', userRef);
     }
     if (activeOnly) {
       filter.set('active', true);
     }
     const criteria = Object.fromEntries(filter);
-    const items = await this.predictiveRuleSetModel.find(criteria)
+    const items = await this.predictiveRuleSetModel.find(criteria);
     return items;
   }
 
