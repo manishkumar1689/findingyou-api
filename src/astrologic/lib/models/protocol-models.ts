@@ -2548,6 +2548,8 @@ const matchPPRangeWithinRulers = async (
   actKey = '',
   birdKey = '',
   isNight = false,
+  chart: Chart,
+  useBirthLngs = false,
 ) => {
   const hasRefPeriod = refPeriod instanceof Object;
   const refStart = hasRefPeriod ? refPeriod.start : 0;
@@ -2559,9 +2561,20 @@ const matchPPRangeWithinRulers = async (
   let action = '';
   let nightMatched = false;
   let valid = false;
+  const grahaPositions = useBirthLngs
+    ? buildGrahaPositionsFromChart(rulers, chart)
+    : [];
   for (const rk of rulers) {
     const transType = matchDikBalaTransition(rk);
-    const transData = await calcTransitionPointJd(currJd, rk, geo, transType);
+    const transData = useBirthLngs
+      ? await calcTransposedTransitionPointJd(
+          currJd,
+          rk,
+          geo,
+          transType,
+          grahaPositions,
+        )
+      : await calcTransitionPointJd(currJd, rk, geo, transType);
     if (transData.jd >= refStart && transData.jd <= refEnd) {
       console.log(rk, transType, transData);
       start = refStart;
@@ -2602,10 +2615,7 @@ export const matchDikBalaWithGraha = async (
     actKey = refKey.split('_')[1];
     matchMode = 'subyama';
   }
-  /* const dt = julToISODate(jd);
-  const relChart = useBirthRef
-    ? chart
-    : await calcBaseChart(dt, geo, true, true); */
+  const useBirthLngs = cond.fromMode === 'birth';
   let matched = false;
   let counter = 0;
   let valid = false;
@@ -2650,6 +2660,8 @@ export const matchDikBalaWithGraha = async (
             actKey,
             rSet.bird,
             isNight,
+            chart,
+            useBirthLngs,
           );
           if (matchData.matched) {
             matched = true;
@@ -2659,6 +2671,9 @@ export const matchDikBalaWithGraha = async (
             start = matchData.start;
             end = matchData.end;
             nightMatched = matchData.nightMatched;
+          }
+          if (matched) {
+            break;
           }
           keyIndex += 1;
         }
@@ -2684,6 +2699,8 @@ export const matchDikBalaWithGraha = async (
               actKey,
               sub.bird,
               matchedYama.isNight,
+              chart,
+              useBirthLngs,
             );
             if (matchData.matched) {
               matched = true;
