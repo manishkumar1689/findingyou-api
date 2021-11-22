@@ -1,11 +1,12 @@
 import { notEmptyString } from '../../lib/validators';
+import { Big5ScaleMap, JungianScaleMap, ScaleScores } from './interfaces';
 
 export const transformUserPreferences = (
   pref,
   surveys = [],
   multiscaleData = [],
 ) => {
-  let score: any = {};
+  let score = null;
   let surveyKey = '';
   if (pref instanceof Object) {
     const { key, value } = pref;
@@ -14,7 +15,7 @@ export const transformUserPreferences = (
     const question = hasSurvey
       ? survey.items.find(opt => opt.key === key)
       : null;
-    surveyKey = hasSurvey ? survey.key : 'core';
+    surveyKey = hasSurvey ? survey.key : '';
     if (question instanceof Object) {
       const { type } = question;
       if (notEmptyString(type) && type.startsWith('multiple_key_scale')) {
@@ -47,5 +48,45 @@ export const transformUserPreferences = (
       }
     }
   }
-  return { survey: surveyKey, ...pref, score };
+  return notEmptyString(surveyKey)
+    ? score !== null
+      ? { survey: surveyKey, ...pref, score }
+      : { survey: surveyKey, ...pref }
+    : pref;
+};
+
+export const compareSurveyScores = (
+  scales1: Big5ScaleMap | JungianScaleMap,
+  scales2: Big5ScaleMap | JungianScaleMap,
+  mode = 'big5',
+) => {
+  const entries = Object.entries(scales1);
+  const num = entries.length;
+  const max = mode === 'big5' ? 4 : 9;
+  const totalDiff = entries
+    .map(([k, v]) => {
+      const v2 = Object.keys(scales2).includes(k) ? scales2[k] : 0;
+      return Math.abs(v - v2);
+    })
+    .reduce((a, b) => a + b, 0);
+  return ((max - totalDiff / num) / max) * 100;
+};
+
+export const compareSurveyScoreSets = (
+  scaleSet1: any[],
+  scaleSet2: any[],
+  type = 'big5',
+) => {
+  const scores = scaleSet1
+    .filter(
+      (scales1, index) =>
+        scales1 instanceof Object &&
+        index < scaleSet2.length &&
+        scaleSet2[index] instanceof Object,
+    )
+    .map((scales1, index) => {
+      const scales2 = scaleSet2[index];
+      return compareSurveyScores(scales1, scales2, type);
+    });
+  return scores.reduce((a, b) => a + b, 0) / scores.length;
 };

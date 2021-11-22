@@ -59,6 +59,24 @@ export class SnippetService {
     return categories;
   }
 
+  async allByCategory(category = ''): Promise<Snippet[]> {
+    let items = [];
+    if (notEmptyString(category, 2)) {
+      const rgx = new RegExp('^' + category + '__');
+      items = await this.snippetModel.find({ key: rgx });
+    }
+    return items;
+  }
+
+  async bulkDelete(category = ''): Promise<any> {
+    let result: any = { deleted: 0 };
+    if (notEmptyString(category, 2)) {
+      const rgx = new RegExp('^' + category + '__');
+      result = await this.snippetModel.deleteMany({ key: rgx }).exec();
+    }
+    return result;
+  }
+
   // fetch all snippets with core fields only
   async getAll(): Promise<Snippet[]> {
     const Snippets = await this.snippetModel.find().exec();
@@ -235,7 +253,7 @@ export class SnippetService {
     const lexeme = await this.getByKey(key);
     const mp = new Map<string, any>();
     if (lexeme) {
-      let mayDelete =
+      const mayDelete =
         lexeme.published === false &&
         lexeme.values.some(vl => vl.active === true || vl.approved === true) ===
           false;

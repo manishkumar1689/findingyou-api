@@ -11,6 +11,7 @@ import {
   Param,
 } from '@nestjs/common';
 import { SnippetService } from './snippet.service';
+import { UserService } from '../user/user.service';
 import { CreateSnippetDTO } from './dto/create-snippet.dto';
 import { BulkSnippetDTO } from './dto/bulk-snippet.dto';
 import { smartCastBool, smartCastString } from '../lib/converters';
@@ -18,6 +19,7 @@ import { notEmptyString } from '../lib/validators';
 import { currentISODate } from '../astrologic/lib/date-funcs';
 import googleTranslateCodes from './sources/google-translate-codes';
 import { TranslateDTO } from './dto/translate.dto';
+import { exportCollection } from 'src/lib/operations';
 
 /*
 Provide alternative versions of snippets if not available
@@ -38,7 +40,10 @@ const defaultLangCodes = (baseLang = '') => {
 
 @Controller('snippet')
 export class SnippetController {
-  constructor(private snippetService: SnippetService) {}
+  constructor(
+    private snippetService: SnippetService,
+    private userService: UserService,
+  ) {}
 
   // add a snippet
   @Post('bulk-save')
@@ -227,6 +232,31 @@ export class SnippetController {
     let data: any = { valid: false, message: 'not authorised' };
     if (user.length > 10) {
       data = await this.snippetService.deleteByKey(key);
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Delete('bulk-delete/:prefix/:user')
+  async bulkDelete(@Res() res, @Param('prefix') prefix, @Param('user') user) {
+    const data: any = {
+      valid: false,
+      exportFile: '',
+      prefix,
+      message: 'not authorised',
+    };
+
+    if (this.userService.isAdminUser(user) && notEmptyString(prefix)) {
+      data.items = await this.snippetService.allByCategory(prefix);
+      data.numDeleted = data.items.length;
+      data.exportFile = exportCollection('snippets', 'json', true);
+      data.message = `valid prefix and user ID`;
+      if (data.items.length > 0) {
+        setTimeout(() => {
+          this.snippetService.bulkDelete(prefix);
+        }, 3000);
+        data.message = `${data.items.length} snippets deleted`;
+        data.valid = true;
+      }
     }
     return res.status(HttpStatus.OK).json(data);
   }

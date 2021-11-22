@@ -36,11 +36,43 @@ const buildOptionParams = (pairs: string[][]): string[] => {
     .map(pair => optionParam(pair[0], pair[1]));
 };
 
+export const fetchFileInfo = path => {
+  const filename = path.split('/').pop();
+  const stats = fs.lstatSync(path);
+  return {
+    name: filename,
+    isDirectory: stats.isDirectory(),
+    size: stats.size,
+    ctime: stats.ctime,
+    mtime: stats.mtime,
+  };
+};
+
+const buildFileData = async (
+  path: string,
+  filename: string,
+): Promise<FileDetails> => {
+  const fp = [path, filename].join('/');
+  return fetchFileInfo(fp);
+};
+
+const dateTimeSuffix = () => {
+  const suffix = new Date()
+    .toISOString()
+    .split('.')
+    .shift()
+    .replace(/[^0-9T]/g, '')
+    .replace(/T/, '_');
+  return '_' + suffix;
+};
+
 export const exportCollection = (
-  collection: string = '',
-  format: string = 'json',
+  collection = '',
+  format = 'json',
+  addDate = false,
 ) => {
-  const outFile = buildFullPath(collection + '.' + format, 'backups');
+  const suffix = addDate ? dateTimeSuffix() : '';
+  const outFile = buildFullPath(collection + suffix + '.' + format, 'backups');
 
   const baseCmd = 'mongoexport';
   const args = buildOptionParams([
@@ -104,24 +136,4 @@ export const listFiles = async (
 
 export const checkFileExists = path => {
   return fs.existsSync(path);
-};
-
-export const fetchFileInfo = path => {
-  const filename = path.split('/').pop();
-  const stats = fs.lstatSync(path);
-  return {
-    name: filename,
-    isDirectory: stats.isDirectory(),
-    size: stats.size,
-    ctime: stats.ctime,
-    mtime: stats.mtime,
-  };
-};
-
-const buildFileData = async (
-  path: string,
-  filename: string,
-): Promise<FileDetails> => {
-  const fp = [path, filename].join('/');
-  return fetchFileInfo(fp);
 };
