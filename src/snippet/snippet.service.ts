@@ -249,14 +249,11 @@ export class SnippetService {
     };
   }
 
-  async deleteByKey(key: string) {
+  async deleteByKey(key: string, unpublish = false) {
     const lexeme = await this.getByKey(key);
     const mp = new Map<string, any>();
     if (lexeme) {
-      const mayDelete =
-        lexeme.published === false &&
-        lexeme.values.some(vl => vl.active === true || vl.approved === true) ===
-          false;
+      const mayDelete = lexeme.published === false || unpublish === true;
       if (mayDelete) {
         this.snippetModel.deleteOne({ key }).exec();
         mp.set('valid', true);

@@ -14,7 +14,11 @@ import { SnippetService } from './snippet.service';
 import { UserService } from '../user/user.service';
 import { CreateSnippetDTO } from './dto/create-snippet.dto';
 import { BulkSnippetDTO } from './dto/bulk-snippet.dto';
-import { smartCastBool, smartCastString } from '../lib/converters';
+import {
+  smartCastBool,
+  smartCastInt,
+  smartCastString,
+} from '../lib/converters';
 import { notEmptyString } from '../lib/validators';
 import { currentISODate } from '../astrologic/lib/date-funcs';
 import googleTranslateCodes from './sources/google-translate-codes';
@@ -227,11 +231,17 @@ export class SnippetController {
     return res.status(HttpStatus.OK).json({ ...data, from, to, valid });
   }
 
-  @Delete('delete/:key/:user')
-  async delete(@Res() res, @Param('key') key, @Param('user') user) {
+  @Delete('delete/:key/:user/:unpub?')
+  async delete(
+    @Res() res,
+    @Param('key') key,
+    @Param('user') user,
+    @Param('unpub') unpub,
+  ) {
     let data: any = { valid: false, message: 'not authorised' };
     if (user.length > 10) {
-      data = await this.snippetService.deleteByKey(key);
+      const unpublish = smartCastInt(unpub, 0) > 0;
+      data = await this.snippetService.deleteByKey(key, unpublish);
     }
     return res.status(HttpStatus.OK).json(data);
   }
