@@ -153,7 +153,10 @@ export class SnippetService {
   }
 
   // post a single Snippet
-  async save(createSnippetDTO: CreateSnippetDTO): Promise<Snippet> {
+  async save(
+    createSnippetDTO: CreateSnippetDTO,
+    overrideKey = '',
+  ): Promise<Snippet> {
     const { key, published, notes, format, values } = createSnippetDTO;
     const snippet = await this.snippetModel.findOne({ key });
     const exists = snippet instanceof Object;
@@ -207,6 +210,9 @@ export class SnippetService {
         ...payload,
         createdAt: dt,
       });
+      if (notEmptyString(overrideKey, 5) && overrideKey !== payload.key) {
+        this.snippetModel.deleteOne({ key: overrideKey }).exec();
+      }
       return newSnippet.save();
     }
   }

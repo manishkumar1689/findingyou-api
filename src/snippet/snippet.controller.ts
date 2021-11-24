@@ -68,6 +68,7 @@ export class SnippetController {
     const keys = query instanceof Object ? Object.keys(query) : [];
     const translateLangStr = keys.includes('langs') ? query.langs : '';
     const fromLang = keys.includes('from') ? query.from : 'en';
+    const overrideKey = keys.includes('override') ? query.override : '';
     const translateLangs = notEmptyString(translateLangStr)
       ? translateLangStr.split(',')
       : [];
@@ -110,7 +111,7 @@ export class SnippetController {
       }
     }
     const edited = { ...createSnippetDTO, values } as CreateSnippetDTO;
-    const snippet = await this.snippetService.save(edited);
+    const snippet = await this.snippetService.save(edited, overrideKey);
     return res.status(HttpStatus.OK).json({
       message: 'Snippet has been edited successfully',
       snippet,
