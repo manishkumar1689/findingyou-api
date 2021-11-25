@@ -7,6 +7,14 @@ const surveyList = [
     enabled: true,
   },
   {
+    key: 'faceted',
+    name: 'Faceted',
+    multiscales: 'big5',
+    type: 'faceted',
+    enabled: true,
+    range: [-2, 2],
+  },
+  {
     key: 'personality',
     name: 'Big Five',
     multiscales: 'big5',

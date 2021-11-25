@@ -780,6 +780,7 @@ export class UserController {
     const showAll = key === 'all';
     const surveyKey = notEmptyString(key, 4) ? key : 'preference_options';
     let data: any = { valid: false };
+
     if (showAll) {
       const keys = await this.settingService.getPreferenceKeys();
       const surveys: Map<string, any> = new Map();

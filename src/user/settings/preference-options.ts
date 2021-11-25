@@ -359,9 +359,11 @@ export const translateItemKey = (key: string) => {
     case 'plus2':
       return 'Very Accurate';
     default:
-      return key.replace(/^(\w+)_(\w+)$/, "$1 - $2").replace(/(\w+)[_-]+(\w)/g, '$1 $2');
+      return key
+        .replace(/^(\w+)_(\w+)$/, '$1 - $2')
+        .replace(/(\w+)[_-]+(\w)/g, '$1 $2');
   }
-}
+};
 
 const matchValueOpts = (category: string) => {
   const optSet = multipleKeyScales.find(ms => ms.key === category);
@@ -395,7 +397,7 @@ const buildOptions = (category: string) => {
   });
 };
 
-export const buildSurveyOptions = (category = "") => buildOptions(category);
+export const buildSurveyOptions = (category = '') => buildOptions(category);
 
 const matchPersonalityOptions = (subkey = 'personality') => {
   let questions = [];
@@ -479,7 +481,6 @@ export interface PrefKeyValue {
   key: string;
   value: any;
 }
-
 
 export interface MatchedOption {
   key: string;
