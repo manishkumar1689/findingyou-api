@@ -77,7 +77,7 @@ import {
 } from '../lib/notifications';
 import { Model } from 'mongoose';
 import { ActiveStatusDTO } from './dto/active-status.dto';
-import { dateAgoString } from 'src/astrologic/lib/date-funcs';
+import { dateAgoString } from '../astrologic/lib/date-funcs';
 import {
   cleanSnippet,
   mapSimplePreferenceOption,

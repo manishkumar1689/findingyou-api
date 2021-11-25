@@ -23,7 +23,7 @@ import { notEmptyString } from '../lib/validators';
 import { currentISODate } from '../astrologic/lib/date-funcs';
 import googleTranslateCodes from './sources/google-translate-codes';
 import { TranslateDTO } from './dto/translate.dto';
-import { exportCollection } from 'src/lib/operations';
+import { exportCollection } from '../lib/operations';
 
 /*
 Provide alternative versions of snippets if not available

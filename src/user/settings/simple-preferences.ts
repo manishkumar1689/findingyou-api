@@ -1,4 +1,4 @@
-import { Snippet } from 'src/snippet/interfaces/snippet.interface';
+import { Snippet } from '../../snippet/interfaces/snippet.interface';
 
 export const mapSimplePreferenceOption = (item = null) => {
   const itemObj =

@@ -1,4 +1,4 @@
-import { isNumeric } from 'src/lib/validators';
+import { isNumeric } from '../../lib/validators';
 import * as swisseph from 'swisseph';
 import { GeoPos } from '../interfaces/geo-pos';
 import { calcBodyJd } from './core';
