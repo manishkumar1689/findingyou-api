@@ -152,6 +152,11 @@ export class SnippetService {
     return await this.snippetModel.findOne({ key: snippetKey }).exec();
   }
 
+  async getByCategory(prefix = ''): Promise<Snippet[]> {
+    const rgx = new RegExp('^' + prefix.replace(/__$/, '') + '__');
+    return await this.snippetModel.find({ key: rgx });
+  }
+
   // post a single Snippet
   async save(
     createSnippetDTO: CreateSnippetDTO,

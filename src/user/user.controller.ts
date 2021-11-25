@@ -78,6 +78,10 @@ import {
 import { Model } from 'mongoose';
 import { ActiveStatusDTO } from './dto/active-status.dto';
 import { dateAgoString } from 'src/astrologic/lib/date-funcs';
+import {
+  cleanSnippet,
+  mapSimplePreferenceOption,
+} from './settings/simple-preferences';
 
 @Controller('user')
 export class UserController {
@@ -801,63 +805,13 @@ export class UserController {
       const refSurveyKey = isSimple ? 'preference_options' : surveyKey;
       data = await this.getPreferencesByKey(refSurveyKey, refKey);
       if (isSimple) {
-        data.items = data.items.map(item => {
-          const { key, type } = item;
-          let value: any = 'plain text';
-          switch (type) {
-            case 'range_number':
-              value = [18, 30];
-              break;
-            case 'uri':
-              value = 'https://resource.com/03736335/video/393737';
-              break;
-            case 'string':
-              value = 'word_of_mouth';
-              break;
-            case 'array_string':
-              value = ['no_beef', 'no_pork'];
-              break;
-            case 'integer':
-              value = 15;
-              break;
-            case 'float':
-              value = 2.5;
-              break;
-            case 'key_scale':
-              value = { never: 0 };
-              break;
-            case 'scale':
-              value = 2;
-              break;
-            case 'array_key_scale':
-              value = { cricket: 5, football: 3, tennis: 1 };
-              break;
-            case 'boolean':
-              value = true;
-              break;
-            case 'multiple_key_scales':
-              value = {
-                key: 'optimistic',
-                values: {
-                  happiness: 4,
-                  success: 2,
-                  reliability: 1,
-                  aspiration: 2,
-                },
-              };
-              break;
-            case 'array_float':
-              value = [2.8, 11.9];
-              break;
-            case 'array_integer':
-              value = [30, 40, 12];
-              break;
-            case 'text':
-              value = 'Cambridge University';
-              break;
-          }
-          return { key, type, value };
-        });
+        data.items = data.items.map(mapSimplePreferenceOption);
+      }
+      if (data.items.some(item => item.type === 'faceted')) {
+        const options = await this.snippetService.getByCategory('faceted');
+        if (options instanceof Array) {
+          data.options = options.map(cleanSnippet);
+        }
       }
     }
     return res.status(HttpStatus.OK).json(data);
