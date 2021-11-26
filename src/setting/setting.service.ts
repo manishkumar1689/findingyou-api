@@ -35,6 +35,7 @@ import {
   reduceFacetedFactors,
   transformUserPreferences,
 } from './lib/mappers';
+import { FacetedItemDTO } from './dto/faceted-item.dto';
 
 @Injectable()
 export class SettingService {
@@ -244,6 +245,22 @@ export class SettingService {
       }
     }
     return items;
+  }
+
+  async analyseBig5Faceted(items: FacetedItemDTO[] = [], cached = true) {
+    let responses = [];
+    let analysis = {};
+    if (items instanceof Array) {
+      const surveyItems = await this.getSurveyItems(
+        'faceted_personality_options',
+        cached,
+      );
+      responses = items.map(item =>
+        normalizeFacetedAnswer(item, surveyItems, false),
+      );
+      analysis = responses.reduce(reduceFacetedFactors, {});
+    }
+    return { responses, analysis };
   }
 
   async getSurveyItemsRaw(surveyKey = '') {

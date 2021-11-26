@@ -8,6 +8,7 @@ import {
   JungianScaleMap,
   ScalePreferenceAnswer,
 } from './interfaces';
+import { FacetedItemDTO } from '../dto/faceted-item.dto';
 
 /*
   Adding/subtracting this number converts from a -2 to 2 range to 1 to 5
@@ -103,6 +104,15 @@ export const normalizeFacetedAnswer = (
   } else {
     return {};
   }
+};
+
+export const normalizedToPreference = (facetedResponse: FacetedItemDTO) => {
+  const { key, value } = facetedResponse;
+  return {
+    type: 'faceted',
+    key,
+    value: value - big5FacetedScaleOffset,
+  };
 };
 
 /*

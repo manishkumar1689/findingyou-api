@@ -82,6 +82,8 @@ import {
   cleanSnippet,
   mapSimplePreferenceOption,
 } from './settings/simple-preferences';
+import { FacetedItemDTO } from 'src/setting/dto/faceted-item.dto';
+import { normalizedToPreference } from 'src/setting/lib/mappers';
 
 @Controller('user')
 export class UserController {
@@ -1331,6 +1333,34 @@ export class UserController {
   ) {
     const data = await this.userService.savePreferences(userID, preferences);
     return res.json(data);
+  }
+
+  @Put('faceted-big5/save/:userID')
+  async testBig4Faceted(
+    @Res() res,
+    @Param('userID') userID,
+    @Body() items: FacetedItemDTO[],
+  ) {
+    let responses = [];
+    let analysis = {};
+    let valid = false;
+    if (items instanceof Array) {
+      const preferences = items.map(normalizedToPreference);
+      const userData = await this.userService.savePreferences(
+        userID,
+        preferences,
+      );
+      if (userData.valid) {
+        const big5Data = await this.settingService.analyseBig5Faceted(
+          items,
+          true,
+        );
+        responses = big5Data.responses;
+        analysis = big5Data.analysis;
+        valid = responses.length > 0;
+      }
+    }
+    return res.send({ valid, responses, analysis });
   }
 
   /*

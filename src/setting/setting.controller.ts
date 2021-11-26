@@ -615,20 +615,11 @@ export class SettingController {
     @Param('refresh') refresh,
     @Body() items: FacetedItemDTO[],
   ) {
-    let responses = [];
-    let analysis = {};
     const cached = smartCastInt(refresh, 0) < 1;
-    console.log(items);
-    if (items instanceof Array) {
-      const surveyItems = await this.settingService.getSurveyItems(
-        'faceted_personality_options',
-        cached,
-      );
-      responses = items.map(item =>
-        normalizeFacetedAnswer(item, surveyItems, false),
-      );
-      analysis = responses.reduce(reduceFacetedFactors, {});
-    }
+    const {
+      responses,
+      analysis,
+    } = await this.settingService.analyseBig5Faceted(items, cached);
     return res.send({ responses, analysis });
   }
 
