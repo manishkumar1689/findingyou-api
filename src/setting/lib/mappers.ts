@@ -1,6 +1,6 @@
 import { Model } from 'mongoose';
 import { smartCastInt } from '../../lib/converters';
-import { PreferenceOption } from 'src/user/interfaces/preference-option.interface';
+import { PreferenceOption } from '../../user/interfaces/preference-option.interface';
 import { Preference } from '../../user/interfaces/preference.interface';
 import { notEmptyString } from '../../lib/validators';
 import {
