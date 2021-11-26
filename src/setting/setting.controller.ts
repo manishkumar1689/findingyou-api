@@ -40,7 +40,6 @@ import { ipWhitelistFileData } from '../auth/auth.utils';
 import { StringsDTO } from './dto/strings.dto';
 import { PredictiveRuleSetDTO } from './dto/predictive-rule-set.dto';
 import { FacetedItemDTO } from './dto/faceted-item.dto';
-import { normalizeFacetedAnswer, reduceFacetedFactors } from './lib/mappers';
 import { smartCastInt } from '../lib/converters';
 
 @Controller('setting')

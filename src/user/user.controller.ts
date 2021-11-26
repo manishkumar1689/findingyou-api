@@ -83,7 +83,7 @@ import {
   mapSimplePreferenceOption,
 } from './settings/simple-preferences';
 import { FacetedItemDTO } from 'src/setting/dto/faceted-item.dto';
-import { normalizedToPreference } from 'src/setting/lib/mappers';
+import { normalizedToPreference } from '../setting/lib/mappers';
 
 @Controller('user')
 export class UserController {
