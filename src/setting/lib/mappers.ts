@@ -1,58 +1,45 @@
+import { Model } from 'mongoose';
+import { smartCastInt } from 'src/lib/converters';
+import { PreferenceOption } from 'src/user/interfaces/preference-option.interface';
+import { Preference } from 'src/user/interfaces/preference.interface';
 import { notEmptyString } from '../../lib/validators';
-import { Big5ScaleMap, JungianScaleMap, ScaleScores } from './interfaces';
+import {
+  Big5ScaleMap,
+  JungianScaleMap,
+  ScalePreferenceAnswer,
+} from './interfaces';
 
-export const transformUserPreferences = (
-  pref,
-  surveys = [],
-  multiscaleData = [],
+const transformMultipleKeyScaleQuestions = (
+  question,
+  value,
+  multiscaleData,
 ) => {
+  const optData = question.options.find(opt => opt.key === value);
   let score = null;
-  let surveyKey = '';
-  if (pref instanceof Object) {
-    const { key, value } = pref;
-    const survey = surveys.find(s => s.items.some(opt => opt.key === key));
-    const hasSurvey = survey instanceof Object;
-    const question = hasSurvey
-      ? survey.items.find(opt => opt.key === key)
-      : null;
-    surveyKey = hasSurvey ? survey.key : '';
-    if (question instanceof Object) {
-      const { type } = question;
-      if (notEmptyString(type) && type.startsWith('multiple_key_scale')) {
-        const optData = question.options.find(opt => opt.key === value);
-        if (optData instanceof Object) {
-          if (optData.valueOpts instanceof Array) {
-            const category = optData.valueOpts[0].category;
-            const row = multiscaleData.find(item => item.key === category);
-            const values = optData.valueOpts.map(op => {
-              const keyEnd = op.key
-                .split('_')
-                .splice(1)
-                .join('_');
-              return [keyEnd, op.value];
-            });
-            const num = values.length;
-            const total = values
-              .map(entry => entry[1])
-              .reduce((a, b) => a + b, 0);
-            const max = row.range[1] * num;
-            const min = row.range[0] * num;
-            score = {
-              scales: Object.fromEntries(values),
-              max,
-              min,
-              total,
-            };
-          }
-        }
-      }
+  if (optData instanceof Object) {
+    if (optData.valueOpts instanceof Array) {
+      const category = optData.valueOpts[0].category;
+      const row = multiscaleData.find(item => item.key === category);
+      const values = optData.valueOpts.map(op => {
+        const keyEnd = op.key
+          .split('_')
+          .splice(1)
+          .join('_');
+        return [keyEnd, op.value];
+      });
+      const num = values.length;
+      const total = values.map(entry => entry[1]).reduce((a, b) => a + b, 0);
+      const max = row.range[1] * num;
+      const min = row.range[0] * num;
+      score = {
+        scales: Object.fromEntries(values),
+        max,
+        min,
+        total,
+      };
     }
   }
-  return notEmptyString(surveyKey)
-    ? score !== null
-      ? { survey: surveyKey, ...pref, score }
-      : { survey: surveyKey, ...pref }
-    : pref;
+  return score;
 };
 
 export const compareSurveyScores = (
@@ -89,4 +76,91 @@ export const compareSurveyScoreSets = (
       return compareSurveyScores(scales1, scales2, type);
     });
   return scores.reduce((a, b) => a + b, 0) / scores.length;
+};
+
+export const normalizeFacetedAnswer = (
+  facetedResponse: ScalePreferenceAnswer,
+  sourcePrefs: PreferenceOption[],
+) => {
+  const { key, value } = facetedResponse;
+  const sq = sourcePrefs.find(s => s.key === key);
+  if (sq) {
+    const { domain, subdomain } = sq;
+    return { key, score: value + 3, domain, facet: smartCastInt(subdomain, 0) };
+  } else {
+    return {};
+  }
+};
+
+const calculateFacetedResult = (score: number, count: number): string => {
+  const average = score / count;
+  let result = 'neutral';
+  if (average > 3) {
+    result = 'high';
+  } else if (average < 3) {
+    result = 'low';
+  }
+  return result;
+};
+
+export const reduceFacetedFactors = (a: any = null, b: any = null) => {
+  if (!a[b.domain]) {
+    a[b.domain] = { score: 0, count: 0, result: 'neutral', facet: {} };
+  }
+
+  a[b.domain].score += parseInt(b.score || 0, 10);
+  a[b.domain].count += 1;
+  a[b.domain].result = calculateFacetedResult(
+    a[b.domain].score,
+    a[b.domain].count,
+  );
+
+  if (b.facet) {
+    if (!a[b.domain].facet[b.facet]) {
+      a[b.domain].facet[b.facet] = { score: 0, count: 0, result: 'neutral' };
+    }
+    a[b.domain].facet[b.facet].score += parseInt(b.score || 0, 10);
+    a[b.domain].facet[b.facet].count += 1;
+    a[b.domain].facet[b.facet].result = calculateFacetedResult(
+      a[b.domain].facet[b.facet].score,
+      a[b.domain].facet[b.facet].count,
+    );
+  }
+  return a;
+};
+
+export const transformUserPreferences = (
+  preference: Preference,
+  surveys = [],
+  multiscaleData = [],
+) => {
+  let score = null;
+  let surveyKey = '';
+  const pref = preference instanceof Model ? preference.toObject() : preference;
+  if (pref instanceof Object) {
+    const { key, value } = pref;
+    const survey = surveys.find(s => s.items.some(opt => opt.key === key));
+    const hasSurvey = survey instanceof Object;
+    const question = hasSurvey
+      ? survey.items.find(opt => opt.key === key)
+      : null;
+    surveyKey = hasSurvey ? survey.key : '';
+    if (question instanceof Object) {
+      const { type } = question;
+      switch (type) {
+        case 'multiple_key_scale':
+          score = transformMultipleKeyScaleQuestions(
+            question,
+            value,
+            multiscaleData,
+          );
+          break;
+      }
+    }
+  }
+  return notEmptyString(surveyKey)
+    ? score !== null
+      ? { survey: surveyKey, ...pref, score }
+      : { survey: surveyKey, ...pref }
+    : pref;
 };

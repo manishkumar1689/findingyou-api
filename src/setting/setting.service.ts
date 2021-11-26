@@ -30,7 +30,11 @@ import * as Redis from 'ioredis';
 import { ProtocolSettings } from '../astrologic/lib/models/protocol-models';
 import { smartCastInt } from '../lib/converters';
 import permissionValues from '../user/settings/permissions';
-import { transformUserPreferences } from './lib/mappers';
+import {
+  normalizeFacetedAnswer,
+  reduceFacetedFactors,
+  transformUserPreferences,
+} from './lib/mappers';
 
 @Injectable()
 export class SettingService {
@@ -182,13 +186,25 @@ export class SettingService {
   async processPreferences(preferences: any[]) {
     const multiscaleData = await this.surveyMultiscales();
     const surveys = await this.getSurveys();
-    return preferences
-      .filter(pref => pref instanceof Object)
+    const preferenceItems = preferences
+      .filter(pr => pr instanceof Object && pr.type !== 'faceted')
       .map(pref => transformUserPreferences(pref, surveys, multiscaleData));
+    const big5 = surveys.find(sv => sv.key === 'faceted_personality_options');
+
+    const big5Questions = big5 instanceof Object ? big5.items : [];
+    let facetedAnswers = [];
+    let facetedAnalysis = {};
+    if (big5Questions instanceof Array && big5Questions.length > 0) {
+      facetedAnswers = preferences
+        .filter(pr => pr.type === 'faceted')
+        .map(pref => normalizeFacetedAnswer(pref, big5Questions));
+      facetedAnalysis = facetedAnswers.reduce(reduceFacetedFactors, {});
+    }
+    return { preferences: preferenceItems, facetedAnswers, facetedAnalysis };
   }
 
   async getSurveys() {
-    const key = 'preference_surveys';
+    const key = 'preference_survey_set';
     const stored = await this.redisGet(key);
     const hasStored = stored instanceof Array && stored.length > 0;
     const rows = hasStored ? stored : await this.getAllSurveys();

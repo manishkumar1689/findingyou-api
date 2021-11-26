@@ -13,4 +13,10 @@ export interface JungianScaleMap {
   judging_perceiving: number;
 }
 
+export interface ScalePreferenceAnswer extends Document {
+  readonly key: string;
+  readonly value: number;
+  readonly type?: string;
+}
+
 export type ScaleScores = Big5ScaleMap[] | JungianScaleMap[];

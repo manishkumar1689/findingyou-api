@@ -825,6 +825,7 @@ export class UserService {
           distance: 1,
           profiles: 1,
           'preferences.key': 1,
+          'preferences.type': 1,
           'preferences.value': 1,
           gender: 1,
         },

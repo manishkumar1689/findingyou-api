@@ -494,10 +494,13 @@ export class UserController {
         : {};
       const refUserId = user._id.toString();
       let preferences = [];
+      let facetedAnalysis: any = {};
       if (user.preferences instanceof Array && user.preferences.length > 0) {
-        preferences = await this.settingService.processPreferences(
+        const prefData = await this.settingService.processPreferences(
           user.preferences,
         );
+        preferences = prefData.preferences;
+        facetedAnalysis = prefData.facetedAnalysis;
       }
       const filteredFlags = hasUser
         ? {
@@ -518,6 +521,7 @@ export class UserController {
       items.push({
         ...user,
         preferences,
+        facetedAnalysis,
         chart,
         hasChart,
         flags: filteredFlags,
@@ -653,15 +657,19 @@ export class UserController {
     const strMode = notEmptyString(mode, 1) ? mode : '';
     const postProcessPreferences = ['full', 'detailed'].includes(strMode);
     const addUserChart = ['member', 'chart', 'full'].includes(strMode);
-    let preferences: any[] = [];
     if (postProcessPreferences && user instanceof Object) {
       if (user.preferences instanceof Array && user.preferences.length > 0) {
-        if (user.constructor.name === 'model') {
-          const userObj = user.toObject();
-          preferences = await this.settingService.processPreferences(
-            userObj.preferences,
-          );
-          result.set('preferences', user);
+        if (user instanceof Model) {
+          const userObj: any = user.toObject();
+          const {
+            preferences,
+            facetedAnswers,
+            facetedAnalysis,
+          } = await this.settingService.processPreferences(userObj.preferences);
+          result.set('preferences', preferences);
+          result.set('facetedAnswers', facetedAnswers);
+          result.set('facetedAnalysis', facetedAnalysis);
+          delete userObj.preferences;
         }
       }
     }
@@ -846,7 +854,6 @@ export class UserController {
     const userData = new Map<string, any>();
     let valid = false;
     const isMemberLogin = mode === 'member';
-    const maxCharts = isMemberLogin ? 10 : 100;
     if (!user) {
       userData.set('msg', 'User not found');
       userData.set('key', 'not-found');
