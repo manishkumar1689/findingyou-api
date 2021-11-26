@@ -231,6 +231,33 @@ export class SettingService {
     return surveys;
   }
 
+  async getSurveyItems(surveyKey = '', cached = true) {
+    const key = ['survey_items', surveyKey].join('_');
+    const stored = cached ? await this.redisGet(key) : [];
+    let items = [];
+    if (stored instanceof Array && stored.length > 0) {
+      items = stored;
+    } else {
+      items = await this.getSurveyItemsRaw(surveyKey);
+      if (items.length > 0) {
+        this.redisSet(key, items);
+      }
+    }
+    return items;
+  }
+
+  async getSurveyItemsRaw(surveyKey = '') {
+    const setting = await this.getByKey(surveyKey);
+    let items = [];
+    if (setting instanceof Object) {
+      const { value } = setting;
+      if (value instanceof Array) {
+        items = value;
+      }
+    }
+    return items;
+  }
+
   async surveyMultiscales() {
     const key = 'survey_multiscales';
     const stored = await this.redisGet(key);

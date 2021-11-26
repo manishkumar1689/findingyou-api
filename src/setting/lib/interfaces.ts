@@ -13,7 +13,7 @@ export interface JungianScaleMap {
   judging_perceiving: number;
 }
 
-export interface ScalePreferenceAnswer extends Document {
+export interface ScalePreferenceAnswer {
   readonly key: string;
   readonly value: number;
   readonly type?: string;

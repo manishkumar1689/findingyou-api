@@ -39,6 +39,9 @@ import { deleteSwissEpheFile } from '../astrologic/lib/files';
 import { ipWhitelistFileData } from '../auth/auth.utils';
 import { StringsDTO } from './dto/strings.dto';
 import { PredictiveRuleSetDTO } from './dto/predictive-rule-set.dto';
+import { FacetedItemDTO } from './dto/faceted-item.dto';
+import { normalizeFacetedAnswer, reduceFacetedFactors } from './lib/mappers';
+import { smartCastInt } from '../lib/converters';
 
 @Controller('setting')
 export class SettingController {
@@ -604,6 +607,29 @@ export class SettingController {
       }
     }
     return res.status(statusCode).json(Object.fromEntries(jsonData));
+  }
+
+  @Post('test-big5/:refresh?')
+  async testBig4Faceted(
+    @Res() res,
+    @Param('refresh') refresh,
+    @Body() items: FacetedItemDTO[],
+  ) {
+    let responses = [];
+    let analysis = {};
+    const cached = smartCastInt(refresh, 0) < 1;
+    console.log(items);
+    if (items instanceof Array) {
+      const surveyItems = await this.settingService.getSurveyItems(
+        'faceted_personality_options',
+        cached,
+      );
+      responses = items.map(item =>
+        normalizeFacetedAnswer(item, surveyItems, false),
+      );
+      analysis = responses.reduce(reduceFacetedFactors, {});
+    }
+    return res.send({ responses, analysis });
   }
 
   @Get('test-records/import')

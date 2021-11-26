@@ -1,13 +1,19 @@
 import { Model } from 'mongoose';
-import { smartCastInt } from 'src/lib/converters';
+import { smartCastInt } from '../../lib/converters';
 import { PreferenceOption } from 'src/user/interfaces/preference-option.interface';
-import { Preference } from 'src/user/interfaces/preference.interface';
+import { Preference } from '../../user/interfaces/preference.interface';
 import { notEmptyString } from '../../lib/validators';
 import {
   Big5ScaleMap,
   JungianScaleMap,
   ScalePreferenceAnswer,
 } from './interfaces';
+
+/*
+  Adding/subtracting this number converts from a -2 to 2 range to 1 to 5
+  for compatibility with Big 5 analysis
+*/
+export const big5FacetedScaleOffset = 3;
 
 const transformMultipleKeyScaleQuestions = (
   question,
@@ -81,17 +87,27 @@ export const compareSurveyScoreSets = (
 export const normalizeFacetedAnswer = (
   facetedResponse: ScalePreferenceAnswer,
   sourcePrefs: PreferenceOption[],
+  applyOffset = true,
 ) => {
   const { key, value } = facetedResponse;
   const sq = sourcePrefs.find(s => s.key === key);
+  const offset = applyOffset ? big5FacetedScaleOffset : 0;
   if (sq) {
     const { domain, subdomain } = sq;
-    return { key, score: value + 3, domain, facet: smartCastInt(subdomain, 0) };
+    return {
+      key,
+      score: smartCastInt(value, 0) + offset,
+      domain,
+      facet: smartCastInt(subdomain, 0),
+    };
   } else {
     return {};
   }
 };
 
+/*
+  This assumes a 1 to 5 scale
+*/
 const calculateFacetedResult = (score: number, count: number): string => {
   const average = score / count;
   let result = 'neutral';
