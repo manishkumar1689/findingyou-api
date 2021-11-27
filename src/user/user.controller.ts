@@ -14,6 +14,8 @@ import {
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
+import { RedisService } from 'nestjs-redis';
+import * as Redis from 'ioredis';
 import { UserService } from './user.service';
 import { MessageService } from '../message/message.service';
 import { SettingService } from '../setting/setting.service';
@@ -41,6 +43,9 @@ import {
   extractSimplified,
   extractObjectAndMerge,
   hashMapToObject,
+  storeInRedis,
+  extractFromRedisClient,
+  extractFromRedisMap,
 } from '../lib/entities';
 import roleValues, { filterLikeabilityKey } from './settings/roles';
 import paymentValues from './settings/payments-options';
@@ -82,8 +87,11 @@ import {
   cleanSnippet,
   mapSimplePreferenceOption,
 } from './settings/simple-preferences';
-import { FacetedItemDTO } from 'src/setting/dto/faceted-item.dto';
-import { normalizedToPreference } from '../setting/lib/mappers';
+import { FacetedItemDTO } from '../setting/dto/faceted-item.dto';
+import {
+  normalizedToPreference,
+  normalizeFacetedPromptItem,
+} from '../setting/lib/mappers';
 
 @Controller('user')
 export class UserController {
@@ -95,7 +103,23 @@ export class UserController {
     private astrologicService: AstrologicService,
     private geoService: GeoService,
     private feedbackService: FeedbackService,
+    private readonly redisService: RedisService,
   ) {}
+
+  async redisClient(): Promise<Redis.Redis> {
+    const redisMap = this.redisService.getClients();
+    return extractFromRedisMap(redisMap);
+  }
+
+  async redisGet(key: string): Promise<any> {
+    const client = await this.redisClient();
+    return await extractFromRedisClient(client, key);
+  }
+
+  async redisSet(key: string, value): Promise<boolean> {
+    const client = await this.redisClient();
+    return await storeInRedis(client, key, value);
+  }
 
   // add a user
   @Post('create')
@@ -744,7 +768,7 @@ export class UserController {
    */
   async getPreferencesByKey(surveyKey = '', key = '') {
     const prefOpts = await this.settingService.getPreferenceOptions(surveyKey);
-    const data = { valid: false, num: 0, items: [] };
+    const data = { valid: false, num: 0, items: [], isFaceted: false };
     const mapLocalised = v => {
       return {
         lang: v.lang,
@@ -760,6 +784,10 @@ export class UserController {
         const vData = await this.snippetService.getSnippetByKeyStart(comboKey);
         const hasVersions = vData.snippet instanceof Object;
         const hasOptionVersions = vData.options.length > 0;
+        const isFaceted = po.type === 'faceted';
+        if (isFaceted && !data.isFaceted) {
+          data.isFaceted = true;
+        }
         const versions = {
           prompt: hasVersions ? vData.snippet.values.map(mapLocalised) : [],
           options: {},
@@ -774,11 +802,14 @@ export class UserController {
           });
           versions.options = Object.fromEntries(optMap.entries());
         }
-        data.items.push({
-          ...po,
-          hasVersions,
-          versions,
-        });
+        const item = isFaceted
+          ? normalizeFacetedPromptItem(po, versions, hasVersions)
+          : {
+              ...po,
+              hasVersions,
+              versions,
+            };
+        data.items.push(item);
       }
     }
     return data;
@@ -789,12 +820,32 @@ export class UserController {
     #admin
     Fetch preference options
   */
-  @Get('preferences/:key?')
-  async listPreferenceOptions(@Res() res, @Param('key') key) {
+  @Get('preferences/:key?/:refresh?')
+  async listPreferenceOptions(
+    @Res() res,
+    @Param('key') key,
+    @Param('refresh') refresh,
+  ) {
     const showAll = key === 'all';
+    const cached = smartCastInt(refresh, 0) < 1;
     const surveyKey = notEmptyString(key, 4) ? key : 'preference_options';
-    let data: any = { valid: false };
+    const cacheKey = ['preferences_listing', surveyKey].join('_');
+    const stored = cached ? await this.redisGet(cacheKey) : null;
+    const validStored = stored instanceof Object && stored.valid;
+    let data: any = { valid: false, cached: false };
+    if (validStored) {
+      data = { ...stored, cached: true };
+    } else {
+      data = await this.assemblePreferenceOptions(key, surveyKey, showAll);
+      if (data.valid && data.items instanceof Array) {
+        this.redisSet(cacheKey, data);
+      }
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
 
+  async assemblePreferenceOptions(key = '', surveyKey = '', showAll = false) {
+    let data: any = { valid: false, cached: false };
     if (showAll) {
       const keys = await this.settingService.getPreferenceKeys();
       const surveys: Map<string, any> = new Map();
@@ -817,14 +868,15 @@ export class UserController {
       if (isSimple) {
         data.items = data.items.map(mapSimplePreferenceOption);
       }
-      if (data.items.some(item => item.type === 'faceted')) {
+      if (data.isFaceted) {
         const options = await this.snippetService.getByCategory('faceted');
         if (options instanceof Array) {
           data.options = options.map(cleanSnippet);
         }
       }
+      data.cached = false;
     }
-    return res.status(HttpStatus.OK).json(data);
+    return data;
   }
 
   /*
@@ -1013,7 +1065,7 @@ export class UserController {
     const status = statusItems.filter(st => {
       return st.current;
     });
-    return res.status(HttpStatus.OK).json({ ...data, status });
+    return res.status(HttpStatus.OK).json({ ...data, status, mode });
   }
 
   /*

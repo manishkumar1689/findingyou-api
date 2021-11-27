@@ -115,6 +115,23 @@ export const normalizedToPreference = (facetedResponse: FacetedItemDTO) => {
   };
 };
 
+export const normalizeFacetedPromptItem = (
+  po: PreferenceOption,
+  versionData = null,
+  hasVersions = false,
+) => {
+  const { key, prompt, domain, subdomain, inverted } = po;
+  return {
+    key,
+    prompt,
+    domain,
+    subdomain: smartCastInt(subdomain),
+    inverted,
+    versions: versionData.prompt,
+    hasVersions,
+  };
+};
+
 /*
   This assumes a 1 to 5 scale
 */

@@ -323,7 +323,7 @@ export class SettingController {
     if (item instanceof Object) {
       const isAdmin = await this.userService.isAdminUser(user);
       if (isAdmin || item.user.toString() === user.toString()) {
-        const data = await this.settingService.saveProtcol(protocolDTO, itemID);
+        await this.settingService.saveProtcol(protocolDTO, itemID);
         result = { valid: true, item };
       }
     }

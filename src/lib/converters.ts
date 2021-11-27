@@ -1,4 +1,4 @@
-import { isNumeric } from "./validators";
+import { isNumeric } from './validators';
 
 export const objectToQueryString = (obj: any): string => {
   let str = '';
@@ -28,7 +28,7 @@ export const mapToQueryString = (map: Map<string, any>): string => {
   return objectToQueryString(Object.fromEntries(map));
 };
 
-export const smartCastString = (item: any, defVal: string = '') => {
+export const smartCastString = (item = null, defVal = '') => {
   let out = defVal;
   switch (typeof item) {
     case 'string':
@@ -69,7 +69,10 @@ export const smartCastFloat = (item: string | number, defVal = 0) => {
   return smartCastNumber(item, defVal, false);
 };
 
-export const smartCastBool = (item: string | number | boolean, defVal = false) => {
+export const smartCastBool = (
+  item: string | number | boolean,
+  defVal = false,
+) => {
   let intVal = defVal ? 1 : 0;
   if (typeof item === 'string') {
     if (item.length > 0) {
@@ -128,8 +131,11 @@ export const roundNumber = (num: number, places = 6) => {
   }
 };
 
-
 export const toStartRef = (startRef = null) => {
   const monthRef = /^\d+m$/i;
-  return isNumeric(startRef) ? parseFloat(startRef) : monthRef.test(startRef) ? parseInt(startRef.replace(/[^0-9]\./, ''), 10) / 12 : startRef;
-}
+  return isNumeric(startRef)
+    ? parseFloat(startRef)
+    : monthRef.test(startRef)
+    ? parseInt(startRef.replace(/[^0-9]\./, ''), 10) / 12
+    : startRef;
+};

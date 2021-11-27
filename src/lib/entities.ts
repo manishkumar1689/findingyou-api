@@ -3,9 +3,7 @@ import * as Redis from 'ioredis';
 export const updateSubEntity = (source, data: any) => {
   if (data instanceof Object && source instanceof Object) {
     const entries = Object.entries(data);
-    entries.forEach(entry => {
-      const k = entry[0];
-      const v = entry[1];
+    entries.forEach(([k, v]) => {
       source[k] = v;
     });
   }
@@ -65,22 +63,6 @@ export const extractObject = (obj: any) => {
   return matchedVal;
 };
 
-export const extractSimplified = (obj: any, exclude: string[]) => {
-  const matchedVal = extractObject(obj);
-  const data = new Map<string, any>();
-  return hashMapToObject(extractObjectAndMerge(matchedVal, data, exclude));
-};
-
-export const extractByKeys = (obj: any, keys: string[]): any => {
-  const mp = new Map<string, any>();
-  if (obj instanceof Object) {
-    keys.forEach(k => {
-      mp.set(k, obj[k]);
-    });
-  }
-  return Object.fromEntries(mp);
-};
-
 export const extractObjectAndMerge = (
   obj: any,
   data: Map<string, any>,
@@ -95,6 +77,22 @@ export const extractObjectAndMerge = (
     });
   }
   return data;
+};
+
+export const extractSimplified = (obj: any, exclude: string[]) => {
+  const matchedVal = extractObject(obj);
+  const data = new Map<string, any>();
+  return hashMapToObject(extractObjectAndMerge(matchedVal, data, exclude));
+};
+
+export const extractByKeys = (obj: any, keys: string[]): any => {
+  const mp = new Map<string, any>();
+  if (obj instanceof Object) {
+    keys.forEach(k => {
+      mp.set(k, obj[k]);
+    });
+  }
+  return Object.fromEntries(mp);
 };
 
 export const extractDocId = (matchedModel): string => {
@@ -132,7 +130,7 @@ export const extractArrayFromObject = (obj: any, keys: string[]) => {
 
 export const simplifyObject = (obj: any, keys: string[]) => {
   const pairs = extractArrayFromObject(obj, keys).map(pair => pair[1]);
-  let hm = new Map<string, any>();
+  const hm = new Map<string, any>();
   pairs.forEach(pair => {
     hm.set(pair[0], pair[1]);
   });
