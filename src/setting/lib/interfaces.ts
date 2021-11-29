@@ -19,4 +19,11 @@ export interface ScalePreferenceAnswer {
   readonly type?: string;
 }
 
+export interface FacetedBig5Set {
+  readonly key: string;
+  readonly score: number;
+  readonly domain: string;
+  readonly facet: number;
+}
+
 export type ScaleScores = Big5ScaleMap[] | JungianScaleMap[];

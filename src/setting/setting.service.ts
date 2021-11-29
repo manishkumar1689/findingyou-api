@@ -31,6 +31,7 @@ import { ProtocolSettings } from '../astrologic/lib/models/protocol-models';
 import { smartCastInt } from '../lib/converters';
 import permissionValues from '../user/settings/permissions';
 import {
+  analyseAnswers,
   normalizeFacetedAnswer,
   reduceFacetedFactors,
   transformUserPreferences,
@@ -258,7 +259,8 @@ export class SettingService {
       responses = items.map(item =>
         normalizeFacetedAnswer(item, surveyItems, false),
       );
-      analysis = responses.reduce(reduceFacetedFactors, {});
+      // analysis = responses.reduce(reduceFacetedFactors, {});
+      analysis = analyseAnswers(responses);
     }
     return { responses, analysis };
   }

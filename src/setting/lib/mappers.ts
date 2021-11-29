@@ -5,6 +5,7 @@ import { Preference } from '../../user/interfaces/preference.interface';
 import { notEmptyString } from '../../lib/validators';
 import {
   Big5ScaleMap,
+  FacetedBig5Set,
   JungianScaleMap,
   ScalePreferenceAnswer,
 } from './interfaces';
@@ -105,7 +106,6 @@ export const normalizeFacetedAnswer = (
   const { key, value } = facetedResponse;
   const sq = sourcePrefs.find(s => s.key === key);
   const offset = applyOffset ? big5FacetedScaleOffset : 0;
-  console.log(sq.inverted);
   if (sq.inverted) {
   }
   if (sq) {
@@ -185,6 +185,40 @@ export const reduceFacetedFactors = (a: any = null, b: any = null) => {
     );
   }
   return a;
+};
+
+export const analyseAnswers = (answers: FacetedBig5Set[]) => {
+  const domainItems: Map<string, any> = new Map();
+  const domains = ['O', 'C', 'E', 'A', 'N'];
+  const facets = [1, 2, 3, 4, 5, 6];
+  domains.forEach(domKey => {
+    const dItems = answers.filter(an => an.domain === domKey);
+    const score = dItems.map(item => item.score).reduce((a, b) => a + b, 0);
+    const count = dItems.length;
+    const item = {
+      score,
+      count,
+      result: calculateFacetedResult(score, count),
+    };
+    const facetResults = facets.map(facet => {
+      const fItems = dItems.filter(an => an.facet === facet);
+      const score = fItems.map(item => item.score).reduce((a, b) => a + b, 0);
+      const count = fItems.length;
+      return [
+        facet,
+        {
+          score,
+          count,
+          result: calculateFacetedResult(score, count),
+        },
+      ];
+    });
+    domainItems.set(domKey, {
+      ...item,
+      facets: Object.fromEntries(facetResults),
+    });
+  });
+  return Object.fromEntries(domainItems.entries());
 };
 
 export const transformUserPreferences = (
