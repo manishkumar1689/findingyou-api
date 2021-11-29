@@ -283,7 +283,7 @@ export class SnippetService {
   }
 
   async matchTranslation(text: string, to = '', from = 'en') {
-    const rgx = new RegExp('^' + text.trim() + '$', 'i');
+    const rgx = new RegExp('^' + text.trim().replace(/\s+/, ' ') + '$', 'i');
     const item = await this.translationModel.findOne({
       from,
       to,
@@ -317,7 +317,10 @@ export class SnippetService {
   }
 
   async translateItem(text = '', target = '', source = 'en') {
-    const item = await this.matchTranslation(text, target, source);
+    const mayMatchExisting = text.length < 128 && !/\n/.test(text);
+    const item = mayMatchExisting
+      ? await this.matchTranslation(text, target, source)
+      : null;
     if (item instanceof Object && notEmptyString(item.text)) {
       return {
         text,

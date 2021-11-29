@@ -14,7 +14,9 @@ import { FacetedItemDTO } from '../dto/faceted-item.dto';
   Adding/subtracting this number converts from a -2 to 2 range to 1 to 5
   for compatibility with Big 5 analysis
 */
-export const big5FacetedScaleOffset = 3;
+export const big5FacetedScaleRange = 5;
+
+export const big5FacetedScaleOffset = Math.ceil(big5FacetedScaleRange / 2);
 
 const transformMultipleKeyScaleQuestions = (
   question,
@@ -85,6 +87,16 @@ export const compareSurveyScoreSets = (
   return scores.reduce((a, b) => a + b, 0) / scores.length;
 };
 
+const applyAdjustedScore = (value = 0, offset = 0, inverted = false) => {
+  let score = smartCastInt(value, 0) + offset;
+  if (inverted) {
+    if (offset === 0) {
+      score = big5FacetedScaleRange + 1 - score;
+    }
+  }
+  return score;
+};
+
 export const normalizeFacetedAnswer = (
   facetedResponse: ScalePreferenceAnswer,
   sourcePrefs: PreferenceOption[],
@@ -93,11 +105,14 @@ export const normalizeFacetedAnswer = (
   const { key, value } = facetedResponse;
   const sq = sourcePrefs.find(s => s.key === key);
   const offset = applyOffset ? big5FacetedScaleOffset : 0;
+  console.log(sq.inverted);
+  if (sq.inverted) {
+  }
   if (sq) {
     const { domain, subdomain } = sq;
     return {
       key,
-      score: smartCastInt(value, 0) + offset,
+      score: applyAdjustedScore(value, offset, sq.inverted),
       domain,
       facet: smartCastInt(subdomain, 0),
     };
@@ -136,11 +151,11 @@ export const normalizeFacetedPromptItem = (
   This assumes a 1 to 5 scale
 */
 const calculateFacetedResult = (score: number, count: number): string => {
-  const average = score / count;
+  const average = Math.round(score / count);
   let result = 'neutral';
-  if (average > 3) {
+  if (average > big5FacetedScaleOffset) {
     result = 'high';
-  } else if (average < 3) {
+  } else if (average < big5FacetedScaleOffset) {
     result = 'low';
   }
   return result;
