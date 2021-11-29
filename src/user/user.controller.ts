@@ -27,6 +27,7 @@ import {
   notEmptyString,
   isNumeric,
   validISODateString,
+  isString,
 } from '../lib/validators';
 import { smartCastInt, toStartRef } from '../lib/converters';
 import { Request } from 'express';
@@ -784,7 +785,7 @@ export class UserController {
         const vData = await this.snippetService.getSnippetByKeyStart(comboKey);
         const hasVersions = vData.snippet instanceof Object;
         const hasOptionVersions = vData.options.length > 0;
-        const isFaceted = po.type === 'faceted';
+        const isFaceted = isString(po.domain);
         if (isFaceted && !data.isFaceted) {
           data.isFaceted = true;
         }

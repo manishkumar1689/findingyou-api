@@ -19,6 +19,16 @@ export const updateInSubEntities = (items: any[], refID: string, data: any) => {
   return items;
 };
 
+export const isObjectWith = (obj = null, fields = []) => {
+  const isObject = obj instanceof Object;
+  const keys = isObject ? Object.keys(obj) : [];
+  const hasFields = fields instanceof Array ? fields.length > 0 : false;
+  const keysMatched = hasFields
+    ? fields.some(f => keys.includes(f) === false) === false
+    : true;
+  return isObject && keysMatched;
+};
+
 export const hashMapToObject = (
   hm: Map<string, any>,
   sortKeys: string[] = [],

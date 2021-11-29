@@ -483,8 +483,8 @@ export class Kuta {
         const hasMale = maleIndex >= 0;
         const hasFemale = femaleIndex >= 0;
         const femaleFirst = hasFemale && femaleIndex < maleIndex;
-        const female = hasFemale ? dataSets[femaleIndex] : null;
-        const male = hasMale ? dataSets[maleIndex] : null;
+        /* const female = hasFemale ? dataSets[femaleIndex] : null;
+        const male = hasMale ? dataSets[maleIndex] : null; */
         if (settings.matchType) {
           switch (key) {
             case 'varna':
@@ -518,7 +518,7 @@ export class Kuta {
               this._calcVedha(settings, result, dataSets, femaleFirst);
               break;
             case 'rajju':
-              this._calcRajju(settings, result, dataSets, femaleFirst);
+              this._calcRajju(settings, result, dataSets);
               break;
             case 'stri':
               this._calcStri(settings, result, dataSets, femaleFirst);
@@ -533,7 +533,7 @@ export class Kuta {
               this._calcVihanga(settings, result, dataSets, femaleFirst);
               break;
             case 'gotra':
-              this._calcGotra(settings, result, dataSets, femaleFirst);
+              this._calcGotra(settings, result, dataSets);
               break;
           }
         }
@@ -789,9 +789,10 @@ export class Kuta {
     let defProtocol = this.itemOptions.get('vashya');
     if (!defProtocol) {
       defProtocol = 'classical__one';
+      score += 1 - 1;
     }
-    let vashya1 = 0;
-    let vashya2 = 0;
+    /* let vashya1 = 0;
+    let vashya2 = 0; */
     const [protocolKey, protocolSubKey] = defProtocol.split('__');
     if (signMatches instanceof Object) {
       const protocols = Object.keys(signMatches);
@@ -821,9 +822,9 @@ export class Kuta {
             score += score2;
           } */
         } else if (matchType === 'degreeRange') {
-          const female = femaleFirst ? s1 : s2;
+          /* const female = femaleFirst ? s1 : s2;
           const male = femaleFirst ? s2 : s1;
-          /* const v1 = this._applyClassicVashyaRangeMatch(protocol, female);
+          const v1 = this._applyClassicVashyaRangeMatch(protocol, female);
           const v2 = this._applyClassicVashyaRangeMatch(protocol, male);
           if (protocol.score instanceof Object) {
             const scoreKeys = Object.keys(protocol.score);
@@ -835,7 +836,7 @@ export class Kuta {
             if (vashyaIndex1 < scoreRows.length) {
               score = scoreRows[vashyaIndex1][vashyaIndex2];
             }
-          } */
+          }*/
         }
         result.score = score;
       }
@@ -969,7 +970,6 @@ export class Kuta {
     settings: any,
     result: KutaValueSet,
     dataSets: Array<KutaGrahaItem>,
-    femaleFirst = true,
   ) {
     const [s1, s2] = dataSets;
     const { values } = settings;
@@ -1141,7 +1141,6 @@ export class Kuta {
     settings: any,
     result: KutaValueSet,
     dataSets: Array<KutaGrahaItem>,
-    femaleFirst,
   ) {
     const { matches, scores } = settings;
     if (matches instanceof Array && scores instanceof Array) {
