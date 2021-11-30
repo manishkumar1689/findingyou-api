@@ -33,11 +33,10 @@ export class SnippetService {
             values: 1,
           }
         : {};
-    const Snippets = await this.snippetModel
+    return await this.snippetModel
       .find(filter)
       .select(fields)
       .exec();
-    return Snippets;
   }
 
   async categories(): Promise<string[]> {
@@ -47,7 +46,6 @@ export class SnippetService {
       .exec();
     const categories: Array<string> = [];
     rows.forEach(row => {
-      const item = row.toObject();
       const { key } = row;
       if (key) {
         const category = key.split('__').shift();
@@ -154,7 +152,7 @@ export class SnippetService {
 
   async getByCategory(prefix = ''): Promise<Snippet[]> {
     const rgx = new RegExp('^' + prefix.replace(/__$/, '') + '__');
-    return await this.snippetModel.find({ key: rgx });
+    return await this.snippetModel.find({ key: rgx }).exec();
   }
 
   // post a single Snippet

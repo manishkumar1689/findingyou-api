@@ -248,7 +248,11 @@ export class SettingService {
     return items;
   }
 
-  async analyseBig5Faceted(items: FacetedItemDTO[] = [], cached = true) {
+  async analyseBig5Faceted(
+    items: FacetedItemDTO[] = [],
+    feedbackItems = [],
+    cached = true,
+  ) {
     let responses = [];
     let analysis = {};
     if (items instanceof Array) {
@@ -260,7 +264,7 @@ export class SettingService {
         normalizeFacetedAnswer(item, surveyItems, false),
       );
       // analysis = responses.reduce(reduceFacetedFactors, {});
-      analysis = analyseAnswers(responses);
+      analysis = analyseAnswers(responses, feedbackItems);
     }
     return { responses, analysis };
   }
@@ -304,7 +308,6 @@ export class SettingService {
         data = setting.value;
       }
     }
-
     const dataWithOptions = data.map(item => {
       const valueOpts = buildSurveyOptions(item.key);
       return { ...item, options: valueOpts };

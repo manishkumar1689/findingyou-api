@@ -1388,15 +1388,18 @@ export class UserController {
     return res.json(data);
   }
 
-  @Put('faceted-big5/save/:userID')
+  @Put('faceted-big5/save/:userID/:refresh?')
   async testBig4Faceted(
     @Res() res,
     @Param('userID') userID,
+    @Param('refresh') refresh,
     @Body() items: FacetedItemDTO[],
   ) {
     let responses = [];
     let analysis = {};
     let valid = false;
+
+    const cached = smartCastInt(refresh, 0) < 1;
     if (items instanceof Array) {
       const preferences = items.map(normalizedToPreference);
       const userData = await this.userService.savePreferences(
@@ -1404,12 +1407,28 @@ export class UserController {
         preferences,
       );
       if (userData.valid) {
+        const cKey = 'big5_feedback_items';
+        let feedbackItems = [];
+        const storedItems = cached ? await this.redisGet(cKey) : null;
+        if (storedItems instanceof Array && storedItems.length > 0) {
+          feedbackItems = storedItems;
+        } else {
+          feedbackItems = await this.snippetService.getByCategory(
+            'big5_results',
+          );
+          if (feedbackItems instanceof Array && feedbackItems.length > 5) {
+            this.redisSet(cKey, feedbackItems);
+          }
+        }
         const big5Data = await this.settingService.analyseBig5Faceted(
           items,
+          feedbackItems,
           true,
         );
+
         responses = big5Data.responses;
         analysis = big5Data.analysis;
+
         valid = responses.length > 0;
       }
     }

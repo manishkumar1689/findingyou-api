@@ -618,7 +618,7 @@ export class SettingController {
     const {
       responses,
       analysis,
-    } = await this.settingService.analyseBig5Faceted(items, cached);
+    } = await this.settingService.analyseBig5Faceted(items, [], cached);
     return res.send({ responses, analysis });
   }
 

@@ -159,10 +159,7 @@ import { GeoPos } from './interfaces/geo-pos';
 import { processPredictiveRuleSet } from './lib/predictions';
 import { panchaPakshiDayNightSet } from './lib/settings/pancha-pakshi';
 import { PairsSetDTO } from './dto/pairs-set.dto';
-import {
-  compatibilityTexts,
-  randomCompatibilityText,
-} from './lib/settings/compatibility-texts';
+import { randomCompatibilityText } from './lib/settings/compatibility-texts';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -3175,6 +3172,7 @@ export class AstrologicController {
     return res.json({
       valid: items.length > 0,
       item,
+      relType,
     });
   }
 

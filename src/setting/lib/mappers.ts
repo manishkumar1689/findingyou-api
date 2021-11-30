@@ -10,6 +10,8 @@ import {
   ScalePreferenceAnswer,
 } from './interfaces';
 import { FacetedItemDTO } from '../dto/faceted-item.dto';
+import { Snippet } from 'src/snippet/interfaces/snippet.interface';
+import { facetedBig5Categories } from '../settings/faceted-big5';
 
 /*
   Adding/subtracting this number converts from a -2 to 2 range to 1 to 5
@@ -187,36 +189,75 @@ export const reduceFacetedFactors = (a: any = null, b: any = null) => {
   return a;
 };
 
-export const analyseAnswers = (answers: FacetedBig5Set[]) => {
+const matchBig5Feedback = (
+  feedbackItems: Snippet[],
+  domain = '',
+  facet = 0,
+  result = 'neutral',
+) => {
+  if (
+    facet > 0 &&
+    domain.length === 1 &&
+    ['low', 'high', 'neutral'].includes(result)
+  ) {
+    const domLetter = domain.toLowerCase();
+    const key = ['big5_results_', domLetter, 'facet', facet, result].join('_');
+    const fbItem = feedbackItems.find(item => item.key === key);
+    if (fbItem instanceof Object) {
+      return fbItem.values.map(v => {
+        const { lang, text } = v;
+        return { lang, text };
+      });
+    }
+  }
+  return [];
+};
+
+export const analyseAnswers = (
+  answers: FacetedBig5Set[],
+  feedbackItems: Snippet[] = [],
+) => {
   const domainItems: Map<string, any> = new Map();
+  const hasFeedback =
+    feedbackItems instanceof Array && feedbackItems.length > 5;
   const domains = ['O', 'C', 'E', 'A', 'N'];
   const facets = [1, 2, 3, 4, 5, 6];
   domains.forEach(domKey => {
     const dItems = answers.filter(an => an.domain === domKey);
     const score = dItems.map(item => item.score).reduce((a, b) => a + b, 0);
     const count = dItems.length;
-    const item = {
-      score,
-      count,
-      result: calculateFacetedResult(score, count),
-    };
-    const facetResults = facets.map(facet => {
-      const fItems = dItems.filter(an => an.facet === facet);
-      const score = fItems.map(item => item.score).reduce((a, b) => a + b, 0);
-      const count = fItems.length;
-      return [
-        facet,
-        {
+    const labelItem = facetedBig5Categories.find(ct => ct.key === domKey);
+    if (labelItem instanceof Object) {
+      const item = {
+        score,
+        count,
+        title: labelItem.title,
+        result: calculateFacetedResult(score, count),
+      };
+      const facetResults = facets.map(facet => {
+        const fItems = dItems.filter(an => an.facet === facet);
+        const score = fItems.map(item => item.score).reduce((a, b) => a + b, 0);
+        const count = fItems.length;
+        const result = calculateFacetedResult(score, count);
+        const flItem = labelItem.facets.find(fc => fc.num === facet);
+        const facetTitle =
+          flItem instanceof Object ? flItem.title : facet.toString();
+        return {
+          num: facet,
+          title: facetTitle,
           score,
           count,
           result: calculateFacetedResult(score, count),
-        },
-      ];
-    });
-    domainItems.set(domKey, {
-      ...item,
-      facets: Object.fromEntries(facetResults),
-    });
+          feedback: hasFeedback
+            ? matchBig5Feedback(feedbackItems, domKey, facet, result)
+            : [],
+        };
+      });
+      domainItems.set(domKey, {
+        ...item,
+        facets: facetResults,
+      });
+    }
   });
   return Object.fromEntries(domainItems.entries());
 };
