@@ -2,7 +2,7 @@ import { Model } from 'mongoose';
 import { smartCastInt } from '../../lib/converters';
 import { PreferenceOption } from '../../user/interfaces/preference-option.interface';
 import { Preference } from '../../user/interfaces/preference.interface';
-import { notEmptyString } from '../../lib/validators';
+import { isNumeric, notEmptyString } from '../../lib/validators';
 import {
   Big5ScaleMap,
   FacetedBig5Set,
@@ -201,14 +201,13 @@ const matchBig5Feedback = (
   result = 'neutral',
 ) => {
   if (
-    facet > 0 &&
+    isNumeric(facet) &&
     domain.length === 1 &&
     ['low', 'high', 'neutral'].includes(result)
   ) {
     const domLetter = domain.toLowerCase();
     const midKey = facet > 0 ? ['facet', facet].join('_') : 'all';
     const key = ['big5_results_', domLetter, midKey, result].join('_');
-    console.log(key);
     const fbItem = feedbackItems.find(item => item.key === key);
     if (fbItem instanceof Object) {
       return fbItem.values.map(v => {
