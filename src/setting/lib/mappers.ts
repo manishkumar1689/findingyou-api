@@ -10,7 +10,7 @@ import {
   ScalePreferenceAnswer,
 } from './interfaces';
 import { FacetedItemDTO } from '../dto/faceted-item.dto';
-import { Snippet } from 'src/snippet/interfaces/snippet.interface';
+import { Snippet } from '../../snippet/interfaces/snippet.interface';
 import { facetedBig5Categories } from '../settings/faceted-big5';
 
 /*
