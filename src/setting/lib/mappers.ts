@@ -206,7 +206,8 @@ const matchBig5Feedback = (
     ['low', 'high', 'neutral'].includes(result)
   ) {
     const domLetter = domain.toLowerCase();
-    const key = ['big5_results_', domLetter, 'facet', facet, result].join('_');
+    const midKey = facet > 0 ? ['facet', facet].join('_') : 'all';
+    const key = ['big5_results_', domLetter, midKey, result].join('_');
     const fbItem = feedbackItems.find(item => item.key === key);
     if (fbItem instanceof Object) {
       return fbItem.values.map(v => {
@@ -233,12 +234,16 @@ export const analyseAnswers = (
     const count = dItems.length;
     const labelItem = facetedBig5Categories.find(ct => ct.key === domKey);
     if (labelItem instanceof Object) {
+      const result = calculateFacetedResult(score, count);
       const item = {
         score,
         count,
         pc: calcBig5ItemPercent(score, count),
         title: labelItem.title,
-        result: calculateFacetedResult(score, count),
+        result,
+        feedback: hasFeedback
+          ? matchBig5Feedback(feedbackItems, domKey, 0, result)
+          : [],
       };
       const facetResults = facets.map(facet => {
         const fItems = dItems.filter(an => an.facet === facet);
