@@ -163,7 +163,12 @@ const calculateFacetedResult = (score: number, count: number): string => {
   return result;
 };
 
-export const reduceFacetedFactors = (a: any = null, b: any = null) => {
+const calcBig5ItemPercent = (score = 0, count = 0): number => {
+  const max = count * big5FacetedScaleRange;
+  return Math.round(100 * 100000 * (score / max)) / 100000;
+};
+
+/* export const reduceFacetedFactors = (a: any = null, b: any = null) => {
   if (!a[b.domain]) {
     a[b.domain] = { score: 0, count: 0, result: 'neutral', facet: {} };
   }
@@ -187,7 +192,7 @@ export const reduceFacetedFactors = (a: any = null, b: any = null) => {
     );
   }
   return a;
-};
+}; */
 
 const matchBig5Feedback = (
   feedbackItems: Snippet[],
@@ -231,6 +236,7 @@ export const analyseAnswers = (
       const item = {
         score,
         count,
+        pc: calcBig5ItemPercent(score, count),
         title: labelItem.title,
         result: calculateFacetedResult(score, count),
       };
@@ -247,6 +253,7 @@ export const analyseAnswers = (
           title: facetTitle,
           score,
           count,
+          pc: calcBig5ItemPercent(score, count),
           result: calculateFacetedResult(score, count),
           feedback: hasFeedback
             ? matchBig5Feedback(feedbackItems, domKey, facet, result)

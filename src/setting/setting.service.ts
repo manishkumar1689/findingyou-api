@@ -33,7 +33,6 @@ import permissionValues from '../user/settings/permissions';
 import {
   analyseAnswers,
   normalizeFacetedAnswer,
-  reduceFacetedFactors,
   transformUserPreferences,
 } from './lib/mappers';
 import { FacetedItemDTO } from './dto/faceted-item.dto';
@@ -200,7 +199,7 @@ export class SettingService {
       facetedAnswers = preferences
         .filter(pr => pr.type === 'faceted')
         .map(pref => normalizeFacetedAnswer(pref, big5Questions));
-      facetedAnalysis = facetedAnswers.reduce(reduceFacetedFactors, {});
+      facetedAnalysis = analyseAnswers(facetedAnswers);
     }
     return { preferences: preferenceItems, facetedAnswers, facetedAnalysis };
   }
@@ -263,7 +262,6 @@ export class SettingService {
       responses = items.map(item =>
         normalizeFacetedAnswer(item, surveyItems, false),
       );
-      // analysis = responses.reduce(reduceFacetedFactors, {});
       analysis = analyseAnswers(responses, feedbackItems);
     }
     return { responses, analysis };
