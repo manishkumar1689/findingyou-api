@@ -60,6 +60,7 @@ import { CountryOption } from './interfaces/country-option.interface';
 import { AstrologicService } from '../astrologic/astrologic.service';
 import { SurveyItem } from './interfaces/survey-item';
 import { SnippetService } from '../snippet/snippet.service';
+import { Snippet } from '../snippet/interfaces/snippet.interface';
 import { FeedbackService } from '../feedback/feedback.service';
 import { ProfileDTO } from './dto/profile.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -1388,8 +1389,23 @@ export class UserController {
     return res.json(data);
   }
 
+  async getBig5FeedItems(cached = true): Promise<Snippet[]> {
+    const cKey = 'big5_feedback_items';
+    let feedbackItems = [];
+    const storedItems = cached ? await this.redisGet(cKey) : null;
+    if (storedItems instanceof Array && storedItems.length > 0) {
+      feedbackItems = storedItems;
+    } else {
+      feedbackItems = await this.snippetService.getByCategory('big5_results');
+      if (feedbackItems instanceof Array && feedbackItems.length > 5) {
+        this.redisSet(cKey, feedbackItems);
+      }
+    }
+    return feedbackItems;
+  }
+
   @Put('faceted-big5/save/:userID/:refresh?')
-  async testBig4Faceted(
+  async getBig5Faceted(
     @Res() res,
     @Param('userID') userID,
     @Param('refresh') refresh,
@@ -1398,32 +1414,19 @@ export class UserController {
     let responses = [];
     let analysis = {};
     let valid = false;
-
     const cached = smartCastInt(refresh, 0) < 1;
     if (items instanceof Array) {
+      const feedbackItems = await this.getBig5FeedItems(cached);
       const preferences = items.map(normalizedToPreference);
       const userData = await this.userService.savePreferences(
         userID,
         preferences,
       );
       if (userData.valid) {
-        const cKey = 'big5_feedback_items';
-        let feedbackItems = [];
-        const storedItems = cached ? await this.redisGet(cKey) : null;
-        if (storedItems instanceof Array && storedItems.length > 0) {
-          feedbackItems = storedItems;
-        } else {
-          feedbackItems = await this.snippetService.getByCategory(
-            'big5_results',
-          );
-          if (feedbackItems instanceof Array && feedbackItems.length > 5) {
-            this.redisSet(cKey, feedbackItems);
-          }
-        }
         const big5Data = await this.settingService.analyseBig5Faceted(
           items,
           feedbackItems,
-          true,
+          cached,
         );
 
         responses = big5Data.responses;
@@ -1433,6 +1436,25 @@ export class UserController {
       }
     }
     return res.send({ valid, responses, analysis });
+  }
+
+  @Post('test-big5/:refresh?')
+  async testBig4Faceted(
+    @Res() res,
+    @Param('refresh') refresh,
+    @Body() items: FacetedItemDTO[],
+  ) {
+    const cached = smartCastInt(refresh, 0) < 1;
+    const feedbackItems = await this.getBig5FeedItems(cached);
+    const {
+      responses,
+      analysis,
+    } = await this.settingService.analyseBig5Faceted(
+      items,
+      feedbackItems,
+      cached,
+    );
+    return res.send({ responses, analysis });
   }
 
   /*

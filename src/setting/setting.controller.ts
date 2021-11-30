@@ -608,20 +608,6 @@ export class SettingController {
     return res.status(statusCode).json(Object.fromEntries(jsonData));
   }
 
-  @Post('test-big5/:refresh?')
-  async testBig4Faceted(
-    @Res() res,
-    @Param('refresh') refresh,
-    @Body() items: FacetedItemDTO[],
-  ) {
-    const cached = smartCastInt(refresh, 0) < 1;
-    const {
-      responses,
-      analysis,
-    } = await this.settingService.analyseBig5Faceted(items, [], cached);
-    return res.send({ responses, analysis });
-  }
-
   @Get('test-records/import')
   async importTestRecords(@Res() res) {
     const result = await parseAstroBankCSV();
