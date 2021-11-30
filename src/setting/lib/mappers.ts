@@ -208,6 +208,7 @@ const matchBig5Feedback = (
     const domLetter = domain.toLowerCase();
     const midKey = facet > 0 ? ['facet', facet].join('_') : 'all';
     const key = ['big5_results_', domLetter, midKey, result].join('_');
+    console.log(key);
     const fbItem = feedbackItems.find(item => item.key === key);
     if (fbItem instanceof Object) {
       return fbItem.values.map(v => {
