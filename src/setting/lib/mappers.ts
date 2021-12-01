@@ -11,7 +11,10 @@ import {
 } from './interfaces';
 import { FacetedItemDTO } from '../dto/faceted-item.dto';
 import { Snippet } from '../../snippet/interfaces/snippet.interface';
-import { facetedBig5Categories } from '../settings/faceted-big5';
+import {
+  facetedBig5Categories,
+  facetedJungianCategories,
+} from '../settings/faceted-big5';
 
 /*
   Adding/subtracting this number converts from a -2 to 2 range to 1 to 5
@@ -219,14 +222,13 @@ const matchBig5Feedback = (
   return [];
 };
 
-export const analyseAnswers = (
-  type = 'faceted',
-  answers: FacetedBig5Set[],
+const analyseBig5Answers = (
+  answers: FacetedBig5Set[] = [],
   feedbackItems: Snippet[] = [],
 ) => {
-  const domainItems: Map<string, any> = new Map();
   const hasFeedback =
     feedbackItems instanceof Array && feedbackItems.length > 5;
+  const domainItems: Map<string, any> = new Map();
   const domains = ['O', 'C', 'E', 'A', 'N'];
   const facets = [1, 2, 3, 4, 5, 6];
   domains.forEach(domKey => {
@@ -272,6 +274,52 @@ export const analyseAnswers = (
       });
     }
   });
+  return domainItems;
+};
+
+const analyseJungianAnswers = (
+  answers: FacetedBig5Set[] = [],
+  feedbackItems: Snippet[] = [],
+) => {
+  const hasFeedback =
+    feedbackItems instanceof Array && feedbackItems.length > 5;
+  const domainItems: Map<string, any> = new Map();
+  const domains = ['IE', 'SN', 'FT', 'JP'];
+  domains.forEach(domKey => {
+    const dItems = answers.filter(an => an.domain === domKey);
+    const score = dItems.map(item => item.score).reduce((a, b) => a + b, 0);
+    const count = dItems.length;
+    const labelItem = facetedJungianCategories.find(ct => ct.key === domKey);
+    const result = calculateFacetedResult(score, count);
+    if (labelItem instanceof Object) {
+      const item = {
+        score,
+        count,
+        pc: calcBig5ItemPercent(score, count),
+        title: labelItem.title,
+        result,
+        feedback: hasFeedback
+          ? matchBig5Feedback(feedbackItems, domKey, 0, result)
+          : [],
+      };
+      domainItems.set(domKey, {
+        ...item,
+      });
+    }
+  });
+  return domainItems;
+};
+
+export const analyseAnswers = (
+  type = 'faceted',
+  answers: FacetedBig5Set[],
+  feedbackItems: Snippet[] = [],
+) => {
+  console.log(type);
+  const domainItems =
+    type === 'jungian'
+      ? analyseJungianAnswers(answers, feedbackItems)
+      : analyseBig5Answers(answers, feedbackItems);
   return Object.fromEntries(domainItems.entries());
 };
 

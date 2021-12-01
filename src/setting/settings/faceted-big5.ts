@@ -60,3 +60,10 @@ export const facetedBig5Categories = [
     ],
   },
 ];
+
+export const facetedJungianCategories = [
+  { key: 'IE', title: 'Introversion - Extroversion' },
+  { key: 'SN', title: 'Sensing – Intuition' },
+  { key: 'FT', title: 'Thinking – Feeling' },
+  { key: 'JP', title: 'Judging – Perceiving' },
+];
