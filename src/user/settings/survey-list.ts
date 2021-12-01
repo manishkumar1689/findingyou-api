@@ -15,20 +15,12 @@ const surveyList = [
     range: [-2, 2],
   },
   {
-    key: 'personality',
-    name: 'Big Five',
-    multiscales: 'big5',
-    type: 'psychometric',
-    enabled: true,
-    range: [1, 5],
-  },
-  {
     key: 'jungian',
     name: 'Jungian',
     multiscales: 'jungian',
-    type: 'psychometric',
+    type: 'jungian',
     enabled: true,
-    range: [1, 10],
+    range: [-2, 2],
   },
   {
     key: 'feedback',

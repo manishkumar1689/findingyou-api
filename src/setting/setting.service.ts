@@ -188,9 +188,12 @@ export class SettingService {
     const multiscaleData = await this.surveyMultiscales();
     const surveys = await this.getSurveys();
     const preferenceItems = preferences
-      .filter(pr => pr instanceof Object && pr.type !== 'faceted')
+      .filter(
+        pr => pr instanceof Object && ['faceted', 'jungian'].includes(pr.type),
+      )
       .map(pref => transformUserPreferences(pref, surveys, multiscaleData));
     const big5 = surveys.find(sv => sv.key === 'faceted_personality_options');
+    const jungian = surveys.find(sv => sv.type === 'jungian');
 
     const big5Questions = big5 instanceof Object ? big5.items : [];
     let facetedAnswers = [];
