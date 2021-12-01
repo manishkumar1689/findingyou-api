@@ -1389,14 +1389,19 @@ export class UserController {
     return res.json(data);
   }
 
-  async getBig5FeedItems(cached = true): Promise<Snippet[]> {
-    const cKey = 'big5_feedback_items';
+  async getFacetedFeedbackItems(
+    type = 'faceted',
+    cached = true,
+  ): Promise<Snippet[]> {
+    const subKey = type === 'faceted' ? 'big5' : 'jungian';
+    const cKey = [subKey, 'feedback_items'].join('_');
+    const resultKey = [subKey, 'results'].join('_');
     let feedbackItems = [];
     const storedItems = cached ? await this.redisGet(cKey) : null;
     if (storedItems instanceof Array && storedItems.length > 0) {
       feedbackItems = storedItems;
     } else {
-      feedbackItems = await this.snippetService.getByCategory('big5_results');
+      feedbackItems = await this.snippetService.getByCategory(resultKey);
       if (feedbackItems instanceof Array && feedbackItems.length > 5) {
         this.redisSet(cKey, feedbackItems);
       }
@@ -1411,19 +1416,52 @@ export class UserController {
     @Param('refresh') refresh,
     @Body() items: FacetedItemDTO[],
   ) {
+    const { valid, responses, analysis } = await this.saveFacetedPromptsByType(
+      'faceted',
+      items,
+      userID,
+      refresh,
+    );
+    return res.send({ valid, responses, analysis });
+  }
+
+  @Put('faceted/save/:type/:userID/:refresh?')
+  async saveFacetedPrompts(
+    @Res() res,
+    @Param('type') type,
+    @Param('userID') userID,
+    @Param('refresh') refresh,
+    @Body() items: FacetedItemDTO[],
+  ) {
+    const { valid, responses, analysis } = await this.saveFacetedPromptsByType(
+      type,
+      items,
+      userID,
+      refresh,
+    );
+    return res.send({ valid, responses, analysis });
+  }
+
+  async saveFacetedPromptsByType(
+    type = 'faceted',
+    items: FacetedItemDTO[] = [],
+    userID = '',
+    refresh = null,
+  ) {
     let responses = [];
     let analysis = {};
     let valid = false;
     const cached = smartCastInt(refresh, 0) < 1;
     if (items instanceof Array) {
-      const feedbackItems = await this.getBig5FeedItems(cached);
+      const feedbackItems = await this.getFacetedFeedbackItems(type, cached);
       const preferences = items.map(normalizedToPreference);
       const userData = await this.userService.savePreferences(
         userID,
         preferences,
       );
       if (userData.valid) {
-        const big5Data = await this.settingService.analyseBig5Faceted(
+        const big5Data = await this.settingService.analyseFacetedByType(
+          type,
           items,
           feedbackItems,
           cached,
@@ -1435,21 +1473,23 @@ export class UserController {
         valid = responses.length > 0;
       }
     }
-    return res.send({ valid, responses, analysis });
+    return { valid, responses, analysis };
   }
 
-  @Post('test-big5/:refresh?')
+  @Post('test-surveys/:type/:refresh?')
   async testBig4Faceted(
     @Res() res,
+    @Param('type') type,
     @Param('refresh') refresh,
     @Body() items: FacetedItemDTO[],
   ) {
     const cached = smartCastInt(refresh, 0) < 1;
-    const feedbackItems = await this.getBig5FeedItems(cached);
+    const feedbackItems = await this.getFacetedFeedbackItems(type, cached);
     const {
       responses,
       analysis,
-    } = await this.settingService.analyseBig5Faceted(
+    } = await this.settingService.analyseFacetedByType(
+      type,
       items,
       feedbackItems,
       cached,

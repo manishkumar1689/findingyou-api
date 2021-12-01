@@ -220,6 +220,7 @@ const matchBig5Feedback = (
 };
 
 export const analyseAnswers = (
+  type = 'faceted',
   answers: FacetedBig5Set[],
   feedbackItems: Snippet[] = [],
 ) => {

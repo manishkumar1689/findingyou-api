@@ -193,18 +193,33 @@ export class SettingService {
       )
       .map(pref => transformUserPreferences(pref, surveys, multiscaleData));
     const big5 = surveys.find(sv => sv.key === 'faceted_personality_options');
-    const jungian = surveys.find(sv => sv.type === 'jungian');
+    const jungian = surveys.find(sv => sv.key === 'jungian_options');
 
-    const big5Questions = big5 instanceof Object ? big5.items : [];
+    const facetedQuestions = big5 instanceof Object ? big5.items : [];
     let facetedAnswers = [];
     let facetedAnalysis = {};
-    if (big5Questions instanceof Array && big5Questions.length > 0) {
-      facetedAnswers = preferences
-        .filter(pr => pr.type === 'faceted')
-        .map(pref => normalizeFacetedAnswer(pref, big5Questions));
-      facetedAnalysis = analyseAnswers(facetedAnswers);
+    let jungianAnswers = [];
+    let jungianAnalysis = {};
+
+    const filterMapSurveyByType = (preferences, sType) => {
+      return preferences
+        .filter(pr => pr.type === sType)
+        .map(pref => normalizeFacetedAnswer(pref, facetedQuestions));
+    };
+
+    if (facetedQuestions instanceof Array && facetedQuestions.length > 0) {
+      facetedAnswers = filterMapSurveyByType(preferences, 'faceted');
+      facetedAnalysis = analyseAnswers('faceted', facetedAnswers);
+      jungianAnswers = filterMapSurveyByType(preferences, 'jungian');
+      jungianAnalysis = {};
     }
-    return { preferences: preferenceItems, facetedAnswers, facetedAnalysis };
+    return {
+      preferences: preferenceItems,
+      facetedAnswers,
+      facetedAnalysis,
+      jungianAnswers,
+      jungianAnalysis,
+    };
   }
 
   async getSurveys() {
@@ -250,22 +265,22 @@ export class SettingService {
     return items;
   }
 
-  async analyseBig5Faceted(
+  async analyseFacetedByType(
+    type = 'faceted',
     items: FacetedItemDTO[] = [],
     feedbackItems = [],
     cached = true,
   ) {
     let responses = [];
     let analysis = {};
+    const surveyKey =
+      type === 'jungian' ? 'jungian_options' : 'faceted_personality_options';
     if (items instanceof Array) {
-      const surveyItems = await this.getSurveyItems(
-        'faceted_personality_options',
-        cached,
-      );
+      const surveyItems = await this.getSurveyItems(surveyKey, cached);
       responses = items.map(item =>
         normalizeFacetedAnswer(item, surveyItems, false),
       );
-      analysis = analyseAnswers(responses, feedbackItems);
+      analysis = analyseAnswers(type, responses, feedbackItems);
     }
     return { responses, analysis };
   }
