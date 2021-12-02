@@ -302,7 +302,8 @@ const analyseJungianAnswers = (
     const domKeyIndex = pc <= 50 ? 0 : 1;
     const domResult = pc <= 50 ? (50 - pc) * 2 : (pc - 50) * 2;
     const resultLetter = domKey.charAt(domKeyIndex);
-    const result = [resultLetter, domResult].join('_');
+    const rangeKey = domResult < 20 ? 'mid' : 'end';
+    const result = [resultLetter, rangeKey, domResult].join('_');
     if (labelItem instanceof Object) {
       const item = {
         title: labelItem.title,
@@ -328,7 +329,6 @@ export const analyseAnswers = (
   answers: FacetedBig5Set[],
   feedbackItems: Snippet[] = [],
 ) => {
-  console.log(type);
   const domainItems =
     type === 'jungian'
       ? analyseJungianAnswers(answers, feedbackItems)
