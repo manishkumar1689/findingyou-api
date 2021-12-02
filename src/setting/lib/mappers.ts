@@ -14,15 +14,16 @@ import { Snippet } from '../../snippet/interfaces/snippet.interface';
 import {
   facetedBig5Categories,
   facetedJungianCategories,
+  facetedJungianFormulae,
 } from '../settings/faceted-big5';
 
 /*
   Adding/subtracting this number converts from a -2 to 2 range to 1 to 5
   for compatibility with Big 5 analysis
 */
-export const big5FacetedScaleRange = 5;
+export const defaultFacetedScaleRange = 5;
 
-export const big5FacetedScaleOffset = Math.ceil(big5FacetedScaleRange / 2);
+export const big5FacetedScaleOffset = Math.ceil(defaultFacetedScaleRange / 2);
 
 const transformMultipleKeyScaleQuestions = (
   question,
@@ -97,7 +98,7 @@ const applyAdjustedScore = (value = 0, offset = 0, inverted = false) => {
   let score = smartCastInt(value, 0) + offset;
   if (inverted) {
     if (offset === 0) {
-      score = big5FacetedScaleRange + 1 - score;
+      score = defaultFacetedScaleRange + 1 - score;
     }
   }
   return score;
@@ -166,38 +167,19 @@ const calculateFacetedResult = (score: number, count: number): string => {
   return result;
 };
 
-const calcBig5ItemPercent = (score = 0, count = 0): number => {
-  const max = count * big5FacetedScaleRange;
-  return Math.round(100 * 100000 * (score / max)) / 100000;
+const calcFacetedItemPercent = (
+  score = 0,
+  count = 0,
+  max = -1,
+  rescaleFromMiddle = false,
+): number => {
+  const maxTotal = max > 1 ? count * max : count * defaultFacetedScaleRange;
+  const scaledScore = rescaleFromMiddle ? score - count : score;
+  const scaledTotal = rescaleFromMiddle ? maxTotal - count : maxTotal;
+  return Math.round(100 * 100000 * (scaledScore / scaledTotal)) / 100000;
 };
 
-/* export const reduceFacetedFactors = (a: any = null, b: any = null) => {
-  if (!a[b.domain]) {
-    a[b.domain] = { score: 0, count: 0, result: 'neutral', facet: {} };
-  }
-
-  a[b.domain].score += parseInt(b.score || 0, 10);
-  a[b.domain].count += 1;
-  a[b.domain].result = calculateFacetedResult(
-    a[b.domain].score,
-    a[b.domain].count,
-  );
-
-  if (b.facet) {
-    if (!a[b.domain].facet[b.facet]) {
-      a[b.domain].facet[b.facet] = { score: 0, count: 0, result: 'neutral' };
-    }
-    a[b.domain].facet[b.facet].score += parseInt(b.score || 0, 10);
-    a[b.domain].facet[b.facet].count += 1;
-    a[b.domain].facet[b.facet].result = calculateFacetedResult(
-      a[b.domain].facet[b.facet].score,
-      a[b.domain].facet[b.facet].count,
-    );
-  }
-  return a;
-}; */
-
-const matchBig5Feedback = (
+const matchFacetedFeedback = (
   feedbackItems: Snippet[],
   domain = '',
   facet = 0,
@@ -241,11 +223,11 @@ const analyseBig5Answers = (
       const item = {
         score,
         count,
-        pc: calcBig5ItemPercent(score, count),
+        pc: calcFacetedItemPercent(score, count),
         title: labelItem.title,
         result,
         feedback: hasFeedback
-          ? matchBig5Feedback(feedbackItems, domKey, 0, result)
+          ? matchFacetedFeedback(feedbackItems, domKey, 0, result)
           : [],
       };
       const facetResults = facets.map(facet => {
@@ -261,10 +243,10 @@ const analyseBig5Answers = (
           title: facetTitle,
           score,
           count,
-          pc: calcBig5ItemPercent(score, count),
+          pc: calcFacetedItemPercent(score, count),
           result: calculateFacetedResult(score, count),
           feedback: hasFeedback
-            ? matchBig5Feedback(feedbackItems, domKey, facet, result)
+            ? matchFacetedFeedback(feedbackItems, domKey, facet, result)
             : [],
         };
       });
@@ -277,6 +259,24 @@ const analyseBig5Answers = (
   return domainItems;
 };
 
+const calcJungianScaleResult = (domKey = '', answers: FacetedBig5Set[]) => {
+  let result = 0;
+  const formula = facetedJungianFormulae.find(f => f.domain === domKey);
+  if (formula instanceof Object) {
+    result = formula.start;
+    formula.sequence.forEach((op, index) => {
+      if (index < answers.length) {
+        if (op === '+') {
+          result += answers[index].score;
+        } else {
+          result -= answers[index].score;
+        }
+      }
+    });
+  }
+  return result;
+};
+
 const analyseJungianAnswers = (
   answers: FacetedBig5Set[] = [],
   feedbackItems: Snippet[] = [],
@@ -287,19 +287,31 @@ const analyseJungianAnswers = (
   const domains = ['IE', 'SN', 'FT', 'JP'];
   domains.forEach(domKey => {
     const dItems = answers.filter(an => an.domain === domKey);
-    const score = dItems.map(item => item.score).reduce((a, b) => a + b, 0);
+    dItems.sort((a, b) => a.facet - b.facet);
+    const subtotal = dItems.map(item => item.score).reduce((a, b) => a + b, 0);
     const count = dItems.length;
     const labelItem = facetedJungianCategories.find(ct => ct.key === domKey);
-    const result = calculateFacetedResult(score, count);
+    const score = calcJungianScaleResult(domKey, dItems);
+    // to be determined
+    const pc = calcFacetedItemPercent(
+      score,
+      count,
+      defaultFacetedScaleRange,
+      true,
+    );
+    const domKeyIndex = pc <= 50 ? 0 : 1;
+    const domResult = pc <= 50 ? (50 - pc) * 2 : (pc - 50) * 2;
+    const result = [domKey.charAt(domKeyIndex), domResult].join('');
     if (labelItem instanceof Object) {
       const item = {
+        title: labelItem.title,
         score,
         count,
-        pc: calcBig5ItemPercent(score, count),
-        title: labelItem.title,
+        pc,
         result,
+        subtotal,
         feedback: hasFeedback
-          ? matchBig5Feedback(feedbackItems, domKey, 0, result)
+          ? matchFacetedFeedback(feedbackItems, domKey, 0, result)
           : [],
       };
       domainItems.set(domKey, {

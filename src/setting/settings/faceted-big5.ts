@@ -67,3 +67,26 @@ export const facetedJungianCategories = [
   { key: 'FT', title: 'Thinking – Feeling' },
   { key: 'JP', title: 'Judging – Perceiving' },
 ];
+
+export const facetedJungianFormulae = [
+  {
+    domain: 'IE',
+    start: 30,
+    sequence: ['-', '-', '-', '+', '-', '+', '+', '-'],
+  },
+  {
+    domain: 'SN',
+    start: 12,
+    sequence: ['+', '+', '+', '+', '+', '-', '-', '+'],
+  },
+  {
+    domain: 'FT',
+    start: 30,
+    sequence: ['-', '+', '+', '-', '-', '+', '-', '-'],
+  },
+  {
+    domain: 'JP',
+    start: 18,
+    sequence: ['+', '+', '-', '+', '-', '+', '-', '+'],
+  },
+];
