@@ -301,7 +301,8 @@ const analyseJungianAnswers = (
     );
     const domKeyIndex = pc <= 50 ? 0 : 1;
     const domResult = pc <= 50 ? (50 - pc) * 2 : (pc - 50) * 2;
-    const result = [domKey.charAt(domKeyIndex), domResult].join('');
+    const resultLetter = domKey.charAt(domKeyIndex);
+    const result = [resultLetter, domResult].join('');
     if (labelItem instanceof Object) {
       const item = {
         title: labelItem.title,
@@ -311,7 +312,7 @@ const analyseJungianAnswers = (
         result,
         subtotal,
         feedback: hasFeedback
-          ? matchFacetedFeedback(feedbackItems, domKey, 0, result)
+          ? matchFacetedFeedback(feedbackItems, domKey, 0, resultLetter)
           : [],
       };
       domainItems.set(domKey, {
