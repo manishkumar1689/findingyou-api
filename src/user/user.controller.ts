@@ -1393,7 +1393,7 @@ export class UserController {
     type = 'faceted',
     cached = true,
   ): Promise<Snippet[]> {
-    const subKey = type === 'faceted' ? 'big5' : 'jungian';
+    const subKey = type === 'faceted' ? 'big5' : 'jung';
     const cKey = [subKey, 'feedback_items'].join('_');
     const resultKey = [subKey, 'results'].join('_');
     let feedbackItems = [];

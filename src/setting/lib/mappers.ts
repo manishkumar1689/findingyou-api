@@ -184,15 +184,32 @@ const matchFacetedFeedback = (
   domain = '',
   facet = 0,
   result = 'neutral',
+  rangeKey = '',
 ) => {
   if (
     isNumeric(facet) &&
-    domain.length === 1 &&
-    ['low', 'high', 'neutral'].includes(result)
+    (domain.length >= 1 || domain.length <= 2) &&
+    (['low', 'high', 'neutral'].includes(result) || result.length === 1)
   ) {
-    const domLetter = domain.toLowerCase();
-    const midKey = facet > 0 ? ['facet', facet].join('_') : 'all';
-    const key = ['big5_results_', domLetter, midKey, result].join('_');
+    const isJungian = domain.length === 2;
+    const domLetter = isJungian ? 'sub' : domain.toLowerCase();
+    const prefix = isJungian ? 'jung' : 'big5';
+    const suffix = notEmptyString(rangeKey)
+      ? rangeKey === 'mid'
+        ? 'ave'
+        : 'high'
+      : '';
+    const midKey = isJungian
+      ? [domain, result].join('_').toLowerCase()
+      : facet > 0
+      ? ['facet', facet].join('_')
+      : 'all';
+    const resultKey = isJungian ? suffix : result.toLowerCase();
+    const parts = [[prefix, 'results_'].join('_'), domLetter, midKey];
+    if (notEmptyString(resultKey)) {
+      parts.push(resultKey);
+    }
+    const key = parts.join('_');
     const fbItem = feedbackItems.find(item => item.key === key);
     if (fbItem instanceof Object) {
       return fbItem.values.map(v => {
@@ -314,6 +331,15 @@ const analyseJungianAnswers = (
         subtotal,
         feedback: hasFeedback
           ? matchFacetedFeedback(feedbackItems, domKey, 0, resultLetter)
+          : [],
+        feedback2: hasFeedback
+          ? matchFacetedFeedback(
+              feedbackItems,
+              domKey,
+              0,
+              resultLetter,
+              rangeKey,
+            )
           : [],
       };
       domainItems.set(domKey, {
