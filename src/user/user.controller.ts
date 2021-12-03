@@ -874,6 +874,16 @@ export class UserController {
         const options = await this.snippetService.getByCategory('faceted');
         if (options instanceof Array) {
           data.options = options.map(cleanSnippet);
+          const subkeys = ['minus2', 'minus1', 'neutral', 'plus1', 'plus2'];
+          const assignSeq = op => {
+            const endKey = op.key.split('_').pop();
+            let subNum = subkeys.indexOf(endKey) + 1;
+            if (subNum < 1 && isNumeric(endKey)) {
+              subNum = parseInt(endKey, 10);
+            }
+            return subNum;
+          };
+          data.options.sort((a, b) => assignSeq(a) - assignSeq(b));
         }
       }
       data.cached = false;
