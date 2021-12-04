@@ -16,6 +16,7 @@ import { UserService } from './user/user.service';
 import { UserSchema } from './user/schemas/user.schema';
 import { AppGateway } from './app.gateway';
 import { FeedbackModule } from './feedback/feedback.module';
+import { PublicUserSchema } from './user/schemas/public-user.schema';
 
 @Module({
   imports: [
@@ -25,7 +26,13 @@ import { FeedbackModule } from './feedback/feedback.module';
         useNewUrlParser: true,
       },
     ),
-    MongooseModule.forFeature([{ name: 'User', schema: UserSchema }]),
+    MongooseModule.forFeature([
+      { name: 'User', schema: UserSchema },
+      {
+        name: 'PublicUser',
+        schema: PublicUserSchema,
+      },
+    ]),
     RedisModule.register(redisOptions),
     MailerModule.forRoot({
       transport: mailDetails.transport,

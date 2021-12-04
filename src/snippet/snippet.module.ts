@@ -6,6 +6,7 @@ import { SnippetSchema } from './schemas/snippet.schema';
 import { TranslatedItemSchema } from './schemas/translated-item.schema';
 import { UserSchema } from '../user/schemas/user.schema';
 import { UserService } from '../user/user.service';
+import { PublicUserSchema } from '../user/schemas/public-user.schema';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { UserService } from '../user/user.service';
       { name: 'Snippet', schema: SnippetSchema },
       { name: 'TranslatedItem', schema: TranslatedItemSchema },
       { name: 'User', schema: UserSchema },
+      { name: 'PublicUser', schema: PublicUserSchema },
     ]),
   ],
   providers: [SnippetService, UserService],

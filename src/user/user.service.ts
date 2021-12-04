@@ -31,6 +31,7 @@ import { smartCastBool, smartCastFloat, smartCastInt } from '../lib/converters';
 import { MediaItemDTO } from './dto/media-item.dto';
 import { PreferenceDTO } from './dto/preference.dto';
 import { matchFileTypeAndMime } from '../lib/files';
+import { PublicUser } from './interfaces/public-user.interface';
 
 const userEditPaths = [
   'fullName',
@@ -63,6 +64,8 @@ const userSelectPaths = [
 export class UserService {
   constructor(
     @InjectModel('User') private readonly userModel: Model<User>,
+    @InjectModel('PublicUser')
+    private readonly publicUserModel: Model<PublicUser>,
     private readonly mailerService: MailerService,
   ) {}
   // fetch all Users
@@ -1678,5 +1681,44 @@ export class UserService {
         break;
     }
     return valid;
+  }
+
+  // save / update a single user with basic data
+  async savePublic(inData = null): Promise<PublicUser> {
+    const obj = inData instanceof Object ? inData : {};
+    const keys = Object.keys(obj);
+    let publicUser = null;
+    if (keys.includes('_id') && notEmptyString(obj._id, 16)) {
+      publicUser = await this.publicUserModel.findById(obj._id);
+    } else if (
+      keys.includes('identifier') &&
+      notEmptyString(obj.identifier, 2)
+    ) {
+      publicUser = await this.publicUserModel.find({
+        identifier: obj.identifier,
+      });
+      if (!publicUser) {
+        const idRgx = new RegExp(obj.identifier, 'i');
+        publicUser = await this.publicUserModel.find({ identifier: idRgx });
+      }
+    }
+    const isNew = publicUser instanceof Model;
+    const uMap: Map<string, any> = new Map();
+    if (keys.includes('preferences') && obj.preferences instanceof Array) {
+      uMap.set('preferences', obj.preferences);
+    }
+    let savedUser = null;
+    const edited = Object.fromEntries(publicUser);
+    if (isNew) {
+      const newUser = new this.publicUserModel(edited);
+      savedUser = await newUser.save();
+    } else {
+      savedUser = await this.publicUserModel.findByIdAndUpdate(
+        publicUser._id,
+        edited,
+      );
+    }
+
+    return savedUser;
   }
 }
