@@ -1464,7 +1464,7 @@ export class UserController {
     const cached = smartCastInt(refresh, 0) < 1;
     if (items instanceof Array) {
       const feedbackItems = await this.getFacetedFeedbackItems(type, cached);
-      const preferences = items.map(normalizedToPreference);
+      const preferences = items.map(item => normalizedToPreference(item, type));
       const userData = await this.userService.savePreferences(
         userID,
         preferences,

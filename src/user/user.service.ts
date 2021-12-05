@@ -32,6 +32,7 @@ import { MediaItemDTO } from './dto/media-item.dto';
 import { PreferenceDTO } from './dto/preference.dto';
 import { matchFileTypeAndMime } from '../lib/files';
 import { PublicUser } from './interfaces/public-user.interface';
+import { normalizedToPreference } from 'src/setting/lib/mappers';
 
 const userEditPaths = [
   'fullName',
@@ -1705,6 +1706,31 @@ export class UserService {
     const isNew = publicUser instanceof Model;
     const uMap: Map<string, any> = new Map();
     if (keys.includes('preferences') && obj.preferences instanceof Array) {
+      const userObj = isNew ? {} : publicUser.toObject();
+      const currentPreferences = isNew
+        ? []
+        : userObj.preferences instanceof Array && userObj.preferences.length > 0
+        ? userObj.preferences
+        : [];
+      obj.preferences
+        .filter(obj => obj instanceof Object)
+        .forEach(pref => {
+          const { key, value, type } = pref;
+          if (notEmptyString(key) && isNumeric(value) && notEmptyString(type)) {
+            const currIndex = currentPreferences.findIndex(
+              pr => pr.key === pref.key,
+            );
+            const newPref = normalizedToPreference(
+              { key, value: smartCastInt(value, 0) },
+              type,
+            );
+            if (currIndex < 0) {
+              currentPreferences.push(newPref);
+            } else {
+              currentPreferences[currIndex] = newPref;
+            }
+          }
+        });
       uMap.set('preferences', obj.preferences);
     }
     let savedUser = null;
@@ -1718,7 +1744,6 @@ export class UserService {
         edited,
       );
     }
-
     return savedUser;
   }
 }

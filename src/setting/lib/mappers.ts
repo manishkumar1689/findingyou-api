@@ -112,9 +112,7 @@ export const normalizeFacetedAnswer = (
   const { key, value } = facetedResponse;
   const sq = sourcePrefs.find(s => s.key === key);
   const offset = applyOffset ? big5FacetedScaleOffset : 0;
-  if (sq.inverted) {
-  }
-  if (sq) {
+  if (sq instanceof Object) {
     const { domain, subdomain } = sq;
     return {
       key,
@@ -127,10 +125,13 @@ export const normalizeFacetedAnswer = (
   }
 };
 
-export const normalizedToPreference = (facetedResponse: FacetedItemDTO) => {
+export const normalizedToPreference = (
+  facetedResponse: FacetedItemDTO,
+  type = 'faceted',
+) => {
   const { key, value } = facetedResponse;
   return {
-    type: 'faceted',
+    type,
     key,
     value: value - big5FacetedScaleOffset,
   };
