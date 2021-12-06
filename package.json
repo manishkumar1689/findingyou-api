@@ -51,7 +51,7 @@
     "rimraf": "^3.0.2",
     "rxjs": "^6.5.4",
     "strip-bom-stream": "^4.0.0",
-    "swisseph": "^0.5.13",
+    "swisseph": "^0.5.16",
     "validator": "^13.0.0"
   },
   "devDependencies": {
