@@ -16,21 +16,16 @@ export class PublicUserDTO {
   readonly active: boolean;
 
   @ApiProperty()
-  readonly test: boolean;
-
-  @ApiProperty()
   readonly geo?: GeoDTO;
 
   @ApiProperty()
   readonly preferences: PreferenceDTO[];
 
   @ApiProperty()
-  readonly preview: string;
-  @ApiProperty()
-  readonly dob?: Date;
+  readonly gender: string;
 
   @ApiProperty()
-  readonly token: string;
+  readonly dob?: Date;
 
   @ApiProperty()
   readonly createdAt: Date;

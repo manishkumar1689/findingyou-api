@@ -20,7 +20,7 @@ export const PublicUserSchema = new mongoose.Schema({
   dob: { type: Date, default: null, required: false },
   gender: {
     type: String,
-    enum: ['f', 'm', '-', 'nb', 'tf', 'tm'],
+    enum: ['f', 'm', '-', 'nb', 'tf', 'tm', 'o'],
     default: '-',
     required: false,
   },

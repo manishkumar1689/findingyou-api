@@ -94,6 +94,7 @@ import {
   normalizedToPreference,
   normalizeFacetedPromptItem,
 } from '../setting/lib/mappers';
+import { PublicUserDTO } from './dto/public-user.dto';
 
 @Controller('user')
 export class UserController {
@@ -1505,6 +1506,61 @@ export class UserController {
       cached,
     );
     return res.send({ responses, analysis });
+  }
+
+  @Post('public-save')
+  async savePublicUser(@Res() res, @Body() userData: PublicUserDTO) {
+    const publicUser = await this.userService.savePublic(userData);
+    const valid = publicUser instanceof Model;
+    let userObj: any = {};
+    let facetedAnswers = [];
+    let jungianAnswers = [];
+    let facetedAnalysis: any = {};
+    let jungianAnalysis: any = {};
+    if (valid) {
+      const {
+        nickName,
+        identifier,
+        useragent,
+        dob,
+        gender,
+        geo,
+        preferences,
+        modifiedAt,
+        createdAt,
+      } = publicUser.toObject();
+      userObj = {
+        nickName,
+        identifier,
+        useragent,
+        dob,
+        gender,
+        geo,
+        modifiedAt,
+        createdAt,
+      };
+      if (preferences.length > 0) {
+        const prefData = await this.settingService.processPreferences(
+          preferences,
+        );
+        if (prefData.jungianAnswers.length > 0) {
+          jungianAnswers = prefData.jungianAnswers;
+          jungianAnalysis = prefData.jungianAnalysis;
+        }
+        if (prefData.facetedAnswers.length > 0) {
+          facetedAnswers = prefData.facetedAnswers;
+          facetedAnalysis = prefData.facetedAnalysis;
+        }
+      }
+    }
+    return res.send({
+      valid,
+      ...userObj,
+      facetedAnswers,
+      facetedAnalysis,
+      jungianAnswers,
+      jungianAnalysis,
+    });
   }
 
   /*

@@ -9,6 +9,7 @@ import {
   hashMapToObject,
   extractObject,
   extractSimplified,
+  extractDocId,
 } from '../lib/entities';
 import * as bcrypt from 'bcrypt';
 import { generateHash } from '../lib/hash';
@@ -1689,23 +1690,42 @@ export class UserService {
     const obj = inData instanceof Object ? inData : {};
     const keys = Object.keys(obj);
     let publicUser = null;
+    const dt = new Date();
     if (keys.includes('_id') && notEmptyString(obj._id, 16)) {
       publicUser = await this.publicUserModel.findById(obj._id);
     } else if (
       keys.includes('identifier') &&
       notEmptyString(obj.identifier, 2)
     ) {
-      publicUser = await this.publicUserModel.find({
+      publicUser = await this.publicUserModel.findOne({
         identifier: obj.identifier,
       });
       if (!publicUser) {
         const idRgx = new RegExp(obj.identifier, 'i');
-        publicUser = await this.publicUserModel.find({ identifier: idRgx });
+        publicUser = await this.publicUserModel.findOne({ identifier: idRgx });
       }
     }
-    const isNew = publicUser instanceof Model;
+    const isNew = !(publicUser instanceof Model);
     const uMap: Map<string, any> = new Map();
-    if (keys.includes('preferences') && obj.preferences instanceof Array) {
+    keys.forEach(k => {
+      if (
+        [
+          'nickName',
+          'identifier',
+          'useragent',
+          'gender',
+          'dob',
+          'geo',
+        ].includes(k)
+      ) {
+        uMap.set(k, obj[k]);
+      }
+    });
+    if (
+      keys.includes('preferences') &&
+      obj.preferences instanceof Array &&
+      obj.preferences.length > 0
+    ) {
       const userObj = isNew ? {} : publicUser.toObject();
       const currentPreferences = isNew
         ? []
@@ -1731,18 +1751,21 @@ export class UserService {
             }
           }
         });
-      uMap.set('preferences', obj.preferences);
+      uMap.set('preferences', currentPreferences);
+    }
+    uMap.set('modifiedAt', dt);
+    if (isNew) {
+      uMap.set('createdAt', dt);
     }
     let savedUser = null;
-    const edited = Object.fromEntries(publicUser);
+    const edited = Object.fromEntries(uMap);
     if (isNew) {
       const newUser = new this.publicUserModel(edited);
       savedUser = await newUser.save();
     } else {
-      savedUser = await this.publicUserModel.findByIdAndUpdate(
-        publicUser._id,
-        edited,
-      );
+      const userID = extractDocId(publicUser);
+      await this.publicUserModel.findByIdAndUpdate(userID, edited);
+      savedUser = await this.publicUserModel.findById(userID);
     }
     return savedUser;
   }
