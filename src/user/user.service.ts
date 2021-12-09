@@ -33,7 +33,7 @@ import { MediaItemDTO } from './dto/media-item.dto';
 import { PreferenceDTO } from './dto/preference.dto';
 import { matchFileTypeAndMime } from '../lib/files';
 import { PublicUser } from './interfaces/public-user.interface';
-import { normalizedToPreference } from 'src/setting/lib/mappers';
+import { normalizedToPreference } from '../setting/lib/mappers';
 
 const userEditPaths = [
   'fullName',
