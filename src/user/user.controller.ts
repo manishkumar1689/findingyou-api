@@ -91,8 +91,10 @@ import {
 } from './settings/simple-preferences';
 import { FacetedItemDTO } from '../setting/dto/faceted-item.dto';
 import {
+  analyseAnswers,
   normalizedToPreference,
   normalizeFacetedPromptItem,
+  filterMapSurveyByType,
 } from '../setting/lib/mappers';
 import { PublicUserDTO } from './dto/public-user.dto';
 
@@ -1519,6 +1521,7 @@ export class UserController {
     let jungianAnalysis: any = {};
     if (valid) {
       const {
+        _id,
         nickName,
         identifier,
         useragent,
@@ -1530,6 +1533,7 @@ export class UserController {
         createdAt,
       } = publicUser.toObject();
       userObj = {
+        _id,
         nickName,
         identifier,
         useragent,
@@ -1561,6 +1565,65 @@ export class UserController {
       jungianAnswers,
       jungianAnalysis,
     });
+  }
+
+  @Get('public-users/:start?/:limit?')
+  async getPublicUsers(
+    @Res() res,
+    @Param('start') start,
+    @Param('limit') limit,
+  ) {
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 10);
+    const users = await this.userService.getPublicUsers(startInt, limitInt);
+    const {
+      facetedQuestions,
+      jungianQuestions,
+    } = await this.settingService.getPsychometricSurveys();
+    const items = users.map(user => {
+      const {
+        nickName,
+        identifier,
+        active,
+        geo,
+        gender,
+        preferences,
+        dob,
+        createdAt,
+        modifiedAt,
+      } = user;
+      const facetedAnswers = filterMapSurveyByType(
+        preferences,
+        'faceted',
+        facetedQuestions,
+      );
+      const facetedAnalysis = analyseAnswers('faceted', facetedAnswers);
+
+      const jungianAnswers = filterMapSurveyByType(
+        preferences,
+        'jungian',
+        jungianQuestions,
+      );
+      const jungianCompleted = jungianAnswers.length >= jungianQuestions.length;
+      const jungianAnalysis = jungianCompleted
+        ? analyseAnswers('jungian', jungianAnswers)
+        : {};
+      return {
+        nickName,
+        identifier,
+        active,
+        geo,
+        gender,
+        dob,
+        createdAt,
+        modifiedAt,
+        facetedAnswers,
+        facetedAnalysis,
+        jungianAnswers,
+        jungianAnalysis,
+      };
+    });
+    return res.json(items);
   }
 
   /*

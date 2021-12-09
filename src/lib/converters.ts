@@ -42,11 +42,7 @@ export const smartCastString = (item = null, defVal = '') => {
   return out;
 };
 
-export const smartCastNumber = (
-  item: string | number,
-  defVal = 0,
-  isInt = false,
-) => {
+export const smartCastNumber = (item: any, defVal = 0, isInt = false) => {
   let out = defVal;
 
   if (typeof item === 'string') {
@@ -61,18 +57,15 @@ export const smartCastNumber = (
   return out;
 };
 
-export const smartCastInt = (item: string | number, defVal = 0) => {
+export const smartCastInt = (item: any, defVal = 0) => {
   return smartCastNumber(item, defVal, true);
 };
 
-export const smartCastFloat = (item: string | number, defVal = 0) => {
+export const smartCastFloat = (item: any, defVal = 0) => {
   return smartCastNumber(item, defVal, false);
 };
 
-export const smartCastBool = (
-  item: string | number | boolean,
-  defVal = false,
-) => {
+export const smartCastBool = (item: any, defVal = false) => {
   let intVal = defVal ? 1 : 0;
   if (typeof item === 'string') {
     if (item.length > 0) {

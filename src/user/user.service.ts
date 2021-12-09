@@ -1769,4 +1769,65 @@ export class UserService {
     }
     return savedUser;
   }
+
+  async getPublicUsers(start = 0, limit = 100, criteria = null) {
+    const critObj = criteria instanceof Object ? criteria : {};
+
+    const filter: Map<string, any> = new Map();
+    Object.entries(critObj).forEach(([key, val]) => {
+      switch (key) {
+        case 'usearch':
+          const rgx = new RegExp('\\b' + val, 'i');
+          filter.set('$or', [{ identifier: rgx }, { nickName: rgx }]);
+          break;
+        case 'active':
+          filter.set('active', smartCastBool(val, true));
+          break;
+        case 'answers':
+          filter.set('numPrefs', {
+            $gt: smartCastInt(val, 0),
+          });
+          break;
+      }
+    });
+    const matchCriteria = Object.fromEntries(filter.entries());
+    const steps = [
+      { $match: matchCriteria },
+      {
+        $project: {
+          nickName: 1,
+          identifier: 1,
+          useragent: 1,
+          active: 1,
+          'geo.lat': 1,
+          'geo.lng': 1,
+          gender: 1,
+          numPrefs: {
+            $cond: {
+              if: { $isArray: '$preferences' },
+              then: { $size: '$preferences' },
+              else: 0,
+            },
+          },
+          'preferences.key': 1,
+          'preferences.type': 1,
+          'preferences.value': 1,
+          dob: 1,
+          createdAt: 1,
+          modifiedAt: 1,
+        },
+      },
+      {
+        $match: matchCriteria,
+      },
+      {
+        $skip: start,
+      },
+      {
+        $limit: limit,
+      },
+    ];
+
+    return await this.publicUserModel.aggregate(steps);
+  }
 }

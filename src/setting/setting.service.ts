@@ -32,6 +32,7 @@ import { smartCastInt } from '../lib/converters';
 import permissionValues from '../user/settings/permissions';
 import {
   analyseAnswers,
+  filterMapSurveyByType,
   normalizeFacetedAnswer,
   transformUserPreferences,
 } from './lib/mappers';
@@ -184,34 +185,50 @@ export class SettingService {
     return data;
   }
 
+  async getPsychometricSurveys() {
+    const surveys = await this.getSurveys();
+    const big5 = surveys.find(sv => sv.key === 'faceted_personality_options');
+    const jungian = surveys.find(sv => sv.key === 'jungian_options');
+    const facetedQuestions = big5 instanceof Object ? big5.items : [];
+    const jungianQuestions = jungian instanceof Object ? jungian.items : [];
+
+    return { facetedQuestions, jungianQuestions };
+  }
+
   async processPreferences(preferences: any[]) {
     const multiscaleData = await this.surveyMultiscales();
     const surveys = await this.getSurveys();
+    const big5 = surveys.find(sv => sv.key === 'faceted_personality_options');
+    const jungian = surveys.find(sv => sv.key === 'jungian_options');
     const preferenceItems = preferences
       .filter(
         pr => pr instanceof Object && ['faceted', 'jungian'].includes(pr.type),
       )
       .map(pref => transformUserPreferences(pref, surveys, multiscaleData));
-    const big5 = surveys.find(sv => sv.key === 'faceted_personality_options');
-    const jungian = surveys.find(sv => sv.key === 'jungian_options');
 
     const facetedQuestions = big5 instanceof Object ? big5.items : [];
+    const jungianQuestions = jungian instanceof Object ? jungian.items : [];
     let facetedAnswers = [];
     let facetedAnalysis = {};
     let jungianAnswers = [];
     let jungianAnalysis = {};
 
-    const filterMapSurveyByType = (preferences, sType) => {
-      return preferences
-        .filter(pr => pr.type === sType)
-        .map(pref => normalizeFacetedAnswer(pref, facetedQuestions));
-    };
-
     if (facetedQuestions instanceof Array && facetedQuestions.length > 0) {
-      facetedAnswers = filterMapSurveyByType(preferences, 'faceted');
+      facetedAnswers = filterMapSurveyByType(
+        preferences,
+        'faceted',
+        facetedQuestions,
+      );
       facetedAnalysis = analyseAnswers('faceted', facetedAnswers);
-      jungianAnswers = filterMapSurveyByType(preferences, 'jungian');
-      jungianAnalysis = {};
+      jungianAnswers = filterMapSurveyByType(
+        preferences,
+        'jungian',
+        jungianQuestions,
+      );
+      const jungianCompleted = jungianAnswers.length >= jungianQuestions.length;
+      jungianAnalysis = jungianCompleted
+        ? analyseAnswers('jungian', jungianAnswers)
+        : {};
     }
     return {
       preferences: preferenceItems,
@@ -223,7 +240,7 @@ export class SettingService {
   }
 
   async getSurveys() {
-    const key = 'preference_survey_set';
+    const key = 'pr_surveys';
     const stored = await this.redisGet(key);
     const hasStored = stored instanceof Array && stored.length > 0;
     const rows = hasStored ? stored : await this.getAllSurveys();

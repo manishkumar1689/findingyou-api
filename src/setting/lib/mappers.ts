@@ -108,7 +108,7 @@ export const normalizeFacetedAnswer = (
   facetedResponse: ScalePreferenceAnswer,
   sourcePrefs: PreferenceOption[],
   applyOffset = true,
-) => {
+): FacetedBig5Set => {
   const { key, value } = facetedResponse;
   const sq = sourcePrefs.find(s => s.key === key);
   const offset = applyOffset ? big5FacetedScaleOffset : 0;
@@ -121,7 +121,12 @@ export const normalizeFacetedAnswer = (
       facet: smartCastInt(subdomain, 0),
     };
   } else {
-    return {};
+    return {
+      key: '',
+      score: 0,
+      domain: '',
+      facet: 0,
+    };
   }
 };
 
@@ -397,4 +402,14 @@ export const transformUserPreferences = (
       ? { survey: surveyKey, ...pref, score }
       : { survey: surveyKey, ...pref }
     : pref;
+};
+
+export const filterMapSurveyByType = (
+  preferences: any[],
+  sType = '',
+  facetedQuestions,
+): FacetedBig5Set[] => {
+  return preferences
+    .filter(pr => pr.type === sType)
+    .map(pref => normalizeFacetedAnswer(pref, facetedQuestions));
 };
