@@ -185,7 +185,7 @@ const calcFacetedItemPercent = (
   return Math.round(100 * 100000 * (scaledScore / scaledTotal)) / 100000;
 };
 
-const matchFacetedFeedback = (
+export const matchFacetedFeedback = (
   feedbackItems: Snippet[],
   domain = '',
   facet = 0,
@@ -354,6 +354,59 @@ const analyseJungianAnswers = (
     }
   });
   return domainItems;
+};
+
+const mergeJungianFeedback = (obj = null, fbItems: Snippet[] = []) => {
+  if (obj instanceof Object) {
+    Object.keys(obj).forEach(key => {
+      const [resultLetter, rangeKey, _] = obj[key].result.split('_');
+      obj[key].feedback = matchFacetedFeedback(fbItems, key, 0, resultLetter);
+      obj[key].feedback2 = matchFacetedFeedback(
+        fbItems,
+        key,
+        0,
+        resultLetter,
+        rangeKey,
+      );
+    });
+  }
+  return obj;
+};
+
+const mergeFactedFeedback = (obj = null, fbItems: Snippet[] = []) => {
+  if (obj instanceof Object) {
+    Object.keys(obj).forEach(key => {
+      obj[key].feedback = matchFacetedFeedback(
+        fbItems,
+        key,
+        0,
+        obj[key].result,
+      );
+      if (obj[key].facets instanceof Array) {
+        obj[key].facets.forEach(fc => {
+          fc.feedback = matchFacetedFeedback(
+            fbItems,
+            key,
+            obj[key].num,
+            obj[key].result,
+          );
+        });
+      }
+    });
+  }
+  return obj;
+};
+
+export const mergePsychometricFeedback = (
+  obj = null,
+  fbItems: Snippet[] = [],
+  type = 'faceted',
+) => {
+  if (type === 'jungian') {
+    return mergeJungianFeedback(obj, fbItems);
+  } else {
+    return mergeFactedFeedback(obj, fbItems);
+  }
 };
 
 export const analyseAnswers = (

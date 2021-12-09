@@ -95,6 +95,8 @@ import {
   normalizedToPreference,
   normalizeFacetedPromptItem,
   filterMapSurveyByType,
+  matchFacetedFeedback,
+  mergePsychometricFeedback,
 } from '../setting/lib/mappers';
 import { PublicUserDTO } from './dto/public-user.dto';
 
@@ -1548,12 +1550,22 @@ export class UserController {
           preferences,
         );
         if (prefData.jungianAnswers.length > 0) {
+          const fbJungian = await this.getFacetedFeedbackItems(
+            'jungian',
+            false,
+          );
           jungianAnswers = prefData.jungianAnswers;
           jungianAnalysis = prefData.jungianAnalysis;
+          mergePsychometricFeedback(jungianAnalysis, fbJungian, 'jungian');
         }
         if (prefData.facetedAnswers.length > 0) {
+          const fbFaceted = await this.getFacetedFeedbackItems(
+            'faceted',
+            false,
+          );
           facetedAnswers = prefData.facetedAnswers;
           facetedAnalysis = prefData.facetedAnalysis;
+          mergePsychometricFeedback(facetedAnalysis, fbFaceted, 'faceted');
         }
       }
     }
