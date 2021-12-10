@@ -1409,7 +1409,7 @@ export class UserController {
     cached = true,
   ): Promise<Snippet[]> {
     const subKey = type === 'faceted' ? 'big5' : 'jung';
-    const cKey = [subKey, 'feedback_items'].join('_');
+    const cKey = [subKey, 'feedback_snippets'].join('_');
     const resultKey = [subKey, 'results'].join('_');
     let feedbackItems = [];
     const storedItems = cached ? await this.redisGet(cKey) : null;

@@ -212,6 +212,7 @@ export const matchFacetedFeedback = (
       : 'all';
     const resultKey = isJungian ? suffix : result.toLowerCase();
     const parts = [[prefix, 'results_'].join('_'), domLetter, midKey];
+
     if (notEmptyString(resultKey)) {
       parts.push(resultKey);
     }
