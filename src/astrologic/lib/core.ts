@@ -73,6 +73,7 @@ import houseTypeData from './settings/house-type-data';
 import { sampleBaseObjects } from './custom-transits';
 import { GeoLoc } from './models/geo-loc';
 import { calcTransposedGrahaTransitions } from './point-transitions';
+import { KeyLng } from './interfaces';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 
@@ -924,6 +925,35 @@ export const calcBodyJd = async (
     });
   }
   return new Graha(data);
+};
+
+export const calcLngJd = async (jd: number, key: string): Promise<number> => {
+  let data: any = { valid: false };
+  const body = grahaValues.find(b => b.key === key);
+  if (body) {
+    const gFlag = swisseph.SEFLG_SIDEREAL;
+    await calcUtAsync(jd, body.num, gFlag).catch(result => {
+      if (result instanceof Object) {
+        data = result;
+        data.valid = Object.keys(result).includes('longitude');
+      }
+    });
+  }
+  return data.valid ? data.longitude : 0;
+};
+
+export const calcLngsJd = async (
+  jd: number,
+  keys: string[] = [],
+): Promise<KeyLng[]> => {
+  const gKeys =
+    keys.length < 2 ? ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa'] : keys;
+  const items: KeyLng[] = [];
+  for (const key of gKeys) {
+    const lng = await calcLngJd(jd, key);
+    items.push({ key, lng });
+  }
+  return items;
 };
 
 export const calcBodiesJd = async (jd: number, keys: string[] = []) => {

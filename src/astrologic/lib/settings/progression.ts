@@ -1,4 +1,4 @@
-import { calcAllBodyLngsJd, calcAyanamsha } from '../core';
+import { calcAllBodyLngsJd, calcAyanamsha, calcLngsJd } from '../core';
 import { julToISODate } from '../date-funcs';
 import { KeyLng } from '../interfaces';
 import { currentJulianDay } from '../julian-date';
@@ -82,17 +82,20 @@ export const mergeIsoDatestoProgressSet = (row: JDProgress): JDProgress => {
 
 export const buildProgressBodySets = async (
   intervals: JDProgress[] = [],
+  grahaKeys = ['su', 've', 'ma'],
   ayanamsaKey = 'true_citra',
 ) => {
   const progressSets = [];
   for (const row of intervals) {
     const ayanamsha = await calcAyanamsha(row.pd, ayanamsaKey);
-    const progData = await calcAllBodyLngsJd(row.pd, 'all');
-    progressSets.push({
-      ...mergeIsoDatestoProgressSet(row),
-      bodies: progData,
-      ayanamsha,
-    });
+    const bodies = await calcLngsJd(row.pd, grahaKeys);
+    if (bodies.length > 0) {
+      progressSets.push({
+        ...mergeIsoDatestoProgressSet(row),
+        bodies,
+        ayanamsha,
+      });
+    }
   }
   return progressSets;
 };

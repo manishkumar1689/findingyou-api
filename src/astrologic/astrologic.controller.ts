@@ -59,6 +59,7 @@ import {
   builldCurrentAndBirthExtendedTransitions,
   calcAllBodiesJd,
   calcAllBodyLngsJd,
+  calcLngsJd,
 } from './lib/core';
 import {
   calcAltitudeSE,
@@ -166,6 +167,8 @@ import {
   buildProgressBodySets,
   toProgressionJdIntervals,
 } from './lib/settings/progression';
+import { calcDist360 } from './lib/helpers';
+import { objectToMap } from 'src/lib/entities';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -586,36 +589,70 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('p2/:dt1/:dt2/:years?/:ayanamsha?')
-  async getProgressionPositions(
-    @Res() res,
-    @Param('dt1') dt1,
-    @Param('dt2') dt2,
-    @Param('years') years,
-    @Param('ayanamsha') ayanamsha,
-  ) {
+  @Get('p2')
+  async getProgressionPositions(@Res() res, @Query() query) {
     const data: any = { valid: false };
+    const params = objectToMap(query);
+    const dt1 = params.has('dt1') ? params.get('dt1') : '';
+    const dt2 = params.has('dt2') ? params.get('dt2') : '';
+    const ayanamsha = params.has('ayanamsha')
+      ? params.get('ayanamsha')
+      : 'true_citra';
+    const loc1 = params.get('loc1');
+    const loc2 = params.get('loc2');
+    const years = params.get('years');
+    const yearsInt = isNumeric(years) ? smartCastInt(years) : 20;
+    const future = params.get('years');
+    const futureInt = isNumeric(future) ? smartCastInt(future) : 5;
+    const futureFrac = futureInt / yearsInt;
     if (validISODateString(dt1) && validISODateString(dt2)) {
       const jd1 = calcJulDate(dt1);
       const jd2 = calcJulDate(dt2);
       const ayanamshaKey = notEmptyString(ayanamsha) ? ayanamsha : 'true_citra';
       data.ayanamsha = await calcAyanamsha(jd1, ayanamshaKey);
       data.ayanamshaKey = ayanamshaKey;
-      const bd1 = await calcAllBodyLngsJd(jd1, 'all');
-      const bd2 = await calcAllBodyLngsJd(jd2, 'all');
+      const bd1 = await calcAllBodyLngsJd(jd1, 'core');
+      const bd2 = await calcAllBodyLngsJd(jd2, 'core');
       data.birthPositions = {
-        p1: bd1.valid ? bd1.bodies : [],
-        p2: bd2.valid ? bd2.bodies : [],
+        p1: bd1.bodies,
+        p2: bd2.bodies,
       };
-      const yearInt = isNumeric(years) ? smartCastInt(years, 20) : 20;
-      const intervalsP1 = toProgressionJdIntervals(jd1, yearInt);
-      const intervalsP2 = toProgressionJdIntervals(jd2, yearInt);
+      const intervalsP1 = toProgressionJdIntervals(
+        jd1,
+        yearsInt,
+        4,
+        futureFrac,
+      );
+      const intervalsP2 = toProgressionJdIntervals(
+        jd2,
+        yearsInt,
+        4,
+        futureFrac,
+      );
       const p1Set = await buildProgressBodySets(intervalsP1);
       const p2Set = await buildProgressBodySets(intervalsP2);
       data.progressSets = {
         p1: p1Set,
         p2: p2Set,
       };
+      /* const p1Ve = data.birthPositions.p1.find(row => row.key === 've');
+      if (p1Ve instanceof Object) {
+        data.nVe2pMa = p2Set.map(row => {
+          const { pd, jd, dt, progressDt, bodies } = row;
+          const bd =
+            bodies instanceof Array ? bodies.find(b => b.key === 'ma') : null;
+          const lng = bd instanceof Object ? bd.lng : 0;
+          return {
+            dist: calcDist360(p1Ve.lng, lng),
+            ve: p1Ve.lng,
+            ma: lng,
+            pd,
+            jd,
+            dt,
+            progressDt,
+          };
+        });
+      } */
     }
     return res.status(HttpStatus.OK).json(data);
   }

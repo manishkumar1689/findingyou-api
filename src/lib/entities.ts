@@ -134,6 +134,12 @@ export const extractPairArrayFromObject = (obj: any, keys: string[]) => {
   return vals;
 };
 
+export const objectToMap = (obj: any = null) => {
+  const entries = obj instanceof Object ? Object.entries(obj) : [];
+  const queryMap: Map<string, any> = new Map(entries);
+  return queryMap;
+};
+
 export const extractArrayFromObject = (obj: any, keys: string[]) => {
   return extractPairArrayFromObject(obj, keys).map(pair => pair[1]);
 };
