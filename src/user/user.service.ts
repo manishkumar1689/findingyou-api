@@ -19,6 +19,7 @@ import {
   isNumeric,
   isSystemFileName,
   notEmptyString,
+  validEmail,
   validISODateString,
   validUri,
 } from '../lib/validators';
@@ -1768,6 +1769,32 @@ export class UserService {
       savedUser = await this.publicUserModel.findById(userID);
     }
     return savedUser;
+  }
+
+  async getPublicUser(ref = '', refType = 'identifier') {
+    const filter: Map<string, any> = new Map();
+    let matchEmail = false;
+    switch (refType) {
+      case 'identifier':
+      case 'email':
+        matchEmail = true;
+        break;
+      case 'id':
+      case '_id':
+        matchEmail = false;
+        break;
+      default:
+        matchEmail = validEmail(ref);
+        break;
+    }
+    if (matchEmail) {
+      const rgx = new RegExp(ref, 'i');
+      filter.set('identifier', rgx);
+    } else {
+      filter.set('_id', ref);
+    }
+    const criteria = Object.fromEntries(filter.entries());
+    return await this.publicUserModel.findOne(criteria);
   }
 
   async getPublicUsers(start = 0, limit = 100, criteria = null) {

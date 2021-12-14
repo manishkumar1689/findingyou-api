@@ -545,6 +545,38 @@ export const calcAllBodies = async (
   return data;
 };
 
+/*
+@param jd:number
+@param mode:string (all|core)
+*/
+export const calcAllBodiesJd = async (jd = 0, mode = 'all') => {
+  const data = { valid: false, jd, bodies: [] };
+  if (jd > 1000) {
+    const showCore = mode === 'core' || mode === 'all';
+    if (showCore) {
+      await addGrahaValues(data, false);
+    }
+  }
+  return data;
+};
+
+/*
+@param jd:number
+@param mode:string (all|core)
+*/
+export const calcAllBodyLngsJd = async (jd = 0, mode = 'all') => {
+  const data = await calcAllBodiesJd(jd, mode);
+  if (data.valid) {
+    data.bodies = data.bodies.map(bd => {
+      return {
+        key: bd.key,
+        lng: bd.longitude,
+      };
+    });
+  }
+  return data;
+};
+
 export const calcMrityubhaga = async (datetime: string, geo) => {
   const bodyData = await calcAllBodies(datetime, 'core');
   const { jd, bodies } = bodyData;

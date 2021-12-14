@@ -57,6 +57,8 @@ import {
   calcDeclination,
   buildExtendedTransitions,
   builldCurrentAndBirthExtendedTransitions,
+  calcAllBodiesJd,
+  calcAllBodyLngsJd,
 } from './lib/core';
 import {
   calcAltitudeSE,
@@ -160,6 +162,10 @@ import { processPredictiveRuleSet } from './lib/predictions';
 import { panchaPakshiDayNightSet } from './lib/settings/pancha-pakshi';
 import { PairsSetDTO } from './dto/pairs-set.dto';
 import { randomCompatibilityText } from './lib/settings/compatibility-texts';
+import {
+  buildProgressBodySets,
+  toProgressionJdIntervals,
+} from './lib/settings/progression';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -576,6 +582,40 @@ export class AstrologicController {
       const geo = locStringToGeo(loc);
       const ayanamshaKey = notEmptyString(ayanamsha) ? ayanamsha : 'true_citra';
       data = await calcCoreGrahaPositions(dt, geo, ayanamshaKey);
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('p2/:dt1/:dt2/:years?/:ayanamsha?')
+  async getProgressionPositions(
+    @Res() res,
+    @Param('dt1') dt1,
+    @Param('dt2') dt2,
+    @Param('years') years,
+    @Param('ayanamsha') ayanamsha,
+  ) {
+    const data: any = { valid: false };
+    if (validISODateString(dt1) && validISODateString(dt2)) {
+      const jd1 = calcJulDate(dt1);
+      const jd2 = calcJulDate(dt2);
+      const ayanamshaKey = notEmptyString(ayanamsha) ? ayanamsha : 'true_citra';
+      data.ayanamsha = await calcAyanamsha(jd1, ayanamshaKey);
+      data.ayanamshaKey = ayanamshaKey;
+      const bd1 = await calcAllBodyLngsJd(jd1, 'all');
+      const bd2 = await calcAllBodyLngsJd(jd2, 'all');
+      data.birthPositions = {
+        p1: bd1.valid ? bd1.bodies : [],
+        p2: bd2.valid ? bd2.bodies : [],
+      };
+      const yearInt = isNumeric(years) ? smartCastInt(years, 20) : 20;
+      const intervalsP1 = toProgressionJdIntervals(jd1, yearInt);
+      const intervalsP2 = toProgressionJdIntervals(jd2, yearInt);
+      const p1Set = await buildProgressBodySets(intervalsP1);
+      const p2Set = await buildProgressBodySets(intervalsP2);
+      data.progressSets = {
+        p1: p1Set,
+        p2: p2Set,
+      };
     }
     return res.status(HttpStatus.OK).json(data);
   }
@@ -3201,9 +3241,8 @@ export class AstrologicController {
     const chart = await this.astrologicService.getChart(chartID);
     if (chart instanceof Object) {
       data.chart = chart;
-      let user = null;
       const userID = chart.user.toString();
-      user = await this.userService.getUser(userID);
+      data.user = await this.userService.getUser(userID);
       data.shortTz = toShortTzAbbr(chart.datetime, chart.tz);
       data.valid = true;
     }

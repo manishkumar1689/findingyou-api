@@ -82,7 +82,7 @@ import {
   IFlag,
   mapLikeabilityRelations,
 } from '../lib/notifications';
-import { Model } from 'mongoose';
+import { isValidObjectId, Model } from 'mongoose';
 import { ActiveStatusDTO } from './dto/active-status.dto';
 import { dateAgoString } from '../astrologic/lib/date-funcs';
 import {
@@ -99,6 +99,7 @@ import {
   mergePsychometricFeedback,
 } from '../setting/lib/mappers';
 import { PublicUserDTO } from './dto/public-user.dto';
+import { User } from './interfaces/user.interface';
 
 @Controller('user')
 export class UserController {
@@ -1579,6 +1580,56 @@ export class UserController {
     });
   }
 
+  mapPublicUser(
+    user: User,
+    facetedQuestions: any[] = [],
+    jungianQuestions: any[] = [],
+  ) {
+    const {
+      _id,
+      nickName,
+      identifier,
+      active,
+      geo,
+      gender,
+      preferences,
+      dob,
+      createdAt,
+      modifiedAt,
+    } = user;
+    const facetedAnswers = filterMapSurveyByType(
+      preferences,
+      'faceted',
+      facetedQuestions,
+    );
+    const facetedAnalysis = analyseAnswers('faceted', facetedAnswers);
+
+    const jungianAnswers = filterMapSurveyByType(
+      preferences,
+      'jungian',
+      jungianQuestions,
+    );
+    const jungianCompleted = jungianAnswers.length >= jungianQuestions.length;
+    const jungianAnalysis = jungianCompleted
+      ? analyseAnswers('jungian', jungianAnswers)
+      : {};
+    return {
+      _id,
+      nickName,
+      identifier,
+      active,
+      geo,
+      gender,
+      dob,
+      createdAt,
+      modifiedAt,
+      facetedAnswers,
+      facetedAnalysis,
+      jungianAnswers,
+      jungianAnalysis,
+    };
+  }
+
   @Get('public-users/:start?/:limit?')
   async getPublicUsers(
     @Res() res,
@@ -1592,50 +1643,50 @@ export class UserController {
       facetedQuestions,
       jungianQuestions,
     } = await this.settingService.getPsychometricSurveys();
-    const items = users.map(user => {
-      const {
-        nickName,
-        identifier,
-        active,
-        geo,
-        gender,
-        preferences,
-        dob,
-        createdAt,
-        modifiedAt,
-      } = user;
-      const facetedAnswers = filterMapSurveyByType(
-        preferences,
-        'faceted',
-        facetedQuestions,
-      );
-      const facetedAnalysis = analyseAnswers('faceted', facetedAnswers);
-
-      const jungianAnswers = filterMapSurveyByType(
-        preferences,
-        'jungian',
-        jungianQuestions,
-      );
-      const jungianCompleted = jungianAnswers.length >= jungianQuestions.length;
-      const jungianAnalysis = jungianCompleted
-        ? analyseAnswers('jungian', jungianAnswers)
-        : {};
-      return {
-        nickName,
-        identifier,
-        active,
-        geo,
-        gender,
-        dob,
-        createdAt,
-        modifiedAt,
-        facetedAnswers,
-        facetedAnalysis,
-        jungianAnswers,
-        jungianAnalysis,
-      };
-    });
+    const items = users.map(user =>
+      this.mapPublicUser(user, facetedQuestions, jungianQuestions),
+    );
     return res.json(items);
+  }
+
+  @Get('public-user/:ref/:refMode?')
+  async getPublicUser(
+    @Res() res,
+    @Param('ref') ref,
+    @Param('refMode') refMode,
+  ) {
+    const refModeKey = notEmptyString(refMode) ? refMode : 'auto';
+    let data: any = { valid: false };
+    if (notEmptyString(ref, 6) && (isValidObjectId(ref) || validEmail(ref))) {
+      const {
+        facetedQuestions,
+        jungianQuestions,
+      } = await this.settingService.getPsychometricSurveys();
+      const user = await this.userService.getPublicUser(ref, refModeKey);
+      if (user instanceof Model) {
+        data = this.mapPublicUser(
+          user.toObject(),
+          facetedQuestions,
+          jungianQuestions,
+        );
+        if (data.facetedAnswers.length > 0) {
+          const fbFaceted = await this.getFacetedFeedbackItems(
+            'faceted',
+            false,
+          );
+          mergePsychometricFeedback(data.facetedAnalysis, fbFaceted, 'faceted');
+        }
+        if (data.jungianAnswers.length > 0) {
+          const fbJungian = await this.getFacetedFeedbackItems(
+            'jungian',
+            false,
+          );
+          mergePsychometricFeedback(data.jungianAnalysis, fbJungian, 'jungian');
+        }
+        data.valid = true;
+      }
+    }
+    return res.json(data);
   }
 
   /*

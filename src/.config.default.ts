@@ -49,7 +49,12 @@ export const googleTranslate = {
   projectId: 'snippets-319613',
 };
 
-export const googleFCMKeyPath = '/Users/neil/apps/findingyou/files/findingyou-1ef9a-firebase-adminsdk-8otfv-1e2b882c10.json';
+export const googleFCMKeyPath =
+  '/Users/neil/apps/findingyou/files/findingyou-1ef9a-firebase-adminsdk-8otfv-1e2b882c10.json';
+
+export const googleFCMBase = 'findingyou-1ef9a-default-rtdb';
+
+export const googleFCMDomain = 'europe-west1.firebasedatabase.app';
 
 export const hashSalt = '4jyddhd-90';
 
