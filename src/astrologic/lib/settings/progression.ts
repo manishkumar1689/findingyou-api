@@ -1,4 +1,4 @@
-import { keyValuesToSimpleObject } from 'src/lib/converters';
+import { keyValuesToSimpleObject } from '../../../lib/converters';
 import { calcAllBodyLngsJd, calcAyanamsha, calcLngsJd } from '../core';
 import { julToISODate } from '../date-funcs';
 import { KeyLng } from '../interfaces';

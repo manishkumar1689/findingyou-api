@@ -168,8 +168,7 @@ import {
   buildProgressBodySets,
   toProgressionJdIntervals,
 } from './lib/settings/progression';
-import { calcDist360 } from './lib/helpers';
-import { objectToMap } from 'src/lib/entities';
+import { objectToMap } from '../lib/entities';
 
 @Controller('astrologic')
 export class AstrologicController {
