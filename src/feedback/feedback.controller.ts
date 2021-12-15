@@ -21,6 +21,7 @@ import { notEmptyString } from '../lib/validators';
 import { SwipeDTO } from './dto/swipe.dto';
 import { sanitize, smartCastInt } from '../lib/converters';
 import { Model } from 'mongoose';
+import { objectToMap } from 'src/lib/entities';
 
 @Controller('feedback')
 export class FeedbackController {
@@ -128,6 +129,27 @@ export class FeedbackController {
       });
     }
     return fcm;
+  }
+
+  @Get('test-fcm')
+  async testFCM(@Res() res, @Query() query) {
+    const params = objectToMap(query);
+    const targetDeviceToken = params.has('targetDeviceToken')
+      ? params.get('targetDeviceToken')
+      : '';
+    const key = params.has('key') ? params.get('key') : '';
+    const value = params.has('value') ? params.get('value') : '';
+    const type = params.has('type') ? params.get('type') : '';
+    const user = params.has('user') ? params.get('user') : '';
+    const targetUser = params.has('targetUser') ? params.get('targetUser') : '';
+    const fcm = await pushFlag(targetDeviceToken, {
+      key,
+      type,
+      value,
+      user,
+      targetUser,
+    });
+    return res.json(fcm);
   }
 
   // Fetch a particular user using ID

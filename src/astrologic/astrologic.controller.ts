@@ -103,6 +103,7 @@ import {
   smartCastFloat,
   smartCastBool,
   roundNumber,
+  keyValuesToSimpleObject,
 } from '../lib/converters';
 import { PairedChartInputDTO } from './dto/paired-chart-input.dto';
 import {
@@ -605,6 +606,10 @@ export class AstrologicController {
     const future = params.get('years');
     const futureInt = isNumeric(future) ? smartCastInt(future) : 5;
     const futureFrac = futureInt / yearsInt;
+    const hasGeo1 = isLocationString(loc1);
+    const hasGeo2 = isLocationString(loc2);
+    const geo1 = hasGeo1 ? locStringToGeo(loc1) : null;
+    const geo2 = hasGeo2 ? locStringToGeo(loc2) : null;
     if (validISODateString(dt1) && validISODateString(dt2)) {
       const jd1 = calcJulDate(dt1);
       const jd2 = calcJulDate(dt2);
@@ -613,9 +618,19 @@ export class AstrologicController {
       data.ayanamshaKey = ayanamshaKey;
       const bd1 = await calcAllBodyLngsJd(jd1, 'core');
       const bd2 = await calcAllBodyLngsJd(jd2, 'core');
+      if (hasGeo1) {
+        const hd1 = await fetchHouseDataJd(jd1, geo1, 'W');
+        bd1.bodies.push({ key: 'as', lng: hd1.ascendant });
+        bd1.bodies.push({ key: 'ds', lng: (hd1.ascendant + 180) % 360 });
+      }
+      if (hasGeo2) {
+        const hd2 = await fetchHouseDataJd(jd2, geo2, 'W');
+        bd1.bodies.push({ key: 'as', lng: hd2.ascendant });
+        bd1.bodies.push({ key: 'ds', lng: (hd2.ascendant + 180) % 360 });
+      }
       data.birthPositions = {
-        p1: bd1.bodies,
-        p2: bd2.bodies,
+        p1: keyValuesToSimpleObject(bd1.bodies, 'lng'),
+        p2: keyValuesToSimpleObject(bd2.bodies, 'lng'),
       };
       const intervalsP1 = toProgressionJdIntervals(
         jd1,
@@ -635,24 +650,6 @@ export class AstrologicController {
         p1: p1Set,
         p2: p2Set,
       };
-      /* const p1Ve = data.birthPositions.p1.find(row => row.key === 've');
-      if (p1Ve instanceof Object) {
-        data.nVe2pMa = p2Set.map(row => {
-          const { pd, jd, dt, progressDt, bodies } = row;
-          const bd =
-            bodies instanceof Array ? bodies.find(b => b.key === 'ma') : null;
-          const lng = bd instanceof Object ? bd.lng : 0;
-          return {
-            dist: calcDist360(p1Ve.lng, lng),
-            ve: p1Ve.lng,
-            ma: lng,
-            pd,
-            jd,
-            dt,
-            progressDt,
-          };
-        });
-      } */
     }
     return res.status(HttpStatus.OK).json(data);
   }

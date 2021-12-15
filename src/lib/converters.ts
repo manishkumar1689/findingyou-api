@@ -132,3 +132,25 @@ export const toStartRef = (startRef = null) => {
     ? parseInt(startRef.replace(/[^0-9]\./, ''), 10) / 12
     : startRef;
 };
+
+export const keyValuesToSimpleObject = (
+  rows: any[] = [],
+  valueField = 'value',
+) => {
+  const rowEntries = rows
+    .filter(row => row instanceof Object)
+    .map(row => Object.entries(row))
+    .filter(
+      entries =>
+        entries.some(entry => entry[0] === 'key') &&
+        entries.some(entry => entry[0] === valueField),
+    )
+    .map(entries => {
+      const k = entries.find(entry => entry[0] === 'key');
+      const v = entries.find(entry => entry[0] === valueField);
+      return k instanceof Array && v instanceof Array
+        ? [k[1], v[1]]
+        : ['', null];
+    });
+  return Object.fromEntries(rowEntries);
+};

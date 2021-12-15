@@ -1,3 +1,4 @@
+import { keyValuesToSimpleObject } from 'src/lib/converters';
 import { calcAllBodyLngsJd, calcAyanamsha, calcLngsJd } from '../core';
 import { julToISODate } from '../date-funcs';
 import { KeyLng } from '../interfaces';
@@ -83,16 +84,18 @@ export const mergeIsoDatestoProgressSet = (row: JDProgress): JDProgress => {
 export const buildProgressBodySets = async (
   intervals: JDProgress[] = [],
   grahaKeys = ['su', 've', 'ma'],
+  addISODates = false,
   ayanamsaKey = 'true_citra',
 ) => {
   const progressSets = [];
   for (const row of intervals) {
     const ayanamsha = await calcAyanamsha(row.pd, ayanamsaKey);
     const bodies = await calcLngsJd(row.pd, grahaKeys);
+    const rowObj = addISODates ? mergeIsoDatestoProgressSet(row) : row;
     if (bodies.length > 0) {
       progressSets.push({
-        ...mergeIsoDatestoProgressSet(row),
-        bodies,
+        ...rowObj,
+        bodies: keyValuesToSimpleObject(bodies, 'lng'),
         ayanamsha,
       });
     }
