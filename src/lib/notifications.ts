@@ -2,13 +2,14 @@ import * as admin from 'firebase-admin';
 import { googleFCMKeyPath, googleFCMBase, googleFCMDomain } from '../.config';
 
 const initApp = () => {
+  if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    process.env.GOOGLE_APPLICATION_CREDENTIALS = googleFCMBase;
+  }
   admin.initializeApp({
     credential: admin.credential.applicationDefault(),
     databaseURL: `https://${googleFCMBase}.${googleFCMDomain}`,
   });
 };
-
-initApp();
 
 export interface IFlag {
   key?: string;
@@ -99,6 +100,7 @@ const castValueToString = (val: any, type: string): string => {
 };
 
 export const pushFlag = async (token: string, flag: IFlag) => {
+  initApp();
   const entries = flag instanceof Object ? Object.entries(flag) : [];
   const hasType = entries.some(entry => entry[0] === 'type');
   const type = hasType ? flag.type : '';
@@ -111,15 +113,15 @@ export const pushFlag = async (token: string, flag: IFlag) => {
       })
     : [];
   const data = Object.fromEntries(strEntries);
-  const message = {
+  /* const message = {
     data,
     token,
-  };
+  }; */
   const result: any = { valid: false, error: null, data: null };
   try {
     await admin
       .messaging()
-      .send(message)
+      .sendToDevice(token, { data })
       .then(response => {
         result.data = response;
       })

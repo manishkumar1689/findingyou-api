@@ -32,6 +32,7 @@ export const PreferenceSchema = new mongoose.Schema({
       'multiple_key_scales', // multiple scales defined by rules,
       'faceted', // scale but for big5 faceted
       'jungian', // scale but for jungian faceted
+      'simple_astro_pair', // simplified astro chart pair with relationship data
     ],
     default: 'string',
     required: true,
