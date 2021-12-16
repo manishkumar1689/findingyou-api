@@ -109,7 +109,11 @@ export const pushMessage = async (
 ) => {
   const result: any = { valid: false, error: null, data: null };
   try {
-    const data = payload instanceof Object ? payload : {};
+    const hasPayload =
+      payload instanceof Object && Object.keys(payload).includes('value');
+    const value = hasPayload ? JSON.stringify(payload.value) : '';
+    const data = payload instanceof Object ? { ...payload, value } : {};
+
     await admin
       .messaging()
       .sendToDevice(token, {
