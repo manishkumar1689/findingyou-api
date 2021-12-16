@@ -16,7 +16,7 @@ import { FeedbackService } from './feedback.service';
 import { UserService } from '../user/user.service';
 import { SettingService } from '../setting/setting.service';
 import { CreateFlagDTO } from './dto/create-flag.dto';
-import { mapLikeability, pushFlag } from '../lib/notifications';
+import { mapLikeability, pushFlag, pushMessage } from '../lib/notifications';
 import { notEmptyString } from '../lib/validators';
 import { SwipeDTO } from './dto/swipe.dto';
 import { sanitize, smartCastInt } from '../lib/converters';
@@ -136,18 +136,9 @@ export class FeedbackController {
     const targetDeviceToken = params.has('targetDeviceToken')
       ? params.get('targetDeviceToken')
       : '';
-    const key = params.has('key') ? params.get('key') : '';
-    const value = params.has('value') ? params.get('value') : '';
-    const type = params.has('type') ? params.get('type') : '';
-    const user = params.has('user') ? params.get('user') : '';
-    const targetUser = params.has('targetUser') ? params.get('targetUser') : '';
-    const fcm = await pushFlag(targetDeviceToken, {
-      key,
-      type,
-      value,
-      user,
-      targetUser,
-    });
+    const title = params.has('title') ? params.get('title') : '';
+    const body = params.has('body') ? params.get('body') : '';
+    const fcm = await pushMessage(targetDeviceToken, title, body);
     return res.json(fcm);
   }
 

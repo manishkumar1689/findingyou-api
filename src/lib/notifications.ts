@@ -3,13 +3,15 @@ import { googleFCMKeyPath, googleFCMBase, googleFCMDomain } from '../.config';
 
 const initApp = () => {
   if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    process.env.GOOGLE_APPLICATION_CREDENTIALS = googleFCMBase;
+    process.env.GOOGLE_APPLICATION_CREDENTIALS = googleFCMKeyPath;
   }
   admin.initializeApp({
     credential: admin.credential.applicationDefault(),
     databaseURL: `https://${googleFCMBase}.${googleFCMDomain}`,
   });
 };
+
+initApp();
 
 export interface IFlag {
   key?: string;
@@ -99,8 +101,41 @@ const castValueToString = (val: any, type: string): string => {
   }
 };
 
+export const pushMessage = async (
+  token: string,
+  title = '',
+  body = '',
+  payload = null,
+) => {
+  const result: any = { valid: false, error: null, data: null };
+  try {
+    const data = payload instanceof Object ? payload : {};
+    await admin
+      .messaging()
+      .sendToDevice(token, {
+        notification: {
+          title,
+          body,
+        },
+        data,
+      })
+      .then(response => {
+        result.data = response;
+        const { results } = result.data;
+        if (results instanceof Array && results.length > 0) {
+          result.valid = results[0].success === true;
+        }
+      })
+      .catch(e => {
+        result.error = e;
+      });
+  } catch (e) {
+    result.error = e;
+  }
+  return result;
+};
+
 export const pushFlag = async (token: string, flag: IFlag) => {
-  initApp();
   const entries = flag instanceof Object ? Object.entries(flag) : [];
   const hasType = entries.some(entry => entry[0] === 'type');
   const type = hasType ? flag.type : '';
@@ -113,25 +148,7 @@ export const pushFlag = async (token: string, flag: IFlag) => {
       })
     : [];
   const data = Object.fromEntries(strEntries);
-  /* const message = {
-    data,
-    token,
-  }; */
-  const result: any = { valid: false, error: null, data: null };
-  try {
-    await admin
-      .messaging()
-      .sendToDevice(token, { data })
-      .then(response => {
-        result.data = response;
-      })
-      .catch(e => {
-        result.error = e;
-      });
-  } catch (e) {
-    result.error = e;
-  }
-  return result;
+  return await pushMessage(token, data.key, JSON.stringify(data));
 };
 
 export const mapFlagItems = (flagKey = ''): FlagItem => {
