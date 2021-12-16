@@ -119,7 +119,9 @@ export class FeedbackController {
     let fcm: any = { valid: false, reason: 'missing device token' };
     const { key, type, value, user, targetUser } = createFlagDTO;
     if (notEmptyString(targetDeviceToken, 5)) {
-      fcm = await pushFlag(targetDeviceToken, {
+      const title = key;
+      const body = 'Someone has interacted with you.';
+      fcm = await pushMessage(targetDeviceToken, title, body, {
         key,
         type,
         value,
@@ -192,10 +194,15 @@ export class FeedbackController {
       } as CreateFlagDTO;
       const flag = await this.feedbackService.saveFlag(flagData);
       const valid = Object.keys(flag).includes('value');
+      const sendMsg = intValue >= 1;
+      let fcm = {};
+      if (sendMsg) {
+        fcm = await this.sendNotification(flagData);
+      }
       data = {
         valid,
         flag,
-        fcm: await this.sendNotification(flagData),
+        fcm,
         count: numSwipes,
         roles,
         maxRating,
