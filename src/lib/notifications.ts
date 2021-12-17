@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 import { googleFCMKeyPath, googleFCMBase, googleFCMDomain } from '../.config';
+import { isNumeric } from './validators';
 
 const initApp = () => {
   if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
@@ -125,10 +126,12 @@ export const pushMessage = async (
       })
       .then(response => {
         result.data = response;
-        const { results } = result.data;
-        if (results instanceof Array && results.length > 0) {
-          result.valid = results[0].success === true;
-        }
+        const { results, successCount } = result.data;
+        result.valid =
+          results instanceof Array &&
+          results.length > 0 &&
+          isNumeric(successCount) &&
+          successCount > 0;
       })
       .catch(e => {
         result.error = e;

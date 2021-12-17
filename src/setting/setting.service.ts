@@ -37,6 +37,7 @@ import {
   transformUserPreferences,
 } from './lib/mappers';
 import { FacetedItemDTO } from './dto/faceted-item.dto';
+import eventTypeValues from 'src/astrologic/lib/settings/event-type-valuess';
 
 @Injectable()
 export class SettingService {
@@ -139,6 +140,31 @@ export class SettingService {
         ? data.value
         : {};
     return new Map(Object.entries(itemObj));
+  }
+
+  async getSubjectDataSetsRaw() {
+    const roddenData = await this.getByKey('rodden_scale_values');
+    const rodItems = roddenData.value instanceof Array ? roddenData.value : [];
+    const relData = await this.getByKey('relationship_types');
+    const relItems = relData.value instanceof Array ? relData.value : [];
+    const eventTypes = eventTypeValues;
+    return {
+      rodden: rodItems.filter(r => r instanceof Object && r.enabled),
+      relations: relItems,
+      eventTypes,
+    };
+  }
+
+  async getSubjectDataSets() {
+    const cKey = 'subject-data-sets';
+    const data = await this.redisGet(cKey);
+    if (data instanceof Object && Object.keys(data).includes('relations')) {
+      return data;
+    } else {
+      const result = await this.getSubjectDataSetsRaw();
+      this.redisSet(cKey, result);
+      return result;
+    }
   }
 
   async getPreferences() {

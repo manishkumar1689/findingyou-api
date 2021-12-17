@@ -613,7 +613,8 @@ export class AstrologicController {
       const jd1 = calcJulDate(dt1);
       const jd2 = calcJulDate(dt2);
       const ayanamshaKey = notEmptyString(ayanamsha) ? ayanamsha : 'true_citra';
-      data.ayanamsha = await calcAyanamsha(jd1, ayanamshaKey);
+      const ayanamsha1 = await calcAyanamsha(jd1, ayanamshaKey);
+      const ayanamsha2 = await calcAyanamsha(jd2, ayanamshaKey);
       data.ayanamshaKey = ayanamshaKey;
       const bd1 = await calcAllBodyLngsJd(jd1, 'core');
       const bd2 = await calcAllBodyLngsJd(jd2, 'core');
@@ -624,13 +625,10 @@ export class AstrologicController {
       }
       if (hasGeo2) {
         const hd2 = await fetchHouseDataJd(jd2, geo2, 'W');
-        bd1.bodies.push({ key: 'as', lng: hd2.ascendant });
-        bd1.bodies.push({ key: 'ds', lng: (hd2.ascendant + 180) % 360 });
+        bd2.bodies.push({ key: 'as', lng: hd2.ascendant });
+        bd2.bodies.push({ key: 'ds', lng: (hd2.ascendant + 180) % 360 });
       }
-      data.birthPositions = {
-        p1: keyValuesToSimpleObject(bd1.bodies, 'lng'),
-        p2: keyValuesToSimpleObject(bd2.bodies, 'lng'),
-      };
+
       const intervalsP1 = toProgressionJdIntervals(
         jd1,
         yearsInt,
@@ -645,9 +643,17 @@ export class AstrologicController {
       );
       const p1Set = await buildProgressBodySets(intervalsP1);
       const p2Set = await buildProgressBodySets(intervalsP2);
-      data.progressSets = {
-        p1: p1Set,
-        p2: p2Set,
+      data.p1 = {
+        jd: jd1,
+        ayanamsha: ayanamsha1,
+        birth: keyValuesToSimpleObject(bd1.bodies, 'lng'),
+        progressSets: p1Set,
+      };
+      data.p2 = {
+        jd: jd2,
+        ayanamsha: ayanamsha2,
+        birth: keyValuesToSimpleObject(bd2.bodies, 'lng'),
+        progressSets: p2Set,
       };
     }
     return res.status(HttpStatus.OK).json(data);
