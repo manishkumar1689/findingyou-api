@@ -37,7 +37,7 @@ import {
   transformUserPreferences,
 } from './lib/mappers';
 import { FacetedItemDTO } from './dto/faceted-item.dto';
-import eventTypeValues from 'src/astrologic/lib/settings/event-type-valuess';
+import eventTypeValues from 'src/astrologic/lib/settings/event-type-values';
 
 @Injectable()
 export class SettingService {

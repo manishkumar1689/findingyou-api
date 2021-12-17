@@ -39,9 +39,6 @@ import { deleteSwissEpheFile } from '../astrologic/lib/files';
 import { ipWhitelistFileData } from '../auth/auth.utils';
 import { StringsDTO } from './dto/strings.dto';
 import { PredictiveRuleSetDTO } from './dto/predictive-rule-set.dto';
-import { FacetedItemDTO } from './dto/faceted-item.dto';
-import { smartCastInt } from '../lib/converters';
-import eventTypeValues from 'src/astrologic/lib/settings/event-type-valuess';
 
 @Controller('setting')
 export class SettingController {
