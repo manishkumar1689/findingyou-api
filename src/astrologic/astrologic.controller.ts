@@ -609,6 +609,10 @@ export class AstrologicController {
     const hasGeo2 = isLocationString(loc2);
     const geo1 = hasGeo1 ? locStringToGeo(loc1) : null;
     const geo2 = hasGeo2 ? locStringToGeo(loc2) : null;
+    const showIsoDates = params.has('iso')
+      ? smartCastInt(params.get('iso'), 0) > 0
+      : false;
+    const progressKeys = ['su', 've', 'ma'];
     if (validISODateString(dt1) && validISODateString(dt2)) {
       const jd1 = calcJulDate(dt1);
       const jd2 = calcJulDate(dt2);
@@ -641,16 +645,28 @@ export class AstrologicController {
         4,
         futureFrac,
       );
-      const p1Set = await buildProgressBodySets(intervalsP1);
-      const p2Set = await buildProgressBodySets(intervalsP2);
+      const p1Set = await buildProgressBodySets(
+        intervalsP1,
+        progressKeys,
+        showIsoDates,
+      );
+      const p2Set = await buildProgressBodySets(
+        intervalsP2,
+        progressKeys,
+        showIsoDates,
+      );
       data.p1 = {
         jd: jd1,
+        dt: julToISODate(jd1),
+        geo: geo1,
         ayanamsha: ayanamsha1,
         birth: keyValuesToSimpleObject(bd1.bodies, 'lng'),
         progressSets: p1Set,
       };
       data.p2 = {
         jd: jd2,
+        dt: julToISODate(jd2),
+        geo: geo2,
         ayanamsha: ayanamsha2,
         birth: keyValuesToSimpleObject(bd2.bodies, 'lng'),
         progressSets: p2Set,
