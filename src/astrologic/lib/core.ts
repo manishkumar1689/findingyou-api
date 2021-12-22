@@ -931,8 +931,8 @@ export const calcLngJd = async (jd: number, key: string): Promise<number> => {
   let data: any = { valid: false };
   const body = grahaValues.find(b => b.key === key);
   if (body) {
-    const gFlag = swisseph.SEFLG_SIDEREAL;
-    await calcUtAsync(jd, body.num, gFlag).catch(result => {
+    //const gFlag = swisseph.SEFLG_TR;
+    await calcUtAsync(jd, body.num, 0).catch(result => {
       if (result instanceof Object) {
         data = result;
         data.valid = Object.keys(result).includes('longitude');
