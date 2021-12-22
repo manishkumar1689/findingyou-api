@@ -534,7 +534,6 @@ export class UserController {
           user.preferences,
         );
         preferences = prefData.preferences;
-        console.log(user.preferences);
         facetedAnalysis = prefData.facetedAnalysis;
       }
       const filteredFlags = hasUser
