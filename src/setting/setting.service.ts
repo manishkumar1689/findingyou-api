@@ -228,7 +228,9 @@ export class SettingService {
     const jungian = surveys.find(sv => sv.key === 'jungian_options');
     const preferenceItems = preferences
       .filter(
-        pr => pr instanceof Object && ['faceted', 'jungian'].includes(pr.type),
+        pr =>
+          pr instanceof Object &&
+          ['faceted', 'jungian'].includes(pr.type) === false,
       )
       .map(pref => transformUserPreferences(pref, surveys, multiscaleData));
 
