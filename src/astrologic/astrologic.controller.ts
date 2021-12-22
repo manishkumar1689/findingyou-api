@@ -602,7 +602,7 @@ export class AstrologicController {
     const loc2 = params.get('loc2');
     const years = params.get('years');
     const yearsInt = isNumeric(years) ? smartCastInt(years) : 20;
-    const future = params.get('years');
+    const future = params.get('future');
     const futureInt = isNumeric(future) ? smartCastInt(future) : 5;
     const futureFrac = futureInt / yearsInt;
     const hasGeo1 = isLocationString(loc1);
