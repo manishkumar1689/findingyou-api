@@ -594,11 +594,18 @@ export class Kuta {
       s2.nakshatraNum,
       s1.nakshatraNum,
     );
-    const taraIndex1 = taraValOne % 9;
-    const taraIndex2 = taraValTwo % 9;
+    const numTaras = 9;
+    const taraMod1 = taraValOne % numTaras;
+    const taraMod2 = taraValTwo % numTaras;
+    const taraNum1 = taraMod1 === 0 ? numTaras : taraMod1;
+    const taraNum2 = taraMod2 === 0 ? numTaras : taraMod2;
+    const taraIndex1 = taraNum1 - 1;
+    const taraIndex2 = taraNum2 - 1;
 
     const { scores } = settings;
     if (scores instanceof Array && scores.length > 8) {
+      result.c1Value = ['tara', taraNum1].join('/');
+      result.c2Value = ['tara', taraNum1].join('/');
       result.score = scores[taraIndex1] + scores[taraIndex2];
     }
   }

@@ -1771,6 +1771,42 @@ export class UserService {
     return savedUser;
   }
 
+  async savePublicPreference(
+    id = '',
+    key = '',
+    type = 'simple_astro_pair',
+    data: any = null,
+  ): Promise<boolean> {
+    let valid = false;
+    const pUser = await this.publicUserModel.findById(id);
+    if (pUser instanceof Model) {
+      const userObj = pUser.toObject();
+      const keys = Object.keys(userObj);
+      const preferences =
+        keys.includes('preferences') && userObj.preferences instanceof Array
+          ? userObj.preferences
+          : [];
+      const prefIndex = preferences.findIndex(pr => pr.key === key);
+      const newPref = {
+        key,
+        type,
+        value: data,
+      };
+      if (prefIndex < 0) {
+        preferences.push(newPref);
+      } else {
+        preferences[prefIndex] = newPref;
+      }
+      await this.publicUserModel
+        .findByIdAndUpdate(id, {
+          preferences,
+        })
+        .exec();
+      valid = true;
+    }
+    return valid;
+  }
+
   async getPublicUser(ref = '', refType = 'identifier') {
     const filter: Map<string, any> = new Map();
     let matchEmail = false;

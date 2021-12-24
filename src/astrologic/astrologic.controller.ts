@@ -609,6 +609,10 @@ export class AstrologicController {
     const hasGeo2 = isLocationString(loc2);
     const geo1 = hasGeo1 ? locStringToGeo(loc1) : null;
     const geo2 = hasGeo2 ? locStringToGeo(loc2) : null;
+    const publicUserId = params.has('puid') ? params.get('puid') : '';
+    const hasPublicUserId = notEmptyString(publicUserId, 16);
+    const userId = params.has('uid') ? params.get('uid') : '';
+    const hasUserId = notEmptyString(userId, 16);
     const showIsoDates = params.has('iso')
       ? smartCastInt(params.get('iso'), 0) > 0
       : false;
@@ -655,22 +659,43 @@ export class AstrologicController {
         progressKeys,
         showIsoDates,
       );
-      data.p1 = {
+      const p1 = {
         jd: jd1,
         dt: julToISODate(jd1),
         geo: geo1,
         ayanamsha: ayanamsha1,
         birth: keyValuesToSimpleObject(bd1.bodies, 'lng'),
+      };
+      data.p1 = {
+        ...p1,
         progressSets: p1Set,
       };
-      data.p2 = {
+      const p2 = {
         jd: jd2,
         dt: julToISODate(jd2),
         geo: geo2,
         ayanamsha: ayanamsha2,
         birth: keyValuesToSimpleObject(bd2.bodies, 'lng'),
+      };
+      data.p2 = {
+        ...p2,
         progressSets: p2Set,
       };
+      console.log(hasPublicUserId, publicUserId);
+      if (hasPublicUserId) {
+        const pairNum = 1;
+        const simpleChartKey = ['astro_pair', pairNum].join('_');
+        this.userService.savePublicPreference(
+          publicUserId,
+          simpleChartKey,
+          'simple_astro_pair',
+          {
+            ayanamshaKey,
+            p1,
+            p2,
+          },
+        );
+      }
     }
     return res.status(HttpStatus.OK).json(data);
   }
