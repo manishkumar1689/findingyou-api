@@ -120,7 +120,11 @@ import {
   Record,
 } from '../lib/parse-astro-csv';
 import { Kuta } from './lib/kuta';
-import { Chart } from './lib/models/chart';
+import {
+  Chart,
+  generateBasicChart,
+  simpleSetToFullChart,
+} from './lib/models/chart';
 import { AspectSet, calcOrb } from './lib/calc-orbs';
 import { AspectSetDTO } from './dto/aspect-set.dto';
 import {
@@ -681,7 +685,7 @@ export class AstrologicController {
         ...p2,
         progressSets: p2Set,
       };
-      console.log(hasPublicUserId, publicUserId);
+
       if (hasPublicUserId) {
         const pairNum = 1;
         const simpleChartKey = ['astro_pair', pairNum].join('_');
@@ -3135,6 +3139,40 @@ export class AstrologicController {
       const simpleC2 = simplifyChart(paired.c2, 'true_citra');
       result.set('c1', simpleC1);
       result.set('c2', simpleC2);
+    }
+    return res.json(Object.fromEntries(result));
+  }
+
+  @Get('kuta-set')
+  async toSimpleKutas(@Res() res, @Query() query) {
+    const params = objectToMap(query);
+    const result: Map<string, any> = new Map();
+    result.set('params', params.get('dt1'));
+    const dt1 = params.get('dt1');
+    const loc1 = params.get('loc1');
+    const name1 = params.get('n1');
+    const gender1 = params.get('g1');
+    const showChartData = params.get('show') === 'c';
+    if (validISODateString(dt1) && notEmptyString(loc1, 3)) {
+      const c1 = await generateBasicChart(dt1, loc1, name1, gender1);
+      if (showChartData) {
+        result.set('c1', c1);
+      }
+      const dt2 = params.get('dt2');
+      const loc2 = params.get('loc2');
+      const name2 = params.get('n2');
+      const gender2 = params.get('g2');
+      if (validISODateString(dt2) && notEmptyString(loc2, 3)) {
+        const c2 = await generateBasicChart(dt2, loc2, name2, gender2);
+        if (showChartData) {
+          result.set('c2', c2);
+        }
+        const kutaSet = await this.settingService.getKutaSettings();
+        const kutaBuilder = new Kuta(c1, c2);
+        kutaBuilder.loadCompatibility(kutaSet);
+        const kutas = kutaBuilder.calcAllSingleKutas(true);
+        result.set('kutas', kutas);
+      }
     }
     return res.json(Object.fromEntries(result));
   }

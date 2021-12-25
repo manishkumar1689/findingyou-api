@@ -372,27 +372,38 @@ export class Kuta {
     return grahas;
   } */
 
-  calcAllSingleKutas() {
+  calcAllSingleKutasFull() {
     const items = [];
+    this.allKeys.forEach(k1 => {
+      this.allKeys.forEach(k2 => {
+        items.push({
+          k1,
+          k2,
+          values: this.calcSingleKutas(this.c1.graha(k1), this.c2.graha(k2)),
+        });
+      });
+    });
+    return items;
+  }
+
+  calcAllSingleKutas(fullSet = false) {
+    const items = this.calcAllSingleKutasFull();
     const simplifyKuta = (item: KutaValueSet) => {
       return {
         key: item.key,
         value: item.score,
       };
     };
-    this.allKeys.forEach(k1 => {
-      this.allKeys.forEach(k2 => {
-        items.push({
-          k1,
-          k2,
-          values: this.calcSingleKutas(
-            this.c1.graha(k1),
-            this.c2.graha(k2),
-          ).map(simplifyKuta),
+    return fullSet
+      ? items
+      : items.map(row => {
+          const { k1, k2, values } = row;
+          return {
+            k1,
+            k2,
+            values: values.map(simplifyKuta),
+          };
         });
-      });
-    });
-    return items;
   }
 
   calcSingleKutasAsObj(gr1: Graha, gr2: Graha) {
@@ -605,7 +616,7 @@ export class Kuta {
     const { scores } = settings;
     if (scores instanceof Array && scores.length > 8) {
       result.c1Value = ['tara', taraNum1].join('/');
-      result.c2Value = ['tara', taraNum1].join('/');
+      result.c2Value = ['tara', taraNum2].join('/');
       result.score = scores[taraIndex1] + scores[taraIndex2];
     }
   }

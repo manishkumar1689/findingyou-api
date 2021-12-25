@@ -104,6 +104,7 @@ export class Graha extends BaseObject {
         switch (key) {
           case 'longitude':
           case 'lon':
+          case 'lng':
             if (typeof value === 'number') {
               this.lng = value;
             }

@@ -9,7 +9,13 @@ import {
   toCamelCase,
   capitalize,
 } from '../helpers';
-import { calcJdPeriodRange, relativeAngle } from './../core';
+import {
+  calcAllBodyLngsJd,
+  calcAyanamsha,
+  calcJdPeriodRange,
+  fetchHouseDataJd,
+  relativeAngle,
+} from './../core';
 import {
   julToISODate,
   weekDayNum,
@@ -17,6 +23,7 @@ import {
   shortTzAbbr,
   hourMinTz,
   julToDateFormat,
+  matchJdAndDatetime,
 } from './../date-funcs';
 import muhurtaValues from './../settings/muhurta-values';
 import caughadiaData from './../settings/caughadia-data';
@@ -39,7 +46,9 @@ import {
   indianGrahaAndPointKeys,
 } from './graha-set';
 import rashiValues from '../settings/rashi-values';
-import ayanamshaValues from '../settings/ayanamsha-values';
+import ayanamshaValues, {
+  matchAyanamshaNum,
+} from '../settings/ayanamsha-values';
 import {
   BooleanSet,
   buildSignHouse,
@@ -59,6 +68,8 @@ import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
 import { Kuta } from '../kuta';
 import { matchKotaPala } from '../settings/kota-values';
 import { combineCharts, filterBmMatchRow } from '../chart-funcs';
+import { locStringToGeo } from '../converters';
+import { keyValuesToSimpleObject } from 'src/lib/converters';
 
 export interface Subject {
   name: string;
@@ -654,7 +665,7 @@ export class Chart {
       {
         num: this.ayanamshaNum,
         house: hi + 1,
-        sign: calcSign(this.longitude),
+        sign: calcSign(gr.longitude),
         nakshatra: Math.floor(gr.longitude / 27) + 1,
         relationship: '',
         charaKaraka: 0,
@@ -2212,3 +2223,98 @@ export class PairedChart {
     return combineCharts(this.c1, this.c2, this.ayanamshaNum);
   }
 }
+
+export const buildGraha = (
+  key = '',
+  lng = 0,
+  ayanamshaItem: AyanamshaItem,
+  lagna = 0,
+): Graha => {
+  const gr = matchReference(key, { lng });
+  gr.setAyanamshaItem(ayanamshaItem);
+  const hi = subtractSign(calcSign(gr.longitude), calcSign(lagna));
+  gr.variants = [
+    {
+      num: ayanamshaItem.num,
+      house: hi + 1,
+      sign: calcSign(gr.longitude),
+      nakshatra: Math.floor(gr.longitude / 27) + 1,
+      relationship: '',
+      charaKaraka: 0,
+    },
+  ];
+  return gr;
+};
+
+export const simpleSetToFullChart = (
+  jd = 0,
+  geo = null,
+  inData: any = null,
+  ayamansha = 24,
+  name = '',
+  gender = '-',
+  ayanamshaKey = 'true_citra',
+) => {
+  const mp: Map<string, any> = new Map();
+  const ayanamshaItem = {
+    key: ayanamshaKey,
+    value: ayamansha,
+    num: matchAyanamshaNum(ayanamshaKey),
+    name: ayanamshaKey,
+  };
+  mp.set('jd', jd);
+  mp.set('geo', geo);
+  mp.set('subject', {
+    ...emptySubject,
+    name,
+    gender,
+  });
+  mp.set('ayanamshas', [
+    {
+      key: ayanamshaKey,
+      value: ayamansha,
+    },
+  ]);
+  if (inData instanceof Object) {
+    const hasAsc = Object.keys(inData).includes('as');
+    const asLng = hasAsc ? inData.as : 0;
+    mp.set('ascendant', asLng);
+    const lagna = subtractLng360(asLng, ayamansha);
+    const grahas: Graha[] = [];
+    if (hasAsc) {
+      Object.entries(inData).map(([k, v]) => {
+        if (['as', 'ds'].includes(k) === false && typeof v === 'number') {
+          const gr = buildGraha(k, v, ayanamshaItem, lagna);
+          grahas.push(gr);
+        }
+      });
+      mp.set('grahas', grahas);
+    }
+  }
+  return new Chart(Object.fromEntries(mp.entries()));
+};
+
+export const generateBasicChart = async (
+  dt = '',
+  loc,
+  name = '',
+  gender = '-',
+  ayanamshaKey = 'true_citra',
+) => {
+  const geo = locStringToGeo(loc);
+  const { jd } = matchJdAndDatetime(dt);
+  const ayanamsha = await calcAyanamsha(jd, ayanamshaKey);
+  const bd = await calcAllBodyLngsJd(jd, 'core');
+  const hd1 = await fetchHouseDataJd(jd, geo, 'W');
+  bd.bodies.push({ key: 'as', lng: hd1.ascendant });
+  const bodyData = keyValuesToSimpleObject(bd.bodies, 'lng');
+  return simpleSetToFullChart(
+    jd,
+    geo,
+    bodyData,
+    ayanamsha,
+    name,
+    gender,
+    ayanamshaKey,
+  );
+};
