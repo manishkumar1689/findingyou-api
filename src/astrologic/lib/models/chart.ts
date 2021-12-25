@@ -69,7 +69,7 @@ import { Kuta } from '../kuta';
 import { matchKotaPala } from '../settings/kota-values';
 import { combineCharts, filterBmMatchRow } from '../chart-funcs';
 import { locStringToGeo } from '../converters';
-import { keyValuesToSimpleObject } from 'src/lib/converters';
+import { keyValuesToSimpleObject } from '../../../lib/converters';
 
 export interface Subject {
   name: string;
