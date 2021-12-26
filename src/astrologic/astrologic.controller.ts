@@ -595,6 +595,28 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  /*
+  Fetch progression longitudes for the Su, Ve and Ma
+  along with the core graha longitudes, including the ascendant and descendant
+  for the birth data.
+  This data can be extracted either from pairs of birth datetime and location parameters (dt1, dt2, loc1, loc2) 
+  or from the ids of existing chart records, i.e. c1 and c2.
+  The resulting progression sets will be symmetrical at 1/4 year intervals.
+  The year span is controlled by the year and future parameters defaulting to 20 and 5 respectively. 
+  This means a 20 year span starting at the beginning of the year 15 (20-5) nyears before the current date and extending 20 years.
+  e.g. current date 17/03/2022
+  years = 30
+  future = 10
+  startDate: 01/01/2002
+  endDate: 2031/12/31
+  dt1: dateString for person 1
+  loc1: location string for person 1
+  dt2: dateString for person 2
+  loc2: location string for person 2
+  iso=1: Output UTC ISO datetime in the progression steps
+  puid: Public user ID (will be saved as the current user)
+
+  */
   @Get('p2')
   async getProgressionPositions(@Res() res, @Query() query) {
     const data: any = { valid: false };
@@ -633,11 +655,27 @@ export class AstrologicController {
     let jd2 = 0;
     let p1Base: any = {};
     let p2Base: any = {};
+    let n1 = '';
+    let n2 = '';
+    let g1 = '';
+    let g2 = '';
     if (validISODateString(dt1) && validISODateString(dt2)) {
       jd1 = calcJulDate(dt1);
       jd2 = calcJulDate(dt2);
       p1Base = await calcBaseLngSetJd(jd1, geo1, hasGeo1, ayanamshaKey);
       p2Base = await calcBaseLngSetJd(jd2, geo2, hasGeo2, ayanamshaKey);
+      if (params.has('n1')) {
+        n1 = params.get('n1');
+      }
+      if (params.has('n2')) {
+        n2 = params.get('n2');
+      }
+      if (params.has('g1')) {
+        g1 = params.get('g1');
+      }
+      if (params.has('g2')) {
+        g2 = params.get('g2');
+      }
     } else if (useCharts) {
       const co1 = await this.astrologicService.getChart(c1);
       const co2 = await this.astrologicService.getChart(c2);
@@ -648,6 +686,10 @@ export class AstrologicController {
         jd2 = chart2.jd;
         p1Base = chart1.toBaseSet();
         p2Base = chart2.toBaseSet();
+        n1 = chart1.name;
+        n2 = chart2.name;
+        g1 = chart1.gender;
+        g2 = chart2.gender;
       }
     }
     if (jd1 > 0 && jd2 > 0) {
@@ -679,6 +721,8 @@ export class AstrologicController {
         dt: julToISODate(jd1),
       };
       data.p1 = {
+        name: n1,
+        gender: g1,
         ...p1,
         progressSets: p1Set,
       };
@@ -687,6 +731,8 @@ export class AstrologicController {
         dt: julToISODate(jd2),
       };
       data.p2 = {
+        name: n2,
+        gender: g2,
         ...p2,
         progressSets: p2Set,
       };
@@ -695,15 +741,14 @@ export class AstrologicController {
         const pairKeyRef = params.has('pn') ? params.get('pn') : '';
         const pairNum = isNumeric(pairKeyRef) ? smartCastInt(pairKeyRef) : 1;
         const simpleChartKey = ['astro_pair', pairNum].join('_');
-        const value = {
-          ayanamshaKey,
-          p1,
-          p2,
-        };
         const pref = {
           key: simpleChartKey,
           type: 'simple_astro_pair',
-          value,
+          value: {
+            ayanamshaKey,
+            p1,
+            p2,
+          },
         } as PreferenceDTO;
         if (hasPublicUserId) {
           this.userService.savePublicPreference(publicUserId, pref);
