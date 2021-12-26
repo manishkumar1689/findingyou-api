@@ -390,6 +390,21 @@ export class Chart {
     }
   }
 
+  /*
+  Adapt the chart object to a simpler data set
+  */
+  toBaseSet(ayanamshaKey = 'true_citra') {
+    const bodies = this.bodies.filter(bd => bd.num >= 0);
+    bodies.push(this.ascendantGraha);
+    bodies.push(this.descendantGraha);
+    return {
+      jd: this.jd,
+      geo: this.geo,
+      ayanamsha: this.getAyanamshaValue(ayanamshaKey),
+      birth: keyValuesToSimpleObject(bodies, 'lng'),
+    };
+  }
+
   matchUpapada(refKey = '') {
     const { key, type } = matchUpapadaKey(refKey);
     switch (type) {

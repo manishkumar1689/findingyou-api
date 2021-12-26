@@ -10,7 +10,7 @@ import {
   Delete,
   Param,
 } from '@nestjs/common';
-import { Model } from 'mongoose';
+import { isValidObjectId, Model } from 'mongoose';
 import { AstrologicService } from './astrologic.service';
 import { GeoService } from './../geo/geo.service';
 import { UserService } from './../user/user.service';
@@ -60,6 +60,7 @@ import {
   calcAllBodiesJd,
   calcAllBodyLngsJd,
   calcLngsJd,
+  calcBaseLngSetJd,
 } from './lib/core';
 import {
   calcAltitudeSE,
@@ -614,33 +615,41 @@ export class AstrologicController {
     const geo1 = hasGeo1 ? locStringToGeo(loc1) : null;
     const geo2 = hasGeo2 ? locStringToGeo(loc2) : null;
     const publicUserId = params.has('puid') ? params.get('puid') : '';
-    const hasPublicUserId = notEmptyString(publicUserId, 16);
+    const hasPublicUserId = isValidObjectId(publicUserId);
     const userId = params.has('uid') ? params.get('uid') : '';
-    const hasUserId = notEmptyString(userId, 16);
+    const hasUserId = isValidObjectId(userId);
+
+    const c1 = params.get('c1');
+    const c2 = params.get('c2');
+    const useCharts = isValidObjectId(c1) && isValidObjectId(c2);
+
     const showIsoDates = params.has('iso')
       ? smartCastInt(params.get('iso'), 0) > 0
       : false;
     const progressKeys = ['su', 've', 'ma'];
+    const ayanamshaKey = notEmptyString(ayanamsha) ? ayanamsha : 'true_citra';
+    let jd1 = 0;
+    let jd2 = 0;
+    let p1Base: any = {};
+    let p2Base: any = {};
     if (validISODateString(dt1) && validISODateString(dt2)) {
-      const jd1 = calcJulDate(dt1);
-      const jd2 = calcJulDate(dt2);
-      const ayanamshaKey = notEmptyString(ayanamsha) ? ayanamsha : 'true_citra';
-      const ayanamsha1 = await calcAyanamsha(jd1, ayanamshaKey);
-      const ayanamsha2 = await calcAyanamsha(jd2, ayanamshaKey);
-      data.ayanamshaKey = ayanamshaKey;
-      const bd1 = await calcAllBodyLngsJd(jd1, 'core');
-      const bd2 = await calcAllBodyLngsJd(jd2, 'core');
-      if (hasGeo1) {
-        const hd1 = await fetchHouseDataJd(jd1, geo1, 'W');
-        bd1.bodies.push({ key: 'as', lng: hd1.ascendant });
-        bd1.bodies.push({ key: 'ds', lng: (hd1.ascendant + 180) % 360 });
+      jd1 = calcJulDate(dt1);
+      jd2 = calcJulDate(dt2);
+      p1Base = await calcBaseLngSetJd(jd1, geo1, hasGeo1, ayanamshaKey);
+      p2Base = await calcBaseLngSetJd(jd2, geo2, hasGeo2, ayanamshaKey);
+    } else if (useCharts) {
+      const co1 = await this.astrologicService.getChart(c1);
+      const co2 = await this.astrologicService.getChart(c2);
+      if (co1 instanceof Object && co2 instanceof Object) {
+        const chart1 = new Chart(co1.toObject());
+        const chart2 = new Chart(co2.toObject());
+        jd1 = chart1.jd;
+        jd2 = chart2.jd;
+        p1Base = chart1.toBaseSet();
+        p2Base = chart2.toBaseSet();
       }
-      if (hasGeo2) {
-        const hd2 = await fetchHouseDataJd(jd2, geo2, 'W');
-        bd2.bodies.push({ key: 'as', lng: hd2.ascendant });
-        bd2.bodies.push({ key: 'ds', lng: (hd2.ascendant + 180) % 360 });
-      }
-
+    }
+    if (jd1 > 0 && jd2 > 0) {
       const intervalsP1 = toProgressionJdIntervals(
         jd1,
         yearsInt,
@@ -663,29 +672,24 @@ export class AstrologicController {
         progressKeys,
         showIsoDates,
       );
+
       const p1 = {
-        jd: jd1,
+        ...p1Base,
         dt: julToISODate(jd1),
-        geo: geo1,
-        ayanamsha: ayanamsha1,
-        birth: keyValuesToSimpleObject(bd1.bodies, 'lng'),
       };
       data.p1 = {
         ...p1,
         progressSets: p1Set,
       };
       const p2 = {
-        jd: jd2,
+        ...p2Base,
         dt: julToISODate(jd2),
-        geo: geo2,
-        ayanamsha: ayanamsha2,
-        birth: keyValuesToSimpleObject(bd2.bodies, 'lng'),
       };
       data.p2 = {
         ...p2,
         progressSets: p2Set,
       };
-
+      data.valid = p2Set.length > 0;
       if (hasPublicUserId) {
         const pairNum = 1;
         const simpleChartKey = ['astro_pair', pairNum].join('_');

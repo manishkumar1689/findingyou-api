@@ -6,6 +6,27 @@ import { Nakshatra } from './models/nakshatra';
 import { Rashi } from './models/rashi-set';
 import rashiValues from './settings/rashi-values';
 
+export interface MfScores {
+  fm: number;
+  mf: number;
+  sameSign?: number;
+}
+
+export interface SignMatchProtocol {
+  signMatches: Array<number[]>;
+  scores: MfScores;
+}
+
+export interface VashyaDegreeRange {
+  degreeRange: Array<number>;
+  vashya: number;
+}
+
+export interface RangeMatchProtocol {
+  ranges: Array<VashyaDegreeRange>;
+  score: any;
+}
+
 export class KutaValueSet {
   key = '';
   head = '';
@@ -454,8 +475,8 @@ export class Kuta {
     };
   }
 
-  calcMultiKutas() {
-    /*  if (this.activePairKeys.length > 0) {
+  /*  calcMultiKutas() {
+    if (this.activePairKeys.length > 0) {
       this.multiSets = new Map<string, KutaMultiSet>();
       this.activePairKeys.forEach(gk => {
         const gr1 = this.matchGraha(this.c1, gk);
@@ -481,8 +502,8 @@ export class Kuta {
         }
       });
       this.buildMultiValues();
-    } */
-  }
+    }
+  } */
 
   calcItem(key: string, dataSets: Array<KutaGrahaItem>): KutaValueSet {
     const result = new KutaValueSet({ key });
@@ -759,7 +780,7 @@ export class Kuta {
     }
   }
 
-  /* _applyVashyaDefouwScore(
+  _applyVashyaDefouwScore(
     protocol: SignMatchProtocol,
     signIndex: number,
     otherSignNum: number,
@@ -790,7 +811,7 @@ export class Kuta {
       }
       return valid;
     });
-  } */
+  }
 
   _calcVashya(
     settings: any,
@@ -803,7 +824,7 @@ export class Kuta {
     const [s1, s2] = dataSets;
     const signIndex1 = s1.rashi.num - 1;
     const signIndex2 = s2.rashi.num - 1;
-    const sameSign = s1.rashi.num === s2.rashi.num;
+    // const sameSign = s1.rashi.num === s2.rashi.num;
     let defProtocol = this.itemOptions.get('vashya');
     if (!defProtocol) {
       defProtocol = 'classical__one';
@@ -817,11 +838,11 @@ export class Kuta {
       if (protocols.includes(protocolKey)) {
         const protocol = signMatches[protocolKey];
         const { matchType, max } = protocol;
-        if (protocol.max) {
-          result.max = protocol.max;
+        if (max) {
+          result.max = max;
         }
         if (matchType === 'signMatches') {
-          /* score = this._applyVashyaDefouwScore(
+          score = this._applyVashyaDefouwScore(
             protocol,
             signIndex1,
             s2.rashi.num,
@@ -832,29 +853,29 @@ export class Kuta {
             signIndex2,
             s1.rashi.num,
             !femaleFirst,
-          ); */
+          );
           // Divide by 2 if vashya is matched both ways
-          /*  if (score > 0 && score2 > 0) {
+          if (score > 0 && score2 > 0) {
             score = (score + score2) / 2;
           } else if (score2 > 0) {
             score += score2;
-          } */
+          }
         } else if (matchType === 'degreeRange') {
-          /* const female = femaleFirst ? s1 : s2;
+          const female = femaleFirst ? s1 : s2;
           const male = femaleFirst ? s2 : s1;
           const v1 = this._applyClassicVashyaRangeMatch(protocol, female);
           const v2 = this._applyClassicVashyaRangeMatch(protocol, male);
           if (protocol.score instanceof Object) {
-            const scoreKeys = Object.keys(protocol.score);
+            /* const scoreKeys = Object.keys(protocol.score); */
             const scoreRows = protocol.score[protocolSubKey];
             const vashyaIndex1 = v1.vashya - 1;
             const vashyaIndex2 = v2.vashya - 1;
-            vashya1 = femaleFirst ? v1.vashya : v2.vashya;
-            vashya2 = femaleFirst ? v2.vashya : v1.vashya;
+            /* vashya1 = femaleFirst ? v1.vashya : v2.vashya;
+            vashya2 = femaleFirst ? v2.vashya : v1.vashya; */
             if (vashyaIndex1 < scoreRows.length) {
               score = scoreRows[vashyaIndex1][vashyaIndex2];
             }
-          }*/
+          }
         }
         result.score = score;
       }

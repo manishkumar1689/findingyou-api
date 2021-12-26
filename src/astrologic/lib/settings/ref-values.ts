@@ -7,6 +7,13 @@ const refValues = [
     icon: '➚',
   },
   {
+    num: 200,
+    jyNum: 200,
+    name: 'Descendant',
+    key: 'ds',
+    icon: '⭣',
+  },
+  {
     num: 202,
     jyNum: 202,
     name: 'Mean Node',

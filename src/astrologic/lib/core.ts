@@ -74,6 +74,7 @@ import { sampleBaseObjects } from './custom-transits';
 import { GeoLoc } from './models/geo-loc';
 import { calcTransposedGrahaTransitions } from './point-transitions';
 import { KeyLng } from './interfaces';
+import { keyValuesToSimpleObject } from '../../lib/converters';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 
@@ -1006,6 +1007,27 @@ const calcAyanamshas = async (
         value: ayanamsa,
       };
     });
+};
+
+export const calcBaseLngSetJd = async (
+  jd = 0,
+  geo: GeoLoc,
+  hasGeo = true,
+  ayanamshaKey = 'true_citra',
+) => {
+  const ayanamsha = await calcAyanamsha(jd, ayanamshaKey);
+  const bd = await calcAllBodyLngsJd(jd, 'core');
+  if (hasGeo) {
+    const hd = await fetchHouseDataJd(jd, geo, 'W');
+    bd.bodies.push({ key: 'as', lng: hd.ascendant });
+    bd.bodies.push({ key: 'ds', lng: (hd.ascendant + 180) % 360 });
+  }
+  return {
+    jd,
+    ayanamsha,
+    geo,
+    birth: keyValuesToSimpleObject(bd.bodies, 'lng'),
+  };
 };
 
 export const calcMoonDataJd = async (

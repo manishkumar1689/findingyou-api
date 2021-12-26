@@ -1613,6 +1613,12 @@ export class UserController {
     const jungianAnalysis = jungianCompleted
       ? analyseAnswers('jungian', jungianAnswers)
       : {};
+    const miniCharts = preferences
+      .filter(pr => pr.type === 'simple_astro_pair')
+      .map(row => {
+        const { key, value } = row;
+        return { key, ...value };
+      });
     return {
       _id,
       nickName,
@@ -1627,6 +1633,7 @@ export class UserController {
       facetedAnalysis,
       jungianAnswers,
       jungianAnalysis,
+      miniCharts,
     };
   }
 
@@ -1683,6 +1690,7 @@ export class UserController {
           );
           mergePsychometricFeedback(data.jungianAnalysis, fbJungian, 'jungian');
         }
+
         data.valid = true;
       }
     }

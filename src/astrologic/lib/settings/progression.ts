@@ -1,8 +1,8 @@
 import { keyValuesToSimpleObject } from '../../../lib/converters';
-import { calcAllBodyLngsJd, calcAyanamsha, calcLngsJd } from '../core';
+import { calcAyanamsha, calcLngsJd } from '../core';
 import { julToISODate } from '../date-funcs';
 import { KeyLng } from '../interfaces';
-import { currentJulianDay, dateStringToJulianDay } from '../julian-date';
+import { dateStringToJulianDay } from '../julian-date';
 
 export interface JDProgress {
   pd: number;
@@ -55,7 +55,7 @@ export const toProgressionJdIntervals = (
   inFuture = 0.25,
   yearType = 'tropical',
 ): JDProgress[] => {
-  const refJd = currentJulianDay();
+  //const refJd = currentJulianDay();
   const currYear = new Date().getFullYear();
   const yl = getYearLength(yearType);
   const numYearsAgo = numYears * (1 - inFuture);
