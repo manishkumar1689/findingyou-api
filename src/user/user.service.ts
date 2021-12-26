@@ -1773,13 +1773,12 @@ export class UserService {
 
   async savePublicPreference(
     id = '',
-    key = '',
-    type = 'simple_astro_pair',
-    data: any = null,
+    preference: PreferenceDTO,
   ): Promise<boolean> {
     let valid = false;
     const pUser = await this.publicUserModel.findById(id);
     if (pUser instanceof Model) {
+      const { key } = preference;
       const userObj = pUser.toObject();
       const keys = Object.keys(userObj);
       const preferences =
@@ -1787,15 +1786,10 @@ export class UserService {
           ? userObj.preferences
           : [];
       const prefIndex = preferences.findIndex(pr => pr.key === key);
-      const newPref = {
-        key,
-        type,
-        value: data,
-      };
       if (prefIndex < 0) {
-        preferences.push(newPref);
+        preferences.push(preference);
       } else {
-        preferences[prefIndex] = newPref;
+        preferences[prefIndex] = preference;
       }
       await this.publicUserModel
         .findByIdAndUpdate(id, {

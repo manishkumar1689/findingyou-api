@@ -174,6 +174,7 @@ import {
   toProgressionJdIntervals,
 } from './lib/settings/progression';
 import { objectToMap } from '../lib/entities';
+import { PreferenceDTO } from 'src/user/dto/preference.dto';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -690,19 +691,25 @@ export class AstrologicController {
         progressSets: p2Set,
       };
       data.valid = p2Set.length > 0;
-      if (hasPublicUserId) {
-        const pairNum = 1;
+      if (hasPublicUserId || hasUserId) {
+        const pairKeyRef = params.has('pn') ? params.get('pn') : '';
+        const pairNum = isNumeric(pairKeyRef) ? smartCastInt(pairKeyRef) : 1;
         const simpleChartKey = ['astro_pair', pairNum].join('_');
-        this.userService.savePublicPreference(
-          publicUserId,
-          simpleChartKey,
-          'simple_astro_pair',
-          {
-            ayanamshaKey,
-            p1,
-            p2,
-          },
-        );
+        const value = {
+          ayanamshaKey,
+          p1,
+          p2,
+        };
+        const pref = {
+          key: simpleChartKey,
+          type: 'simple_astro_pair',
+          value,
+        } as PreferenceDTO;
+        if (hasPublicUserId) {
+          this.userService.savePublicPreference(publicUserId, pref);
+        } else {
+          this.userService.savePreference(userId, pref);
+        }
       }
     }
     return res.status(HttpStatus.OK).json(data);
