@@ -47,6 +47,7 @@ import {
   storeInRedis,
   extractFromRedisClient,
   extractFromRedisMap,
+  objectToMap,
 } from '../lib/entities';
 import roleValues, { filterLikeabilityKey } from './settings/roles';
 import paymentValues from './settings/payments-options';
@@ -100,6 +101,10 @@ import {
 } from '../setting/lib/mappers';
 import { PublicUserDTO } from './dto/public-user.dto';
 import { User } from './interfaces/user.interface';
+import {
+  buildProgressSetPairs,
+  mergeProgressSets,
+} from 'src/astrologic/lib/settings/progression';
 
 @Controller('user')
 export class UserController {
@@ -1661,9 +1666,13 @@ export class UserController {
     @Res() res,
     @Param('ref') ref,
     @Param('refMode') refMode,
+    @Query() query,
   ) {
     const refModeKey = notEmptyString(refMode) ? refMode : 'auto';
     let data: any = { valid: false };
+    const params = objectToMap(query);
+    const loadP2 = smartCastInt(params.get('p2'), 0) > 0;
+    const loadKutas = smartCastInt(params.get('kutas'), 0) > 0;
     if (notEmptyString(ref, 6) && (isValidObjectId(ref) || validEmail(ref))) {
       const {
         facetedQuestions,
@@ -1690,7 +1699,12 @@ export class UserController {
           );
           mergePsychometricFeedback(data.jungianAnalysis, fbJungian, 'jungian');
         }
-
+        if (loadP2) {
+          const pkNumRef = params.has('cn') ? params.get('cn') : '1';
+          const pkNum = isNumeric(pkNumRef) ? parseInt(pkNumRef) : 1;
+          const cKey = ['astro_pair', pkNum].join('_');
+          await mergeProgressSets(data, cKey);
+        }
         data.valid = true;
       }
     }

@@ -110,3 +110,83 @@ export const buildProgressBodySets = async (
   }
   return progressSets;
 };
+
+export const buildProgressSetPairs = async (
+  jd1 = 0,
+  jd2 = 0,
+  yearsInt,
+  perYear = 4,
+  futureFrac = 0.25,
+  progressKeys = ['su', 've', 'ma'],
+  showIsoDates = false,
+) => {
+  const intervalsP1 = toProgressionJdIntervals(
+    jd1,
+    yearsInt,
+    perYear,
+    futureFrac,
+  );
+  const intervalsP2 = toProgressionJdIntervals(
+    jd2,
+    yearsInt,
+    perYear,
+    futureFrac,
+  );
+  const p1Set = await buildProgressBodySets(
+    intervalsP1,
+    progressKeys,
+    showIsoDates,
+  );
+  const p2Set = await buildProgressBodySets(
+    intervalsP2,
+    progressKeys,
+    showIsoDates,
+  );
+  return {
+    p1: p1Set,
+    p2: p2Set,
+  };
+};
+
+export const mergeProgressSets = async (
+  data: any = null,
+  cKey = 'astro_pair_ 1',
+  yearsInt = 20,
+  perYear = 4,
+  futureFrac = 0.25,
+) => {
+  if (
+    data instanceof Object &&
+    Object.keys(data).includes('miniCharts') &&
+    data.miniCharts instanceof Array &&
+    data.miniCharts.length > 0
+  ) {
+    const matchedIndex = data.miniCharts.findIndex(mc => mc.key === cKey);
+    const mcIndex = matchedIndex >= 0 ? matchedIndex : 0;
+    const miniC = data.miniCharts[mcIndex];
+    if (miniC instanceof Object && data instanceof Object) {
+      const { p1, p2 } = miniC;
+      if (p1 instanceof Object && p2 instanceof Object) {
+        const pData = await buildProgressSetPairs(
+          p1.jd,
+          p2.jd,
+          yearsInt,
+          perYear,
+          futureFrac,
+        );
+        data.miniCharts[mcIndex] = {
+          ...miniC,
+          p1: {
+            ...p1,
+            progressSets: pData.p1,
+          },
+          p2: {
+            ...p2,
+            progressSets: pData.p2,
+          },
+        };
+      }
+    }
+  }
+  return data;
+};

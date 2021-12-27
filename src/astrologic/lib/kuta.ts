@@ -393,10 +393,11 @@ export class Kuta {
     return grahas;
   } */
 
-  calcAllSingleKutasFull() {
+  calcAllSingleKutasFull(grahaKeys: string[] = []) {
     const items = [];
-    this.allKeys.forEach(k1 => {
-      this.allKeys.forEach(k2 => {
+    const refKeys = grahaKeys.length > 1 ? grahaKeys : this.allKeys;
+    refKeys.forEach(k1 => {
+      refKeys.forEach(k2 => {
         items.push({
           k1,
           k2,
@@ -407,8 +408,8 @@ export class Kuta {
     return items;
   }
 
-  calcAllSingleKutas(fullSet = false) {
-    const items = this.calcAllSingleKutasFull();
+  calcAllSingleKutas(fullSet = false, grahaKeys: string[] = []) {
+    const items = this.calcAllSingleKutasFull(grahaKeys);
     const simplifyKuta = (item: KutaValueSet) => {
       return {
         key: item.key,

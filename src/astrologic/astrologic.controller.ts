@@ -57,9 +57,6 @@ import {
   calcDeclination,
   buildExtendedTransitions,
   builldCurrentAndBirthExtendedTransitions,
-  calcAllBodiesJd,
-  calcAllBodyLngsJd,
-  calcLngsJd,
   calcBaseLngSetJd,
 } from './lib/core';
 import {
@@ -121,11 +118,7 @@ import {
   Record,
 } from '../lib/parse-astro-csv';
 import { Kuta } from './lib/kuta';
-import {
-  Chart,
-  generateBasicChart,
-  simpleSetToFullChart,
-} from './lib/models/chart';
+import { Chart, generateBasicChart } from './lib/models/chart';
 import { AspectSet, calcOrb } from './lib/calc-orbs';
 import { AspectSetDTO } from './dto/aspect-set.dto';
 import {
@@ -169,10 +162,7 @@ import { processPredictiveRuleSet } from './lib/predictions';
 import { panchaPakshiDayNightSet } from './lib/settings/pancha-pakshi';
 import { PairsSetDTO } from './dto/pairs-set.dto';
 import { randomCompatibilityText } from './lib/settings/compatibility-texts';
-import {
-  buildProgressBodySets,
-  toProgressionJdIntervals,
-} from './lib/settings/progression';
+import { buildProgressSetPairs } from './lib/settings/progression';
 import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from 'src/user/dto/preference.dto';
 
@@ -693,29 +683,15 @@ export class AstrologicController {
       }
     }
     if (jd1 > 0 && jd2 > 0) {
-      const intervalsP1 = toProgressionJdIntervals(
+      const progressData = await buildProgressSetPairs(
         jd1,
-        yearsInt,
-        4,
-        futureFrac,
-      );
-      const intervalsP2 = toProgressionJdIntervals(
         jd2,
         yearsInt,
         4,
         futureFrac,
-      );
-      const p1Set = await buildProgressBodySets(
-        intervalsP1,
         progressKeys,
         showIsoDates,
       );
-      const p2Set = await buildProgressBodySets(
-        intervalsP2,
-        progressKeys,
-        showIsoDates,
-      );
-
       const p1 = {
         ...p1Base,
         dt: julToISODate(jd1),
@@ -724,7 +700,7 @@ export class AstrologicController {
         name: n1,
         gender: g1,
         ...p1,
-        progressSets: p1Set,
+        progressSets: progressData.p1,
       };
       const p2 = {
         ...p2Base,
@@ -734,9 +710,9 @@ export class AstrologicController {
         name: n2,
         gender: g2,
         ...p2,
-        progressSets: p2Set,
+        progressSets: progressData.p2,
       };
-      data.valid = p2Set.length > 0;
+      data.valid = progressData.p2.length > 0;
       if (hasPublicUserId || hasUserId) {
         const pairKeyRef = params.has('pn') ? params.get('pn') : '';
         const pairNum = isNumeric(pairKeyRef) ? smartCastInt(pairKeyRef) : 1;
@@ -746,8 +722,8 @@ export class AstrologicController {
           type: 'simple_astro_pair',
           value: {
             ayanamshaKey,
-            p1,
-            p2,
+            p1: data.p1,
+            p2: data.p2,
           },
         } as PreferenceDTO;
         if (hasPublicUserId) {
@@ -3209,6 +3185,11 @@ export class AstrologicController {
     const name1 = params.get('n1');
     const gender1 = params.get('g1');
     const showChartData = params.get('show') === 'c';
+    const grahaKeyRef = params.has('gks') ? params.get('gks') : '';
+    const grahaKeys =
+      grahaKeyRef === 'basic'
+        ? ['su', 'mo', 've', 'as']
+        : grahaKeyRef.split(',').filter(k => k.length === 2);
     if (validISODateString(dt1) && notEmptyString(loc1, 3)) {
       const c1 = await generateBasicChart(dt1, loc1, name1, gender1);
       if (showChartData) {
@@ -3218,6 +3199,8 @@ export class AstrologicController {
       const loc2 = params.get('loc2');
       const name2 = params.get('n2');
       const gender2 = params.get('g2');
+      const tO1 = params.get('to1');
+      const to2 = params.get('to2');
       if (validISODateString(dt2) && notEmptyString(loc2, 3)) {
         const c2 = await generateBasicChart(dt2, loc2, name2, gender2);
         if (showChartData) {
@@ -3226,7 +3209,7 @@ export class AstrologicController {
         const kutaSet = await this.settingService.getKutaSettings();
         const kutaBuilder = new Kuta(c1, c2);
         kutaBuilder.loadCompatibility(kutaSet);
-        const kutas = kutaBuilder.calcAllSingleKutas(true);
+        const kutas = kutaBuilder.calcAllSingleKutas(true, grahaKeys);
         result.set('kutas', kutas);
       }
     }
