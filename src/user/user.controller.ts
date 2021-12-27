@@ -96,15 +96,11 @@ import {
   normalizedToPreference,
   normalizeFacetedPromptItem,
   filterMapSurveyByType,
-  matchFacetedFeedback,
   mergePsychometricFeedback,
 } from '../setting/lib/mappers';
 import { PublicUserDTO } from './dto/public-user.dto';
 import { User } from './interfaces/user.interface';
-import {
-  buildProgressSetPairs,
-  mergeProgressSets,
-} from 'src/astrologic/lib/settings/progression';
+import { mergeProgressSets } from '../astrologic/lib/settings/progression';
 
 @Controller('user')
 export class UserController {

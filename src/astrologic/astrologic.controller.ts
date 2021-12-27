@@ -164,7 +164,7 @@ import { PairsSetDTO } from './dto/pairs-set.dto';
 import { randomCompatibilityText } from './lib/settings/compatibility-texts';
 import { buildProgressSetPairs } from './lib/settings/progression';
 import { objectToMap } from '../lib/entities';
-import { PreferenceDTO } from 'src/user/dto/preference.dto';
+import { PreferenceDTO } from '../user/dto/preference.dto';
 
 @Controller('astrologic')
 export class AstrologicController {
