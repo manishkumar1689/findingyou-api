@@ -645,26 +645,49 @@ export class AstrologicController {
     let jd2 = 0;
     let p1Base: any = {};
     let p2Base: any = {};
-    let n1 = '';
-    let n2 = '';
-    let g1 = '';
-    let g2 = '';
+    const sub1 = {
+      name: '',
+      gender: '',
+      roddenValue: 0,
+      geo: geo1,
+      placeName: '',
+      tzOffset: 0,
+    };
+    const sub2 = { ...sub1, geo: geo2 };
     if (validISODateString(dt1) && validISODateString(dt2)) {
       jd1 = calcJulDate(dt1);
       jd2 = calcJulDate(dt2);
       p1Base = await calcBaseLngSetJd(jd1, geo1, hasGeo1, ayanamshaKey);
       p2Base = await calcBaseLngSetJd(jd2, geo2, hasGeo2, ayanamshaKey);
       if (params.has('n1')) {
-        n1 = params.get('n1');
+        sub1.name = params.get('n1');
       }
       if (params.has('n2')) {
-        n2 = params.get('n2');
+        sub2.name = params.get('n2');
       }
       if (params.has('g1')) {
-        g1 = params.get('g1');
+        sub1.gender = params.get('g1');
       }
       if (params.has('g2')) {
-        g2 = params.get('g2');
+        sub2.gender = params.get('g2');
+      }
+      if (params.has('r1')) {
+        sub1.roddenValue = smartCastInt(params.get('r1'));
+      }
+      if (params.has('r2')) {
+        sub2.roddenValue = smartCastInt(params.get('r2'));
+      }
+      if (params.has('pl1')) {
+        sub1.placeName = params.get('pl1');
+      }
+      if (params.has('pl2')) {
+        sub2.placeName = params.get('pl2');
+      }
+      if (params.has('to1')) {
+        sub1.tzOffset = smartCastInt(params.get('to1'));
+      }
+      if (params.has('to2')) {
+        sub2.tzOffset = smartCastInt(params.get('to2'));
       }
     } else if (useCharts) {
       const co1 = await this.astrologicService.getChart(c1);
@@ -676,10 +699,14 @@ export class AstrologicController {
         jd2 = chart2.jd;
         p1Base = chart1.toBaseSet();
         p2Base = chart2.toBaseSet();
-        n1 = chart1.name;
-        n2 = chart2.name;
-        g1 = chart1.gender;
-        g2 = chart2.gender;
+        sub1.name = chart1.name;
+        sub2.name = chart2.name;
+        sub1.gender = chart1.gender;
+        sub2.gender = chart2.gender;
+        sub1.roddenValue = chart1.subject.roddenValue;
+        sub2.roddenValue = chart2.subject.roddenValue;
+        sub1.tzOffset = chart1.tzOffset;
+        sub2.tzOffset = chart2.tzOffset;
       }
     }
     if (jd1 > 0 && jd2 > 0) {
@@ -697,8 +724,7 @@ export class AstrologicController {
         dt: julToISODate(jd1),
       };
       data.p1 = {
-        name: n1,
-        gender: g1,
+        ...sub1,
         ...p1,
         progressSets: progressData.p1,
       };
@@ -707,8 +733,7 @@ export class AstrologicController {
         dt: julToISODate(jd2),
       };
       data.p2 = {
-        name: n2,
-        gender: g2,
+        ...sub2,
         ...p2,
         progressSets: progressData.p2,
       };
@@ -722,8 +747,14 @@ export class AstrologicController {
           type: 'simple_astro_pair',
           value: {
             ayanamshaKey,
-            p1: data.p1,
-            p2: data.p2,
+            p1: {
+              ...sub1,
+              ...p1,
+            },
+            p2: {
+              ...sub2,
+              ...p2,
+            },
           },
         } as PreferenceDTO;
         if (hasPublicUserId) {

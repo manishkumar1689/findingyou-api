@@ -1879,7 +1879,7 @@ export class UserController {
     #development
   */
   @Post('bulk/sample-import')
-  async bulkSampleImprt(@Res() res, @Body() sampleDataDTO: SampleDataDTO) {
+  async bulkSampleImport(@Res() res, @Body() sampleDataDTO: SampleDataDTO) {
     const data: Map<string, any> = new Map();
     if (sampleDataDTO.items.length > 0) {
       for (const item of sampleDataDTO.items) {
