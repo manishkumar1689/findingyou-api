@@ -101,6 +101,7 @@ import {
 import { PublicUserDTO } from './dto/public-user.dto';
 import { User } from './interfaces/user.interface';
 import { mergeProgressSets } from '../astrologic/lib/settings/progression';
+import { IdSetDTO } from './dto/id-set.dto';
 
 @Controller('user')
 export class UserController {
@@ -332,6 +333,13 @@ export class UserController {
       num: users.length,
       items: users,
     });
+  }
+
+  @Post('basic-by-ids')
+  async getBasicDetailsByIds(@Res() res, @Body() idSet: IdSetDTO) {
+    const { uids, userID } = idSet;
+    const data = await this.userService.getBasicByIds(uids, userID);
+    res.json(data);
   }
 
   /**

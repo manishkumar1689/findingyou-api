@@ -88,6 +88,35 @@ export class UserService {
   }
   // count users by criteria
 
+  async getBasicByIds(ids: string[], uid: string) {
+    const isActive = await this.isActive(uid);
+    let users = [];
+    if (isActive) {
+      const items = await this.userModel
+        .find({
+          _id: {
+            $in: ids,
+          },
+          active: true,
+        })
+        .select('_id nickName roles profiles');
+      if (items.length > 0) {
+        users = items.map(item => {
+          const { _id, nickName, roles, profiles } = item;
+          let profileImg = '';
+          if (profiles instanceof Array && profiles.length > 0) {
+            const { mediaItems } = profiles[0];
+            if (mediaItems instanceof Array && mediaItems.length > 0) {
+              profileImg = mediaItems[0].filename;
+            }
+          }
+          return { _id, nickName, roles, profileImg };
+        });
+      }
+    }
+    return users;
+  }
+
   async count(criteria: any = null, activeOnly = true): Promise<number> {
     const filterCriteria = this.buildCriteria(criteria, activeOnly);
     return await this.userModel.count(filterCriteria).exec();

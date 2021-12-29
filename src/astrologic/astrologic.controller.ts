@@ -3221,6 +3221,23 @@ export class AstrologicController {
       grahaKeyRef === 'basic'
         ? ['su', 'mo', 've', 'as']
         : grahaKeyRef.split(',').filter(k => k.length === 2);
+    const publicUserId = params.has('puid') ? params.get('puid') : '';
+    if (isValidObjectId(publicUserId)) {
+      const publicUser = await this.userService.getPublicUser(publicUserId);
+      const pairNum = 1;
+      const simpleChartKey = ['astro_pair', pairNum].join('_');
+      if (publicUser instanceof Model) {
+        if (
+          publicUser.preferences instanceof Array &&
+          publicUser.preferences.length > 0
+        ) {
+          const pair = publicUser.preferences.find(
+            p => p.key === simpleChartKey,
+          );
+          console.log(pair);
+        }
+      }
+    }
     if (validISODateString(dt1) && notEmptyString(loc1, 3)) {
       const c1 = await generateBasicChart(dt1, loc1, name1, gender1);
       if (showChartData) {
