@@ -605,7 +605,7 @@ export class AstrologicController {
   loc2: location string for person 2
   iso=1: Output UTC ISO datetime in the progression steps
   puid: Public user ID (will be saved as the current user)
-
+  refNum: paired chart ref number. Defaults to 1
   */
   @Get('p2')
   async getProgressionPositions(@Res() res, @Query() query) {
@@ -3224,7 +3224,8 @@ export class AstrologicController {
     const publicUserId = params.has('puid') ? params.get('puid') : '';
     if (isValidObjectId(publicUserId)) {
       const publicUser = await this.userService.getPublicUser(publicUserId);
-      const pairNum = 1;
+      const refNum = params.get('pn');
+      const pairNum = isNumeric(refNum) ? smartCastInt(refNum, 1) : 1;
       const simpleChartKey = ['astro_pair', pairNum].join('_');
       if (publicUser instanceof Model) {
         if (
