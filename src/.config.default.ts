@@ -5,6 +5,8 @@ import * as redisStore from 'cache-manager-redis-store';
 
 export const port = 3043;
 
+export const socketIoPort = 4093;
+
 export const globalApikey = 'eKabd7G;bd';
 export const suffixSplitChars = ['%', '.', ','];
 export const authMode = 'dynamic';

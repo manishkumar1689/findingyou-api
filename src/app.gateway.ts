@@ -6,8 +6,9 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'net';
+import { socketIoPort } from './.config';
 
-@WebSocketGateway(4091)
+@WebSocketGateway(socketIoPort)
 export class AppGateway {
   @WebSocketServer() server: Server;
 
