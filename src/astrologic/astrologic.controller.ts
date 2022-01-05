@@ -118,7 +118,11 @@ import {
   Record,
 } from '../lib/parse-astro-csv';
 import { Kuta } from './lib/kuta';
-import { Chart, generateBasicChart } from './lib/models/chart';
+import {
+  Chart,
+  generateBasicChart,
+  simpleSetToFullChart,
+} from './lib/models/chart';
 import { AspectSet, calcOrb } from './lib/calc-orbs';
 import { AspectSetDTO } from './dto/aspect-set.dto';
 import {
@@ -3239,7 +3243,35 @@ export class AstrologicController {
         }
       }
     }
-    if (validISODateString(dt1) && notEmptyString(loc1, 3)) {
+    const puid = params.has('puid') ? params.get('puid') : '';
+    const hasPuid = isValidObjectId(puid);
+    const pNum = params.has('pn') ? params.get('pn') : '1';
+    const refNum = isNumeric(pNum) ? smartCastInt(pNum, 1) : 1;
+    if (hasPuid) {
+      const user = await this.userService.getPublicUser(puid, 'id');
+      const cKey = ['astro_pair', refNum].join('_');
+      const pairs = user.preferences.filter(
+        pf => pf.type === 'simple_astro_pair',
+      );
+      const pref = pairs.find(mc => mc.key === cKey);
+      if (pref instanceof Object) {
+        const pairData = pref.value;
+        if (pairData instanceof Object) {
+          const dataKeys = Object.keys(pairData);
+          if (dataKeys.includes('p1') && dataKeys.includes('p2')) {
+            const c1 = simpleSetToFullChart(pairData.p1);
+            const c2 = simpleSetToFullChart(pairData.p2);
+            const kutaSet = await this.settingService.getKutaSettings();
+            const kutaBuilder = new Kuta(c1, c2);
+            kutaBuilder.loadCompatibility(kutaSet);
+            const grahaKeys = ['su', 'mo', 've', 'as'];
+            const kutas = kutaBuilder.calcAllSingleKutas(true, grahaKeys);
+            result.set('kutas', kutas);
+            result.set('pair', pairData);
+          }
+        }
+      }
+    } else if (validISODateString(dt1) && notEmptyString(loc1, 3)) {
       const c1 = await generateBasicChart(dt1, loc1, name1, gender1);
       if (showChartData) {
         result.set('c1', c1);

@@ -573,6 +573,13 @@ export class Kuta {
         if (result.max < 1) {
           result.max = settings.max;
         }
+        if (result.c1Value.length < 2 && dataSets.length > 0) {
+          result.c1Value = ['nakshatra', dataSets[0].nakshatraNum].join('/');
+        }
+        if (result.c2Value.length < 2 && dataSets.length > 1) {
+          result.c2Value = ['nakshatra', dataSets[1].nakshatraNum].join('/');
+        }
+        result.head = dataSets.map(ds => ds.lng).join('/');
       }
     }
     return result;

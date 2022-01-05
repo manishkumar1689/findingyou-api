@@ -102,6 +102,8 @@ import { PublicUserDTO } from './dto/public-user.dto';
 import { User } from './interfaces/user.interface';
 import { mergeProgressSets } from '../astrologic/lib/settings/progression';
 import { IdSetDTO } from './dto/id-set.dto';
+import { simpleSetToFullChart } from 'src/astrologic/lib/models/chart';
+import { Kuta } from 'src/astrologic/lib/kuta';
 
 @Controller('user')
 export class UserController {
@@ -1703,11 +1705,24 @@ export class UserController {
           );
           mergePsychometricFeedback(data.jungianAnalysis, fbJungian, 'jungian');
         }
+        const pkNumRef = params.has('cn') ? params.get('cn') : '1';
+        const pkNum = isNumeric(pkNumRef) ? parseInt(pkNumRef) : 1;
+        const cKey = ['astro_pair', pkNum].join('_');
         if (loadP2) {
-          const pkNumRef = params.has('cn') ? params.get('cn') : '1';
-          const pkNum = isNumeric(pkNumRef) ? parseInt(pkNumRef) : 1;
-          const cKey = ['astro_pair', pkNum].join('_');
           await mergeProgressSets(data, cKey);
+        }
+        if (loadKutas) {
+          const pairData = data.miniCharts.find(mc => mc.key === cKey);
+          if (pairData instanceof Object) {
+            const c1 = simpleSetToFullChart(pairData.p1);
+            const c2 = simpleSetToFullChart(pairData.p2);
+            const kutaSet = await this.settingService.getKutaSettings();
+            const kutaBuilder = new Kuta(c1, c2);
+            kutaBuilder.loadCompatibility(kutaSet);
+            const grahaKeys = ['su', 'mo', 've', 'as'];
+            const kutas = kutaBuilder.calcAllSingleKutas(true, grahaKeys);
+            data.kutas = kutas;
+          }
         }
         data.valid = true;
       }
