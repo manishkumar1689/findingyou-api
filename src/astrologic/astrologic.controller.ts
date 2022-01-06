@@ -3250,10 +3250,10 @@ export class AstrologicController {
     if (hasPuid) {
       const user = await this.userService.getPublicUser(puid, 'id');
       const cKey = ['astro_pair', refNum].join('_');
-      const pairs = user.preferences.filter(
-        pf => pf.type === 'simple_astro_pair',
+      const pairIndex = user.preferences.findIndex(
+        pf => pf.type === 'simple_astro_pair' && pf.key === cKey,
       );
-      const pref = pairs.find(mc => mc.key === cKey);
+      const pref = pairIndex < 0 ? null : user.preferences[pairIndex];
       if (pref instanceof Object) {
         const pairData = pref.value;
         if (pairData instanceof Object) {
