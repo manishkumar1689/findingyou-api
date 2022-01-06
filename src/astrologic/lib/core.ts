@@ -873,7 +873,7 @@ export const calcAllStars = async (
 };
 
 export const matchNakshatra = (deg: number) => {
-  let row = { index: -1, num: 0, percent: 0, ruler: '' };
+  let row: any = { index: -1, num: 0, percent: 0, ruler: '', yoni: -1 };
   const nkVal = deg / (360 / nakshatraValues.length);
   const index = Math.floor(nkVal);
   const percent = (nkVal % 1) * 100;

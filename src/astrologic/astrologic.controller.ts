@@ -3267,7 +3267,15 @@ export class AstrologicController {
             const kutaBuilder = new Kuta(c1, c2);
             kutaBuilder.loadCompatibility(kutaSet);
             const grahaKeys = ['su', 'mo', 've', 'as'];
-            const kutas = kutaBuilder.calcAllSingleKutas(true, grahaKeys);
+            const kutaType = params.has('set') ? params.get('set') : 'ashta';
+            const kutaSetType = notEmptyString(kutaType, 1)
+              ? kutaType
+              : 'ashta';
+            const kutas = kutaBuilder.calcAllSingleKutas(
+              true,
+              grahaKeys,
+              kutaSetType,
+            );
             result.set('kutas', kutas);
             result.set('pcKey', cKey);
             result.set('pair', pairData);

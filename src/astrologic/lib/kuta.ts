@@ -1,4 +1,5 @@
 import { inRange, notEmptyString } from '../../lib/validators';
+import { matchNakshatra } from './core';
 import { calcInclusiveNakshatras, calcInclusiveTwelfths } from './math-funcs';
 import { Chart } from './models/chart';
 import { Graha } from './models/graha-set';
@@ -408,7 +409,12 @@ export class Kuta {
     return items;
   }
 
-  calcAllSingleKutas(fullSet = false, grahaKeys: string[] = []) {
+  calcAllSingleKutas(
+    fullSet = false,
+    grahaKeys: string[] = [],
+    kutaType = 'all',
+  ) {
+    this.kutaType = kutaType;
     const items = this.calcAllSingleKutasFull(grahaKeys);
     const simplifyKuta = (item: KutaValueSet) => {
       return {
@@ -734,6 +740,12 @@ export class Kuta {
             }
           }
         }
+        result.c1Value = ['yoni', matchNakshatra(dataSets[0].lng).yoni].join(
+          '/',
+        );
+        result.c2Value = ['yoni', matchNakshatra(dataSets[1].lng).yoni].join(
+          '/',
+        );
         result.score = score;
       }
     }

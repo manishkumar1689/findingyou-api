@@ -1722,7 +1722,11 @@ export class UserController {
             const kutaBuilder = new Kuta(c1, c2);
             kutaBuilder.loadCompatibility(kutaSet);
             const grahaKeys = ['su', 'mo', 've', 'as'];
-            data.kutas = kutaBuilder.calcAllSingleKutas(true, grahaKeys);
+            data.kutas = kutaBuilder.calcAllSingleKutas(
+              true,
+              grahaKeys,
+              'ashta',
+            );
             data.pcKey = cKey;
           }
         }
