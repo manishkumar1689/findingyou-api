@@ -117,7 +117,8 @@ export class DictionaryService {
     if (lexeme) {
       const item = lexeme.toObject();
       if (item.translations) {
-        let { lang, text, type, alpha } = translationDTO;
+        const { lang, text } = translationDTO;
+        let { type, alpha } = translationDTO;
         if (!type) {
           type = 'standard';
         }

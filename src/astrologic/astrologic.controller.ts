@@ -119,6 +119,7 @@ import {
 } from '../lib/parse-astro-csv';
 import { Kuta } from './lib/kuta';
 import {
+  basicSetToFullChart,
   Chart,
   generateBasicChart,
   simpleSetToFullChart,
@@ -3239,7 +3240,6 @@ export class AstrologicController {
           const pair = publicUser.preferences.find(
             p => p.key === simpleChartKey,
           );
-          console.log(pair);
         }
       }
     }
@@ -3259,14 +3259,17 @@ export class AstrologicController {
         if (pairData instanceof Object) {
           const dataKeys = Object.keys(pairData);
           if (dataKeys.includes('p1') && dataKeys.includes('p2')) {
-            const c1 = simpleSetToFullChart(pairData.p1);
-            const c2 = simpleSetToFullChart(pairData.p2);
+            const c1 = basicSetToFullChart(pairData.p1);
+            const c2 = basicSetToFullChart(pairData.p2);
+            c1.setAyanamshaItemByKey('true_citra');
+            c2.setAyanamshaItemByKey('true_citra');
             const kutaSet = await this.settingService.getKutaSettings();
             const kutaBuilder = new Kuta(c1, c2);
             kutaBuilder.loadCompatibility(kutaSet);
             const grahaKeys = ['su', 'mo', 've', 'as'];
             const kutas = kutaBuilder.calcAllSingleKutas(true, grahaKeys);
             result.set('kutas', kutas);
+            result.set('pcKey', cKey);
             result.set('pair', pairData);
           }
         }

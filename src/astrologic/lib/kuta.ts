@@ -579,7 +579,7 @@ export class Kuta {
         if (result.c2Value.length < 2 && dataSets.length > 1) {
           result.c2Value = ['nakshatra', dataSets[1].nakshatraNum].join('/');
         }
-        result.head = dataSets.map(ds => ds.lng).join('/');
+        result.head = dataSets.map(ds => [ds.key, ds.lng].join(':')).join('/');
       }
     }
     return result;

@@ -48,11 +48,13 @@ export class DictionaryController {
 
   @Get('list/:ref?')
   async listAll(@Res() res, @Param('ref') ref) {
-    const filter = new Map<string, string>();
+    const filter = new Map<string, any>();
     if (notEmptyString(ref, 1)) {
-      const filterName = ref.length < 3 ? 'init' : 'category';
-      const filterVal = ref;
-      filter.set(filterName, filterVal);
+      const filterType = ref.length < 3 ? 'init' : 'category';
+      const filterVal =
+        filterType === 'category' && ref.includes(',') ? ref.split(',') : ref;
+      const filterKey = filterVal instanceof Array ? 'categories' : filterType;
+      filter.set(filterKey, filterVal);
     }
     let result: any = { valid: false };
     const items = await this.dictionaryService.getAll(

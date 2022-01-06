@@ -2309,6 +2309,31 @@ export const simpleSetToFullChart = (
   return new Chart(Object.fromEntries(mp.entries()));
 };
 
+export const basicSetToFullChart = (
+  simpleSet = null,
+  ayanamshaKey = 'true_citra',
+) => {
+  if (simpleSet instanceof Object) {
+    const { jd, geo, birth, ayanamsha, name, gender } = simpleSet;
+    if (
+      typeof jd === 'number' &&
+      geo instanceof Object &&
+      birth instanceof Object
+    ) {
+      return simpleSetToFullChart(
+        jd,
+        geo,
+        birth,
+        ayanamsha,
+        name,
+        gender,
+        ayanamshaKey,
+      );
+    }
+  }
+  return new Chart(null);
+};
+
 export const generateBasicChart = async (
   dt = '',
   loc,
