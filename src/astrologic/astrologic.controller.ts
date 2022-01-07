@@ -23,6 +23,7 @@ import {
   isNumber,
   isLocationString,
   validLocationParameter,
+  validEmail,
 } from '../lib/validators';
 import {
   correctDatetime,
@@ -3226,7 +3227,7 @@ export class AstrologicController {
       grahaKeyRef === 'basic'
         ? ['su', 'mo', 've', 'as']
         : grahaKeyRef.split(',').filter(k => k.length === 2);
-    const publicUserId = params.has('puid') ? params.get('puid') : '';
+    /* const publicUserId = params.has('puid') ? params.get('puid') : '';
     if (isValidObjectId(publicUserId)) {
       const publicUser = await this.userService.getPublicUser(publicUserId);
       const refNum = params.get('pn');
@@ -3242,20 +3243,33 @@ export class AstrologicController {
           );
         }
       }
-    }
+    } */
     const puid = params.has('puid') ? params.get('puid') : '';
     const hasPuid = isValidObjectId(puid);
+    let email = '';
+    let hasEmail = false;
+    if (!hasPuid) {
+      if (params.has('email')) {
+        email = params.get('email');
+        hasEmail = validEmail(email);
+      }
+    }
+    const hasUserRef = hasPuid || hasEmail;
     const pNum = params.has('pn') ? params.get('pn') : '1';
     const refNum = isNumeric(pNum) ? smartCastInt(pNum, 1) : 1;
     let user: any = null;
     let cKey = '';
     let pairIndex = -1;
-    if (hasPuid) {
-      user = await this.userService.getPublicUser(puid, 'id');
-      cKey = ['astro_pair', refNum].join('_');
-      pairIndex = user.preferences.findIndex(
-        pf => pf.type === 'simple_astro_pair' && pf.key === cKey,
-      );
+    if (hasUserRef) {
+      const userRef = hasPuid ? puid : email;
+      const matchType = hasPuid ? 'id' : 'email';
+      user = await this.userService.getPublicUser(userRef, matchType);
+      if (user instanceof Model) {
+        cKey = ['astro_pair', refNum].join('_');
+        pairIndex = user.preferences.findIndex(
+          pf => pf.type === 'simple_astro_pair' && pf.key === cKey,
+        );
+      }
     }
     if (validISODateString(dt1) && notEmptyString(loc1, 3)) {
       const c1 = await generateBasicChart(dt1, loc1, name1, gender1);
