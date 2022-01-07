@@ -102,8 +102,8 @@ import { PublicUserDTO } from './dto/public-user.dto';
 import { User } from './interfaces/user.interface';
 import { mergeProgressSets } from '../astrologic/lib/settings/progression';
 import { IdSetDTO } from './dto/id-set.dto';
-import { basicSetToFullChart } from 'src/astrologic/lib/models/chart';
-import { Kuta } from 'src/astrologic/lib/kuta';
+import { basicSetToFullChart } from '../astrologic/lib/models/chart';
+import { Kuta } from '../astrologic/lib/kuta';
 
 @Controller('user')
 export class UserController {
