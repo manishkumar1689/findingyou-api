@@ -3291,35 +3291,39 @@ export class AstrologicController {
         const kutaBuilder = new Kuta(c1, c2);
         kutaBuilder.loadCompatibility(kutaSet);
         const kutas = kutaBuilder.calcAllSingleKutas(true, grahaKeys);
+        const pl1 = params.has('pl1') ? params.get('pl1') : '';
+        const pl2 = params.has('pl2') ? params.get('pl2') : '';
+        const simpleC1 = c1.toBaseSet();
+        const simpleC2 = c2.toBaseSet();
+        const p1 = {
+          ...simpleC1,
+          name: name1,
+          gender: gender1,
+          tzOffset: smartCastInt(tO1, 0),
+          placeName: pl1,
+        };
+        const p2 = {
+          ...simpleC2,
+          name: name2,
+          gender: gender2,
+          tzOffset: smartCastInt(tO2, 0),
+          placeName: pl2,
+        };
         if (hasPuid) {
-          const pl1 = params.has('pl1') ? params.get('pl1') : '';
-          const pl2 = params.has('pl2') ? params.get('pl2') : '';
-          const simpleC1 = c1.toBaseSet();
-          const simpleC2 = c2.toBaseSet();
           const newPref = {
             key: cKey,
             type: 'simple_astro_pair',
             value: {
               ayanamshaKey: 'true_citra',
-              p1: {
-                ...simpleC1,
-                name: name1,
-                gender: gender1,
-                tzOffset: smartCastInt(tO1, 0),
-                placeName: pl1,
-              },
-              p2: {
-                ...simpleC2,
-                name: name2,
-                gender: gender2,
-                tzOffset: smartCastInt(tO2, 0),
-                placeName: pl2,
-              },
+              p1,
+              p2,
             },
           } as PreferenceDTO;
           this.userService.savePublicPreference(puid, newPref);
         }
         result.set('kutas', kutas);
+        result.set('p1', p1);
+        result.set('p2', p2);
       }
     } else if (hasPuid) {
       const pref = pairIndex < 0 ? null : user.preferences[pairIndex];
@@ -3347,7 +3351,8 @@ export class AstrologicController {
             );
             result.set('kutas', kutas);
             result.set('pcKey', cKey);
-            result.set('pair', pairData);
+            result.set('p1', pairData.p1);
+            result.set('p2', pairData.p2);
           }
         }
       }
