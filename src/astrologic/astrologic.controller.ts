@@ -3215,7 +3215,6 @@ export class AstrologicController {
   async toSimpleKutas(@Res() res, @Query() query) {
     const params = objectToMap(query);
     const result: Map<string, any> = new Map();
-    result.set('params', params.get('dt1'));
     const dt1 = params.get('dt1');
     const loc1 = params.get('loc1');
     const name1 = params.get('n1');
@@ -3247,12 +3246,64 @@ export class AstrologicController {
     const hasPuid = isValidObjectId(puid);
     const pNum = params.has('pn') ? params.get('pn') : '1';
     const refNum = isNumeric(pNum) ? smartCastInt(pNum, 1) : 1;
+    let user: any = null;
+    let cKey = '';
+    let pairIndex = -1;
     if (hasPuid) {
-      const user = await this.userService.getPublicUser(puid, 'id');
-      const cKey = ['astro_pair', refNum].join('_');
-      const pairIndex = user.preferences.findIndex(
+      user = await this.userService.getPublicUser(puid, 'id');
+      cKey = ['astro_pair', refNum].join('_');
+      pairIndex = user.preferences.findIndex(
         pf => pf.type === 'simple_astro_pair' && pf.key === cKey,
       );
+    }
+    if (validISODateString(dt1) && notEmptyString(loc1, 3)) {
+      const c1 = await generateBasicChart(dt1, loc1, name1, gender1);
+      if (showChartData) {
+        result.set('c1', c1);
+      }
+      const dt2 = params.get('dt2');
+      const loc2 = params.get('loc2');
+      const name2 = params.get('n2');
+      const gender2 = params.get('g2');
+      const tO1 = params.get('to1');
+      const tO2 = params.get('to2');
+      if (validISODateString(dt2) && notEmptyString(loc2, 3)) {
+        const c2 = await generateBasicChart(dt2, loc2, name2, gender2);
+        if (showChartData) {
+          result.set('c2', c2);
+        }
+        const kutaSet = await this.settingService.getKutaSettings();
+        const kutaBuilder = new Kuta(c1, c2);
+        kutaBuilder.loadCompatibility(kutaSet);
+        const kutas = kutaBuilder.calcAllSingleKutas(true, grahaKeys);
+        if (hasPuid) {
+          const pl1 = params.has('pl1') ? params.get('pl1') : '';
+          const pl2 = params.has('pl2') ? params.get('pl2') : '';
+          const simpleC1 = c1.toBaseSet();
+          const simpleC2 = c2.toBaseSet();
+          const newPref = {
+            key: cKey,
+            type: 'simple_astro_pair',
+            value: {
+              ayanamshaKey: 'true_citra',
+              p1: {
+                ...simpleC1,
+                tzOffset: tO1,
+                placeName: pl1,
+              },
+              p2: {
+                ...simpleC2,
+                tzOffset: tO2,
+                placeName: pl2,
+              },
+            },
+          } as PreferenceDTO;
+          console.log(newPref);
+          this.userService.savePublicPreference(puid, newPref);
+        }
+        result.set('kutas', kutas);
+      }
+    } else if (hasPuid) {
       const pref = pairIndex < 0 ? null : user.preferences[pairIndex];
       if (pref instanceof Object) {
         const pairData = pref.value;
@@ -3281,28 +3332,6 @@ export class AstrologicController {
             result.set('pair', pairData);
           }
         }
-      }
-    } else if (validISODateString(dt1) && notEmptyString(loc1, 3)) {
-      const c1 = await generateBasicChart(dt1, loc1, name1, gender1);
-      if (showChartData) {
-        result.set('c1', c1);
-      }
-      const dt2 = params.get('dt2');
-      const loc2 = params.get('loc2');
-      const name2 = params.get('n2');
-      const gender2 = params.get('g2');
-      const tO1 = params.get('to1');
-      const to2 = params.get('to2');
-      if (validISODateString(dt2) && notEmptyString(loc2, 3)) {
-        const c2 = await generateBasicChart(dt2, loc2, name2, gender2);
-        if (showChartData) {
-          result.set('c2', c2);
-        }
-        const kutaSet = await this.settingService.getKutaSettings();
-        const kutaBuilder = new Kuta(c1, c2);
-        kutaBuilder.loadCompatibility(kutaSet);
-        const kutas = kutaBuilder.calcAllSingleKutas(true, grahaKeys);
-        result.set('kutas', kutas);
       }
     }
     return res.json(Object.fromEntries(result));
