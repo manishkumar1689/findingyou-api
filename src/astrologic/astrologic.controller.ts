@@ -3321,9 +3321,10 @@ export class AstrologicController {
           } as PreferenceDTO;
           this.userService.savePublicPreference(puid, newPref);
         }
-        result.set('kutas', kutas);
+        result.set('valid', true);
         result.set('p1', p1);
         result.set('p2', p2);
+        result.set('kutas', kutas);
       }
     } else if (hasPuid) {
       const pref = pairIndex < 0 ? null : user.preferences[pairIndex];
@@ -3349,10 +3350,11 @@ export class AstrologicController {
               grahaKeys,
               kutaSetType,
             );
-            result.set('kutas', kutas);
-            result.set('pcKey', cKey);
+            result.set('valid', true);
             result.set('p1', pairData.p1);
             result.set('p2', pairData.p2);
+            result.set('kutas', kutas);
+            result.set('pcKey', cKey);
           }
         }
       }
