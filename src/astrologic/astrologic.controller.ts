@@ -3273,6 +3273,7 @@ export class AstrologicController {
     }
     if (validISODateString(dt1) && notEmptyString(loc1, 3)) {
       const c1 = await generateBasicChart(dt1, loc1, name1, gender1);
+      c1.setAyanamshaItemByKey('true_citra');
       if (showChartData) {
         result.set('c1', c1);
       }
@@ -3284,6 +3285,7 @@ export class AstrologicController {
       const tO2 = params.get('to2');
       if (validISODateString(dt2) && notEmptyString(loc2, 3)) {
         const c2 = await generateBasicChart(dt2, loc2, name2, gender2);
+        c2.setAyanamshaItemByKey('true_citra');
         if (showChartData) {
           result.set('c2', c2);
         }
