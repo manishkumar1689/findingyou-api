@@ -3303,7 +3303,6 @@ export class AstrologicController {
               },
             },
           } as PreferenceDTO;
-          console.log(newPref);
           this.userService.savePublicPreference(puid, newPref);
         }
         result.set('kutas', kutas);
