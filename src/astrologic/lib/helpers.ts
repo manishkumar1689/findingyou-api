@@ -3,12 +3,13 @@ import vargaValues from './settings/varga-values';
 import { zeroPad } from '../../lib/converters';
 import { SignValue } from '../interfaces/sign-house';
 import { NakshatraItem } from '../interfaces/nakshatra-item';
-import {
-  aspectGroups,
-} from './settings/graha-values';
+import { aspectGroups } from './settings/graha-values';
 import { Graha } from './models/graha-set';
 import { LngLat } from './interfaces';
 import { Placename } from '../../user/interfaces/placename.interface';
+import { KutaGrahaItem } from './kuta';
+import rashiValues from './settings/rashi-values';
+import maitriData from './settings/maitri-data';
 
 export const extractString = (obj: any, key: string): string => {
   let str = '';
@@ -168,8 +169,7 @@ export const calcVargaValue = (lng: number, num: number) => (lng * num) % 360;
 export const subtractLng360 = (lng: number, offset = 0) =>
   (lng + 360 - offset) % 360;
 
-export const 
-addLng360 = (lng: number, offset = 0) =>
+export const addLng360 = (lng: number, offset = 0) =>
   (lng + 360 + offset) % 360;
 
 export const subtractSign = (sign1: number, sign2: number) =>
@@ -222,21 +222,22 @@ export const toSignValues = (
 };
 
 export const calcCoordsDistance = (geo1: LngLat, geo2: LngLat, unit = 'km') => {
-	if ((geo1.lat == geo2.lat) && (geo1.lng == geo2.lng)) {
-		return 0;
-	}
-	else {
-		const radlat1 = Math.PI * geo1.lat/180;
-		const radlat2 = Math.PI * geo1.lat/180;
-		const theta = geo1.lng-geo2.lng;
-		const radtheta = Math.PI * theta/180;
-		let dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
-		if (dist > 1) {
-			dist = 1;
-		}
-		dist = Math.acos(dist);
-		dist = dist * 180/Math.PI;
-		dist = dist * 60 * 1.1515;
+  if (geo1.lat == geo2.lat && geo1.lng == geo2.lng) {
+    return 0;
+  } else {
+    const radlat1 = (Math.PI * geo1.lat) / 180;
+    const radlat2 = (Math.PI * geo1.lat) / 180;
+    const theta = geo1.lng - geo2.lng;
+    const radtheta = (Math.PI * theta) / 180;
+    let dist =
+      Math.sin(radlat1) * Math.sin(radlat2) +
+      Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
+    if (dist > 1) {
+      dist = 1;
+    }
+    dist = Math.acos(dist);
+    dist = (dist * 180) / Math.PI;
+    dist = dist * 60 * 1.1515;
     const matchUnit = (str: string) => {
       switch (str.trim().toLowerCase()) {
         case 'km':
@@ -248,12 +249,12 @@ export const calcCoordsDistance = (geo1: LngLat, geo2: LngLat, unit = 'km') => {
         default:
           return 1;
       }
-    }
-    const unitStr = typeof unit === 'string'? unit : 'm';
-    const multiplier = matchUnit(unitStr)
-		return dist * multiplier;
-	}
-}
+    };
+    const unitStr = typeof unit === 'string' ? unit : 'm';
+    const multiplier = matchUnit(unitStr);
+    return dist * multiplier;
+  }
+};
 
 export const matchNakshatra28 = (index: number, offset = 0) => {
   const num = index + 1;
@@ -414,10 +415,10 @@ export const nakshatra28 = (lng: number) => {
 };
 
 export const nakshatra28ToDegrees = (nakRef: number, offset = 0): number[] => {
-  const nak = (360/27);
+  const nak = 360 / 27;
   const nakNum = ((nakRef - 1 + offset + 28) % 28) + 1;
   let start = (nakNum - 1) * nak;
-  let end = nakNum  * nak;
+  let end = nakNum * nak;
   const [minAbhjit, maxAbhjit] = abhijitNakshatraRange();
   if (nakNum === 21) {
     end = minAbhjit;
@@ -438,7 +439,10 @@ export const nakshatra28ToDegrees = (nakRef: number, offset = 0): number[] => {
   return [start, end];
 };
 
-export const numbersToRanges = (nums: number[], addEndOffset = true): number[][] => {
+export const numbersToRanges = (
+  nums: number[],
+  addEndOffset = true,
+): number[][] => {
   const ranges = [];
   const endOffset = addEndOffset ? 1 : 0;
   if (nums.length > 0) {
@@ -447,13 +451,13 @@ export const numbersToRanges = (nums: number[], addEndOffset = true): number[][]
       nums.sort((a, b) => a - b);
       let min = nums[0];
       for (let i = 0; i < lastIndex; i++) {
-        const next = nums[(i+1)];
+        const next = nums[i + 1];
         const curr = nums[i];
         if (curr !== next - 1) {
           ranges.push([min, curr + endOffset]);
           min = next;
         }
-        if (i === (lastIndex -1)) {
+        if (i === lastIndex - 1) {
           ranges.push([min, next + endOffset]);
         }
       }
@@ -462,13 +466,16 @@ export const numbersToRanges = (nums: number[], addEndOffset = true): number[][]
     }
   }
   return ranges;
-}
+};
 
 export const numbersToSpans = (nums: number[]) => {
   return numbersToRanges(nums, false);
-}
+};
 
-export const numbersToNakshatraDegreeRanges = (nums: number[], offset = 0): number[][] => {
+export const numbersToNakshatraDegreeRanges = (
+  nums: number[],
+  offset = 0,
+): number[][] => {
   return numbersToSpans(nums).map(span => {
     if (span[0] === span[1]) {
       return nakshatra28ToDegrees(span[0], offset);
@@ -478,7 +485,7 @@ export const numbersToNakshatraDegreeRanges = (nums: number[], offset = 0): numb
       return [start[0], end[1]];
     }
   });
-}
+};
 
 export const withinNakshatra27 = (lng: number) => {
   return lng % (360 / 27);
@@ -565,23 +572,32 @@ export const generateNameSearchRegex = (str: string): string => {
   return str;
 };
 
-
 export const toLocationString = (toponyms: Placename[]) => {
   const numParts = toponyms.length;
   const lastIndex = numParts - 1;
   const last2Index = numParts - 2;
-  const items = numParts > 4 ? [toponyms[lastIndex], toponyms[last2Index], toponyms[0]] : numParts > 1 ? [toponyms[lastIndex], toponyms[0]] : [];
+  const items =
+    numParts > 4
+      ? [toponyms[lastIndex], toponyms[last2Index], toponyms[0]]
+      : numParts > 1
+      ? [toponyms[lastIndex], toponyms[0]]
+      : [];
   const names = [];
-  items.forEach((item) => {
+  items.forEach(item => {
     const { name } = item;
     if (names.includes(name) === false) {
       names.push(name);
     }
   });
   return names.join(', ');
-}
+};
 
 export const simplifyGeoData = (geoData = null) => {
-  const toponyms = geoData instanceof Object && Object.keys(geoData).includes("toponyms") && geoData.toponyms instanceof Array? geoData.toponyms : [];
+  const toponyms =
+    geoData instanceof Object &&
+    Object.keys(geoData).includes('toponyms') &&
+    geoData.toponyms instanceof Array
+      ? geoData.toponyms
+      : [];
   return toLocationString(toponyms);
-}
+};

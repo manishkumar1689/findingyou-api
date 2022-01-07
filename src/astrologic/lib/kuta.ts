@@ -5,6 +5,7 @@ import { Chart } from './models/chart';
 import { Graha } from './models/graha-set';
 import { Nakshatra } from './models/nakshatra';
 import { Rashi } from './models/rashi-set';
+import { matchNaturalGrahaMaitri } from './settings/maitri-data';
 import rashiValues from './settings/rashi-values';
 
 export interface MfScores {
@@ -26,6 +27,10 @@ export interface VashyaDegreeRange {
 export interface RangeMatchProtocol {
   ranges: Array<VashyaDegreeRange>;
   score: any;
+}
+export interface DictMatch {
+  key: string;
+  dict: string;
 }
 
 export class KutaValueSet {
@@ -606,7 +611,11 @@ export class Kuta {
     const scoreSet = settings.score.find(sc => sc.brideNum === femaleVal.num);
     const maleVal = settings.signs.find(sn => sn.sign === male.rashi.num);
     const maleScoreIndex = maleVal.num - 1;
+    const s1Num = femaleFirst ? femaleVal.num : maleVal.num;
+    const s2Num = femaleFirst ? maleVal.num : femaleVal.num;
     score = scoreSet.groomScores[maleScoreIndex];
+    result.c1Value = [key, s1Num].join('/');
+    result.c2Value = [key, s2Num].join('/');
     result.score = score;
   }
 
@@ -850,8 +859,8 @@ export class Kuta {
       defProtocol = 'classical__one';
       score += 1 - 1;
     }
-    /* let vashya1 = 0;
-    let vashya2 = 0; */
+    let vashya1 = 0;
+    let vashya2 = 0;
     const [protocolKey, protocolSubKey] = defProtocol.split('__');
     if (signMatches instanceof Object) {
       const protocols = Object.keys(signMatches);
@@ -890,13 +899,15 @@ export class Kuta {
             const scoreRows = protocol.score[protocolSubKey];
             const vashyaIndex1 = v1.vashya - 1;
             const vashyaIndex2 = v2.vashya - 1;
-            /* vashya1 = femaleFirst ? v1.vashya : v2.vashya;
-            vashya2 = femaleFirst ? v2.vashya : v1.vashya; */
+            vashya1 = femaleFirst ? v1.vashya : v2.vashya;
+            vashya2 = femaleFirst ? v2.vashya : v1.vashya;
             if (vashyaIndex1 < scoreRows.length) {
               score = scoreRows[vashyaIndex1][vashyaIndex2];
             }
           }
         }
+        result.c1Value = ['vashya', vashya1].join('/');
+        result.c2Value = ['vashya', vashya2].join('/');
         result.score = score;
       }
     }
@@ -909,7 +920,7 @@ export class Kuta {
     femaleFirst = true,
   ) {
     const [s1, s2] = dataSets;
-    /* const [rel1, rel2] = matchNaturalGrahaMaitri(s1, s2);
+    const [rel1, rel2] = matchNaturalGrahaMaitri(s1, s2);
     const protocolKey = this.itemOptions.get('grahamaitri');
     const { variants } = settings;
     const variantKeys = Object.keys(settings);
@@ -922,11 +933,14 @@ export class Kuta {
         const scoreItem = scores.find(
           sc => sc.f === relMatch.f && sc.m === relMatch.m,
         );
+        const { dignities } = settings.dictionary;
+        result.c1Value = this.diginityKey(dignities, rel1);
+        result.c2Value = this.diginityKey(dignities, rel2);
         if (scoreItem) {
           result.score = scoreItem.score;
         }
       }
-    } */
+    }
   }
 
   _calcMahendra(
@@ -1347,6 +1361,7 @@ export class Kuta {
               }
               if (relType.length > 2) {
                 const scoreRow = scores.find(sc => sc.type === relType);
+
                 if (scoreRow) {
                   result.score = scoreRow.score;
                 }
@@ -1356,5 +1371,14 @@ export class Kuta {
         }
       }
     }
+  }
+
+  diginityKey(dignities: DictMatch[], rel = '') {
+    const dictRow = dignities.find(row => row.key === rel);
+    let dictKey = '';
+    if (dictRow) {
+      dictKey = dictRow.dict;
+    }
+    return ['dignity', dictKey].join('/');
   }
 }

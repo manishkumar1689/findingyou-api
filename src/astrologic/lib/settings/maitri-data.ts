@@ -1,3 +1,4 @@
+import { KutaGrahaItem } from '../kuta';
 import { Graha } from '../models/graha-set';
 import rashiValues from './rashi-values';
 
@@ -106,8 +107,17 @@ const maitriData = {
   },
 };
 
-export const matchLord = (graha: Graha) => {
+export const matchLord = (graha: Graha | KutaGrahaItem) => {
   const rashiRow = rashiValues.find(rs => rs.num === graha.sign);
+  let ruler = '';
+  if (rashiRow) {
+    ruler = rashiRow.ruler;
+  }
+  return ruler;
+};
+
+export const matchKutaLord = (kg: KutaGrahaItem) => {
+  const rashiRow = rashiValues.find(rs => rs.num === kg.rashi.num);
   let ruler = '';
   if (rashiRow) {
     ruler = rashiRow.ruler;
@@ -133,15 +143,6 @@ export const matchRelations = (
   return relKey === comparison;
 };
 
-export const matchNaturalGrahaMaitri = (g1: Graha, g2: Graha) => {
-  const ruler1 = matchLord(g1);
-  const ruler2 = matchLord(g2);
-  const sameRuler = ruler1 === ruler2;
-  const rel1 = sameRuler ? 'same' : matchNaturalMaitri(ruler1, ruler2);
-  const rel2 = sameRuler ? 'same' : matchNaturalMaitri(ruler2, ruler1);
-  return [rel1, rel2];
-};
-
 export const matchNaturalMaitri = (gk1: string, gk2: string): string => {
   let natural = '';
   const row = maitriData.natural.find(item => item.graha === gk1);
@@ -157,6 +158,18 @@ export const matchNaturalMaitri = (gk1: string, gk2: string): string => {
     }
   }
   return natural;
+};
+
+export const matchNaturalGrahaMaitri = (
+  g1: Graha | KutaGrahaItem,
+  g2: Graha | KutaGrahaItem,
+) => {
+  const ruler1 = matchLord(g1);
+  const ruler2 = matchLord(g2);
+  const sameRuler = ruler1 === ruler2;
+  const rel1 = sameRuler ? 'same' : matchNaturalMaitri(ruler1, ruler2);
+  const rel2 = sameRuler ? 'same' : matchNaturalMaitri(ruler2, ruler1);
+  return [rel1, rel2];
 };
 
 export default maitriData;

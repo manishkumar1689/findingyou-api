@@ -3227,6 +3227,8 @@ export class AstrologicController {
       grahaKeyRef === 'basic'
         ? ['su', 'mo', 've', 'as']
         : grahaKeyRef.split(',').filter(k => k.length === 2);
+    const kutaType = params.has('set') ? params.get('set') : 'ashta';
+    const kutaSetType = notEmptyString(kutaType, 1) ? kutaType : 'ashta';
     /* const publicUserId = params.has('puid') ? params.get('puid') : '';
     if (isValidObjectId(publicUserId)) {
       const publicUser = await this.userService.getPublicUser(publicUserId);
@@ -3292,7 +3294,11 @@ export class AstrologicController {
         const kutaSet = await this.settingService.getKutaSettings();
         const kutaBuilder = new Kuta(c1, c2);
         kutaBuilder.loadCompatibility(kutaSet);
-        const kutas = kutaBuilder.calcAllSingleKutas(true, grahaKeys);
+        const kutas = kutaBuilder.calcAllSingleKutas(
+          true,
+          grahaKeys,
+          kutaSetType,
+        );
         const pl1 = params.has('pl1') ? params.get('pl1') : '';
         const pl2 = params.has('pl2') ? params.get('pl2') : '';
         const simpleC1 = c1.toBaseSet();
@@ -3342,11 +3348,6 @@ export class AstrologicController {
             const kutaSet = await this.settingService.getKutaSettings();
             const kutaBuilder = new Kuta(c1, c2);
             kutaBuilder.loadCompatibility(kutaSet);
-            const grahaKeys = ['su', 'mo', 've', 'as'];
-            const kutaType = params.has('set') ? params.get('set') : 'ashta';
-            const kutaSetType = notEmptyString(kutaType, 1)
-              ? kutaType
-              : 'ashta';
             const kutas = kutaBuilder.calcAllSingleKutas(
               true,
               grahaKeys,
