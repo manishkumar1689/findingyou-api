@@ -170,6 +170,7 @@ import { randomCompatibilityText } from './lib/settings/compatibility-texts';
 import { buildProgressSetPairs } from './lib/settings/progression';
 import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
+import { start } from 'repl';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -3288,12 +3289,16 @@ export class AstrologicController {
               ayanamshaKey: 'true_citra',
               p1: {
                 ...simpleC1,
-                tzOffset: tO1,
+                name: name1,
+                gender: gender1,
+                tzOffset: smartCastInt(tO1, 0),
                 placeName: pl1,
               },
               p2: {
                 ...simpleC2,
-                tzOffset: tO2,
+                name: name2,
+                gender: gender2,
+                tzOffset: smartCastInt(tO2, 0),
                 placeName: pl2,
               },
             },
@@ -3335,6 +3340,21 @@ export class AstrologicController {
       }
     }
     return res.json(Object.fromEntries(result));
+  }
+
+  @Get('public-pairs/:start?/:numUsers?')
+  async fetchPublicCharts(
+    @Res() res,
+    @Param('start') start,
+    @Param('numUsers') numUsers,
+  ) {
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(numUsers, 100);
+    const items = await this.userService.fetchPublicAstroPairs(
+      startInt,
+      limitInt,
+    );
+    return res.json(items);
   }
 
   @Post('save-charts')

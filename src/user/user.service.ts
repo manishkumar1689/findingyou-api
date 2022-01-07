@@ -1916,4 +1916,53 @@ export class UserService {
 
     return await this.publicUserModel.aggregate(steps);
   }
+
+  async fetchPublicAstroPairs(start = 0, maxUsers = 100) {
+    const steps = [
+      {
+        $match: {
+          'preferences.type': 'simple_astro_pair',
+        },
+      },
+      {
+        $project: {
+          identifier: 1,
+          nickName: 1,
+          simplePairs: {
+            $filter: {
+              input: '$preferences',
+              as: 'pc',
+              cond: { $eq: ['$$pc.type', 'simple_astro_pair'] },
+            },
+          },
+        },
+      },
+      {
+        $sort: {
+          modifiedAt: -1,
+        },
+      },
+      {
+        $skip: start,
+      },
+      {
+        $limit: maxUsers,
+      },
+    ];
+    const items = await this.publicUserModel.aggregate(steps);
+    return items
+      .map(row => {
+        return row.simplePairs
+          .filter(sp => sp.value instanceof Object)
+          .map(sp => {
+            return {
+              email: row.identifier,
+              userName: row.nickName,
+              key: sp.key,
+              ...sp.value,
+            };
+          });
+      })
+      .reduce((a, b) => a.concat(b));
+  }
 }
