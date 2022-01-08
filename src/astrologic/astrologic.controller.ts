@@ -3333,7 +3333,7 @@ export class AstrologicController {
         result.set('p2', p2);
         result.set('kutas', kutas);
       }
-    } else if (hasPuid) {
+    } else if (hasUserRef) {
       const pref = pairIndex < 0 ? null : user.preferences[pairIndex];
       if (pref instanceof Object) {
         const pairData = pref.value;
