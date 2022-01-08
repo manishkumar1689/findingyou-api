@@ -171,7 +171,6 @@ import { randomCompatibilityText } from './lib/settings/compatibility-texts';
 import { buildProgressSetPairs } from './lib/settings/progression';
 import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
-import { start } from 'repl';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -3227,8 +3226,8 @@ export class AstrologicController {
       grahaKeyRef === 'basic'
         ? ['su', 'mo', 've', 'as']
         : grahaKeyRef.split(',').filter(k => k.length === 2);
-    const kutaType = params.has('set') ? params.get('set') : 'ashta';
-    const kutaSetType = notEmptyString(kutaType, 1) ? kutaType : 'ashta';
+    const kutaType = params.has('set') ? params.get('set') : 'dvadasha';
+    const kutaSetType = notEmptyString(kutaType, 1) ? kutaType : 'dvadasha';
     /* const publicUserId = params.has('puid') ? params.get('puid') : '';
     if (isValidObjectId(publicUserId)) {
       const publicUser = await this.userService.getPublicUser(publicUserId);

@@ -1725,7 +1725,7 @@ export class UserController {
             data.kutas = kutaBuilder.calcAllSingleKutas(
               true,
               grahaKeys,
-              'ashta',
+              'dvadasha',
             );
             data.pcKey = cKey;
           }
