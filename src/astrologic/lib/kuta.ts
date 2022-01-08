@@ -1,11 +1,16 @@
-import { inRange, notEmptyString } from '../../lib/validators';
+import { inRange, isNumeric, notEmptyString } from '../../lib/validators';
 import { matchNakshatra } from './core';
 import { calcInclusiveNakshatras, calcInclusiveTwelfths } from './math-funcs';
 import { Chart } from './models/chart';
 import { Graha } from './models/graha-set';
 import { Nakshatra } from './models/nakshatra';
 import { Rashi } from './models/rashi-set';
-import { matchNaturalGrahaMaitri } from './settings/maitri-data';
+import {
+  matchLord,
+  matchNaturalGrahaMaitri,
+  matchNaturalMaitri,
+  matchRelations,
+} from './settings/maitri-data';
 import rashiValues from './settings/rashi-values';
 
 export interface MfScores {
@@ -1068,6 +1073,10 @@ export class Kuta {
           const bothDown = dir1 === -1 && dir2 === -1;
           const oppositeDir =
             dir1 !== dir2 && [dir1, dir2].includes(0) === false;
+          const dirLabel = dir => (dir === 1 ? '▲' : dir === -1 ? '▼' : '●');
+          result.c1Value = ['rajju', body1, dirLabel(dir1)].join('/');
+          result.c2Value = ['rajju', body2, dirLabel(dir2)].join('/');
+
           const protocolKey = this.itemOptions.get('rajju');
           const keys = Object.keys(settings);
           if (keys.includes(protocolKey)) {
@@ -1116,9 +1125,11 @@ export class Kuta {
                   itemScore = scoreRow.score;
                 }
                 if (calc instanceof Array) {
-                  /* const ruler1 = matchLord(s1);
+                  const ruler1 = matchLord(s1);
                   const ruler2 = matchLord(s2);
                   const sameRulers = ruler1 === ruler2;
+                  const signRulersRel1 = matchNaturalMaitri(ruler1, ruler2);
+                  const signRulersRel2 = matchNaturalMaitri(ruler2, ruler1);
                   const pointSignAspect = calcInclusiveTwelfths(
                     s1.sign,
                     s2.sign,
@@ -1156,7 +1167,7 @@ export class Kuta {
                     if (isNumeric(add)) {
                       itemScore += add;
                     }
-                  } */
+                  }
                 }
                 result.score = itemScore;
               }

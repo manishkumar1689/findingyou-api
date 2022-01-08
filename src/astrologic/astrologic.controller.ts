@@ -3228,23 +3228,6 @@ export class AstrologicController {
         : grahaKeyRef.split(',').filter(k => k.length === 2);
     const kutaType = params.has('set') ? params.get('set') : 'dvadasha';
     const kutaSetType = notEmptyString(kutaType, 1) ? kutaType : 'dvadasha';
-    /* const publicUserId = params.has('puid') ? params.get('puid') : '';
-    if (isValidObjectId(publicUserId)) {
-      const publicUser = await this.userService.getPublicUser(publicUserId);
-      const refNum = params.get('pn');
-      const pairNum = isNumeric(refNum) ? smartCastInt(refNum, 1) : 1;
-      const simpleChartKey = ['astro_pair', pairNum].join('_');
-      if (publicUser instanceof Model) {
-        if (
-          publicUser.preferences instanceof Array &&
-          publicUser.preferences.length > 0
-        ) {
-          const pair = publicUser.preferences.find(
-            p => p.key === simpleChartKey,
-          );
-        }
-      }
-    } */
     const puid = params.has('puid') ? params.get('puid') : '';
     const hasPuid = isValidObjectId(puid);
     let email = '';
@@ -3284,6 +3267,14 @@ export class AstrologicController {
       const gender2 = params.get('g2');
       const tO1 = params.get('to1');
       const tO2 = params.get('to2');
+      const r1 = params.get('r1');
+      const r2 = params.get('r2');
+      const rod1 = isNumeric(r1) ? parseInt(r1) : 200;
+      const rod2 = isNumeric(r2) ? parseInt(r2) : 200;
+      const e1 = params.get('e1');
+      const e2 = params.get('e2');
+      const et1 = notEmptyString(e1) ? e1.toLowerCase() : 'birth';
+      const et2 = notEmptyString(e2) ? e2.toLowerCase() : 'birth';
       if (validISODateString(dt2) && notEmptyString(loc2, 3)) {
         const c2 = await generateBasicChart(dt2, loc2, name2, gender2);
         c2.setAyanamshaItemByKey('true_citra');
@@ -3308,6 +3299,8 @@ export class AstrologicController {
           gender: gender1,
           tzOffset: smartCastInt(tO1, 0),
           placeName: pl1,
+          eventType: et1,
+          roddenValue: rod1,
         };
         const p2 = {
           ...simpleC2,
@@ -3315,6 +3308,8 @@ export class AstrologicController {
           gender: gender2,
           tzOffset: smartCastInt(tO2, 0),
           placeName: pl2,
+          eventType: et2,
+          roddenValue: rod2,
         };
         if (hasPuid) {
           const newPref = {
