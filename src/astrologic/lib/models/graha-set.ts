@@ -147,7 +147,7 @@ export class Graha extends BaseObject {
   }
 
   get sign() {
-    return Math.floor(this.lng / 30) + 1;
+    return Math.floor(this.longitude / 30) + 1;
   }
 
   get signIndex() {
@@ -172,7 +172,7 @@ export class Graha extends BaseObject {
   }
 
   get nakshatra(): Nakshatra {
-    return new Nakshatra(matchNakshatra(this.lng));
+    return new Nakshatra(matchNakshatra(this.longitude));
   }
 
   get ayanamshaValue() {

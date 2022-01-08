@@ -117,12 +117,7 @@ export class KutaGrahaItem {
   lng: number;
   moonWaxing: boolean;
 
-  constructor(
-    graha: Graha,
-    gender: string,
-    nakshatra: number,
-    moonWaxing: boolean,
-  ) {
+  constructor(graha: Graha, gender: string, moonWaxing: boolean) {
     this.key = graha.key;
     this.gender = gender;
     const rashi = rashiValues.find(rs => rs.num === graha.sign);
@@ -484,8 +479,8 @@ export class Kuta {
     let s1 = null;
     let s2 = null;
     if (gr1 instanceof Graha && gr2 instanceof Graha) {
-      s1 = new KutaGrahaItem(gr1, this.gender1, gr1.nakshatra.num, false);
-      s2 = new KutaGrahaItem(gr2, this.gender2, gr2.nakshatra.num, true);
+      s1 = new KutaGrahaItem(gr1, this.gender1, false);
+      s2 = new KutaGrahaItem(gr2, this.gender2, true);
     }
     return {
       s1,
