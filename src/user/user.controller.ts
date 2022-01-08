@@ -1525,9 +1525,16 @@ export class UserController {
   }
 
   @Post('public-save')
-  async savePublicUser(@Res() res, @Body() userData: PublicUserDTO) {
+  async savePublicUser(
+    @Res() res,
+    @Body() userData: PublicUserDTO,
+    @Query() query,
+  ) {
     const publicUser = await this.userService.savePublic(userData);
     const valid = publicUser instanceof Model;
+    const params = objectToMap(query);
+    const showPsychRaw = params.has('psych') ? params.get('psych') : '1';
+    const showPsych = smartCastInt(showPsychRaw, 1) > 0;
     let userObj: any = {};
     let facetedAnswers = [];
     let jungianAnswers = [];
@@ -1557,7 +1564,7 @@ export class UserController {
         modifiedAt,
         createdAt,
       };
-      if (preferences.length > 0) {
+      if (preferences.length > 0 && showPsych) {
         const prefData = await this.settingService.processPreferences(
           preferences,
         );
@@ -1581,14 +1588,20 @@ export class UserController {
         }
       }
     }
-    return res.send({
-      valid,
-      ...userObj,
-      facetedAnswers,
-      facetedAnalysis,
-      jungianAnswers,
-      jungianAnalysis,
-    });
+    const result = showPsych
+      ? {
+          valid,
+          ...userObj,
+          facetedAnswers,
+          facetedAnalysis,
+          jungianAnswers,
+          jungianAnalysis,
+        }
+      : {
+          valid,
+          ...userObj,
+        };
+    return res.send(result);
   }
 
   mapPublicUser(
@@ -1726,6 +1739,7 @@ export class UserController {
               true,
               grahaKeys,
               'dvadasha',
+              false,
             );
             data.pcKey = cKey;
           }

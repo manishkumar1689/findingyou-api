@@ -693,6 +693,10 @@ export class Kuta {
               row.compare === comparisonType,
           );
         if (calcItem) {
+          const nadiOne = values[s1.nakshatraNum - 1];
+          const nadiTwo = values[s2.nakshatraNum - 1];
+          result.c1Value = ['nadi', [1, nadiOne].join('_')].join('/');
+          result.c2Value = ['nadi', [1, nadiTwo].join('_')].join('/');
           result.score = calcItem.score;
         }
       }
