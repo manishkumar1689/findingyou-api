@@ -587,10 +587,22 @@ export class Kuta {
           result.max = settings.max;
         }
         if (result.c1Value.length < 2 && dataSets.length > 0) {
-          result.c1Value = ['nakshatra', dataSets[0].nakshatraNum].join('/');
+          const diff1 = calcInclusiveNakshatras(
+            dataSets[0].nakshatraNum,
+            dataSets[1].nakshatraNum,
+          );
+          result.c1Value = ['nakshatra', dataSets[0].nakshatraNum, diff1].join(
+            '/',
+          );
         }
         if (result.c2Value.length < 2 && dataSets.length > 1) {
-          result.c2Value = ['nakshatra', dataSets[1].nakshatraNum].join('/');
+          const diff2 = calcInclusiveNakshatras(
+            dataSets[1].nakshatraNum,
+            dataSets[0].nakshatraNum,
+          );
+          result.c2Value = ['nakshatra', dataSets[1].nakshatraNum, diff2].join(
+            '/',
+          );
         }
         result.head = dataSets.map(ds => [ds.key, ds.lng].join(':')).join('/');
       }
@@ -661,8 +673,8 @@ export class Kuta {
 
     const { scores } = settings;
     if (scores instanceof Array && scores.length > 8) {
-      result.c1Value = ['tara', taraNum1].join('/');
-      result.c2Value = ['tara', taraNum2].join('/');
+      result.c1Value = ['tara', taraNum1, taraValOne].join('/');
+      result.c2Value = ['tara', taraNum2, taraValTwo].join('/');
       result.score = scores[taraIndex1] + scores[taraIndex2];
     }
   }

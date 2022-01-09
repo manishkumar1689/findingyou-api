@@ -3228,6 +3228,9 @@ export class AstrologicController {
         : grahaKeyRef.split(',').filter(k => k.length === 2);
     const kutaType = params.has('set') ? params.get('set') : 'dvadasha';
     const kutaSetType = notEmptyString(kutaType, 1) ? kutaType : 'dvadasha';
+
+    const allCombosRaw = params.has('combos') ? params.get('combos') : '0';
+    const allCombos = smartCastInt(allCombosRaw) > 0;
     const puid = params.has('puid') ? params.get('puid') : '';
     const hasPuid = isValidObjectId(puid);
     let email = '';
@@ -3288,6 +3291,7 @@ export class AstrologicController {
           true,
           grahaKeys,
           kutaSetType,
+          allCombos,
         );
         const pl1 = params.has('pl1') ? params.get('pl1') : '';
         const pl2 = params.has('pl2') ? params.get('pl2') : '';
@@ -3346,6 +3350,7 @@ export class AstrologicController {
               true,
               grahaKeys,
               kutaSetType,
+              allCombos,
             );
             result.set('valid', true);
             result.set('p1', pairData.p1);
