@@ -808,6 +808,8 @@ export class Kuta {
                 }
               }
             }
+            result.c1Value = ['gana', ganaOne].join('/');
+            result.c2Value = ['gana', ganaTwo].join('/');
           }
         }
         result.score = score;
