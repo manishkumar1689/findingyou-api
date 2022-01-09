@@ -38,6 +38,18 @@ export interface DictMatch {
   dict: string;
 }
 
+export interface ItemMatchOverride {
+  num: number;
+  index: number;
+  score: number;
+}
+
+export interface KutaScoreMatch {
+  standard: number;
+  match: number;
+  overrides?: Array<ItemMatchOverride>;
+}
+
 export class KutaValueSet {
   key = '';
   head = '';
@@ -997,7 +1009,7 @@ export class Kuta {
     }
   }
 
-  /*  _calcVedhaSubScore(score: KutaScoreMatch, matchIndex = 0, nakshatraNum = 0) {
+  _calcVedhaSubScore(score: KutaScoreMatch, matchIndex = 0, nakshatraNum = 0) {
     let scoreVal = 0;
     const { match, standard, overrides } = score;
     if (matchIndex >= 0) {
@@ -1014,7 +1026,7 @@ export class Kuta {
       scoreVal = standard;
     }
     return scoreVal;
-  } */
+  }
 
   _calcVedha(
     settings: any,
@@ -1040,7 +1052,7 @@ export class Kuta {
           ) {
             const { score, max } = settings[protocolKey];
             if (score) {
-              /* let scoreVal = this._calcVedhaSubScore(
+              let scoreVal = this._calcVedhaSubScore(
                 score,
                 matchIndex1,
                 s1.nakshatraNum,
@@ -1049,8 +1061,10 @@ export class Kuta {
                 score,
                 matchIndex2,
                 s2.nakshatraNum,
-              ); */
-              //result.score = scoreVal / 2;
+              );
+              result.c1Value = ['nakshatra', s1.nakshatraNum].join('/');
+              result.c2Value = ['nakshatra', s2.nakshatraNum].join('/');
+              result.score = scoreVal / 2;
               result.max = max;
             }
           }
