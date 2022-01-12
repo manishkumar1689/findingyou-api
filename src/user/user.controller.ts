@@ -345,14 +345,13 @@ export class UserController {
   }
 
   @Get('basic-by-id/:uid')
-  async getBasicDetailsById(@Res() res, @Param() uid: string) {
+  async getBasicDetailsById(@Res() res, @Param('uid') uid: string) {
     const userID = isValidObjectId(uid) ? uid : '';
     const user =
       userID.length > 12 ? await this.userService.getBasicById(userID) : null;
+
     const result =
-      user instanceof Model
-        ? { valid: true, ...user.toObject() }
-        : { valid: false };
+      user instanceof Object ? { valid: true, ...user } : { valid: false };
     res.json(result);
   }
 

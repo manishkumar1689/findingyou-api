@@ -124,19 +124,16 @@ export class UserService {
   }
 
   async getBasicById(uid: string) {
-    const isActive = await this.isActive(uid);
+    const items = await this.userModel
+      .find({
+        _id: uid,
+        active: true,
+      })
+      .select('_id active nickName roles profiles');
     let user = null;
-    if (isActive) {
-      const items = await this.userModel
-        .find({
-          _id: uid,
-          active: true,
-        })
-        .select('_id nickName roles profiles');
-      if (items.length > 0) {
-        const users = items.map(this.mapBasicUser);
-        user = users[0];
-      }
+    if (items.length > 0) {
+      const users = items.map(this.mapBasicUser);
+      user = users[0];
     }
     return user;
   }
