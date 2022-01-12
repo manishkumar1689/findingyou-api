@@ -344,6 +344,18 @@ export class UserController {
     res.json(data);
   }
 
+  @Get('basic-by-id/:uid')
+  async getBasicDetailsById(@Res() res, @Param() uid: string) {
+    const userID = isValidObjectId(uid) ? uid : '';
+    const user =
+      userID.length > 12 ? await this.userService.getBasicById(userID) : null;
+    const result =
+      user instanceof Model
+        ? { valid: true, ...user.toObject() }
+        : { valid: false };
+    res.json(result);
+  }
+
   /**
    * Optional query string parameters include:
    * roles: comma-separated list of role keys
@@ -1859,11 +1871,19 @@ export class UserController {
     @Param('userID') userID,
     @Param('mediaRef') mediaRef,
   ) {
-    const data: any = { valid: false, item: null, fileDeleted: false };
+    const data: any = {
+      valid: false,
+      item: null,
+      user: null,
+      fileDeleted: false,
+    };
     const result = await this.userService.deleteMediaItemByRef(
       userID,
       mediaRef,
     );
+    if (result.user instanceof Object) {
+      data.user = result.user;
+    }
     if (result.deleted) {
       if (result.item instanceof Object) {
         data.item = result.item;

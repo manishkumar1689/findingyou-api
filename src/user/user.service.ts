@@ -88,6 +88,22 @@ export class UserService {
   }
   // count users by criteria
 
+  mapBasicUser(item: any = null) {
+    const obj =
+      item instanceof Object
+        ? item
+        : { _id: '', nickName: '', roles: [], profiles: [] };
+    const { _id, nickName, roles, profiles } = obj;
+    let profileImg = '';
+    if (profiles instanceof Array && profiles.length > 0) {
+      const { mediaItems } = profiles[0];
+      if (mediaItems instanceof Array && mediaItems.length > 0) {
+        profileImg = mediaItems[0].filename;
+      }
+    }
+    return { _id, nickName, roles, profileImg };
+  }
+
   async getBasicByIds(ids: string[], uid: string) {
     const isActive = await this.isActive(uid);
     let users = [];
@@ -101,20 +117,28 @@ export class UserService {
         })
         .select('_id nickName roles profiles');
       if (items.length > 0) {
-        users = items.map(item => {
-          const { _id, nickName, roles, profiles } = item;
-          let profileImg = '';
-          if (profiles instanceof Array && profiles.length > 0) {
-            const { mediaItems } = profiles[0];
-            if (mediaItems instanceof Array && mediaItems.length > 0) {
-              profileImg = mediaItems[0].filename;
-            }
-          }
-          return { _id, nickName, roles, profileImg };
-        });
+        users = items.map(this.mapBasicUser);
       }
     }
     return users;
+  }
+
+  async getBasicById(uid: string) {
+    const isActive = await this.isActive(uid);
+    let user = null;
+    if (isActive) {
+      const items = await this.userModel
+        .find({
+          _id: uid,
+          active: true,
+        })
+        .select('_id nickName roles profiles');
+      if (items.length > 0) {
+        const users = items.map(this.mapBasicUser);
+        user = users[0];
+      }
+    }
+    return user;
   }
 
   async count(criteria: any = null, activeOnly = true): Promise<number> {

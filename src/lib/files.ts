@@ -42,19 +42,131 @@ const maxLargeSizeKey = (imageSizes = null) => {
       }
     }
     return area;
-  }
-  const keyAreas = imageSizes instanceof Object? Object.entries(imageSizes).map(entry => {
-    const [key, item] = entry;
-    const area = calcArea(item);
-    return {key, area };
-  }) : [];
+  };
+  const keyAreas =
+    imageSizes instanceof Object
+      ? Object.entries(imageSizes).map(entry => {
+          const [key, item] = entry;
+          const area = calcArea(item);
+          return { key, area };
+        })
+      : [];
   const lastIndex = keyAreas.length - 1;
   const hasSizes = lastIndex >= 0;
-  const areas = hasSizes? keyAreas.map(item => item.area) : [];
-  const max = hasSizes? Math.max(...areas) : 0;
-  const item = hasSizes? keyAreas.find(item => item.area === max) : null;
-  return item instanceof Object ? item.key : hasSizes? keyAreas[lastIndex].key : '';
-}
+  const areas = hasSizes ? keyAreas.map(item => item.area) : [];
+  const max = hasSizes ? Math.max(...areas) : 0;
+  const item = hasSizes ? keyAreas.find(item => item.area === max) : null;
+  return item instanceof Object
+    ? item.key
+    : hasSizes
+    ? keyAreas[lastIndex].key
+    : '';
+};
+
+export const mediaPath = (type = 'media', subDir = '') => {
+  let relPath = 'media';
+
+  switch (type) {
+    case 'export':
+    case 'exports':
+      relPath = exportDirectory;
+      break;
+    case 'backup':
+    case 'backups':
+      relPath = backupPath;
+      break;
+    case 'files':
+      relPath = filesDirectory;
+      break;
+    case 'sources':
+    case 'source':
+      relPath = sourcesDirectory;
+      break;
+    case 'swisseph':
+      relPath = ephemerisPath;
+      break;
+    case 'media':
+      relPath = mediaDirectory;
+      break;
+  }
+  if (notEmptyString(subDir)) {
+    relPath += '/' + subDir;
+    const normalisedPath = path.resolve(relPath);
+    if (!fs.existsSync(normalisedPath)) {
+      fs.mkdirSync(normalisedPath);
+    }
+  }
+  return path.resolve(relPath) + '/';
+};
+
+export const buildFullPath = (
+  filename: string,
+  type = 'media',
+  subDir = '',
+) => {
+  return mediaPath(type, subDir) + filename;
+};
+
+export const buildFileName = (
+  workID: string,
+  ts: number,
+  extension: string,
+) => {
+  return workID + '-' + ts.toString() + '.' + extension;
+};
+
+export const checkFileExists = (filename: string, type = 'media') => {
+  const fp = buildFullPath(filename, type);
+  return fs.existsSync(fp);
+};
+
+export const mediaFileExists = (filename: string) => {
+  return checkFileExists(filename, 'media');
+};
+
+export const generateFileName = (userID: string, originalname: string) => {
+  let extension = originalname
+    .split('.')
+    .pop()
+    .toLowerCase();
+  switch (extension) {
+    case 'jpeg':
+      extension = 'jpg';
+      break;
+  }
+  let filename = '';
+  if (userID.indexOf('-') > 6) {
+    filename = userID + '.' + extension;
+  } else {
+    let ts = new Date().getTime() % 1000000;
+    filename = buildFileName(userID, ts, extension);
+    if (mediaFileExists(filename)) {
+      ts = (new Date().getTime() % 999888) + Math.floor(Math.random() * 111);
+      filename = buildFileName(userID, ts, extension);
+    }
+  }
+  return filename;
+};
+
+export const writeMediaFile = (filename: string, data, type = 'media') => {
+  const fp = buildFullPath(filename, type);
+  return fs.writeFileSync(fp, data);
+};
+
+const imageAttrsLargerThan = (attrs: Map<string, any>, imgSize = null) => {
+  if (imgSize instanceof Object) {
+    const { width, height } = imgSize;
+    if (
+      attrs.has('width') &&
+      isNumber(width) &&
+      attrs.has('height') &&
+      isNumber(height)
+    ) {
+      return attrs.get('width') > width || attrs.get('height') > height;
+    }
+  }
+  return false;
+};
 
 export const uploadMediaFile = (
   userID: string,
@@ -93,7 +205,6 @@ export const uploadMediaFile = (
   const variants = [];
   if (isBitmap) {
     let ms = 0;
-    const largestSize = 
     Object.entries(imageSizes).forEach(entry => {
       const [key, imgSize] = entry;
       const largestKey = maxLargeSizeKey(imageSizes);
@@ -134,6 +245,26 @@ export const buildDateTimeSuffixedFileName = fileName => {
   const base = hasExtension ? parts.join('.') : fileName;
   const suffix = generateDateTimeSuffix();
   return [base.trim(), suffix].join('--') + ext.trim();
+};
+
+export const getFileData = (fn: string): FileData => {
+  const fp = fs.existsSync(fn) ? fn : '';
+  let iSize = 0;
+  let modified = '';
+  if (fp.length > 0) {
+    const { mtime, size } = fs.statSync(fp);
+    if (mtime instanceof Date) {
+      modified = mtime.toISOString();
+    }
+    if (size) {
+      iSize = size;
+    }
+  }
+  return {
+    path: fp,
+    modified,
+    size: iSize,
+  };
 };
 
 export const uploadSwissEphDataFile = (
@@ -185,45 +316,6 @@ export const uploadSwissEphDataFile = (
   };
 };
 
-const imageAttrsLargerThan = (attrs: Map<string, any>, imgSize = null) => {
-  if (imgSize instanceof Object) {
-    const { width, height } = imgSize;
-    if (
-      attrs.has('width') &&
-      isNumber(width) &&
-      attrs.has('height') &&
-      isNumber(height)
-    ) {
-      return attrs.get('width') > width || attrs.get('height') > height;
-    }
-  }
-  return false;
-};
-
-export const generateFileName = (userID: string, originalname: string) => {
-  let extension = originalname
-    .split('.')
-    .pop()
-    .toLowerCase();
-  switch (extension) {
-    case 'jpeg':
-      extension = 'jpg';
-      break;
-  }
-  let filename = '';
-  if (userID.indexOf('-') > 6) {
-    filename = userID + '.' + extension;
-  } else {
-    let ts = new Date().getTime() % 1000000;
-    filename = buildFileName(userID, ts, extension);
-    if (mediaFileExists(filename)) {
-      ts = new Date().getTime() % 999888 + Math.floor(Math.random() * 111);
-      filename = buildFileName(userID, ts, extension);
-    }
-  }
-  return filename;
-};
-
 export const generateImageStyle = (filename: string, params = null) => {
   if (notEmptyString(filename) && params instanceof Object) {
     const { mode, width, height } = params;
@@ -234,15 +326,6 @@ export const generateImageStyle = (filename: string, params = null) => {
     }
   }
   return filename;
-};
-
-export const writeMediaFile = (
-  filename: string,
-  data,
-  type: string = 'media',
-) => {
-  const fp = buildFullPath(filename, type);
-  return fs.writeFileSync(fp, data);
 };
 
 export const writeExportFile = (filename: string, data, folder = 'exports') => {
@@ -256,23 +339,6 @@ export const writeSourceFile = (filename: string, data) => {
 
 export const validFileName = (name: string) => {
   return /^[a-z0-9._-]+\.\w+$/.test(name);
-};
-
-export const buildFileName = (
-  workID: string,
-  ts: number,
-  extension: string,
-) => {
-  return workID + '-' + ts.toString() + '.' + extension;
-};
-
-export const mediaFileExists = (filename: string) => {
-  return checkFileExists(filename, 'media');
-};
-
-export const checkFileExists = (filename: string, type: string = 'media') => {
-  const fp = buildFullPath(filename, type);
-  return fs.existsSync(fp);
 };
 
 export const renameFile = (sourceName: string, newName: string) => {
@@ -295,11 +361,8 @@ export const renameFile = (sourceName: string, newName: string) => {
   return hashMapToObject(out);
 };
 
-export const deleteFile = (
-  filename: string,
-  directory: string = '',
-) => {
-  const targetType = typeof directory === 'string'? directory : 'media';
+export const deleteFile = (filename: string, directory = '') => {
+  const targetType = typeof directory === 'string' ? directory : 'media';
   let deleted = false;
   const fp = buildFullPath(filename, targetType);
   if (fs.existsSync(fp)) {
@@ -307,42 +370,6 @@ export const deleteFile = (
     deleted = true;
   }
   return deleted;
-};
-
-export const mediaPath = (type = 'media', subDir = '') => {
-  let relPath = 'media';
-
-  switch (type) {
-    case 'export':
-    case 'exports':
-      relPath = exportDirectory;
-      break;
-    case 'backup':
-    case 'backups':
-      relPath = backupPath;
-      break;
-    case 'files':
-      relPath = filesDirectory;
-      break;
-    case 'sources':
-    case 'source':
-      relPath = sourcesDirectory;
-      break;
-    case 'swisseph':
-      relPath = ephemerisPath;
-      break;
-    case 'media':
-      relPath = mediaDirectory;
-      break;
-  }
-  if (notEmptyString(subDir)) {
-    relPath += '/' + subDir;
-    const normalisedPath = path.resolve(relPath);
-    if (!fs.existsSync(normalisedPath)) {
-      fs.mkdirSync(normalisedPath);
-    }
-  }
-  return path.resolve(relPath) + '/';
 };
 
 export const smartParseJsonFromBuffer = buffer => {
@@ -428,38 +455,10 @@ export const writeSettingFile = (fileName: string, value = null) => {
   writeExportFile(fileName, value);
 };
 
-export const buildFullPath = (
-  filename: string,
-  type: string = 'media',
-  subDir = '',
-) => {
-  return mediaPath(type, subDir) + filename;
-};
-
 export const exportFileData = (filename: string): FileData => {
   const dirPath = mediaPath('exports');
   const fn = dirPath + filename;
   return getFileData(fn);
-};
-
-export const getFileData = (fn: string): FileData => {
-  const fp = fs.existsSync(fn) ? fn : '';
-  let iSize = 0;
-  let modified = '';
-  if (fp.length > 0) {
-    const { mtime, size } = fs.statSync(fp);
-    if (mtime instanceof Date) {
-      modified = mtime.toISOString();
-    }
-    if (size) {
-      iSize = size;
-    }
-  }
-  return {
-    path: fp,
-    modified,
-    size: iSize,
-  };
 };
 
 export const matchFullPath = (filename: string, dir = '', subDir = '') => {
@@ -475,7 +474,6 @@ export const matchFullPath = (filename: string, dir = '', subDir = '') => {
   return data;
 };
 
-
 export const readRawFile = (filename: string, dir = '', subDir = '') => {
   const fullPath = buildFullPath(filename, dir, subDir);
   let out = '';
@@ -484,10 +482,9 @@ export const readRawFile = (filename: string, dir = '', subDir = '') => {
       const buffer = fs.readFileSync(fullPath);
       out = buffer.toString();
     }
-    
   }
   return out;
-}
+};
 
 const matchMimeFromExtension = (extension = '') => {
   switch (extension) {
@@ -510,7 +507,7 @@ const matchMimeFromExtension = (extension = '') => {
     default:
       return 'application/octet-stream';
   }
-}
+};
 
 const matchTypeFromMime = (mime = '') => {
   switch (mime) {
@@ -521,15 +518,18 @@ const matchTypeFromMime = (mime = '') => {
     default:
       return mime.split('/').shift();
   }
-}
+};
 
-export const matchFileTypeAndMime = (filename = '', mimetype = '') => { 
+export const matchFileTypeAndMime = (filename = '', mimetype = '') => {
   let mime = mimetype || 'text/plain';
-  if (notEmptyString(filename) && emptyString(mimetype) || ['application/octet-stream'].includes(mimetype)) {
+  if (
+    (notEmptyString(filename) && emptyString(mimetype)) ||
+    ['application/octet-stream'].includes(mimetype)
+  ) {
     const fn = filename.toLowerCase();
     const extension = fn.split('.').pop();
     mime = matchMimeFromExtension(extension);
   }
   const type = matchTypeFromMime(mime);
   return { mime, fileType: type };
-}
+};
