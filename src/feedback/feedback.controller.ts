@@ -112,6 +112,12 @@ export class FeedbackController {
     return res.json(data);
   }
 
+  @Get('send-chat-request/:from/:to')
+  async sendChatRequest(@Res() res, @Body() createFlagDTO: CreateFlagDTO) {
+    const data = await this.sendNotification(createFlagDTO);
+    return res.json(data);
+  }
+
   async sendNotification(createFlagDTO: CreateFlagDTO) {
     const targetDeviceToken = await this.userService.getUserDeviceToken(
       createFlagDTO.targetUser,
