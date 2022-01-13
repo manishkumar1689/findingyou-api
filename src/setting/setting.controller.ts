@@ -270,9 +270,10 @@ export class SettingController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('flags')
-  async getAllFlags(@Res() res) {
-    const flags = await this.settingService.getFlags();
+  @Get('flags/:refresh')
+  async getAllFlags(@Res() res, @Param('refresh') refresh = '') {
+    const skipCache = refresh === 'refresh';
+    const flags = await this.settingService.getFlags(skipCache);
     return res.json(flags);
   }
 

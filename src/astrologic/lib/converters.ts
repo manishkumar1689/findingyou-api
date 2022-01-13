@@ -2,7 +2,7 @@ import { isNumeric } from '../../lib/validators';
 import { ephemerisDefaults } from '../../.config';
 import { GeoLoc } from './models/geo-loc';
 
-interface degreesMinutesSeconds {
+interface DegreesMinutesSeconds {
   deg: number;
   min: number;
   sec?: number;
@@ -17,7 +17,11 @@ export const locStringToGeo = (loc: string) => {
   return new GeoLoc({ lat, lng, alt });
 };
 
-export const latLngParamsToGeo = (latStr: string, lngStr: string, altStr = "") => {
+export const latLngParamsToGeo = (
+  latStr: string,
+  lngStr: string,
+  altStr = '',
+) => {
   const [lat, lng, altV] = [latStr, lngStr, altStr]
     .filter(isNumeric)
     .map(parseFloat);
@@ -25,7 +29,7 @@ export const latLngParamsToGeo = (latStr: string, lngStr: string, altStr = "") =
   return { lat, lng, alt };
 };
 
-export const dmsToDegrees = (dms: degreesMinutesSeconds) => {
+export const dmsToDegrees = (dms: DegreesMinutesSeconds) => {
   let v = 0;
   const keys = Object.keys(dms);
   if (keys.includes('deg')) {
@@ -45,7 +49,7 @@ export const dmsToDegrees = (dms: degreesMinutesSeconds) => {
 @return Object
 */
 export const decDegToDms = flDeg => {
-  let dms = { deg: 0, min: 0, sec: 0 };
+  const dms = { deg: 0, min: 0, sec: 0 };
   if (isNumeric(flDeg)) {
     flDeg = parseFloat(flDeg);
     dms.deg = Math.floor(flDeg);
@@ -84,16 +88,19 @@ export const degAsDms = (flDeg, mode = 'raw', precision = 0) => {
   return `${degrees}º ${dms.min}'${sec3dec}"${suffix}`;
 };
 
-
 export const correctDatetime = (dtStr: string): string => {
-  const [date,time] = dtStr.replace(/[a-z]$/i, '').split('.').shift().split('T');
+  const [date, time] = dtStr
+    .replace(/[a-z]$/i, '')
+    .split('.')
+    .shift()
+    .split('T');
   let timeStr = '12:00:00';
   if (typeof time === 'string' && /^\d+/.test(time)) {
     const parts = time.split(':');
     const timeParts = [0, 1, 2].map(ti => {
-      return ti < parts.length? parts[ti] : '00';
-    })
+      return ti < parts.length ? parts[ti] : '00';
+    });
     timeStr = timeParts.join(':');
   }
   return [date, timeStr].join('T');
-}
+};

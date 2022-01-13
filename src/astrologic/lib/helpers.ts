@@ -7,9 +7,6 @@ import { aspectGroups } from './settings/graha-values';
 import { Graha } from './models/graha-set';
 import { LngLat } from './interfaces';
 import { Placename } from '../../user/interfaces/placename.interface';
-import { KutaGrahaItem } from './kuta';
-import rashiValues from './settings/rashi-values';
-import maitriData from './settings/maitri-data';
 
 export const extractString = (obj: any, key: string): string => {
   let str = '';
