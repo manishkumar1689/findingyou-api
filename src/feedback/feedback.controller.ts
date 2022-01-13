@@ -21,6 +21,7 @@ import { notEmptyString } from '../lib/validators';
 import { SwipeDTO } from './dto/swipe.dto';
 import { sanitize, smartCastInt } from '../lib/converters';
 import { objectToMap } from '../lib/entities';
+import { isValidObjectId } from 'mongoose';
 
 @Controller('feedback')
 export class FeedbackController {
@@ -113,8 +114,33 @@ export class FeedbackController {
   }
 
   @Get('send-chat-request/:from/:to')
-  async sendChatRequest(@Res() res, @Body() createFlagDTO: CreateFlagDTO) {
-    const data = await this.sendNotification(createFlagDTO);
+  async sendChatRequest(
+    @Res() res,
+    @Param('from') from: string,
+    @Param('to') to: string,
+  ) {
+    const key = 'chat_quest';
+    const data: any = { valid: false, fcm: null };
+    if (isValidObjectId(from) && isValidObjectId(to)) {
+      const infoFrom = await this.userService.getBasicById(from);
+      if (
+        infoFrom instanceof Object &&
+        Object.keys(infoFrom).includes('nickName')
+      ) {
+        const text = `${infoFrom.nickName} wants to chat with you`;
+        const createFlagDTO = {
+          user: from,
+          targetUser: to,
+          key,
+          type: 'text',
+          value: text,
+        } as CreateFlagDTO;
+        data.fcm = await this.sendNotification(createFlagDTO);
+        if (data.fcm instanceof Object && data.fcm.valid) {
+          data.valid = true;
+        }
+      }
+    }
     return res.json(data);
   }
 
@@ -125,8 +151,10 @@ export class FeedbackController {
     let fcm: any = { valid: false, reason: 'missing device token' };
     const { key, type, value, user, targetUser } = createFlagDTO;
     if (notEmptyString(targetDeviceToken, 5)) {
-      const title = key;
-      const body = 'Someone has interacted with you.';
+      const title = key.replace(/_/g, ' ');
+      const body = notEmptyString(value, 2)
+        ? value
+        : 'Someone has interacted with you.';
       fcm = await pushMessage(targetDeviceToken, title, body, {
         key,
         type,
