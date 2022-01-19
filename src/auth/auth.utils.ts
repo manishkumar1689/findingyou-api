@@ -90,15 +90,18 @@ export const ipWhitelistFileData = () => {
   let extraIps: string[] = [];
   if (notEmptyString(ipWhitelistFileContent)) {
     const ipRgx = /^\d+\.\d+\.\d+\.\d+$/;
-    extraIps = ipWhitelistFileContent.split("\n").map(line => line.trim()).filter(line => ipRgx.test(line) && ipWhitelist.includes(line) === false);
+    extraIps = ipWhitelistFileContent
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => ipRgx.test(line) && ipWhitelist.includes(line) === false);
   }
   return extraIps;
-}
+};
 
 export const fetchIpWhitelist = () => {
   const extraIps = ipWhitelistFileData();
   return [...ipWhitelist, ...extraIps];
-}
+};
 
 export const maySkipValidation = (request: Request): boolean => {
   let valid = false;
@@ -109,7 +112,7 @@ export const maySkipValidation = (request: Request): boolean => {
   const { path } = request.route;
   const ipOverrides = fetchIpWhitelist();
   const mode =
-  ipOverrides.includes(ip) || pathWhitelist.includes(path)
+    ipOverrides.includes(ip) || pathWhitelist.includes(path)
       ? 'skip'
       : authMode.toString();
   switch (mode) {

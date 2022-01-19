@@ -12,6 +12,7 @@ import {
   mapFlagItems,
   mapUserFlag,
 } from '../lib/notifications';
+import { smartCastInt } from 'src/lib/converters';
 
 @Injectable()
 export class FeedbackService {
@@ -230,6 +231,62 @@ export class FeedbackService {
       });
     }
     return { userFlags, excludedIds, includedIds };
+  }
+
+  async rankByLikeability(userIds: string[] = [], skip = 0, limit = 10000) {
+    const filter: Map<string, any> = new Map();
+    filter.set('key', 'likeability');
+    filter.set('value', { $gt: 0 });
+    if (userIds.length > 0) {
+      filter.set('targetUser', {
+        $in: userIds,
+      });
+    }
+    const criteria = Object.fromEntries(filter.entries());
+    const rows = await this.flagModel
+      .find(criteria)
+      .select('value targetUser')
+      .sort({ modifiedAt: -1 })
+      .skip(skip)
+      .limit(limit);
+    const lMap: Map<string, number> = new Map();
+    rows.forEach(row => {
+      const { targetUser } = row;
+      const uid = targetUser.toString();
+      let vl = lMap.has(uid) ? lMap.get(uid) : 0;
+      vl += smartCastInt(row.value, 1);
+      lMap.set(uid, vl);
+    });
+    const entries = [...lMap.entries()];
+    entries.sort((a, b) => b[1] - a[1]);
+    return Object.fromEntries(entries);
+  }
+
+  async rankByActivity(userIds: string[] = [], weeks = 2) {
+    const oneWeek = weeks * 7 * 24 * 60 * 60 * 1000;
+    const nowTs = new Date().getTime();
+    const oneWeekAgo = new Date(nowTs - oneWeek);
+    const filter: Map<string, any> = new Map();
+    filter.set('modifiedAt', {
+      $gt: oneWeekAgo,
+    });
+    if (userIds.length > 0) {
+      filter.set('user', {
+        $in: userIds,
+      });
+    }
+    const criteria = Object.fromEntries(filter.entries());
+    const rows = await this.flagModel.find(criteria).select('user');
+    const lMap: Map<string, number> = new Map();
+    for (const row of rows) {
+      const { user } = row;
+      const uid = user.toString();
+      const vl = lMap.has(uid) ? lMap.get(uid) + 1 : 1;
+      lMap.set(uid, vl);
+    }
+    const entries = [...lMap.entries()];
+    entries.sort((a, b) => b[1] - a[1]);
+    return Object.fromEntries(entries);
   }
 
   async getMemberSet(user: string, uid: string) {

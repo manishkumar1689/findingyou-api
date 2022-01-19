@@ -102,7 +102,6 @@ import {
   smartCastFloat,
   smartCastBool,
   roundNumber,
-  keyValuesToSimpleObject,
 } from '../lib/converters';
 import { PairedChartInputDTO } from './dto/paired-chart-input.dto';
 import {

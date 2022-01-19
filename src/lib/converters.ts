@@ -44,7 +44,6 @@ export const smartCastString = (item = null, defVal = '') => {
 
 export const smartCastNumber = (item: any, defVal = 0, isInt = false) => {
   let out = defVal;
-
   if (typeof item === 'string') {
     if (item.length > 0) {
       if (/^\s*-?\d+(\.\d+)?\s*/.test(item)) {

@@ -919,6 +919,35 @@ export class UserController {
     return data;
   }
 
+  /**
+   * #mobile
+   * #admin
+   * Fetch most active users
+   */
+  @Get('most-active/:numWeeks?')
+  async getMostActive(@Res() res, @Param('numWeeks') numWeeks) {
+    const numWeeksInt = isNumeric(numWeeks) ? smartCastInt(numWeeks, 1) : 2;
+    const result = await this.feedbackService.rankByActivity([], numWeeksInt);
+    return res.status(HttpStatus.OK).json(result);
+  }
+
+  /**
+   * #mobile
+   * #admin
+   * Fetch most active users
+   */
+  @Get('most-liked/:start?/:limit?')
+  async getMostLiked(@Res() res, @Param('start') start, @Param('limit') limit) {
+    const startInt = isNumeric(start) ? smartCastInt(start, 0) : 0;
+    const limitInt = isNumeric(limit) ? smartCastInt(limit, 0) : 0;
+    const result = await this.feedbackService.rankByLikeability(
+      [],
+      startInt,
+      limitInt,
+    );
+    return res.status(HttpStatus.OK).json(result);
+  }
+
   /*
     #mobile
     #admin
