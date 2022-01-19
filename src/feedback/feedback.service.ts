@@ -12,7 +12,7 @@ import {
   mapFlagItems,
   mapUserFlag,
 } from '../lib/notifications';
-import { smartCastInt } from 'src/lib/converters';
+import { smartCastInt } from '../lib/converters';
 
 @Injectable()
 export class FeedbackService {
