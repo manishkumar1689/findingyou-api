@@ -233,7 +233,12 @@ export class FeedbackService {
     return { userFlags, excludedIds, includedIds };
   }
 
-  async rankByLikeability(userIds: string[] = [], skip = 0, limit = 10000) {
+  async rankByLikeability(
+    userIds: string[] = [],
+    maxDaysActiveAgo = 14,
+    skip = 0,
+    limit = 10000,
+  ) {
     const filter: Map<string, any> = new Map();
     filter.set('key', 'likeability');
     filter.set('value', { $gt: 0 });
@@ -250,16 +255,37 @@ export class FeedbackService {
       .skip(skip)
       .limit(limit);
     const lMap: Map<string, number> = new Map();
-    rows.forEach(row => {
+    for (const row of rows) {
       const { targetUser } = row;
       const uid = targetUser.toString();
       let vl = lMap.has(uid) ? lMap.get(uid) : 0;
       vl += smartCastInt(row.value, 1);
-      lMap.set(uid, vl);
-    });
+      const daysAgo = await this.lastFlagSentDaysAgo(uid);
+      if (daysAgo <= maxDaysActiveAgo) {
+        lMap.set(uid, vl);
+      }
+    }
     const entries = [...lMap.entries()];
     entries.sort((a, b) => b[1] - a[1]);
     return Object.fromEntries(entries);
+  }
+
+  async lastFlagSentDaysAgo(userId = '') {
+    const lastItems = await this.flagModel
+      .find({ user: userId })
+      .select('modifiedAt')
+      .sort({ modifiedAt: -1 })
+      .skip(0)
+      .limit(1);
+    if (lastItems.length > 0) {
+      const { modifiedAt } = lastItems[0];
+      if (modifiedAt instanceof Date) {
+        const currTs = new Date().getTime();
+        const ts = lastItems[0].modifiedAt.getTime();
+        return (currTs - ts) / (24 * 60 * 60 * 1000);
+      }
+    }
+    return -1;
   }
 
   async rankByActivity(userIds: string[] = [], weeks = 2) {
@@ -276,13 +302,25 @@ export class FeedbackService {
       });
     }
     const criteria = Object.fromEntries(filter.entries());
-    const rows = await this.flagModel.find(criteria).select('user');
+    console.log(criteria);
+    const rows = await this.flagModel.find(criteria).select('user modifiedAt');
     const lMap: Map<string, number> = new Map();
+    const currTs = new Date().getTime();
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const daysAgoToPoints = (daysAgo: number, weeks = 1) => {
+      const multiplier = weeks * 14;
+      return Math.ceil(multiplier / daysAgo);
+    };
     for (const row of rows) {
-      const { user } = row;
-      const uid = user.toString();
-      const vl = lMap.has(uid) ? lMap.get(uid) + 1 : 1;
-      lMap.set(uid, vl);
+      const { user, modifiedAt } = row;
+      if (user) {
+        const uid = user.toString();
+        const ts = modifiedAt.getTime();
+        const daysAgo = (currTs - ts) / msPerDay;
+        const points = daysAgoToPoints(daysAgo, weeks);
+        const vl = lMap.has(uid) ? lMap.get(uid) + points : points;
+        lMap.set(uid, vl);
+      }
     }
     const entries = [...lMap.entries()];
     entries.sort((a, b) => b[1] - a[1]);

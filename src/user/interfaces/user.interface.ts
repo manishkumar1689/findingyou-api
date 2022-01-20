@@ -15,6 +15,7 @@ export interface User extends Document {
   readonly roles: string[];
   readonly active: boolean;
   readonly test: boolean;
+  readonly boosts?: number;
   readonly status: Status[];
   readonly geo?: Geo;
   readonly coords?: number[];

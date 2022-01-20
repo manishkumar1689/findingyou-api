@@ -104,6 +104,7 @@ import { mergeProgressSets } from '../astrologic/lib/settings/progression';
 import { IdSetDTO } from './dto/id-set.dto';
 import { basicSetToFullChart } from '../astrologic/lib/models/chart';
 import { Kuta } from '../astrologic/lib/kuta';
+import { PaymentDTO } from './dto/payment.dto';
 
 @Controller('user')
 export class UserController {
@@ -382,6 +383,12 @@ export class UserController {
   ) {
     const { query } = request;
     const items = await this.fetchMembers(start, limit, query);
+    return res.json(items);
+  }
+
+  @Get('swipe-deck/:userID/:limit?')
+  async swipeDeck(@Res() res, @Param('userID') userID, @Param('limit') limit) {
+    const items = await this.fetchMembers(0, limit, { user: userID });
     return res.json(items);
   }
 
@@ -936,12 +943,20 @@ export class UserController {
    * #admin
    * Fetch most active users
    */
-  @Get('most-liked/:start?/:limit?')
-  async getMostLiked(@Res() res, @Param('start') start, @Param('limit') limit) {
+  @Get('most-liked/:daysAgo?/:start?/:limit?')
+  async getMostLiked(
+    @Res() res,
+    @Param('daysAgo') daysAgo,
+    @Param('start') start,
+    @Param('limit') limit,
+  ) {
+    const daInt = isNumeric(daysAgo) ? smartCastInt(daysAgo, 0) : 14;
+    const daysAgoInt = daInt > 0 ? daInt : 14;
     const startInt = isNumeric(start) ? smartCastInt(start, 0) : 0;
     const limitInt = isNumeric(limit) ? smartCastInt(limit, 0) : 0;
     const result = await this.feedbackService.rankByLikeability(
       [],
+      daysAgoInt,
       startInt,
       limitInt,
     );
@@ -1034,6 +1049,34 @@ export class UserController {
   */
   @Post('edit-status')
   async editStatus(@Res() res, @Body() editStatusDTO: EditStatusDTO) {
+    const data = await this.editStatusItem(editStatusDTO);
+    return res.json(data);
+  }
+
+  @Put('add-boost/:userID/:num/:days?')
+  async applyBoostStatus(
+    @Res() res,
+    @Param('userID') userID,
+    @Param('num') num,
+    @Param('days') days,
+    @Body() paymentDTO: PaymentDTO,
+  ) {
+    const numBoosts = isNumeric(num) ? smartCastInt(num, 1) : 1;
+    const numDays = isNumeric(days) ? smartCastInt(num, 7) : 7;
+    const futureTs = new Date().getTime() + numDays * 24 * 60 * 60 * 1000;
+    const expiryDate = new Date(futureTs);
+    const editStatusDTO = {
+      user: userID,
+      role: 'active',
+      paymentOption: 'booster',
+      payment: paymentDTO,
+      expiryDate,
+    };
+    const data = await this.editStatusItem(editStatusDTO, numBoosts);
+    return res.json(data);
+  }
+
+  async editStatusItem(editStatusDTO: EditStatusDTO, numBoosts = 0) {
     const roles = await this.getRoles();
     const paymentOptions = await this.getPaymentOptions();
     const { user, role, paymentOption, payment, expiryDate } = editStatusDTO;
@@ -1051,6 +1094,7 @@ export class UserController {
         matchedPO,
         payment,
         expiryDt,
+        numBoosts,
       );
       let userObj = userData instanceof Model ? userData.toObject() : {};
       const keys = Object.keys(userObj);
@@ -1070,7 +1114,7 @@ export class UserController {
         ...userObj,
       };
     }
-    return res.status(HttpStatus.OK).json(data);
+    return data;
   }
 
   /*

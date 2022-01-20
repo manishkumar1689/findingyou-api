@@ -601,12 +601,14 @@ export class UserService {
     paymentOption: PaymentOption = null,
     payData: PaymentDTO = null,
     expiryDt: Date = null,
+    numBoosts = 0,
   ): Promise<User> {
     const user = await this.userModel.findById(userID);
     const validRole = roles.some(r => r.key === statusKey);
     if (user && validRole) {
       const userObj = extractObject(user);
       let payment = null;
+      const { boosts } = userObj;
       if (payData instanceof Object) {
         const { service, ref, amount, curr, createdAt } = payData;
         payment = { service, ref, amount, curr, createdAt };
@@ -679,17 +681,46 @@ export class UserService {
       const newRoles = statuses.filter(st => st.current).map(st => st.role);
       const active =
         newRoles.length > 0 && newRoles.includes('blocked') === false;
-      return await this.userModel.findByIdAndUpdate(
-        userID,
-        {
-          active,
-          roles: newRoles,
-          status: statuses,
-          modifiedAt: currDt,
-        },
-        { new: true },
-      );
+      const edited: any = {
+        active,
+        roles: newRoles,
+        status: statuses,
+        modifiedAt: currDt,
+      };
+      if (numBoosts > 0) {
+        const currBoosts = isNumeric(boosts) ? smartCastInt(boosts, 0) : 0;
+        edited.boosts = currBoosts + numBoosts;
+      }
+      return await this.userModel.findByIdAndUpdate(userID, edited, {
+        new: true,
+      });
     }
+  }
+
+  async decrementBoost(userID = '') {
+    const user = await this.userModel.findById(userID).select('boosts');
+    const result = { valid: false, boosts: 0 };
+    if (user instanceof Model) {
+      const { boosts } = user;
+      if (isNumeric(boosts)) {
+        const currBoosts = smartCastInt(boosts);
+        if (currBoosts > 0) {
+          const edited = {
+            boosts: currBoosts - 1,
+          };
+          const editedUser = await this.userModel.findByIdAndUpdate(
+            userID,
+            edited,
+            { new: true },
+          );
+          if (editedUser) {
+            result.boosts = currBoosts - 1;
+            result.valid = true;
+          }
+        }
+      }
+    }
+    return result;
   }
 
   async updateActive(

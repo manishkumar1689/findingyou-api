@@ -14,9 +14,16 @@ const roleValues = [
     adminAccess: true,
     appAccess: false, // would have to use a separate account
     permissions: ['astrologic_testing', 'member_admin', 'dictionary_admin'],
-    likes: {
-
-    }
+    likes: {},
+  },
+  {
+    key: 'boosted',
+    name: 'Boosted user',
+    overrides: [], // temporary profile
+    adminAccess: false,
+    appAccess: false,
+    inherits: [],
+    permissions: ['boosted_profile'],
   },
   {
     key: 'blocked',
@@ -65,38 +72,38 @@ const roleValues = [
   },
 ];
 
-export const filterLikeabilityKey = (key = "") => {
+export const filterLikeabilityKey = (key = '') => {
   switch (key) {
     case 'liked1':
-      return { 
+      return {
         refNum: 1,
-        gte: false
+        gte: false,
       };
     case 'liked2':
     case 'superliked':
     case 'superstarred':
     case 'starred':
-      return { 
-        refNum: 2, 
-        gte: false
+      return {
+        refNum: 2,
+        gte: false,
       };
     case 'passed':
-      return { 
-        refNum: 0, 
-        gte: false
+      return {
+        refNum: 0,
+        gte: false,
       };
     case 'likeability':
     case 'likability':
-      return { 
-        refNum: -3, 
-        gte: true
+      return {
+        refNum: -3,
+        gte: true,
       };
     default:
-      return { 
-        refNum: 1, 
-        gte: true
+      return {
+        refNum: 1,
+        gte: true,
       };
   }
-}
+};
 
 export default roleValues;

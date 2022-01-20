@@ -73,6 +73,7 @@ export const UserSchema = new mongoose.Schema({
   dob: { type: Date, default: null, required: false },
   active: Boolean,
   test: Boolean,
+  boosts: { type: Number, required: false, default: 0 },
   status: [StatusSchema],
   deviceToken: String,
   token: String,
