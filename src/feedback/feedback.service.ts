@@ -63,7 +63,7 @@ export class FeedbackService {
       modifiedAt: 1,
     });
     return rows
-      .filter(row => row instanceof Model)
+      .filter(row => row instanceof Model && row.user)
       .map(row => {
         return {
           ...row.toObject(),
@@ -284,12 +284,14 @@ export class FeedbackService {
     const lMap: Map<string, number> = new Map();
     for (const row of rows) {
       const { targetUser } = row;
-      const uid = targetUser.toString();
-      let vl = lMap.has(uid) ? lMap.get(uid) : 0;
-      vl += smartCastInt(row.value, 1);
-      const daysAgo = await this.lastFlagSentDaysAgo(uid);
-      if (daysAgo <= maxDaysActiveAgo) {
-        lMap.set(uid, vl);
+      if (targetUser) {
+        const uid = targetUser.toString();
+        let vl = lMap.has(uid) ? lMap.get(uid) : 0;
+        vl += smartCastInt(row.value, 1);
+        const daysAgo = await this.lastFlagSentDaysAgo(uid);
+        if (daysAgo <= maxDaysActiveAgo) {
+          lMap.set(uid, vl);
+        }
       }
     }
     const entries = [...lMap.entries()];

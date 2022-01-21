@@ -435,10 +435,15 @@ export class UserController {
         gender: user.gender,
       };
       const members = await this.fetchMembers(0, limitInt, queryParams);
+      const ids = members.map(m => m._id);
+      const mostActive = await this.feedbackService.rankByActivity(ids, 2);
+      const mostPopular = await this.feedbackService.rankByLikeability(ids);
       return res.json({
         members,
         queryParams,
         excludedIds,
+        mostActive,
+        mostPopular,
         user,
         ratings,
         preferences: Object.fromEntries(preferenceMap.entries()),
