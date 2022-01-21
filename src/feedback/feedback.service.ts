@@ -45,6 +45,33 @@ export class FeedbackService {
     return await this.flagModel.find(criteria);
   }
 
+  async getRatings(user: string, yearsAgo = 1) {
+    const timeAgo = yearsAgo * 365.25 * 24 * 60 * 60 * 1000;
+    const startTsMs = new Date().getTime() - timeAgo;
+    const startDate = new Date(startTsMs);
+    const criteria = {
+      key: 'likeability',
+      $or: [{ targetUser: user }, { user }],
+      modifiedAt: {
+        $gte: startDate,
+      },
+    };
+    const rows = await this.flagModel.find(criteria).select({
+      user: 1,
+      targetUser: 1,
+      value: 1,
+      modifiedAt: 1,
+    });
+    return rows
+      .filter(row => row instanceof Model)
+      .map(row => {
+        return {
+          ...row.toObject(),
+          isFrom: row.user.toString() === user,
+        };
+      });
+  }
+
   async getAllUserInteractions(
     user: string,
     startDate = null,
@@ -302,7 +329,6 @@ export class FeedbackService {
       });
     }
     const criteria = Object.fromEntries(filter.entries());
-    console.log(criteria);
     const rows = await this.flagModel.find(criteria).select('user modifiedAt');
     const lMap: Map<string, number> = new Map();
     const currTs = new Date().getTime();

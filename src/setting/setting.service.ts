@@ -230,7 +230,8 @@ export class SettingService {
       .filter(
         pr =>
           pr instanceof Object &&
-          ['faceted', 'jungian'].includes(pr.type) === false,
+          ['faceted', 'jungian', 'simple_astro_pair'].includes(pr.type) ===
+            false,
       )
       .map(pref => transformUserPreferences(pref, surveys, multiscaleData));
 

@@ -236,6 +236,8 @@ export class UserService {
             filter.set('preferences', this.translateTargetGenders(val));
             break;
           case 'age_range':
+          case 'ageRange':
+          case 'agerange':
             filter.set('preferences', this.translateAgeRangeWithin(val));
             break;
           case 'ids':

@@ -105,6 +105,7 @@ import { IdSetDTO } from './dto/id-set.dto';
 import { basicSetToFullChart } from '../astrologic/lib/models/chart';
 import { Kuta } from '../astrologic/lib/kuta';
 import { PaymentDTO } from './dto/payment.dto';
+import { join } from 'path';
 
 @Controller('user')
 export class UserController {
@@ -388,8 +389,63 @@ export class UserController {
 
   @Get('swipe-deck/:userID/:limit?')
   async swipeDeck(@Res() res, @Param('userID') userID, @Param('limit') limit) {
-    const items = await this.fetchMembers(0, limit, { user: userID });
-    return res.json(items);
+    const limitInt = isNumeric(limit) ? smartCastInt(limit, 52) : 52;
+    const yearMs = 365.25 * 24 * 60 * 60 * 1000;
+    const userData = await this.getMember(userID);
+    if (userData.valid) {
+      const { user } = userData;
+      const preferenceMap: Map<string, any> = new Map(
+        user.preferences.map(pref => [pref.key, pref.value]),
+      );
+
+      /* const interactions = await this.feedbackService.fetchByLikeability(
+      userID,
+      startDate,
+      refNum,
+      gte,
+      mutualMode,
+    ); */
+      const ratings = await this.feedbackService.getRatings(userID);
+      const minVal = -3;
+      const age =
+        (new Date().getTime() - new Date(user.dob).getTime()) / yearMs;
+      const excludedIds = ratings
+        .filter(r => r.isFrom && r.value < 1 && r.value > minVal)
+        .map(r => r.targetUser);
+      const maxDistance = preferenceMap.has('max_distance')
+        ? preferenceMap.get('max_distance')
+        : 200;
+      const minAge = age < 28 ? 18 : age - 10;
+      const ageRange = preferenceMap.has('age_range')
+        ? preferenceMap.get('age_range')
+        : [minAge, age + 10];
+      const targetGenders = preferenceMap.has('genders')
+        ? preferenceMap.get('genders')
+        : user.gender === 'm'
+        ? ['f']
+        : ['m'];
+
+      const queryParams = {
+        user: userID,
+        context: 'search',
+        near: [user.geo.lat, user.geo.lng, maxDistance].join(','),
+        age: ageRange.join(','),
+        ageRange: age,
+        genders: targetGenders.join(','),
+        gender: user.gender,
+      };
+      const members = await this.fetchMembers(0, limitInt, queryParams);
+      return res.json({
+        members,
+        queryParams,
+        excludedIds,
+        user,
+        ratings,
+        preferences: Object.fromEntries(preferenceMap.entries()),
+      });
+    } else {
+      return res.status(HttpStatus.NOT_FOUND).json({ valid: false });
+    }
   }
 
   async fetchMembers(start = 0, limit = 100, queryRef = null) {
@@ -705,7 +761,17 @@ export class UserController {
     Fetch a particular user using ID
   */
   @Get('item/:userID/:mode?')
-  async getUser(@Res() res, @Param('userID') userID, @Param('mode') mode) {
+  async memberDeatils(
+    @Res() res,
+    @Param('userID') userID,
+    @Param('mode') mode,
+  ) {
+    const result = await this.getMember(userID, mode);
+    const status = result.valid ? HttpStatus.OK : HttpStatus.NOT_FOUND;
+    return res.status(status).json(result);
+  }
+
+  async getMember(userID = '', mode = '') {
     const result: Map<string, any> = new Map();
     result.set('user', null);
     const validUserId = userID.length === 24 && /^[0-9a-f]+$/i.test(userID);
@@ -747,8 +813,7 @@ export class UserController {
     if (notEmptyString(errorMsg)) {
       result.set('msg', errorMsg);
     }
-    const status = valid ? HttpStatus.OK : HttpStatus.NOT_FOUND;
-    return res.status(status).json(Object.fromEntries(result.entries()));
+    return Object.fromEntries(result.entries());
   }
 
   /**
