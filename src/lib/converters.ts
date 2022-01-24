@@ -160,3 +160,22 @@ export function shuffle<T>(unshuffled: T[]): T[] {
     .sort((a, b) => a.sort - b.sort)
     .map(({ value }) => value);
 }
+
+export interface MatchedItem {
+  item: any;
+  matched: boolean;
+}
+
+export const extractKeyedItem = (items: any[] = [], key = ''): MatchedItem => {
+  const matchedItem = items.find(item => item.key === key);
+  return { item: matchedItem, matched: matchedItem instanceof Object };
+};
+
+export const extractBooleanFromKeyedItems = (
+  items: any[] = [],
+  key = '',
+  defaultValue = false,
+): boolean => {
+  const { matched, item } = extractKeyedItem(items, key);
+  return matched && typeof item.value === 'boolean' ? item.value : defaultValue;
+};

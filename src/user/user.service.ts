@@ -29,7 +29,12 @@ import { PaymentOption } from './interfaces/payment-option.interface';
 import { PaymentDTO } from './dto/payment.dto';
 import { ProfileDTO } from './dto/profile.dto';
 import { MatchedOption, PrefKeyValue } from './settings/preference-options';
-import { smartCastBool, smartCastFloat, smartCastInt } from '../lib/converters';
+import {
+  extractBooleanFromKeyedItems,
+  smartCastBool,
+  smartCastFloat,
+  smartCastInt,
+} from '../lib/converters';
 import { MediaItemDTO } from './dto/media-item.dto';
 import { PreferenceDTO } from './dto/preference.dto';
 import { matchFileTypeAndMime } from '../lib/files';
@@ -93,7 +98,7 @@ export class UserService {
       item instanceof Object
         ? item
         : { _id: '', nickName: '', roles: [], profiles: [] };
-    const { _id, nickName, roles, profiles } = obj;
+    const { _id, nickName, roles, profiles, preferences } = obj;
     let profileImg = '';
     if (profiles instanceof Array && profiles.length > 0) {
       const { mediaItems } = profiles[0];
@@ -101,7 +106,12 @@ export class UserService {
         profileImg = mediaItems[0].filename;
       }
     }
-    return { _id, nickName, roles, profileImg };
+    const showOnlineStatus = extractBooleanFromKeyedItems(
+      preferences,
+      'show_online_status',
+      false,
+    );
+    return { _id, nickName, roles, profileImg, showOnlineStatus };
   }
 
   async getBasicByIds(ids: string[], uid: string) {
@@ -129,7 +139,7 @@ export class UserService {
         _id: uid,
         active: true,
       })
-      .select('_id active nickName roles profiles');
+      .select('_id active nickName roles profiles preferences');
     let user = null;
     if (items.length > 0) {
       const users = items.map(this.mapBasicUser);

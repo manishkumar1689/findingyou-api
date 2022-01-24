@@ -102,10 +102,9 @@ import { PublicUserDTO } from './dto/public-user.dto';
 import { User } from './interfaces/user.interface';
 import { mergeProgressSets } from '../astrologic/lib/settings/progression';
 import { IdSetDTO } from './dto/id-set.dto';
-import { basicSetToFullChart } from '../astrologic/lib/models/chart';
+import { basicSetToFullChart, Chart } from '../astrologic/lib/models/chart';
 import { Kuta } from '../astrologic/lib/kuta';
 import { PaymentDTO } from './dto/payment.dto';
-import { join } from 'path';
 
 @Controller('user')
 export class UserController {
@@ -393,6 +392,12 @@ export class UserController {
     const yearMs = 365.25 * 24 * 60 * 60 * 1000;
     const userData = await this.getMember(userID);
     if (userData.valid) {
+      const baseChartObj = await this.astrologicService.getUserBirthChart(
+        userID,
+      );
+      const baseObj =
+        baseChartObj instanceof Model ? baseChartObj.toObject() : null;
+      const baseChart = new Chart(baseObj);
       const { user } = userData;
       const preferenceMap: Map<string, any> = new Map(
         user.preferences.map(pref => [pref.key, pref.value]),
@@ -427,6 +432,7 @@ export class UserController {
 
       const queryParams = {
         user: userID,
+        mode: 'complete',
         context: 'search',
         near: [user.geo.lat, user.geo.lng, maxDistance].join(','),
         age: ageRange.join(','),
@@ -434,12 +440,23 @@ export class UserController {
         genders: targetGenders.join(','),
         gender: user.gender,
       };
-      const members = await this.fetchMembers(0, limitInt, queryParams);
+      const members = await this.fetchMembers(0, limitInt, queryParams, true);
+      const kutaPairs = [];
+      for (const member of members) {
+        if (member.hasChart) {
+          const kutaRow = await this.calcKutas(baseChart, member.chart);
+          kutaPairs.push({
+            c2: member.chart._id,
+            rows: kutaRow,
+          });
+        }
+      }
       const ids = members.map(m => m._id);
       const mostActive = await this.feedbackService.rankByActivity(ids, 2);
       const mostPopular = await this.feedbackService.rankByLikeability(ids);
       return res.json({
         members,
+        kutaPairs,
         queryParams,
         excludedIds,
         mostActive,
@@ -453,7 +470,22 @@ export class UserController {
     }
   }
 
-  async fetchMembers(start = 0, limit = 100, queryRef = null) {
+  async calcKutas(c1: Chart, c2: Chart) {
+    c1.setAyanamshaItemByKey('true_citra');
+    c2.setAyanamshaItemByKey('true_citra');
+    const kutaSet = await this.settingService.getKutaSettings();
+    const kutaBuilder = new Kuta(c1, c2);
+    kutaBuilder.loadCompatibility(kutaSet);
+    const grahaKeys = ['su', 'mo', 've', 'as'];
+    return kutaBuilder.calcAllSingleKutas(true, grahaKeys, 'ashta', false);
+  }
+
+  async fetchMembers(
+    start = 0,
+    limit = 100,
+    queryRef = null,
+    fullChart = false,
+  ) {
     const query: any = queryRef instanceof Object ? queryRef : {};
     const startInt = smartCastInt(start, 0);
     const limitInt = smartCastInt(limit, 100);
@@ -462,7 +494,7 @@ export class UserController {
     const queryKeys = Object.keys(query);
     let filterIds = [];
     let hasFilterIds = false;
-    const notLiked = queryKeys.includes('notliked');
+    //const notLiked = queryKeys.includes('notliked');
     const hasUser =
       queryKeys.includes('user') && notEmptyString(query.user, 16);
     const userId = hasUser ? query.user : '';
@@ -614,7 +646,9 @@ export class UserController {
       const chartObj = await this.astrologicService.getUserBirthChart(user._id);
       const hasChart = chartObj instanceof Object;
       const chart = hasChart
-        ? simplifyChart(chartObj, ayanamshaKey, simpleMode)
+        ? fullChart
+          ? new Chart(chartObj.toObject())
+          : simplifyChart(chartObj, ayanamshaKey, simpleMode)
         : {};
       const refUserId = user._id.toString();
       let preferences = [];
