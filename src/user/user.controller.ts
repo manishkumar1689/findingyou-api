@@ -774,9 +774,8 @@ export class UserController {
   @Get('permissions')
   async listPermissions(@Res() res) {
     const permData = await this.settingService.getPermissions();
-    console.log(permData);
     const permObj = permData instanceof Object ? permData : {};
-    const matchPermName = key => {
+    const matchPermName = (key: string) => {
       const row = permissionValues.find(pm => pm.key === key);
       return row instanceof Object ? row.name : toWords(key);
     };
