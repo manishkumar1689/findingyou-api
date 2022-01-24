@@ -105,6 +105,8 @@ import { IdSetDTO } from './dto/id-set.dto';
 import { basicSetToFullChart, Chart } from '../astrologic/lib/models/chart';
 import { Kuta } from '../astrologic/lib/kuta';
 import { PaymentDTO } from './dto/payment.dto';
+import { toWords } from '../astrologic/lib/helpers';
+import permissionValues from './settings/permissions';
 
 @Controller('user')
 export class UserController {
@@ -771,8 +773,28 @@ export class UserController {
   */
   @Get('permissions')
   async listPermissions(@Res() res) {
-    const data = await this.settingService.getPermissionData();
-    return res.status(HttpStatus.OK).json(data);
+    const permData = await this.settingService.getPermissions();
+    console.log(permData);
+    const permObj = permData instanceof Object ? permData : {};
+    const matchPermName = key => {
+      const row = permissionValues.find(pm => pm.key === key);
+      return row instanceof Object ? row.name : toWords(key);
+    };
+    const entryToPerm = ([key, value]) => {
+      return {
+        key,
+        name: matchPermName(key),
+        value,
+      };
+    };
+    return res.status(HttpStatus.OK).json({
+      items: Object.entries(permObj)
+        .filter(entry => typeof entry[1] === 'boolean')
+        .map(entryToPerm),
+      limits: Object.entries(permObj)
+        .filter(entry => typeof entry[1] === 'number')
+        .map(entryToPerm),
+    });
   }
 
   /*
