@@ -111,7 +111,19 @@ export class UserService {
       'show_online_status',
       false,
     );
-    return { _id, nickName, roles, profileImg, showOnlineStatus };
+    const hideFromExplore = extractBooleanFromKeyedItems(
+      preferences,
+      'hide_from_explore',
+      false,
+    );
+    return {
+      _id,
+      nickName,
+      roles,
+      profileImg,
+      showOnlineStatus,
+      hideFromExplore,
+    };
   }
 
   async getBasicByIds(ids: string[], uid: string) {
