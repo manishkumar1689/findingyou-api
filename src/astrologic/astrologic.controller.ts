@@ -742,11 +742,13 @@ export class AstrologicController {
         ...p2,
         progressSets: progressData.p2,
       };
+      data.key = '';
       data.valid = progressData.p2.length > 0;
       if (hasPublicUserId || hasUserId) {
         const pairKeyRef = params.has('pn') ? params.get('pn') : '';
         const pairNum = isNumeric(pairKeyRef) ? smartCastInt(pairKeyRef) : 1;
         const simpleChartKey = ['astro_pair', pairNum].join('_');
+        data.key = simpleChartKey;
         const pref = {
           key: simpleChartKey,
           type: 'simple_astro_pair',
@@ -788,7 +790,7 @@ export class AstrologicController {
     const datetime = correctDatetime(dtStr);
     const geo = isLocationString(loc) ? locStringToGeo(loc) : null;
     const hasGeo = geo instanceof Object;
-    const ayanamshaKey = notEmptyString(ayanamsha) ? ayanamsha : 'true_citra';
+    const ayanamshaKey = notEmptyString(ayanamsha) ? ayanamsha : 'truefcitra';
     const result = await this.astrologicService.getGrahaPositions(
       datetime,
       geo,
