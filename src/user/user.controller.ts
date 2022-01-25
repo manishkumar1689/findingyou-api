@@ -1870,6 +1870,20 @@ export class UserController {
     };
   }
 
+  @Delete('public-pair-delete/:uid/:key')
+  async deletePublicPair(@Res() res, @Param('uid') uid, @Param('key') key) {
+    const { exists, removed } = await this.userService.removePublicPreference(
+      uid,
+      key,
+    );
+    const status = exists
+      ? removed
+        ? HttpStatus.OK
+        : HttpStatus.NOT_MODIFIED
+      : HttpStatus.NOT_FOUND;
+    return res.status(status).json({ valid: exists, removed });
+  }
+
   @Get('public-users/:start?/:limit?')
   async getPublicUsers(
     @Res() res,

@@ -2041,4 +2041,27 @@ export class UserService {
       })
       .reduce((a, b) => a.concat(b));
   }
+
+  async removePublicPreference(uid: string, key: string) {
+    const pu = await this.publicUserModel.findById(uid);
+    const exists = pu instanceof Model;
+    const result = { exists, removed: false };
+    if (exists) {
+      const puObj = pu.toObject();
+      const { preferences } = puObj;
+      if (preferences instanceof Array) {
+        const prefIndex = preferences.findIndex(pr => pr.key === key);
+        if (prefIndex >= 0) {
+          preferences.splice(prefIndex, 1);
+          const updated = await this.publicUserModel.findByIdAndUpdate(uid, {
+            preferences,
+          });
+          if (updated) {
+            result.removed = true;
+          }
+        }
+      }
+    }
+    return result;
+  }
 }

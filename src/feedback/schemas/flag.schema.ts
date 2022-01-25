@@ -35,6 +35,7 @@ export const FlagSchema = new mongoose.Schema({
       'double',
       'string',
       'text',
+      'title_text',
       'array_string',
       'array_int',
       'array_double',

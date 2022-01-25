@@ -15,12 +15,13 @@ import { FeedbackService } from './feedback.service';
 import { UserService } from '../user/user.service';
 import { SettingService } from '../setting/setting.service';
 import { CreateFlagDTO } from './dto/create-flag.dto';
-import { mapLikeability, pushFlag, pushMessage } from '../lib/notifications';
+import { mapLikeability, pushMessage } from '../lib/notifications';
 import { notEmptyString } from '../lib/validators';
 import { SwipeDTO } from './dto/swipe.dto';
 import { sanitize, smartCastInt } from '../lib/converters';
 import { objectToMap } from '../lib/entities';
 import { isValidObjectId } from 'mongoose';
+import { fromBase64 } from '../lib/hash';
 
 @Controller('feedback')
 export class FeedbackController {
@@ -112,11 +113,12 @@ export class FeedbackController {
     return res.json(data);
   }
 
-  @Get('send-chat-request/:from/:to')
+  @Get('send-chat-request/:from/:to/:msg?')
   async sendChatRequest(
     @Res() res,
     @Param('from') from: string,
     @Param('to') to: string,
+    @Param('msg') msg: string,
   ) {
     const key = 'chat_request';
     const data: any = { valid: false, fcm: null };
@@ -126,13 +128,19 @@ export class FeedbackController {
         infoFrom instanceof Object &&
         Object.keys(infoFrom).includes('nickName')
       ) {
-        const text = `${infoFrom.nickName} wants to chat with you`;
+        const title = infoFrom.nickName;
+        const text = notEmptyString(msg, 2)
+          ? fromBase64(msg)
+          : 'New chat message';
         const createFlagDTO = {
           user: from,
           targetUser: to,
           key,
-          type: 'text',
-          value: text,
+          type: 'title_text',
+          value: {
+            title,
+            text,
+          },
         } as CreateFlagDTO;
         data.fcm = await this.sendNotification(createFlagDTO);
         if (data.fcm instanceof Object && data.fcm.valid) {
@@ -149,18 +157,29 @@ export class FeedbackController {
     );
     let fcm: any = { valid: false, reason: 'missing device token' };
     const { key, type, value, user, targetUser } = createFlagDTO;
+
     if (notEmptyString(targetDeviceToken, 5)) {
-      const title = key.replace(/_/g, ' ');
-      const body = notEmptyString(value, 2)
-        ? value
-        : 'Someone has interacted with you.';
-      fcm = await pushMessage(targetDeviceToken, title, body, {
-        key,
-        type,
-        value,
-        user,
-        targetUser,
-      });
+      const plainText = type === 'text' && notEmptyString(value);
+      const titleText =
+        type === 'title_text' &&
+        value instanceof Object &&
+        Object.keys(value).includes('title');
+      if (plainText || titleText) {
+        const title = plainText ? key.replace(/_/g, ' ') : value.title;
+        const body = plainText
+          ? notEmptyString(value, 2)
+            ? value
+            : 'Someone has interacted with you.'
+          : value.text;
+
+        fcm = await pushMessage(targetDeviceToken, title, body, {
+          key,
+          type,
+          value,
+          user,
+          targetUser,
+        });
+      }
     }
     return fcm;
   }
