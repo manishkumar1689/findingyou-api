@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Model } from 'mongoose';
+import { isValidObjectId, Model } from 'mongoose';
 import { ObjectId } from 'mongoose/lib/types';
 import { InjectModel } from '@nestjs/mongoose';
 import { MailerService } from '@nest-modules/mailer';
@@ -522,11 +522,17 @@ export class UserService {
           }
         }
       });
-      userData.set('status', statusValues);
+      if (statusValues.length > 0) {
+        userData.set('status', statusValues);
+      }
     }
     if (isNew) {
       userData.set('active', true);
       userData.set('createdAt', dt);
+    }
+    const stVals = userData.has('status') ? userData.get('status') : [];
+    if (stVals.length < 1) {
+      userData.delete('status');
     }
     userData.set('modifiedAt', dt);
     return hashMapToObject(userData);
@@ -537,70 +543,99 @@ export class UserService {
     userID: string,
     createUserDTO: CreateUserDTO,
     roles: Role[] = [],
-  ): Promise<{ user: User; keys: string[]; message: string }> {
-    const user = await this.userModel.findById(userID);
-    let message = 'User has been updated successfully';
-    const hasPassword = notEmptyString(createUserDTO.password);
-    let hasOldPassword = false;
-    let mayEditPassword =
-      user instanceof Object && notEmptyString(user.password);
-    if (hasPassword) {
-      hasOldPassword = notEmptyString(createUserDTO.oldPassword, 6);
-      if (hasOldPassword) {
-        mayEditPassword = bcrypt.compareSync(
-          createUserDTO.oldPassword,
-          user.password,
-        );
-      } else {
-        const hasAdmin = notEmptyString(createUserDTO.admin, 12);
-        mayEditPassword = hasAdmin
-          ? await this.isAdminUser(createUserDTO.admin)
-          : false;
+  ): Promise<{
+    user: User;
+    keys: string[];
+    message: string;
+    reasonKey: string;
+  }> {
+    const user =
+      notEmptyString(userID) && isValidObjectId(userID)
+        ? await this.userModel.findById(userID)
+        : null;
+    let updatedUser = {};
+    let userObj: any = {};
+    let message = 'User cannot be matched';
+    let reasonKey = 'unmatched';
+    if (user instanceof Model) {
+      message = 'User has been updated successfully';
+      const hasPassword = notEmptyString(createUserDTO.password);
+      let hasOldPassword = false;
+      const hasCurrentPassword = notEmptyString(user.password);
+      let mayEditPassword = false;
+      if (hasPassword && hasCurrentPassword) {
+        hasOldPassword = notEmptyString(createUserDTO.oldPassword, 6);
+        if (hasOldPassword) {
+          mayEditPassword = bcrypt.compareSync(
+            createUserDTO.oldPassword,
+            user.password,
+          );
+        } else {
+          const hasAdmin = notEmptyString(createUserDTO.admin, 12);
+          mayEditPassword = hasAdmin
+            ? await this.isAdminUser(createUserDTO.admin)
+            : false;
+        }
+      }
+      if (hasPassword && !mayEditPassword) {
+        if (user.mode !== 'local') {
+          reasonKey = 'social_login';
+          mayEditPassword = false;
+          message =
+            'May not edit password as user is authenticated via a third party service';
+        } else {
+          message = hasOldPassword
+            ? `May not edit password as the old password could not be matched`
+            : `Not authorised to edit the password`;
+        }
+      }
+      userObj = this.transformUserDTO(
+        createUserDTO,
+        false,
+        roles,
+        user,
+        mayEditPassword,
+      );
+      const editKeys = Object.keys(userObj).filter(key => key !== 'modifiedAt');
+      const hasProfileText =
+        Object.keys(createUserDTO).includes('publicProfileText') &&
+        notEmptyString(createUserDTO.publicProfileText, 2);
+      if (hasProfileText) {
+        const profile = {
+          type: 'public',
+          text: createUserDTO.publicProfileText,
+        } as ProfileDTO;
+        await this.saveProfile(userID, profile);
+      }
+      const hasPreferences =
+        Object.keys(createUserDTO).includes('preferences') &&
+        createUserDTO.preferences instanceof Array &&
+        createUserDTO.preferences.length > 0;
+      if (hasPreferences) {
+        const user = await this.userModel.findById(userID);
+        const prefs = this.mergePreferences(user, createUserDTO.preferences);
+        userObj.preferences = prefs;
+      }
+      if (editKeys.length > 0) {
+        updatedUser = await this.userModel.findByIdAndUpdate(userID, userObj, {
+          new: true,
+        });
+        if (updatedUser instanceof Model) {
+          if (hasPassword && mayEditPassword) {
+            reasonKey = 'password_edited';
+          } else {
+            reasonKey = 'user_edited';
+          }
+        }
       }
     }
-    if (hasPassword && !mayEditPassword) {
-      message = hasOldPassword
-        ? `May not edit password as the old password could not be matched`
-        : `Not authorised to edit the password`;
-    }
-    const userObj = this.transformUserDTO(
-      createUserDTO,
-      false,
-      roles,
-      user,
-      mayEditPassword,
-    );
-    const hasProfileText =
-      Object.keys(createUserDTO).includes('publicProfileText') &&
-      notEmptyString(createUserDTO.publicProfileText, 2);
-    if (hasProfileText) {
-      const profile = {
-        type: 'public',
-        text: createUserDTO.publicProfileText,
-      } as ProfileDTO;
-      await this.saveProfile(userID, profile);
-    }
-    const hasPreferences =
-      Object.keys(createUserDTO).includes('preferences') &&
-      createUserDTO.preferences instanceof Array &&
-      createUserDTO.preferences.length > 0;
-    if (hasPreferences) {
-      const user = await this.userModel.findById(userID);
-      const prefs = this.mergePreferences(user, createUserDTO.preferences);
-      userObj.preferences = prefs;
-    }
-    const updatedUser = await this.userModel.findByIdAndUpdate(
-      userID,
-      userObj,
-      { new: true },
-    );
-
     return {
       keys: Object.keys(userObj).filter(k => {
         return k === 'status' ? userObj[k].length > 0 : true;
       }),
       user: this.removeHiddenFields(updatedUser),
       message,
+      reasonKey,
     };
   }
 
@@ -1071,7 +1106,12 @@ export class UserService {
   }
 
   removeHiddenFields(user = null) {
-    const userObj = user instanceof Object ? user.toObject() : {};
+    const userObj =
+      user instanceof Object
+        ? user instanceof Model
+          ? user.toObject()
+          : user
+        : {};
     const keys = Object.keys(userObj);
     const hiddenKeys = ['password', 'coords', '__v'];
     hiddenKeys.forEach(key => {

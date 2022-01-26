@@ -167,7 +167,10 @@ import { processPredictiveRuleSet } from './lib/predictions';
 import { panchaPakshiDayNightSet } from './lib/settings/pancha-pakshi';
 import { PairsSetDTO } from './dto/pairs-set.dto';
 import { randomCompatibilityText } from './lib/settings/compatibility-texts';
-import { buildProgressSetPairs } from './lib/settings/progression';
+import {
+  buildProgressSetPairs,
+  buildSingleProgressSet,
+} from './lib/settings/progression';
 import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
 
@@ -772,6 +775,38 @@ export class AstrologicController {
       }
     }
     return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('next-p2/:chartID/:showISO?/:grahas?')
+  async renderNextProgressionPositionsForChart(
+    @Res() res,
+    @Param('chartID') chartID,
+    @Param('showISO') showISO,
+    @Param('grahas') grahas,
+  ) {
+    const chartData = await this.astrologicService.getChart(chartID);
+    const rsMap: Map<string, any> = new Map();
+    if (chartData instanceof Model) {
+      const chart = new Chart(chartData.toObject());
+      const showISODt = isNumeric(showISO)
+        ? smartCastInt(showISO, 0) > 0
+        : false;
+      let grahaKeys = ['su', 've', 'ma'];
+      if (notEmptyString(grahas)) {
+        const gKeys = grahas.split(',').filter(gk => gk.length === 2);
+        if (gKeys.length > 0) {
+          grahaKeys = gKeys;
+        }
+      }
+      const progSet = await buildSingleProgressSet(
+        chart.jd,
+        4,
+        grahaKeys,
+        showISODt,
+      );
+      rsMap.set('progressSet', progSet);
+    }
+    return res.json(Object.fromEntries(rsMap.entries()));
   }
 
   /*

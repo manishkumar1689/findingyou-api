@@ -59,12 +59,14 @@ export const toProgressionJdIntervals = (
   const currYear = new Date().getFullYear();
   const yl = getYearLength(yearType);
   const numYearsAgo = numYears * (1 - inFuture);
-  const startYear = currYear - numYearsAgo;
+  const startYearFl = currYear - numYearsAgo;
+  const startYear = Math.floor(startYearFl);
   const dateStr = [
     [startYear.toString(), '01', '01'].join('-'),
     '00:00:00',
   ].join('T');
-  const startJd = dateStringToJulianDay(dateStr);
+  const startYearAdd = startYearFl % 1;
+  const startJd = dateStringToJulianDay(dateStr) + startYearAdd * yl;
   //const startJd = refJd - numYears * (1 - inFuture) * yl;
   const startProgressionJd = toProgressionJD(birthJd, startJd);
   const jdPairs: JDProgress[] = [{ pd: startProgressionJd, jd: startJd }];
@@ -146,6 +148,24 @@ export const buildProgressSetPairs = async (
     p1: p1Set,
     p2: p2Set,
   };
+};
+
+export const buildSingleProgressSet = async (
+  jd = 0,
+  numSamples = 4,
+  progressKeys = ['su', 've', 'ma'],
+  showIsoDates = false,
+  perYear = 4,
+) => {
+  const numYears = numSamples / perYear;
+  const futureFrac = 1 - 1 / perYear;
+  const intervals = toProgressionJdIntervals(jd, numYears, perYear, futureFrac);
+  const progSet = await buildProgressBodySets(
+    intervals,
+    progressKeys,
+    showIsoDates,
+  );
+  return progSet;
 };
 
 export const mergeProgressSets = async (

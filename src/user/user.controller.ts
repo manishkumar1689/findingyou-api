@@ -275,6 +275,49 @@ export class UserController {
     #admin
     #astrotesting
   */
+  @Put('edit-password/:userID')
+  async editUserPassword(
+    @Res() res,
+    @Param('userID') userID,
+    @Body() createUserDTO: CreateUserDTO,
+  ) {
+    const roles = await this.getRoles();
+    const filteredEntries = Object.entries(createUserDTO).filter(entry =>
+      ['password', 'oldPassword'].includes(entry[0]),
+    );
+    let msg = 'invalid payload';
+    let userObj: any = {};
+    let status = HttpStatus.NOT_ACCEPTABLE;
+    let reason = 'invalid_input';
+    if (filteredEntries.length === 2) {
+      const filteredDTO = Object.fromEntries(filteredEntries) as CreateUserDTO;
+      console.log(filteredDTO);
+      const {
+        user,
+        keys,
+        message,
+        reasonKey,
+      } = await this.userService.updateUser(userID, filteredDTO, roles);
+      msg = message;
+      userObj = user;
+      reason = reasonKey;
+      status =
+        user instanceof Object && keys.length > 0
+          ? HttpStatus.OK
+          : HttpStatus.NOT_ACCEPTABLE;
+    }
+    return res.status(status).json({
+      message: msg,
+      user: userObj,
+      reason,
+    });
+  }
+
+  /*
+    #mobile
+    #admin
+    #astrotesting
+  */
   @Get('list/:start?/:limit?')
   async getUsersByCriteria(
     @Res() res,
