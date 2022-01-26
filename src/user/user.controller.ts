@@ -291,7 +291,6 @@ export class UserController {
     let reason = 'invalid_input';
     if (filteredEntries.length === 2) {
       const filteredDTO = Object.fromEntries(filteredEntries) as CreateUserDTO;
-      console.log(filteredDTO);
       const {
         user,
         keys,
