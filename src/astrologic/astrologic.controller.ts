@@ -4493,7 +4493,6 @@ export class AstrologicController {
         chartIDs = await this.astrologicService.idsWithoutProgressItems(
           limitInt,
         );
-        console.log(chartIDs);
       }
     }
     if (chartIDs.length > 0) {
