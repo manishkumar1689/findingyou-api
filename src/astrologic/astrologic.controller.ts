@@ -170,6 +170,7 @@ import { randomCompatibilityText } from './lib/settings/compatibility-texts';
 import {
   buildProgressSetPairs,
   buildSingleProgressSet,
+  buildSingleProgressSetKeyValues,
 } from './lib/settings/progression';
 import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
@@ -1470,6 +1471,9 @@ export class AstrologicController {
             }
             const placenames = mapToponyms(geoInfo.toponyms, geo, locality);
 
+            const progressItems = await buildSingleProgressSetKeyValues(
+              chartData.jd,
+            );
             data.chart = {
               user,
               isDefaultBirthChart,
@@ -1479,6 +1483,7 @@ export class AstrologicController {
               placenames,
               status,
               ...chartData,
+              progressItems,
             };
             if (notEmptyString(parent, 16)) {
               data.chart.parent = parent;
@@ -2207,6 +2212,9 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  /*
+   maintenance / development
+  */
   async recalcChart(chart) {
     const core = await calcCompactChartData(
       julToISODate(chart.jd),

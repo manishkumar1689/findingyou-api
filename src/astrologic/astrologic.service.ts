@@ -88,7 +88,7 @@ import { simplifyChart } from './lib/member-charts';
 import { getAshtakavargaBodyGrid } from './lib/settings/ashtakavarga-values';
 import { GeoPos } from './interfaces/geo-pos';
 import { ProgressItemDTO } from './dto/progress-item.dto';
-import { buildSingleProgressSet } from './lib/settings/progression';
+import { buildSingleProgressSetKeyValues } from './lib/settings/progression';
 import { currentJulianDay } from './lib/julian-date';
 const { ObjectId } = Types;
 
@@ -1048,11 +1048,8 @@ export class AstrologicService {
             ? chartData.progressItems.filter(pi => pi.jd >= oneYearOld)
             : [];
         numProgressItems = pItems.length;
-        const grahaKeys = ['su', 've', 'ma'];
-        const newProgressSet = await buildSingleProgressSet(
+        const newProgressSet = await buildSingleProgressSetKeyValues(
           chartObj.jd,
-          4,
-          grahaKeys,
         );
         let lastItemJd = 0;
         if (pItems.length > 1) {
@@ -1060,12 +1057,9 @@ export class AstrologicService {
           lastItemJd = pItems[pItems.length - 1].jd;
         }
         if (lastItemJd < lastFutureJd) {
-          const newProgressItems = newProgressSet
-            .map(pItem => {
-              const bodies = simpleObjectToKeyValues(pItem.bodies);
-              return { ...pItem, bodies };
-            })
-            .filter(pi => pi.jd > lastItemJd);
+          const newProgressItems = newProgressSet.filter(
+            pi => pi.jd > lastItemJd,
+          );
           const progressItems = pItems.map(pi => pi as ProgressItemDTO);
           for (const pItem of newProgressItems) {
             progressItems.push(pItem as ProgressItemDTO);

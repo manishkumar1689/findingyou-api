@@ -1,4 +1,7 @@
-import { keyValuesToSimpleObject } from '../../../lib/converters';
+import {
+  keyValuesToSimpleObject,
+  simpleObjectToKeyValues,
+} from '../../../lib/converters';
 import { calcAyanamsha, calcLngsJd } from '../core';
 import { julToISODate } from '../date-funcs';
 import { KeyLng } from '../interfaces';
@@ -166,6 +169,14 @@ export const buildSingleProgressSet = async (
     showIsoDates,
   );
   return progSet;
+};
+
+export const buildSingleProgressSetKeyValues = async (jd = 0) => {
+  const pgs = await buildSingleProgressSet(jd);
+  return pgs.map(pItem => {
+    const bodies = simpleObjectToKeyValues(pItem.bodies);
+    return { ...pItem, bodies };
+  });
 };
 
 export const mergeProgressSets = async (
