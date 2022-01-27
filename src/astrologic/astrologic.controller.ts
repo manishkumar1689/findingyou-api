@@ -102,6 +102,7 @@ import {
   smartCastFloat,
   smartCastBool,
   roundNumber,
+  simpleObjectToKeyValues,
 } from '../lib/converters';
 import { PairedChartInputDTO } from './dto/paired-chart-input.dto';
 import {
@@ -173,6 +174,7 @@ import {
 } from './lib/settings/progression';
 import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
+import { currentJulianDay } from './lib/julian-date';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -4472,6 +4474,39 @@ export class AstrologicController {
     const data = fetchAllSettings(filters);
     return res.status(HttpStatus.OK).json(data);
   }
+
+  /*
+   * maintenance
+   */
+
+  /* async saveP2Set(chartID = '') {
+    if (notEmptyString(chartID) && isValidObjectId(chartID)) {
+      const chartData = await this.astrologicService.getChart(chartID);
+      const currentJd = currentJulianDay();
+      const oneYearOld = currentJulianDay() - 365.25;
+      if (chartData instanceof Model) {
+        const chartObj = chartData.toObject();
+        const cKeys = Object.keys(chartData);
+        const pItems =
+          cKeys.includes('progressItems') &&
+          chartData.progressItems instanceof Array
+            ? chartData.progressItems
+            : [];
+        const grahaKeys = ['su', 've', 'ma'];
+        const newProgressSet = await buildSingleProgressSet(
+          chartObj.jd,
+          4,
+          grahaKeys,
+        );
+        pItems.sort((a, b) => a.jd - b.jd);
+        const latestItem = pItems[pItems.length - 1].jd;
+        const progressItems = newProgressSet.map(pItem => {
+          const bodies = simpleObjectToKeyValues(pItem.bodies);
+          return { ...pItem, bodies };
+        });
+      }
+    }
+  } */
 
   /*
    * development

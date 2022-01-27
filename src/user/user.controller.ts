@@ -16,6 +16,7 @@ import {
 } from '@nestjs/common';
 import { RedisService } from 'nestjs-redis';
 import * as Redis from 'ioredis';
+import { MailerService } from '@nest-modules/mailer';
 import { UserService } from './user.service';
 import { MessageService } from '../message/message.service';
 import { SettingService } from '../setting/setting.service';
@@ -37,7 +38,7 @@ import {
   toBase64,
   tokenTo6Digits,
 } from '../lib/hash';
-import { maxResetMinutes } from '../.config';
+import { mailDetails, maxResetMinutes } from '../.config';
 import * as bcrypt from 'bcrypt';
 import {
   extractDocId,
@@ -107,6 +108,7 @@ import { Kuta } from '../astrologic/lib/kuta';
 import { PaymentDTO } from './dto/payment.dto';
 import { toWords } from '../astrologic/lib/helpers';
 import permissionValues from './settings/permissions';
+import { EmailParams } from './interfaces/email-params';
 
 @Controller('user')
 export class UserController {
@@ -119,6 +121,7 @@ export class UserController {
     private geoService: GeoService,
     private feedbackService: FeedbackService,
     private readonly redisService: RedisService,
+    private mailerService: MailerService,
   ) {}
 
   async redisClient(): Promise<Redis.Redis> {
@@ -1491,10 +1494,9 @@ export class UserController {
     if (user) {
       if (notEmptyString(user.token, 6)) {
         const resetLink = '/user/reset/' + toBase64(userID + '__' + user.token);
-        data.set('token', user.token);
+        //data.set('token', user.token);
         const resetNumber = tokenTo6Digits(user.token);
         data.set('number', resetNumber);
-
         if (webMode) {
           data.set('link', resetLink);
         } else {
@@ -1528,7 +1530,7 @@ export class UserController {
       userID = extractDocId(user);
     }
     if (userID.length > 3) {
-      return this.triggerResetRequest(userID, res);
+      return this.triggerResetRequest(userID, res, true);
     } else {
       return res
         .status(HttpStatus.OK)
@@ -2235,5 +2237,43 @@ export class UserController {
       mode: 'local',
     };
     this.userService.create(user);
+  }
+
+  @Get('test-mail/:email/:subject/:text')
+  async testMail(
+    @Res() res,
+    @Param('email') email,
+    @Param('subject') subject,
+    @Param('text') text,
+  ) {
+    const result = await this.sendMail({ email, subject, html: text });
+    return res.json(result);
+  }
+
+  async sendMail(emailParams: EmailParams) {
+    const { email, subject, html, from } = emailParams;
+    const result = { valid: false, sent: false, error: null };
+    const fromAddress = notEmptyString(from) ? from : mailDetails.fromAddress;
+    await this.mailerService
+      .sendMail({
+        to: email, // list of receivers
+        from: fromAddress, // sender address
+        subject,
+        text: html
+          .replace(/<\w+[^>]*?>/g, '')
+          .replace(/<a\b[^>]*?href="([^">]+?)"[^>]*?>([^<]*?)<\/a>/g, '$2 ($1)')
+          .replace(/<\/(i|em|b|strong|span)>/g, '')
+          .replace(/<\/\w+>/g, '\n'), // plaintext body
+        html, // HTML body content
+      })
+      .then(data => {
+        result.sent = true;
+        result.valid = true;
+      })
+      .catch(e => {
+        result.sent = false;
+        result.error = e;
+      });
+    return result;
   }
 }

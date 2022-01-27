@@ -10,6 +10,7 @@ import { VariantSet } from './variant-set.interface';
 import { ObjectMatchSet } from './object-match-set.interface';
 import { RashiSet } from '../lib/models/rashi-set';
 import { StringValue } from './string-value.interface';
+import { ProgressItem } from './progress-item.interface';
 
 export interface Chart extends Document {
   readonly user: string;
@@ -30,12 +31,13 @@ export interface Chart extends Document {
   readonly houses: HouseSystem[];
   readonly indianTime: ITime;
   readonly ayanamshas: KeyNumValue[];
-  readonly upagrahas: KeyNumValue[];
-  readonly sphutas: VariantSet[];
-  readonly numValues: KeyNumValue[];
-  readonly stringValues: StringValue[];
-  readonly objects: ObjectMatchSet[];
+  readonly upagrahas?: KeyNumValue[];
+  readonly sphutas?: VariantSet[];
+  readonly numValues?: KeyNumValue[];
+  readonly stringValues?: StringValue[];
+  readonly objects?: ObjectMatchSet[];
   readonly rashis?: RashiSet[];
+  readonly progressItems?: ProgressItem[];
   readonly notes: string;
   readonly createdAt: Date;
   readonly modifiedAt: Date;

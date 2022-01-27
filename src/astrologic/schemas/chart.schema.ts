@@ -10,6 +10,7 @@ import { VariantSetSchema } from './variant-set.schema';
 import { ObjectMatchSetSchema } from './object-match-set.schema';
 import { StringValueSchema } from './string-value.schema';
 import { RashiSetSchema } from './rashi-set.schema';
+import { ProgressItemSchema } from './progress-item.schema';
 const { ObjectId } = mongoose.Schema.Types;
 
 export const ChartSchema = new mongoose.Schema({
@@ -125,6 +126,11 @@ export const ChartSchema = new mongoose.Schema({
   },
   rashis: {
     type: [RashiSetSchema],
+    required: false,
+    default: [],
+  },
+  progressItems: {
+    type: [ProgressItemSchema],
     required: false,
     default: [],
   },

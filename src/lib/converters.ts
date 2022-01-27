@@ -1,3 +1,4 @@
+import { KeyNumValue } from '../astrologic/lib/interfaces';
 import { isNumeric } from './validators';
 
 export const objectToQueryString = (obj: any): string => {
@@ -152,6 +153,21 @@ export const keyValuesToSimpleObject = (
         : ['', null];
     });
   return Object.fromEntries(rowEntries);
+};
+
+export const simpleObjectToKeyValues = (inData: any = null): KeyNumValue[] => {
+  if (inData instanceof Object) {
+    return Object.entries(inData)
+      .filter(entry => isNumeric(entry[1]))
+      .map(([key, value]) => {
+        return {
+          key,
+          value: smartCastFloat(value),
+        };
+      });
+  } else {
+    return [];
+  }
 };
 
 export function shuffle<T>(unshuffled: T[]): T[] {

@@ -9,6 +9,8 @@ import { KeyNumValueDTO } from './key-num-value.dto';
 import { VariantSetDTO } from './variant-set.dto';
 import { ObjectMatchSetDTO } from './object-match-set.dto';
 import { StringValueDTO } from './string-value.dto';
+import { ProgressItemDTO } from './progress-item.dto';
+import { RashiDTO } from './rashi.dto';
 
 export class CreateChartDTO {
   @ApiProperty()
@@ -66,19 +68,25 @@ export class CreateChartDTO {
   readonly ayanamshas: KeyNumValueDTO[];
 
   @ApiProperty()
-  upagrahas: KeyNumValueDTO[];
+  upagrahas?: KeyNumValueDTO[];
 
   @ApiProperty()
-  sphutas: VariantSetDTO[];
+  sphutas?: VariantSetDTO[];
 
   @ApiProperty()
-  numValues: Array<KeyNumValueDTO>;
+  numValues?: Array<KeyNumValueDTO>;
 
   @ApiProperty()
-  stringValues: StringValueDTO[];
+  stringValues?: StringValueDTO[];
 
   @ApiProperty()
-  objects: Array<ObjectMatchSetDTO>;
+  objects?: ObjectMatchSetDTO[];
+
+  @ApiProperty()
+  rashis?: RashiDTO[];
+
+  @ApiProperty()
+  readonly progressItems?: ProgressItemDTO[];
 
   @ApiProperty()
   readonly createdAt: Date;
