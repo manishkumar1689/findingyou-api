@@ -292,6 +292,7 @@ export class UserController {
     let userObj: any = {};
     let status = HttpStatus.NOT_ACCEPTABLE;
     let reason = 'invalid_input';
+    let valid = false;
     if (filteredEntries.length === 2) {
       const filteredDTO = Object.fromEntries(filteredEntries) as CreateUserDTO;
       const {
@@ -303,16 +304,15 @@ export class UserController {
       msg = message;
       userObj = user;
       reason = reasonKey;
-      status =
-        user instanceof Object && keys.length > 0
-          ? HttpStatus.OK
-          : HttpStatus.NOT_ACCEPTABLE;
+      valid = user instanceof Object && keys.length > 0;
+      status = valid ? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
     }
-    return res.status(status).json({
+    const baseResult = {
       message: msg,
-      user: userObj,
       reason,
-    });
+      valid,
+    };
+    return res.status(status).json(baseResult);
   }
 
   /*

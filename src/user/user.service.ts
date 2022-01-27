@@ -556,7 +556,8 @@ export class UserService {
     let updatedUser = {};
     let userObj: any = {};
     let message = 'User cannot be matched';
-    let reasonKey = 'unmatched';
+    let reasonKey = 'unmatched_user';
+    let valid = false;
     if (user instanceof Model) {
       message = 'User has been updated successfully';
       const hasPassword = notEmptyString(createUserDTO.password);
@@ -570,11 +571,17 @@ export class UserService {
             createUserDTO.oldPassword,
             user.password,
           );
+          if (!mayEditPassword) {
+            reasonKey = 'unmatched_old_password';
+          }
         } else {
           const hasAdmin = notEmptyString(createUserDTO.admin, 12);
           mayEditPassword = hasAdmin
             ? await this.isAdminUser(createUserDTO.admin)
             : false;
+          if (!mayEditPassword) {
+            reasonKey = 'not_authorised';
+          }
         }
       }
       if (hasPassword && !mayEditPassword) {
@@ -620,6 +627,7 @@ export class UserService {
         updatedUser = await this.userModel.findByIdAndUpdate(userID, userObj, {
           new: true,
         });
+        valid = true;
         if (updatedUser instanceof Model) {
           if (hasPassword && mayEditPassword) {
             reasonKey = 'password_edited';
@@ -633,7 +641,7 @@ export class UserService {
       keys: Object.keys(userObj).filter(k => {
         return k === 'status' ? userObj[k].length > 0 : true;
       }),
-      user: this.removeHiddenFields(updatedUser),
+      user: valid ? this.removeHiddenFields(updatedUser) : null,
       message,
       reasonKey,
     };
