@@ -123,7 +123,6 @@ import {
   basicSetToFullChart,
   Chart,
   generateBasicChart,
-  simpleSetToFullChart,
 } from './lib/models/chart';
 import { AspectSet, calcOrb } from './lib/calc-orbs';
 import { AspectSetDTO } from './dto/aspect-set.dto';
@@ -174,7 +173,6 @@ import {
 } from './lib/settings/progression';
 import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
-import { currentJulianDay } from './lib/julian-date';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -4475,39 +4473,37 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  /*
-   * maintenance
-   */
-
-  /* async saveP2Set(chartID = '') {
-    if (notEmptyString(chartID) && isValidObjectId(chartID)) {
-      const chartData = await this.astrologicService.getChart(chartID);
-      const currentJd = currentJulianDay();
-      const oneYearOld = currentJulianDay() - 365.25;
-      if (chartData instanceof Model) {
-        const chartObj = chartData.toObject();
-        const cKeys = Object.keys(chartData);
-        const pItems =
-          cKeys.includes('progressItems') &&
-          chartData.progressItems instanceof Array
-            ? chartData.progressItems
-            : [];
-        const grahaKeys = ['su', 've', 'ma'];
-        const newProgressSet = await buildSingleProgressSet(
-          chartObj.jd,
-          4,
-          grahaKeys,
+  @Get('add-p2')
+  async addP2Set(@Res() res, @Query() query) {
+    const filter: Map<string, any> =
+      query instanceof Object ? new Map(Object.entries(query)) : new Map();
+    let chartIDs: string[] = [];
+    const result = { valid: false, updated: [] };
+    if (filter.has('cid')) {
+      chartIDs.push(filter.get('cid'));
+    } else if (filter.has('cids')) {
+      const cids = filter.get('cids');
+      if (typeof cids === 'string' && cids.length > 12) {
+        chartIDs = cids.split(',');
+      }
+    } else if (filter.has('limit')) {
+      const limit = filter.get('limit');
+      if (isNumeric(limit)) {
+        const limitInt = smartCastInt(limit, 100);
+        chartIDs = await this.astrologicService.idsWithoutProgressItems(
+          limitInt,
         );
-        pItems.sort((a, b) => a.jd - b.jd);
-        const latestItem = pItems[pItems.length - 1].jd;
-        const progressItems = newProgressSet.map(pItem => {
-          const bodies = simpleObjectToKeyValues(pItem.bodies);
-          return { ...pItem, bodies };
-        });
+        console.log(chartIDs);
       }
     }
-  } */
-
+    if (chartIDs.length > 0) {
+      for (const cid of chartIDs) {
+        const itemResult = await this.astrologicService.saveP2Set(cid);
+        result.updated.push({ ...itemResult, chartID: cid });
+      }
+    }
+    return res.status(HttpStatus.OK).json(result);
+  }
   /*
    * development
    */

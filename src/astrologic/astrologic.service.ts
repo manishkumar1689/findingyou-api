@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { isValidObjectId, Model, Types } from 'mongoose';
 import { BodySpeed } from './interfaces/body-speed.interface';
 import { Chart } from './interfaces/chart.interface';
 import { BodySpeedDTO } from './dto/body-speed.dto';
@@ -68,7 +68,11 @@ import {
 import { Chart as ChartClass } from './lib/models/chart';
 import { Kuta } from './lib/kuta';
 import { AspectSet, buildDegreeRange, buildLngRange } from './lib/calc-orbs';
-import { sanitize, smartCastInt } from '../lib/converters';
+import {
+  sanitize,
+  simpleObjectToKeyValues,
+  smartCastInt,
+} from '../lib/converters';
 import { KeyValue } from './interfaces/key-value';
 import { TagDTO } from './dto/tag.dto';
 import {
@@ -83,6 +87,9 @@ import { LngLat } from './lib/interfaces';
 import { simplifyChart } from './lib/member-charts';
 import { getAshtakavargaBodyGrid } from './lib/settings/ashtakavarga-values';
 import { GeoPos } from './interfaces/geo-pos';
+import { ProgressItemDTO } from './dto/progress-item.dto';
+import { buildSingleProgressSet } from './lib/settings/progression';
+import { currentJulianDay } from './lib/julian-date';
 const { ObjectId } = Types;
 
 @Injectable()
@@ -993,6 +1000,88 @@ export class AstrologicService {
         .exec();
       return await this.chartModel.findById(chartID);
     }
+  }
+
+  // update existing with unique chartID
+  async updateProgressItems(
+    chartID: string,
+    progressItems: ProgressItemDTO[] = [],
+  ) {
+    return await this.chartModel
+      .findByIdAndUpdate(
+        chartID,
+        { progressItems, modifiedAt: new Date() },
+        { new: false },
+      )
+      .exec();
+  }
+
+  async idsWithoutProgressItems(limit = 100) {
+    const idRows = await this.chartModel
+      .find({
+        progressItems: { $exists: false },
+      })
+      .select('_id')
+      .limit(limit);
+    return idRows instanceof Array ? idRows.map(row => row._id.toString()) : [];
+  }
+
+  /*
+   * maintenance
+   */
+  async saveP2Set(chartID = '') {
+    let numUpdated = 0;
+    let numProgressItems = 0;
+    let matched = false;
+    if (notEmptyString(chartID) && isValidObjectId(chartID)) {
+      const chartData = await this.getChart(chartID);
+      const currentJd = currentJulianDay();
+      const oneYearOld = currentJd - 365.25;
+      const lastFutureJd = currentJd + 365.25 / 2;
+      if (chartData instanceof Model) {
+        matched = true;
+        const chartObj = chartData.toObject();
+        const cKeys = Object.keys(chartObj);
+        const pItems =
+          cKeys.includes('progressItems') &&
+          chartData.progressItems instanceof Array
+            ? chartData.progressItems.filter(pi => pi.jd >= oneYearOld)
+            : [];
+        numProgressItems = pItems.length;
+        const grahaKeys = ['su', 've', 'ma'];
+        const newProgressSet = await buildSingleProgressSet(
+          chartObj.jd,
+          4,
+          grahaKeys,
+        );
+        let lastItemJd = 0;
+        if (pItems.length > 1) {
+          pItems.sort((a, b) => a.jd - b.jd);
+          lastItemJd = pItems[pItems.length - 1].jd;
+        }
+        if (lastItemJd < lastFutureJd) {
+          const newProgressItems = newProgressSet
+            .map(pItem => {
+              const bodies = simpleObjectToKeyValues(pItem.bodies);
+              return { ...pItem, bodies };
+            })
+            .filter(pi => pi.jd > lastItemJd);
+          const progressItems = pItems.map(pi => pi as ProgressItemDTO);
+          for (const pItem of newProgressItems) {
+            progressItems.push(pItem as ProgressItemDTO);
+          }
+          const updated = await this.updateProgressItems(
+            chartID,
+            progressItems,
+          );
+          if (updated instanceof Model) {
+            numUpdated = newProgressItems.length;
+            numProgressItems = progressItems.length;
+          }
+        }
+      }
+    }
+    return { numUpdated, numProgressItems, matched };
   }
 
   // get chart by ID

@@ -62,7 +62,6 @@ export const DefaultAyanamshaItem: AyanamshaItem = {
   name: 'True Citra',
 };
 
-
 export interface Toponym {
   name: string;
   fullName: string;
@@ -82,4 +81,11 @@ export interface TransitJdSet {
   set: number;
   mc: number;
   ic?: number;
+}
+
+export interface ProgressSetItem {
+  jd: number;
+  pd: number;
+  bodies: KeyNumValue[];
+  ayanamsha: number;
 }

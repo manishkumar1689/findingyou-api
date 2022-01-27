@@ -1,5 +1,10 @@
 import { GeoLoc } from './geo-loc';
-import { KeyNumValue, AyanamshaItem, SurfaceTSData } from '../interfaces';
+import {
+  KeyNumValue,
+  AyanamshaItem,
+  SurfaceTSData,
+  ProgressSetItem,
+} from '../interfaces';
 import {
   subtractLng360,
   calcVargaSet,
@@ -238,6 +243,7 @@ export class Chart {
   createdAt?: Date;
   modifiedAt?: Date;
   ayanamshaItem?: AyanamshaItem;
+  progressItems?: ProgressSetItem[];
   vargaNum = 1;
   surface: SurfaceTSData = {
     geo: { lat: 0, lng: 0 },
@@ -308,6 +314,7 @@ export class Chart {
           case 'objects':
           case 'houses':
           case 'ayanamshas':
+          case 'progressItems':
             if (v instanceof Array) {
               this[k] = v;
             }
@@ -476,6 +483,20 @@ export class Chart {
       ? naturalMalefics
       : naturalBenefics;
   }
+
+  /* matchProgressItem(jd = 0) {
+    const startJd = jd - 45;
+    const endJd = jd + 45;
+    const item = this.progressItems.find(
+      pi => pi.jd >= startJd && pi.jd <= endJd,
+    );
+    if (item instanceof Object) {
+      const { jd, pd, ayanamsha } = item;
+      const bodies = keyValuesToSimpleObject(item.bodies.map());
+
+      return {};
+    }
+  } */
 
   get kotaSvami() {
     const moonSign = this.graha('mo').signNum;

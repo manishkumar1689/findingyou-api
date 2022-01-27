@@ -63,9 +63,17 @@ export const hashSalt = '4jyddhd-90';
 export const maxResetMinutes = 180;
 
 export const mailDetails = {
+  transport: {
+    host: 'smtp-mail.outlook.com',
+    port: 587,
+    secure: false, // upgrade later with STARTTLS
+    auth: {
+      user: 'marketing@findingyou.me',
+      pass: '#Romeu_108',
+    },
+  },
   fromName: 'FindingYou Service Desk',
-  fromAddress: 'info@findingyou.co',
-  transport: 'smtp://username:password@mailserver.domain',
+  fromAddress: 'marketing@findingyou.me',
 };
 
 export const mailService = {
