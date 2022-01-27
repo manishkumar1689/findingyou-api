@@ -1,9 +1,15 @@
-import { mapLngRange } from "../../lib/query-builders";
+import { mapLngRange } from '../../lib/query-builders';
+import { ProgressResult } from './interfaces';
 
 export interface AspectRow {
   key: string;
   deg: number;
   weight?: number;
+}
+
+export interface AspectAngles {
+  key: string;
+  angles: number[];
 }
 
 export interface OrbSetRow {
@@ -21,6 +27,21 @@ export interface AspectSet {
   k1: string;
   k2: string;
   orb?: number;
+}
+
+export interface AspectResult {
+  k1?: string;
+  k2?: string;
+  lng1: number;
+  lng2: number;
+  aspectDiff: number;
+  diff: number;
+  aspected?: boolean;
+}
+
+export interface AspectResultSet {
+  key: string;
+  results: AspectResult[];
 }
 
 export const orbMatrix: Array<Array<number>> = [
@@ -70,8 +91,84 @@ export const aspects: Array<AspectRow> = [
   { key: 'conjunction', deg: 0.0, weight: 0 },
 ];
 
+export const coreAspects = [
+  { key: 'conjunction', angles: [0] },
+  { key: 'opposition', angles: [180] },
+  { key: 'trine', angles: [120, 240] },
+  { key: 'square', angles: [90, 270] },
+  { key: 'quincunx', angles: [150] },
+];
+
+export const calcDist360 = (lng1: number, lng2: number): number => {
+  const lngs = [lng1, lng2];
+  lngs.sort((a, b) => (a < b ? -1 : 1));
+  const [low, high] = lngs;
+  const results = [high - low, low + 360 - high];
+  const minDiff = Math.min(...results);
+  return minDiff;
+};
+
+export const calcAspect = (
+  lng1: number,
+  lng2: number,
+  aspectKey = 'conjunction',
+): AspectResult => {
+  const aspectRow = coreAspects.find(
+    (row: AspectAngles) => row.key === aspectKey,
+  );
+  let aspectDiff = 360;
+  const diff = calcDist360(lng1, lng2);
+  if (aspectRow instanceof Object) {
+    const aspectDiffs = aspectRow.angles.map(angle => calcDist360(diff, angle));
+    aspectDiff = Math.min(...aspectDiffs);
+  }
+  return { lng1, lng2, diff, aspectDiff };
+};
+
+export const buildCoreAspects = (
+  p1Set: ProgressResult,
+  p2Set: ProgressResult,
+  tolerance = 2.1,
+  showAll = false,
+): AspectResultSet[] => {
+  const p2Keys = Object.keys(p2Set.bodies);
+  return coreAspects
+    .map(row => {
+      const results = Object.entries(p1Set.bodies)
+        .map(([k1, lng]) => {
+          if (p2Keys.includes('ve')) {
+            return {
+              k1,
+              k2: 've',
+              ...calcAspect(lng, p2Set.bodies.ve, row.key),
+            };
+          } else {
+            return {
+              k1: '',
+              k2: '',
+              lng1: -1,
+              lng2: -1,
+              diff: -1,
+              aspectDiff: -1,
+            };
+          }
+        })
+        .filter(row => row.lng1 >= 0 && row.lng2 >= 0)
+        .map(row => {
+          const aspected = row.aspectDiff <= tolerance;
+          return { ...row, aspected };
+        })
+        .filter(row => showAll || row.aspected);
+      return {
+        key: row.key,
+        results,
+      };
+    })
+    .filter(row => row.results.length > 0);
+};
+
 const matchAspectKey = (key: string) => {
-  let matchedKey = key
+  const matchedKey = key
     .toLowerCase()
     .replace(/_+/g, '-')
     .replace(/^bi-/i, 'bi');
@@ -97,11 +194,11 @@ const matchAspectGroupIndex = (aspectKey: string): number => {
 
 export const buildDegreeRange = (degree: number, orb = 0) => {
   return [(degree + 360 - orb) % 360, (degree + 360 + orb) % 360];
-}
+};
 
 export const buildLngRange = (degree: number, orb = 0) => {
   return mapLngRange(buildDegreeRange(degree, orb));
-}
+};
 
 export const calcAllAspectRanges = (
   aspectRow: AspectRow,

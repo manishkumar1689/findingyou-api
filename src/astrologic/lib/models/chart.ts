@@ -4,6 +4,7 @@ import {
   AyanamshaItem,
   SurfaceTSData,
   ProgressSetItem,
+  ProgressResult,
 } from '../interfaces';
 import {
   subtractLng360,
@@ -75,6 +76,7 @@ import { matchKotaPala } from '../settings/kota-values';
 import { combineCharts, filterBmMatchRow } from '../chart-funcs';
 import { locStringToGeo } from '../converters';
 import { keyValuesToSimpleObject } from '../../../lib/converters';
+import { currentJulianDay } from '../julian-date';
 
 export interface Subject {
   name: string;
@@ -243,7 +245,7 @@ export class Chart {
   createdAt?: Date;
   modifiedAt?: Date;
   ayanamshaItem?: AyanamshaItem;
-  progressItems?: ProgressSetItem[];
+  progressItems?: ProgressSetItem[] = [];
   vargaNum = 1;
   surface: SurfaceTSData = {
     geo: { lat: 0, lng: 0 },
@@ -484,19 +486,35 @@ export class Chart {
       : naturalBenefics;
   }
 
-  /* matchProgressItem(jd = 0) {
-    const startJd = jd - 45;
-    const endJd = jd + 45;
+  matchProgressItem(refJd = 0, tolerance = 45): ProgressResult {
+    const jd = refJd > 1000 ? refJd : currentJulianDay();
+    const startJd = jd - tolerance;
+    const endJd = jd + tolerance;
     const item = this.progressItems.find(
       pi => pi.jd >= startJd && pi.jd <= endJd,
     );
     if (item instanceof Object) {
       const { jd, pd, ayanamsha } = item;
-      const bodies = keyValuesToSimpleObject(item.bodies.map());
+      const bodies = keyValuesToSimpleObject(
+        item.bodies.map(row => {
+          const value = subtractLng360(row.value, ayanamsha);
+          return { key: row.key, value };
+        }),
+        'value',
+      );
 
-      return {};
+      return { jd, pd, bodies, ayanamsha, valid: true, applied: true };
+    } else {
+      return {
+        jd: 0,
+        pd: 0,
+        bodies: {},
+        ayanamsha: 0,
+        valid: false,
+        applied: false,
+      };
     }
-  } */
+  }
 
   get kotaSvami() {
     const moonSign = this.graha('mo').signNum;

@@ -109,6 +109,8 @@ import { PaymentDTO } from './dto/payment.dto';
 import { toWords } from '../astrologic/lib/helpers';
 import permissionValues from './settings/permissions';
 import { EmailParams } from './interfaces/email-params';
+import { currentJulianDay } from '../astrologic/lib/julian-date';
+import { buildCoreAspects } from '../astrologic/lib/calc-orbs';
 
 @Controller('user')
 export class UserController {
@@ -501,6 +503,26 @@ export class UserController {
       const ids = members.map(m => m._id);
       const mostActive = await this.feedbackService.rankByActivity(ids, 2);
       const mostPopular = await this.feedbackService.rankByLikeability(ids);
+      const currJd = currentJulianDay();
+      const p1Set = baseChart.matchProgressItem(currJd);
+      const p2Charts: Chart[] = members.map(m => {
+        if (m.hasChart) {
+          return new Chart(m.chart);
+        } else {
+          return new Chart();
+        }
+      });
+      const p2 = p2Charts
+        .map(c => {
+          const p2Set = c.matchProgressItem(currJd);
+          return {
+            _id: c._id,
+            jd: p1Set.jd,
+            jdDiff: p1Set.jd - p2Set.jd,
+            aspects: buildCoreAspects(p1Set, p2Set),
+          };
+        })
+        .filter(row => row.aspects.length > 0);
       return res.json({
         members,
         kutaPairs,
@@ -510,6 +532,8 @@ export class UserController {
         mostPopular,
         user,
         ratings,
+        p1Set,
+        p2,
         preferences: Object.fromEntries(preferenceMap.entries()),
       });
     } else {

@@ -7,7 +7,7 @@ import { UserSchema } from '../user/schemas/user.schema';
 import { PairedChartSchema } from '../astrologic/schemas/paired-chart.schema';
 import { calcAllAspectRanges, aspects } from '../astrologic/lib/calc-orbs';
 
-interface schemaItem {
+interface SchemaItem {
   key: string;
   subPaths: Array<string>;
   type?: string;
@@ -293,45 +293,102 @@ export const buildChartLookupPath = () => {
   ];
 };
 
-export const buildPairedChartProjection = (
-  fieldFilters: Array<string> = [],
-  hasYearSpanFields = false,
+export const addThirdLevel = (
+  mp: Map<string, any>,
+  baseKey: string,
+  key: string,
 ) => {
-  const chartFields = deconstructSchema(PairedChartSchema);
-  const mp: Map<string, any> = new Map();
-  chartFields.forEach(item => {
-    const baseKey = item.key;
-    switch (baseKey) {
-      case 'c1':
-      case 'c2':
-      case 'timespace':
-        buildInnerChartProjection(mp, baseKey, true);
-        break;
-      case 'kutas':
-        addKutaFields(mp);
-        break;
-      default:
-        buildFromSchema(item, mp);
-        break;
-    }
-  });
-  const applyFilter = fieldFilters.length > 0;
-  const rgx = new RegExp('\\b(' + fieldFilters.join('|') + ')');
-  if (hasYearSpanFields) {
-    mp.set('yearLength', 1);
-    mp.set('yearSpan', 1);
-    mp.set('currYear', 1);
+  let subFields = [];
+  const coreKey = baseKey.split('.').pop();
+  switch (key) {
+    case 'items':
+      switch (coreKey) {
+        case 'rashis':
+          subFields = [
+            'houseNum',
+            'sign',
+            'lordInHouse',
+            'arudhaInHouse',
+            'arudhaInSign',
+            'arudhaInLord',
+          ];
+          break;
+        default:
+          subFields = ['type', 'key', 'value', 'refVal'];
+          break;
+      }
+      break;
+    case 'variants':
+      subFields = [
+        'num',
+        'charaKaraka',
+        'sign',
+        'house',
+        'nakshatra',
+        'relationship',
+      ];
+      break;
+    case 'transitions':
+      subFields = ['type', 'jd'];
+      break;
+    case 'geo':
+      subFields = ['lat', 'lng', 'alt'];
+      break;
+    case 'topo':
+      subFields = ['lat', 'lng'];
+      break;
+    case 'contacts':
+      subFields = ['identifier', 'mode', 'type'];
+      break;
   }
-  const entries = [...mp.entries()];
-  return Object.fromEntries(
-    entries.filter(entry => {
-      return applyFilter ? rgx.test(entry[0]) : true;
-    }),
-  );
+  mp.delete([baseKey, key].join('.'));
+  subFields.forEach(sk => {
+    mp.set([baseKey, key, sk].join('.'), 1);
+  });
+};
+
+export const deconstructSchema = (schemaClass: Schema) => {
+  return Object.entries(schemaClass.obj).map(entry => {
+    const [key, item] = entry;
+    let subPaths = [];
+    let dataRef = '';
+    if (item instanceof Object) {
+      const typeMatches = Object.entries(item)
+        .filter(entry => entry[0] === 'type')
+        .map(entry => entry[1]);
+      const type = typeMatches.length > 0 ? typeMatches.shift() : '';
+      if (type instanceof Array && type.length > 0) {
+        const matchedType = type.shift();
+        if (matchedType instanceof Object) {
+          if (Object.keys(matchedType).includes('obj')) {
+            subPaths = Object.keys(matchedType.obj);
+          }
+        }
+        dataRef = 'Nested';
+      } else {
+        subPaths = [];
+        if (type instanceof Function) {
+          dataRef = type.toString().replace(/^function\s+(\w+)\([^§]*?$/, '$1');
+        } else if (type instanceof Object) {
+          if (type.singleNestedPaths instanceof Object) {
+            subPaths = Object.keys(type.singleNestedPaths)
+              .map(path => path.split('.').pop())
+              .filter(key => key !== '_id');
+            dataRef = 'SingleNested';
+          }
+          if (subPaths.length < 1 && type.obj instanceof Object) {
+            subPaths = Object.keys(type.obj).map(path => path.split('.').pop());
+            dataRef = 'SingleNested';
+          }
+        }
+      }
+    }
+    return { key, subPaths, type: dataRef };
+  });
 };
 
 export const buildFromSchema = (
-  item: schemaItem,
+  item: SchemaItem,
   mp: Map<string, any>,
   prefix = '',
   skipFields: Array<string> = [],
@@ -433,10 +490,12 @@ export const addKutaFields = (mp: Map<string, any>) => {
   });
 };
 
-export const buildChartProjection = (prefix = '', expandUser = false) => {
-  const mp: Map<string, any> = new Map();
-  buildInnerChartProjection(mp, prefix, expandUser);
-  return Object.fromEntries(mp.entries());
+export const buildInnerUserProjection = (mp: Map<string, any>, prefix = '') => {
+  const chartFields = deconstructSchema(UserSchema);
+  mp.delete(prefix);
+  chartFields.forEach(item => {
+    buildFromSchema(item, mp, prefix, ['password']);
+  });
 };
 
 export const buildInnerChartProjection = (
@@ -482,112 +541,53 @@ export const buildInnerChartProjection = (
   });
 };
 
+export const buildPairedChartProjection = (
+  fieldFilters: Array<string> = [],
+  hasYearSpanFields = false,
+) => {
+  const chartFields = deconstructSchema(PairedChartSchema);
+  const mp: Map<string, any> = new Map();
+  chartFields.forEach(item => {
+    const baseKey = item.key;
+    switch (baseKey) {
+      case 'c1':
+      case 'c2':
+      case 'timespace':
+        buildInnerChartProjection(mp, baseKey, true);
+        break;
+      case 'kutas':
+        addKutaFields(mp);
+        break;
+      default:
+        buildFromSchema(item, mp);
+        break;
+    }
+  });
+  const applyFilter = fieldFilters.length > 0;
+  const rgx = new RegExp('\\b(' + fieldFilters.join('|') + ')');
+  if (hasYearSpanFields) {
+    mp.set('yearLength', 1);
+    mp.set('yearSpan', 1);
+    mp.set('currYear', 1);
+  }
+  const entries = [...mp.entries()];
+  return Object.fromEntries(
+    entries.filter(entry => {
+      return applyFilter ? rgx.test(entry[0]) : true;
+    }),
+  );
+};
+
+export const buildChartProjection = (prefix = '', expandUser = false) => {
+  const mp: Map<string, any> = new Map();
+  buildInnerChartProjection(mp, prefix, expandUser);
+  return Object.fromEntries(mp.entries());
+};
+
 export const buildUserProjection = (prefix = '') => {
   const mp: Map<string, any> = new Map();
   buildInnerUserProjection(mp, prefix);
   return Object.fromEntries(mp.entries());
-};
-
-export const buildInnerUserProjection = (mp: Map<string, any>, prefix = '') => {
-  const chartFields = deconstructSchema(UserSchema);
-  mp.delete(prefix);
-  chartFields.forEach(item => {
-    buildFromSchema(item, mp, prefix, ['password']);
-  });
-};
-
-export const addThirdLevel = (
-  mp: Map<string, any>,
-  baseKey: string,
-  key: string,
-) => {
-  let subFields = [];
-  const coreKey = baseKey.split('.').pop();
-  switch (key) {
-    case 'items':
-      switch (coreKey) {
-        case 'rashis':
-          subFields = [
-            'houseNum',
-            'sign',
-            'lordInHouse',
-            'arudhaInHouse',
-            'arudhaInSign',
-            'arudhaInLord',
-          ];
-          break;
-        default:
-          subFields = ['type', 'key', 'value', 'refVal'];
-          break;
-      }
-      break;
-    case 'variants':
-      subFields = [
-        'num',
-        'charaKaraka',
-        'sign',
-        'house',
-        'nakshatra',
-        'relationship',
-      ];
-      break;
-    case 'transitions':
-      subFields = ['type', 'jd'];
-      break;
-    case 'geo':
-      subFields = ['lat', 'lng', 'alt'];
-      break;
-    case 'topo':
-      subFields = ['lat', 'lng'];
-      break;
-    case 'contacts':
-      subFields = ['identifier', 'mode', 'type'];
-      break;
-  }
-  mp.delete([baseKey, key].join('.'));
-  subFields.forEach(sk => {
-    mp.set([baseKey, key, sk].join('.'), 1);
-  });
-};
-
-export const deconstructSchema = (schemaClass: Schema) => {
-  return Object.entries(schemaClass.obj).map(entry => {
-    const [key, item] = entry;
-    let subPaths = [];
-    let dataRef = '';
-    if (item instanceof Object) {
-      const typeMatches = Object.entries(item)
-        .filter(entry => entry[0] === 'type')
-        .map(entry => entry[1]);
-      const type = typeMatches.length > 0 ? typeMatches.shift() : '';
-      if (type instanceof Array && type.length > 0) {
-        const matchedType = type.shift();
-        if (matchedType instanceof Object) {
-          if (Object.keys(matchedType).includes('obj')) {
-            subPaths = Object.keys(matchedType.obj);
-          }
-        }
-        dataRef = 'Nested';
-      } else {
-        subPaths = [];
-        if (type instanceof Function) {
-          dataRef = type.toString().replace(/^function\s+(\w+)\([^§]*?$/, '$1');
-        } else if (type instanceof Object) {
-          if (type.singleNestedPaths instanceof Object) {
-            subPaths = Object.keys(type.singleNestedPaths)
-              .map(path => path.split('.').pop())
-              .filter(key => key !== '_id');
-            dataRef = 'SingleNested';
-          }
-          if (subPaths.length < 1 && type.obj instanceof Object) {
-            subPaths = Object.keys(type.obj).map(path => path.split('.').pop());
-            dataRef = 'SingleNested';
-          }
-        }
-      }
-    }
-    return { key, subPaths, type: dataRef };
-  });
 };
 
 /* export const buildChartProjection = (prefix = '') => {
@@ -681,7 +681,7 @@ export const yearSpanAddFieldSteps = () => {
 export const mapLngRange = (pair: number[]) => {
   const [min, max] = pair;
   return { lng: { $gte: min, $lte: max } };
-}
+};
 
 export const buildLngRanges = (
   aspect: string,

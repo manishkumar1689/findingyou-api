@@ -89,3 +89,26 @@ export interface ProgressSetItem {
   bodies: KeyNumValue[];
   ayanamsha: number;
 }
+
+export interface GrahaLngs {
+  su?: number;
+  mo?: number;
+  me?: number;
+  ve?: number;
+  ma?: number;
+  ju?: number;
+  sa?: number;
+  ke?: number;
+  ra?: number;
+  as?: number;
+  ds?: number;
+}
+
+export interface ProgressResult {
+  jd: number;
+  pd: number;
+  bodies: GrahaLngs;
+  ayanamsha: number;
+  valid: boolean;
+  applied: boolean;
+}
