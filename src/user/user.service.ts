@@ -595,6 +595,7 @@ export class UserService {
             ? `May not edit password as the old password could not be matched`
             : `Not authorised to edit the password`;
         }
+        valid = false;
       }
       userObj = this.transformUserDTO(
         createUserDTO,
