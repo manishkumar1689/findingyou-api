@@ -51,7 +51,7 @@ export const saptaKeys = [
 export const dvadashaKeys = [...ashtaKeys, ...extraDvadashaKeys];
 
 export const dashaAshtaDvadashaKeys = () => {
-  const coreKeys = Object.assign({}, ashtaKeys);
+  const coreKeys = [...ashtaKeys];
   const extraDashaKeys = dashaKeys.filter(
     dk => coreKeys.includes(dk) === false,
   );
@@ -59,7 +59,7 @@ export const dashaAshtaDvadashaKeys = () => {
 };
 
 export const dashaAshtaKeys = () => {
-  const comboKeys = Object.assign({}, dvadashaKeys);
+  const comboKeys = [...dvadashaKeys];
   const extraDashaKeys = dashaKeys.filter(
     dk => comboKeys.includes(dk) === false,
   );
@@ -112,6 +112,7 @@ export class KutaValueSet {
   c2Value = '-';
   score = 0;
   max = 0;
+  variantRef = '';
 
   constructor(inData = null) {
     if (inData instanceof Object) {
@@ -122,6 +123,7 @@ export class KutaValueSet {
           case 'head':
           case 'c1Value':
           case 'c2Value':
+          case 'variantRef':
             if (typeof v === 'string') {
               this[k] = v;
             }
@@ -136,6 +138,20 @@ export class KutaValueSet {
       });
     }
   }
+
+  get variantKey(): string {
+    const parts = [this.key];
+    if (notEmptyString(this.variantRef) && this.variantRef !== 'standard') {
+      parts.push(this.variantRef);
+    }
+    return parts.join('/');
+  }
+}
+
+export interface KutaValueSetItems {
+  k1: string;
+  k2: string;
+  values: KutaValueSet[];
 }
 
 class KutaKeyVariant {
@@ -724,10 +740,8 @@ export class Kuta {
             '/',
           );
         }
-        result.head = [
-          ...dataSets.map(ds => [ds.key, ds.lng].join(':')),
-          variantRef,
-        ].join('/');
+        result.head = dataSets.map(ds => [ds.key, ds.lng].join(':')).join('/');
+        result.variantRef = variantRef;
       }
     }
     return result;
@@ -1533,3 +1547,40 @@ export class Kuta {
     return ['dignity', dictKey].join('/');
   }
 }
+
+export const calcKutaTotal = (kutaVS: KutaValueSet[], keys: string[] = []) => {
+  return kutaVS
+    .filter(row => keys.includes(row.variantKey))
+    .map(row => row.score)
+    .reduce((a, b) => a + b, 0);
+};
+
+export const calcKutaRowTotal = (
+  kutaRow: KutaValueSetItems[],
+  keys: string[] = [],
+) => {
+  return kutaRow.map(row => {
+    const { k1, k2, values } = row;
+    return {
+      k1,
+      k2,
+      total: calcKutaTotal(values, keys),
+    };
+  });
+};
+
+export const calcAshtaKutaRowTotal = (kutaRow: KutaValueSetItems[] = []) => {
+  return calcKutaRowTotal(kutaRow, ashtaKeys);
+};
+
+export const calcDashaKutaRowTotal = (kutaRow: KutaValueSetItems[] = []) => {
+  return calcKutaRowTotal(kutaRow, dashaKeys);
+};
+
+export const calcDvadashaKutaRowTotal = (kutaRow: KutaValueSetItems[] = []) => {
+  return calcKutaRowTotal(kutaRow, dvadashaKeys);
+};
+
+export const calcSaptaKutaRowTotal = (kutaRow: KutaValueSetItems[] = []) => {
+  return calcKutaRowTotal(kutaRow, saptaKeys);
+};

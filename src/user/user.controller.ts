@@ -104,7 +104,13 @@ import { User } from './interfaces/user.interface';
 import { mergeProgressSets } from '../astrologic/lib/settings/progression';
 import { IdSetDTO } from './dto/id-set.dto';
 import { basicSetToFullChart, Chart } from '../astrologic/lib/models/chart';
-import { ashtaKeys, dashaKeys, Kuta } from '../astrologic/lib/kuta';
+import {
+  ashtaKeys,
+  calcAshtaKutaRowTotal,
+  calcDashaKutaRowTotal,
+  dashaKeys,
+  Kuta,
+} from '../astrologic/lib/kuta';
 import { PaymentDTO } from './dto/payment.dto';
 import { toWords } from '../astrologic/lib/helpers';
 import permissionValues from './settings/permissions';
@@ -521,6 +527,10 @@ export class UserController {
           );
           kutaPairs.push({
             c2: member.chart._id,
+            totals: {
+              ashta: calcAshtaKutaRowTotal(kutaRow),
+              dasha: calcDashaKutaRowTotal(kutaRow),
+            },
             rows: kutaRow,
           });
         }
