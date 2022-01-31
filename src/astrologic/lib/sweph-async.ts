@@ -1,5 +1,6 @@
 import * as util from 'util';
 import * as swisseph from 'swisseph';
+import { smartCastFloat } from '../../lib/converters';
 
 /* export const calcAsync = util.promisify(swisseph.calc); */
 
@@ -26,13 +27,16 @@ export const getAyanamsa = (jd = 0, flag = 0) => {
   let ayanamsa = 0;
   let error: any = null;
   if (result instanceof Object) {
-    const keys = Object.keys(result);
-    if (keys.includes('error')) {
-      error = result.error;
-    }
-    if (keys.includes('ayanamsa')) {
-      ayanamsa = result.ayanamsa;
-    }
+    Object.entries(result).forEach(([k, v]) => {
+      switch (k) {
+        case 'error':
+          error = v;
+          break;
+        case 'ayanamsa':
+          ayanamsa = smartCastFloat(v);
+          break;
+      }
+    });
   }
   return { ayanamsa, error };
 };
