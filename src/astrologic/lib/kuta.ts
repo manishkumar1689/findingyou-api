@@ -1,4 +1,4 @@
-import { smartCastFloat } from 'src/lib/converters';
+import { smartCastFloat } from '../../lib/converters';
 import { inRange, isNumeric, notEmptyString } from '../../lib/validators';
 import { matchNakshatra } from './core';
 import { calcInclusiveNakshatras, calcInclusiveTwelfths } from './math-funcs';

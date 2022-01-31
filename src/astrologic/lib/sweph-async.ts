@@ -1,7 +1,7 @@
 import * as util from 'util';
 import * as swisseph from 'swisseph';
 
-export const calcAsync = util.promisify(swisseph.calc);
+/* export const calcAsync = util.promisify(swisseph.calc); */
 
 export const calcUtAsync = util.promisify(swisseph.swe_calc_ut);
 
@@ -21,16 +21,28 @@ export const getColTrans = util.promisify(swisseph.swe_cotrans);
 
 export const getAzalt = util.promisify(swisseph.swe_azalt);
 
-export const getAyanamsa = swisseph.swe_get_ayanamsa_ex_ut;
+export const getAyanamsa = (jd = 0, flag = 0) => {
+  const result = swisseph.swe_get_ayanamsa_ex_ut(jd, flag);
+  let ayanamsa = 0;
+  let error: any = null;
+  if (result instanceof Object) {
+    const keys = Object.keys(result);
+    if (keys.includes('error')) {
+      error = result.error;
+    }
+    if (keys.includes('ayanamsa')) {
+      ayanamsa = result.ayanamsa;
+    }
+  }
+  return { ayanamsa, error };
+};
 
 export const getSidTime = (jd = 0, eps = 0, nut = 0) => {
   const result = swisseph.swe_sidtime0(jd, eps, nut);
   return result instanceof Object ? result.siderialTime * 3600 : -1;
-}
+};
 
 export const getDeltaT = (jd = 0): number => {
   const result = swisseph.swe_deltat(jd);
   return result instanceof Object ? result.delta : -1;
-}
-
-
+};

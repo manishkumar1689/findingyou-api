@@ -61,7 +61,7 @@ export const toDateParts = (strDate: string) => {
 };
 
 export const calcJulDateFromParts = (dp, julian = false) => {
-  const gregFlag = julian === true ? 0 : 1;
+  const gregFlag = julian === true ? swisseph.SE_JUL_CAL : swisseph.SE_GREG_CAL;
   return swisseph.swe_julday(dp.year, dp.month, dp.day, dp.hour, gregFlag);
 };
 
