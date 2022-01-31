@@ -34,7 +34,14 @@ export const buildIsoDateFromParts = dp => {
     .shift();
 };
 
-export const toDateParts = (strDate: string) => {
+export interface DateParts {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+}
+
+export const toDateParts = (strDate: string): DateParts => {
   const [dtPart, remainder] = strDate
     .trim()
     .replace(' ', 'T')
@@ -60,14 +67,20 @@ export const toDateParts = (strDate: string) => {
   };
 };
 
-export const calcJulDateFromParts = (dp, julian = false) => {
-  const gregFlag = julian === true ? swisseph.SE_JUL_CAL : swisseph.SE_GREG_CAL;
-  return swisseph.swe_julday(dp.year, dp.month, dp.day, dp.hour, gregFlag);
+export const calcJulDateFromParts = (dp: DateParts) => {
+  //const gregFlag = julian === true ? swisseph.SE_JUL_CAL : swisseph.SE_GREG_CAL;
+  return swisseph.swe_julday(
+    dp.year,
+    dp.month,
+    dp.day,
+    dp.hour,
+    swisseph.SE_GREG_CAL,
+  );
 };
 
-export const calcJulDate = (strDate, julian = false) => {
+export const calcJulDate = (strDate: string) => {
   const dp = toDateParts(strDate);
-  return calcJulDateFromParts(dp, julian);
+  return calcJulDateFromParts(dp);
 };
 
 export const buildDatePartsFromParams = query => {

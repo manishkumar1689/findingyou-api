@@ -624,6 +624,7 @@ export class UserService {
         const prefs = this.mergePreferences(user, createUserDTO.preferences);
         userObj.preferences = prefs;
       }
+      console.log('edited keys length', editKeys.length);
       if (editKeys.length > 0) {
         updatedUser = await this.userModel.findByIdAndUpdate(userID, userObj, {
           new: true,
