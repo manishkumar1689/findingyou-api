@@ -68,6 +68,46 @@ export const dashaAshtaKeys = () => {
 
 export const allObjectKeys = [...ashtaKeys, ...extraDvadashaKeys, ...otherKeys];
 
+export const matchKutaKeyVariants = (kutaType = 'ashta') => {
+  const kutaRef = kutaType.toLowerCase();
+  switch (kutaRef) {
+    case 'dvadasha':
+      return dvadashaKeys;
+    case 'dasha':
+      return dashaKeys;
+    case 'sapta':
+      return saptaKeys;
+    case 'other':
+      return otherKeys;
+    case 'dashaashta':
+      return dashaAshtaKeys();
+    case 'dashaashtadvadasha':
+      return dashaAshtaDvadashaKeys();
+    case 'all':
+      return allObjectKeys;
+    default:
+      return ashtaKeys;
+  }
+};
+
+export const showKutaVariants = () => {
+  return [
+    'sapta',
+    'ashta',
+    'dasha',
+    'dvadasha',
+    'other',
+    'dashaashta',
+    'dashaashtadvadasha',
+    'all',
+  ].map(type => {
+    return {
+      type,
+      keys: matchKutaKeyVariants(type),
+    };
+  });
+};
+
 export interface MfScores {
   fm: number;
   mf: number;
@@ -395,24 +435,7 @@ export class Kuta {
   }
 
   get currentKeys() {
-    switch (this.kutaType) {
-      case 'dvadasha':
-        return dvadashaKeys;
-      case 'dasha':
-        return dashaKeys;
-      case 'sapta':
-        return saptaKeys;
-      case 'other':
-        return otherKeys;
-      case 'dashaashta':
-        return dashaAshtaKeys();
-      case 'dashaashtadvadasha':
-        return dashaAshtaDvadashaKeys();
-      case 'all':
-        return allObjectKeys;
-      default:
-        return ashtaKeys;
-    }
+    return matchKutaKeyVariants(this.kutaType);
   }
 
   /* buildMultiValues() {
