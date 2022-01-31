@@ -14,6 +14,60 @@ import {
 } from './settings/maitri-data';
 import rashiValues from './settings/rashi-values';
 
+export const ashtaKeys = [
+  'varna',
+  'vashya',
+  'tara',
+  'yoni',
+  'grahamaitri',
+  'gana',
+  'rashi',
+  'nadi',
+];
+export const extraDvadashaKeys = ['rajju', 'vedha', 'stri', 'mahendra'];
+export const otherKeys = ['gotra', 'vihanga', 'yonyanukulya', 'vainashika'];
+export const dashaKeys = [
+  'vashya/dasha',
+  'tara',
+  'yoni',
+  'grahamaitri',
+  'gana/dasha',
+  'rashi',
+  'rajju/dasha',
+  'vedha',
+  'mahendra',
+  'stri',
+];
+export const saptaKeys = [
+  'varna/scale/4',
+  'vashya',
+  'tara/scale/6',
+  'yoni',
+  'grahamaitri/sapta',
+  'gana/sapta',
+  'rashi/scale/8',
+];
+
+export const dvadashaKeys = [...ashtaKeys, ...extraDvadashaKeys];
+
+export const dashaAshtaDvadashaKeys = () => {
+  const coreKeys = Object.assign({}, ashtaKeys);
+  const extraDashaKeys = dashaKeys.filter(
+    dk => coreKeys.includes(dk) === false,
+  );
+  return [...coreKeys, ...extraDashaKeys];
+};
+
+export const dashaAshtaKeys = () => {
+  const comboKeys = Object.assign({}, dvadashaKeys);
+  const extraDashaKeys = dashaKeys.filter(
+    dk => comboKeys.includes(dk) === false,
+  );
+  return [...comboKeys, ...extraDashaKeys];
+};
+
+export const allObjectKeys = [...ashtaKeys, ...extraDvadashaKeys, ...otherKeys];
+
 export interface MfScores {
   fm: number;
   mf: number;
@@ -214,44 +268,6 @@ export class Kuta {
 
   private kutaType = 'all';
 
-  private ashtaKeys = [
-    'varna',
-    'vashya',
-    'tara',
-    'yoni',
-    'grahamaitri',
-    'gana',
-    'rashi',
-    'nadi',
-  ];
-
-  private extraDvadashaKeys = ['rajju', 'vedha', 'stri', 'mahendra'];
-
-  private otherKeys = ['gotra', 'vihanga', 'yonyanukulya', 'vainashika'];
-
-  private dashaKeys = [
-    'vashya/dasha',
-    'tara',
-    'yoni',
-    'grahamaitri',
-    'gana/dasha',
-    'rashi',
-    'rajju/dasha',
-    'vedha',
-    'mahendra',
-    'stri',
-  ];
-
-  private saptaKeys = [
-    'varna/scale/4',
-    'vashya',
-    'tara/scale/6',
-    'yoni',
-    'grahamaitri/sapta',
-    'gana/sapta',
-    'rashi/scale/8',
-  ];
-
   private itemOptions = new Map<string, string>();
 
   private pairKeys = ['as', 'mo', 've', 'su'];
@@ -272,14 +288,6 @@ export class Kuta {
   constructor(chart1: Chart, chart2: Chart) {
     this.c1 = chart1;
     this.c2 = chart2;
-  }
-
-  get dvadashaKeys() {
-    return [...this.ashtaKeys, ...this.extraDvadashaKeys];
-  }
-
-  get allObjectKeys() {
-    return [...this.ashtaKeys, ...this.extraDvadashaKeys, ...this.otherKeys];
   }
 
   get coreBodies() {
@@ -373,17 +381,21 @@ export class Kuta {
   get currentKeys() {
     switch (this.kutaType) {
       case 'dvadasha':
-        return this.dvadashaKeys;
+        return dvadashaKeys;
       case 'dasha':
-        return this.dashaKeys;
+        return dashaKeys;
       case 'sapta':
-        return this.saptaKeys;
+        return saptaKeys;
       case 'other':
-        return this.otherKeys;
+        return otherKeys;
+      case 'dashaashta':
+        return dashaAshtaKeys();
+      case 'dashaashtadvadasha':
+        return dashaAshtaDvadashaKeys();
       case 'all':
-        return this.allObjectKeys;
+        return allObjectKeys;
       default:
-        return this.ashtaKeys;
+        return ashtaKeys;
     }
   }
 

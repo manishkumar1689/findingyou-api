@@ -502,9 +502,20 @@ export class SettingService {
     };
   }
 
-  async getKutas() {
-    const data = await this.getByKey('kuta_variants');
-    const settingValue = data instanceof Object ? data.value : {};
+  async getKutas(skipCache = false): Promise<Map<string, any>> {
+    const cKey = 'kuta_variants';
+    const stored = skipCache ? null : await this.redisGet(cKey);
+    const isStored = stored instanceof Object;
+    let settingValue = {};
+    if (!isStored) {
+      const data = await this.getByKey('kuta_variants');
+      settingValue = data instanceof Object ? data.value : {};
+      if (Object.keys(settingValue).length > 5) {
+        this.redisSet(cKey, settingValue);
+      }
+    } else {
+      settingValue = stored;
+    }
     return new Map(Object.entries(settingValue));
   }
 

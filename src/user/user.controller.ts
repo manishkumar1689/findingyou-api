@@ -104,7 +104,7 @@ import { User } from './interfaces/user.interface';
 import { mergeProgressSets } from '../astrologic/lib/settings/progression';
 import { IdSetDTO } from './dto/id-set.dto';
 import { basicSetToFullChart, Chart } from '../astrologic/lib/models/chart';
-import { Kuta } from '../astrologic/lib/kuta';
+import { ashtaKeys, dashaKeys, Kuta } from '../astrologic/lib/kuta';
 import { PaymentDTO } from './dto/payment.dto';
 import { toWords } from '../astrologic/lib/helpers';
 import permissionValues from './settings/permissions';
@@ -436,7 +436,12 @@ export class UserController {
   }
 
   @Get('swipe-deck/:userID/:limit?')
-  async swipeDeck(@Res() res, @Param('userID') userID, @Param('limit') limit) {
+  async swipeDeck(
+    @Res() res,
+    @Param('userID') userID,
+    @Param('limit') limit,
+    @Query() query,
+  ) {
     const limitInt = isNumeric(limit) ? smartCastInt(limit, 52) : 52;
     const yearMs = 365.25 * 24 * 60 * 60 * 1000;
     const userData = await this.getMember(userID);
@@ -489,11 +494,31 @@ export class UserController {
         genders: targetGenders.join(','),
         gender: user.gender,
       };
+      const filterMap: Map<string, string> = new Map(Object.entries(query));
+      const kutaTypeKeyRef = filterMap.has('kt')
+        ? filterMap.get('kt')
+        : 'dashaashta';
+      const kutaTypeKey = [
+        'ashta',
+        'dashaashta',
+        'dvadasha',
+        'sapta',
+        'dashaashtadvadasha',
+        'all',
+      ].includes(kutaTypeKeyRef)
+        ? kutaTypeKeyRef
+        : 'dashaashta';
       const members = await this.fetchMembers(0, limitInt, queryParams, true);
       const kutaPairs = [];
+      const kutaSet = await this.settingService.getKutaSettings();
       for (const member of members) {
         if (member.hasChart) {
-          const kutaRow = await this.calcKutas(baseChart, member.chart);
+          const kutaRow = await this._calcKutas(
+            baseChart,
+            member.chart,
+            kutaSet,
+            kutaTypeKey,
+          );
           kutaPairs.push({
             c2: member.chart._id,
             rows: kutaRow,
@@ -526,6 +551,10 @@ export class UserController {
       return res.json({
         members,
         kutaPairs,
+        kutaKeys: {
+          ashta: ashtaKeys,
+          dasha: dashaKeys,
+        },
         queryParams,
         excludedIds,
         mostActive,
@@ -541,14 +570,18 @@ export class UserController {
     }
   }
 
-  async calcKutas(c1: Chart, c2: Chart) {
+  async _calcKutas(
+    c1: Chart,
+    c2: Chart,
+    kutaSet: Map<string, any> = new Map(),
+    kutaTypeKey = 'ashta',
+  ) {
     c1.setAyanamshaItemByKey('true_citra');
     c2.setAyanamshaItemByKey('true_citra');
-    const kutaSet = await this.settingService.getKutaSettings();
     const kutaBuilder = new Kuta(c1, c2);
     kutaBuilder.loadCompatibility(kutaSet);
     const grahaKeys = ['su', 'mo', 've', 'as'];
-    return kutaBuilder.calcAllSingleKutas(true, grahaKeys, 'ashta', false);
+    return kutaBuilder.calcAllSingleKutas(true, grahaKeys, kutaTypeKey, false);
   }
 
   async fetchMembers(
