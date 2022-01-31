@@ -3279,6 +3279,8 @@ export class AstrologicController {
     const hasPuid = isValidObjectId(puid);
     let email = '';
     let hasEmail = false;
+    result.set('valid', false);
+    result.set('kutas', []);
     if (!hasPuid) {
       if (params.has('email')) {
         email = params.get('email');
@@ -3291,6 +3293,9 @@ export class AstrologicController {
     let user: any = null;
     let cKey = '';
     let pairIndex = -1;
+    let c1 = null;
+    let c2 = null;
+    let hasCharts = false;
     if (hasUserRef) {
       const userRef = hasPuid ? puid : email;
       const matchType = hasPuid ? 'id' : 'email';
@@ -3302,12 +3307,10 @@ export class AstrologicController {
         );
       }
     }
+    const kutaSet = await this.settingService.getKutaSettings();
     if (validISODateString(dt1) && notEmptyString(loc1, 3)) {
-      const c1 = await generateBasicChart(dt1, loc1, name1, gender1);
-      c1.setAyanamshaItemByKey('true_citra');
-      if (showChartData) {
-        result.set('c1', c1);
-      }
+      c1 = await generateBasicChart(dt1, loc1, name1, gender1);
+
       const dt2 = params.get('dt2');
       const loc2 = params.get('loc2');
       const name2 = params.get('n2');
@@ -3323,20 +3326,9 @@ export class AstrologicController {
       const et1 = notEmptyString(e1) ? e1.toLowerCase() : 'birth';
       const et2 = notEmptyString(e2) ? e2.toLowerCase() : 'birth';
       if (validISODateString(dt2) && notEmptyString(loc2, 3)) {
-        const c2 = await generateBasicChart(dt2, loc2, name2, gender2);
+        c2 = await generateBasicChart(dt2, loc2, name2, gender2);
         c2.setAyanamshaItemByKey('true_citra');
-        if (showChartData) {
-          result.set('c2', c2);
-        }
-        const kutaSet = await this.settingService.getKutaSettings();
-        const kutaBuilder = new Kuta(c1, c2);
-        kutaBuilder.loadCompatibility(kutaSet);
-        const kutas = kutaBuilder.calcAllSingleKutas(
-          true,
-          grahaKeys,
-          kutaSetType,
-          allCombos,
-        );
+        hasCharts = true;
         const pl1 = params.has('pl1') ? params.get('pl1') : '';
         const pl2 = params.has('pl2') ? params.get('pl2') : '';
         const simpleC1 = c1.toBaseSet();
@@ -3371,10 +3363,8 @@ export class AstrologicController {
           } as PreferenceDTO;
           this.userService.savePublicPreference(puid, newPref);
         }
-        result.set('valid', true);
         result.set('p1', p1);
         result.set('p2', p2);
-        result.set('kutas', kutas);
       }
     } else if (hasUserRef) {
       const pref = pairIndex < 0 ? null : user.preferences[pairIndex];
@@ -3383,27 +3373,33 @@ export class AstrologicController {
         if (pairData instanceof Object) {
           const dataKeys = Object.keys(pairData);
           if (dataKeys.includes('p1') && dataKeys.includes('p2')) {
-            const c1 = basicSetToFullChart(pairData.p1);
-            const c2 = basicSetToFullChart(pairData.p2);
-            c1.setAyanamshaItemByKey('true_citra');
-            c2.setAyanamshaItemByKey('true_citra');
-            const kutaSet = await this.settingService.getKutaSettings();
-            const kutaBuilder = new Kuta(c1, c2);
-            kutaBuilder.loadCompatibility(kutaSet);
-            const kutas = kutaBuilder.calcAllSingleKutas(
-              true,
-              grahaKeys,
-              kutaSetType,
-              allCombos,
-            );
-            result.set('valid', true);
+            c1 = basicSetToFullChart(pairData.p1);
+            c2 = basicSetToFullChart(pairData.p2);
+            hasCharts = true;
             result.set('p1', pairData.p1);
             result.set('p2', pairData.p2);
-            result.set('kutas', kutas);
             result.set('pcKey', cKey);
           }
         }
       }
+    }
+    if (hasCharts) {
+      c1.setAyanamshaItemByKey('true_citra');
+      c2.setAyanamshaItemByKey('true_citra');
+      if (showChartData) {
+        result.set('c1', c1);
+        result.set('c2', c2);
+      }
+      const kutaBuilder = new Kuta(c1, c2);
+      kutaBuilder.loadCompatibility(kutaSet);
+      const kutas = kutaBuilder.calcAllSingleKutas(
+        true,
+        grahaKeys,
+        kutaSetType,
+        allCombos,
+      );
+      result.set('kutas', kutas);
+      result.set('valid', true);
     }
     return res.json(Object.fromEntries(result));
   }

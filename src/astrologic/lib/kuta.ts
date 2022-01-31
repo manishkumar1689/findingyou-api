@@ -1,3 +1,4 @@
+import { smartCastFloat } from 'src/lib/converters';
 import { inRange, isNumeric, notEmptyString } from '../../lib/validators';
 import { matchNakshatra } from './core';
 import { calcInclusiveNakshatras, calcInclusiveTwelfths } from './math-funcs';
@@ -80,6 +81,45 @@ export class KutaValueSet {
         }
       });
     }
+  }
+}
+
+class KutaKeyVariant {
+  key = '';
+  variant = '';
+  scale = -1;
+
+  constructor(keyRef = '') {
+    if (typeof keyRef === 'string') {
+      const parts = keyRef.split('/');
+      this.key = parts[0];
+      if (parts.length > 1) {
+        const isScale = parts[1] === 'scale';
+        if (!isScale) {
+          this.variant = parts[1];
+        } else {
+          if (parts.length > 2 && isNumeric(parts[2])) {
+            this.scale = smartCastFloat(parts[2]);
+          }
+        }
+      }
+    }
+  }
+
+  get hasVariant() {
+    return this.variant.length > 1;
+  }
+
+  get hasScale() {
+    return this.scale > 0;
+  }
+
+  get variantRef() {
+    return this.hasScale
+      ? ['scale', this.scale].join('/')
+      : this.hasVariant
+      ? this.variant
+      : 'standard';
   }
 }
 
@@ -189,6 +229,29 @@ export class Kuta {
 
   private otherKeys = ['gotra', 'vihanga', 'yonyanukulya', 'vainashika'];
 
+  private dashaKeys = [
+    'vashya/dasha',
+    'tara',
+    'yoni',
+    'grahamaitri',
+    'gana/dasha',
+    'rashi',
+    'rajju/dasha',
+    'vedha',
+    'mahendra',
+    'stri',
+  ];
+
+  private saptaKeys = [
+    'varna/scale/4',
+    'vashya',
+    'tara/scale/6',
+    'yoni',
+    'grahamaitri/sapta',
+    'gana/sapta',
+    'rashi/scale/8',
+  ];
+
   private itemOptions = new Map<string, string>();
 
   private pairKeys = ['as', 'mo', 've', 'su'];
@@ -247,19 +310,28 @@ export class Kuta {
   }
 
   get types() {
-    return ['ashta', 'dvadasha', 'other'];
+    return ['ashta', 'dvadasha', 'dasha', 'other'];
   }
 
   get allKeys() {
     return [...this.coreBodies, ...this.extraObjects];
   }
 
-  loadCompatibility(kutaSet: Map<string, any> = new Map()) {
+  loadCompatibility(
+    kutaSet: Map<string, any> = new Map(),
+    overrideOptions: Map<string, string> = new Map(),
+  ) {
     this.compatabilitySet = kutaSet;
     this.itemVariants
       .filter(iv => iv.keys.length > 0)
       .forEach(iv => {
-        this.itemOptions.set(iv.key, iv.keys[0]);
+        const hasOverride = overrideOptions.has(iv.key);
+        const overrideKey = hasOverride ? overrideOptions.get(iv.key) : '';
+        const overrideExists = hasOverride
+          ? iv.keys.includes(overrideKey)
+          : false;
+        const matchedOptKey = overrideExists ? overrideKey : iv.keys[0];
+        this.itemOptions.set(iv.key, matchedOptKey);
       });
   }
 
@@ -279,7 +351,8 @@ export class Kuta {
   }
 
   buildSingleValues(addTotal = false) {
-    this.singleValues = this.currentKeys.map(key => {
+    this.singleValues = this.currentKeys.map(keyRef => {
+      const key = keyRef.split('/').shift();
       const row = this.valueSets.get(key);
       const result = row instanceof KutaValueSet ? row : new KutaValueSet(null);
       return result;
@@ -301,6 +374,10 @@ export class Kuta {
     switch (this.kutaType) {
       case 'dvadasha':
         return this.dvadashaKeys;
+      case 'dasha':
+        return this.dashaKeys;
+      case 'sapta':
+        return this.saptaKeys;
       case 'other':
         return this.otherKeys;
       case 'all':
@@ -310,7 +387,7 @@ export class Kuta {
     }
   }
 
-  buildMultiValues() {
+  /* buildMultiValues() {
     this.multiValues = this.currentKeys.map(key => {
       const row = this.multiSets.get(key);
       const result =
@@ -341,17 +418,17 @@ export class Kuta {
 
     const totalRow = new KutaMultiSet('total', 'Total', totalCells);
     this.multiValues.push(totalRow);
-  }
+  } */
 
-  matchRowLabel(field: string, singleMode = true) {
+  /*   matchRowLabel(field: string, singleMode = true) {
     const refCols = singleMode ? this.singleColumns : this.multiColumns;
     const col = refCols.find(col => col.key === field);
     if (col instanceof Object) {
       return col.label;
     }
-  }
+  } */
 
-  get singleColumns() {
+  /* get singleColumns() {
     const cols = [
       {
         key: 'head',
@@ -375,9 +452,9 @@ export class Kuta {
       label: 'Max',
     });
     return cols;
-  }
+  } */
 
-  get multiColumns() {
+  /* get multiColumns() {
     const cols = [
       {
         key: 'head',
@@ -399,7 +476,7 @@ export class Kuta {
       label: 'Max',
     });
     return cols;
-  }
+  } */
 
   /* buildGrahas(set = 1): Array<Graha> {
     const c = set === 2 ? this.c2 : this.c1;
@@ -467,8 +544,18 @@ export class Kuta {
     if (gr1 instanceof Graha && gr2 instanceof Graha) {
       const { s1, s2, valid } = this.buildSubjects(gr1, gr2);
       if (valid) {
-        this.currentKeys.forEach(key => {
-          const result = this.calcItem(key, [s1, s2]);
+        this.currentKeys.forEach(keyRef => {
+          const {
+            key,
+            variant,
+            hasVariant,
+            scale,
+            variantRef,
+          } = new KutaKeyVariant(keyRef);
+          if (hasVariant) {
+            this.itemOptions.set(key, variant);
+          }
+          const result = this.calcItem(key, [s1, s2], scale, variantRef);
           this.valueSets.set(key, result);
         });
       }
@@ -531,7 +618,12 @@ export class Kuta {
     }
   } */
 
-  calcItem(key: string, dataSets: Array<KutaGrahaItem>): KutaValueSet {
+  calcItem(
+    key: string,
+    dataSets: Array<KutaGrahaItem>,
+    scale = -1,
+    variantRef = '',
+  ): KutaValueSet {
     const result = new KutaValueSet({ key });
     if (this.compatabilitySet.has(key) && dataSets.length > 1) {
       const settings = this.compatabilitySet.get(key);
@@ -598,6 +690,10 @@ export class Kuta {
         if (result.max < 1) {
           result.max = settings.max;
         }
+        if (scale > 0 && typeof result.max === 'number') {
+          result.score = (result.score / result.max) * scale;
+          result.max = result.max * scale;
+        }
         if (result.c1Value.length < 2 && dataSets.length > 0) {
           const diff1 = calcInclusiveNakshatras(
             dataSets[0].nakshatraNum,
@@ -616,7 +712,10 @@ export class Kuta {
             '/',
           );
         }
-        result.head = dataSets.map(ds => [ds.key, ds.lng].join(':')).join('/');
+        result.head = [
+          ...dataSets.map(ds => [ds.key, ds.lng].join(':')),
+          variantRef,
+        ].join('/');
       }
     }
     return result;
@@ -1160,7 +1259,7 @@ export class Kuta {
                   const matchedRule = calc.find(cc => {
                     let valid = false;
                     if (cc instanceof Object) {
-                      const { rule, score } = cc;
+                      const { rule } = cc;
                       if (rule instanceof Object) {
                         valid = Object.entries(rule).every(entry => {
                           const [k, v] = entry;

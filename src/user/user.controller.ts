@@ -30,7 +30,7 @@ import {
   validISODateString,
   isString,
 } from '../lib/validators';
-import { smartCastInt, toStartRef } from '../lib/converters';
+import { htmlToPlainText, smartCastInt, toStartRef } from '../lib/converters';
 import { Request } from 'express';
 import {
   fromBase64,
@@ -2263,41 +2263,35 @@ export class UserController {
     this.userService.create(user);
   }
 
-  @Get('test-mail/:email/:subject/:text')
-  async testMail(
-    @Res() res,
-    @Param('email') email,
-    @Param('subject') subject,
-    @Param('text') text,
-  ) {
-    const result = await this.sendMail({ email, subject, html: text });
+  @Post('test-mail')
+  async testMail(@Res() res, @Body() inData: EmailParams) {
+    const { email, subject, html } = inData;
+    const result = await this.sendMail({ email, subject, html });
     return res.json(result);
   }
 
   async sendMail(emailParams: EmailParams) {
     const { email, subject, html, from } = emailParams;
-    const result = { valid: false, sent: false, error: null };
+    const result = { valid: false, sent: false, error: null, response: null };
     const fromAddress = notEmptyString(from) ? from : mailDetails.fromAddress;
+    const payload = {
+      to: email, // list of receivers
+      from: fromAddress, // sender address
+      subject,
+      text: htmlToPlainText(html),
+      html, // HTML body content
+    };
     await this.mailerService
-      .sendMail({
-        to: email, // list of receivers
-        from: fromAddress, // sender address
-        subject,
-        text: html
-          .replace(/<\w+[^>]*?>/g, '')
-          .replace(/<a\b[^>]*?href="([^">]+?)"[^>]*?>([^<]*?)<\/a>/g, '$2 ($1)')
-          .replace(/<\/(i|em|b|strong|span)>/g, '')
-          .replace(/<\/\w+>/g, '\n'), // plaintext body
-        html, // HTML body content
-      })
+      .sendMail(payload)
       .then(data => {
         result.sent = true;
         result.valid = true;
+        result.response = data;
       })
       .catch(e => {
         result.sent = false;
         result.error = e;
       });
-    return result;
+    return { ...result, payload };
   }
 }

@@ -1,5 +1,6 @@
+import { convert } from 'html-to-text';
 import { KeyNumValue } from '../astrologic/lib/interfaces';
-import { isNumeric } from './validators';
+import { isNumeric, notEmptyString } from './validators';
 
 export const objectToQueryString = (obj: any): string => {
   let str = '';
@@ -194,4 +195,12 @@ export const extractBooleanFromKeyedItems = (
 ): boolean => {
   const { matched, item } = extractKeyedItem(items, key);
   return matched && typeof item.value === 'boolean' ? item.value : defaultValue;
+};
+
+export const htmlToPlainText = (html = ''): string => {
+  if (notEmptyString(html)) {
+    return convert(html, { wordwrap: 130 });
+  } else {
+    return '';
+  }
 };
