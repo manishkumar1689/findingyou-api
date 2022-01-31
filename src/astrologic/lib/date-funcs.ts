@@ -187,8 +187,8 @@ export const matchEndJdAndDatetime = (strRef = '', startJd = 0) => {
   return { endJd: jd, endDt: dtUtc.split('.').shift() };
 };
 
-export const jdToDateParts = (jd, gregFlag = 1) => {
-  return swisseph.swe_revjul(jd, gregFlag);
+export const jdToDateParts = (jd: number) => {
+  return swisseph.swe_revjul(jd, swisseph.SE_GREG_CAL);
 };
 
 export const convertUnitValsToDays = (numVal: number, unit = ''): number => {
@@ -228,8 +228,8 @@ export const durationStringToDays = (str = ''): number => {
   return days;
 };
 
-export const jdToDateTime = (jd, gregFlag = 1) => {
-  const parts = jdToDateParts(jd, gregFlag);
+export const jdToDateTime = (jd: number): string => {
+  const parts = jdToDateParts(jd);
   const dateStr = [parts.year, zero2Pad(parts.month), zero2Pad(parts.day)].join(
     '-',
   );
