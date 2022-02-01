@@ -222,8 +222,19 @@ export class SettingService {
   }
 
   async processPreferences(preferences: any[]) {
-    const multiscaleData = await this.surveyMultiscales();
-    const surveys = await this.getSurveys();
+    const { surveys, multiscaleData } = await this.getSurveyData();
+    return await this.processPreferenceData(
+      preferences,
+      surveys,
+      multiscaleData,
+    );
+  }
+
+  async processPreferenceData(
+    preferences: any[],
+    surveys: any[] = [],
+    multiscaleData: any[] = [],
+  ) {
     const big5 = surveys.find(sv => sv.key === 'faceted_personality_options');
     const jungian = surveys.find(sv => sv.key === 'jungian_options');
     const preferenceItems = preferences
@@ -248,7 +259,10 @@ export class SettingService {
         'faceted',
         facetedQuestions,
       );
-      facetedAnalysis = analyseAnswers('faceted', facetedAnswers);
+      const facetedCompleted = facetedAnswers.length >= facetedQuestions.length;
+      facetedAnalysis = facetedCompleted
+        ? analyseAnswers('faceted', facetedAnswers)
+        : {};
       jungianAnswers = filterMapSurveyByType(
         preferences,
         'jungian',
@@ -268,15 +282,26 @@ export class SettingService {
     };
   }
 
-  async getSurveys() {
+  async getSurveys(skipCache = false) {
     const key = 'pr_surveys';
-    const stored = await this.redisGet(key);
+    const stored = skipCache ? [] : await this.redisGet(key);
     const hasStored = stored instanceof Array && stored.length > 0;
     const rows = hasStored ? stored : await this.getAllSurveys();
     if (!hasStored && rows.length > 0) {
       this.redisSet(key, rows);
     }
     return rows;
+  }
+
+  async getSurveyData(skipCache = false) {
+    const allSurveys = await this.getSurveys(skipCache);
+    const surveys = allSurveys.filter(
+      s => s.items instanceof Array && s.items.length > 0,
+    );
+    return {
+      surveys,
+      multiscaleData: await this.surveyMultiscales(skipCache),
+    };
   }
 
   async getAllSurveys() {
@@ -343,9 +368,9 @@ export class SettingService {
     return items;
   }
 
-  async surveyMultiscales() {
+  async surveyMultiscales(skipCache = false): Promise<any[]> {
     const key = 'survey_multiscales';
-    const stored = await this.redisGet(key);
+    const stored = skipCache ? [] : await this.redisGet(key);
     const hasStored = stored instanceof Array && stored.length > 0;
     const rows = hasStored ? stored : await this.surveyMultiscaleList();
     if (!hasStored && rows.length > 0) {

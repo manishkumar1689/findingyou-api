@@ -51,7 +51,7 @@ export const saptaKeys = [
 export const dvadashaKeys = [...ashtaKeys, ...extraDvadashaKeys];
 
 export const dashaAshtaDvadashaKeys = () => {
-  const coreKeys = [...ashtaKeys];
+  const coreKeys = [...dvadashaKeys];
   const extraDashaKeys = dashaKeys.filter(
     dk => coreKeys.includes(dk) === false,
   );
@@ -59,7 +59,7 @@ export const dashaAshtaDvadashaKeys = () => {
 };
 
 export const dashaAshtaKeys = () => {
-  const comboKeys = [...dvadashaKeys];
+  const comboKeys = [...ashtaKeys];
   const extraDashaKeys = dashaKeys.filter(
     dk => comboKeys.includes(dk) === false,
   );
@@ -416,8 +416,8 @@ export class Kuta {
 
   buildSingleValues(addTotal = false) {
     this.singleValues = this.currentKeys.map(keyRef => {
-      const key = keyRef.split('/').shift();
-      const row = this.valueSets.get(key);
+      //const key = keyRef.split('/').shift();
+      const row = this.valueSets.get(keyRef);
       const result = row instanceof KutaValueSet ? row : new KutaValueSet(null);
       return result;
     });
@@ -605,9 +605,11 @@ export class Kuta {
           } = new KutaKeyVariant(keyRef);
           if (hasVariant) {
             this.itemOptions.set(key, variant);
+          } else {
+            this.itemOptions.set(key, this.getDefaultVariant(key));
           }
           const result = this.calcItem(key, [s1, s2], scale, variantRef);
-          this.valueSets.set(key, result);
+          this.valueSets.set(keyRef, result);
         });
       }
     }
@@ -668,6 +670,20 @@ export class Kuta {
       this.buildMultiValues();
     }
   } */
+
+  getDefaultVariant(key = '') {
+    const settings = this.compatabilitySet.get(key);
+    if (settings instanceof Object) {
+      const { variants } = settings;
+      if (variants instanceof Object) {
+        const keys = Object.keys(variants);
+        if (keys.length) {
+          return keys[0];
+        }
+      }
+    }
+    return '-';
+  }
 
   calcItem(
     key: string,
@@ -738,7 +754,7 @@ export class Kuta {
               break;
           }
         }
-        if (result.max < 1) {
+        if (result.max < 1 && isNumeric(settings.max)) {
           result.max = settings.max;
         }
         if (scale > 0 && typeof result.max === 'number') {
@@ -943,7 +959,8 @@ export class Kuta {
     result: KutaValueSet,
     dataSets: Array<KutaGrahaItem>,
   ) {
-    const { nakshatraMatches, matchScores, variants, calc } = settings;
+    const { nakshatraMatches, matchScores, max, calc } = settings;
+
     if (
       nakshatraMatches instanceof Array &&
       matchScores instanceof Object &&
@@ -982,6 +999,11 @@ export class Kuta {
             }
             result.c1Value = ['gana', ganaOne].join('/');
             result.c2Value = ['gana', ganaTwo].join('/');
+          }
+        }
+        if (max instanceof Object) {
+          if (Object.keys(max).includes(protocolKey)) {
+            result.max = max[protocolKey];
           }
         }
         result.score = score;
@@ -1571,23 +1593,41 @@ export class Kuta {
   }
 }
 
-export const calcKutaTotal = (kutaVS: KutaValueSet[], keys: string[] = []) => {
-  return kutaVS
-    .filter(row => keys.includes(row.variantKey))
-    .map(row => row.score)
-    .reduce((a, b) => a + b, 0);
+export interface MaxScore {
+  score: number;
+  max: number;
+}
+
+export interface MaxScoreSet extends MaxScore {
+  k1: string;
+  k2: string;
+}
+
+export const calcKutaTotal = (
+  kutaVS: KutaValueSet[],
+  keys: string[] = [],
+): MaxScore => {
+  const filteredItems = kutaVS.filter(row => keys.includes(row.variantKey));
+  const score = filteredItems.map(row => row.score).reduce((a, b) => a + b, 0);
+  const max = filteredItems.map(row => row.max).reduce((a, b) => a + b, 0);
+  return {
+    score,
+    max,
+  };
 };
 
 export const calcKutaRowTotal = (
   kutaRow: KutaValueSetItems[],
   keys: string[] = [],
-) => {
+): MaxScoreSet[] => {
   return kutaRow.map(row => {
     const { k1, k2, values } = row;
+    const { max, score } = calcKutaTotal(values, keys);
     return {
       k1,
       k2,
-      total: calcKutaTotal(values, keys),
+      score,
+      max,
     };
   });
 };

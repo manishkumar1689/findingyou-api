@@ -755,7 +755,10 @@ export class UserController {
             otherUserIds,
           )
         : userFlags;
-
+    const {
+      surveys,
+      multiscaleData,
+    } = await this.settingService.getSurveyData();
     for (const user of users) {
       const chartObj = await this.astrologicService.getUserBirthChart(user._id);
       const hasChart = chartObj instanceof Object;
@@ -768,8 +771,10 @@ export class UserController {
       let preferences = [];
       let facetedAnalysis: any = {};
       if (user.preferences instanceof Array && user.preferences.length > 0) {
-        const prefData = await this.settingService.processPreferences(
+        const prefData = await this.settingService.processPreferenceData(
           user.preferences,
+          surveys,
+          multiscaleData,
         );
         preferences = prefData.preferences;
         facetedAnalysis = prefData.facetedAnalysis;
