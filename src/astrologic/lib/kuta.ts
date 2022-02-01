@@ -66,6 +66,14 @@ export const dashaAshtaKeys = () => {
   return [...comboKeys, ...extraDashaKeys];
 };
 
+export const dashaSaptaAshtaDvadashaKeys = () => {
+  const comboKeys = [...dvadashaKeys];
+  const extraDashaKeys = [...dashaKeys, ...saptaKeys].filter(
+    dk => comboKeys.includes(dk) === false,
+  );
+  return [...comboKeys, ...extraDashaKeys];
+};
+
 export const allObjectKeys = [...ashtaKeys, ...extraDvadashaKeys, ...otherKeys];
 
 export const matchKutaKeyVariants = (kutaType = 'ashta') => {
@@ -83,6 +91,8 @@ export const matchKutaKeyVariants = (kutaType = 'ashta') => {
       return dashaAshtaKeys();
     case 'dashaashtadvadasha':
       return dashaAshtaDvadashaKeys();
+    case 'dashasaptadvadasha':
+      return dashaSaptaAshtaDvadashaKeys();
     case 'all':
       return allObjectKeys;
     default:
@@ -759,7 +769,7 @@ export class Kuta {
         }
         if (scale > 0 && typeof result.max === 'number') {
           result.score = (result.score / result.max) * scale;
-          result.max = result.max * scale;
+          result.max = scale;
         }
         if (result.c1Value.length < 2 && dataSets.length > 0) {
           const diff1 = calcInclusiveNakshatras(
