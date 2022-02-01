@@ -3368,6 +3368,7 @@ export class AstrologicController {
         }
         result.set('p1', p1);
         result.set('p2', p2);
+        result.set('pcKey', cKey);
       }
     } else if (hasUserRef) {
       const pref = pairIndex < 0 ? null : user.preferences[pairIndex];
