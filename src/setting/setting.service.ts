@@ -130,7 +130,7 @@ export class SettingService {
     return { ...result, value: newValue };
   }
 
-  // get a single setting by key
+  // get a kuta variants
   async getKutaSettings(): Promise<Map<string, any>> {
     const data = await this.getByKey('kuta_variants');
     const itemObj =

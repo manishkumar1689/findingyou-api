@@ -3264,6 +3264,9 @@ export class AstrologicController {
     const loc1 = params.get('loc1');
     const name1 = params.get('n1');
     const gender1 = params.get('g1');
+    const skipCache = params.has('sk')
+      ? smartCastInt(params.get('sk'), 0) > 1
+      : false;
     const showChartData = params.get('show') === 'c';
     const grahaKeyRef = params.has('gks') ? params.get('gks') : '';
     const grahaKeys =
@@ -3307,7 +3310,7 @@ export class AstrologicController {
         );
       }
     }
-    const kutaSet = await this.settingService.getKutaSettings();
+    const kutaSet = await this.settingService.getKutas(skipCache);
     if (validISODateString(dt1) && notEmptyString(loc1, 3)) {
       c1 = await generateBasicChart(dt1, loc1, name1, gender1);
 
