@@ -39,7 +39,7 @@ export const dashaKeys = [
   'stri',
 ];
 export const saptaKeys = [
-  'varna/scale/4',
+  'varna/scale/5',
   'vashya',
   'tara/scale/6',
   'yoni',
