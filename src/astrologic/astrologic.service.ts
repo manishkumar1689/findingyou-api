@@ -1750,6 +1750,10 @@ export class AstrologicService {
       .limit(limit);
   }
 
+  /*
+   * AstroWebApp
+   * Potential use in mobile app
+   */
   async getChartNamesByUserAndName(
     userID: string,
     search: string,
@@ -1822,6 +1826,9 @@ export class AstrologicService {
     return items;
   }
 
+  /*
+   * AstroWebApp only
+   */
   async countCoreChartDataByUser(userID: string, search = '', status = '') {
     const condMap = new Map<string, any>();
     if (notEmptyString(search)) {
@@ -1838,7 +1845,10 @@ export class AstrologicService {
     return await this.chartModel.count(Object.fromEntries(condMap));
   }
 
-  // save a single body speed record
+  /*
+   * Development and maintenace
+   * save a single body speed record
+   */
   async saveBodySpeed(data: BodySpeedDTO): Promise<BodySpeed> {
     const record = await this.bodySpeedModel
       .findOne({ jd: data.jd, num: data.num })
@@ -1862,6 +1872,10 @@ export class AstrologicService {
       .exec();
   }
 
+  /*
+   * Core chart listing method
+   * used by AstroWebApp
+   */
   async list(
     criteria: Map<string, any> = new Map<string, any>(),
     start = 0,
@@ -2048,6 +2062,9 @@ export class AstrologicService {
     return slugs instanceof Array ? slugs : [];
   }
 
+  /*
+    Development and maintenance
+  */
   async savePlanetStations(
     num: number,
     datetime: string,
@@ -2092,6 +2109,9 @@ export class AstrologicService {
     return data;
   }
 
+  /*
+    Development and maintenance
+  */
   async saveBodySpeedStation(
     jd: number,
     num: number,
@@ -2102,6 +2122,9 @@ export class AstrologicService {
     return saved;
   }
 
+  /*
+    Development and maintenance
+  */
   async nextPrevStation(
     num: number,
     jd: number,
@@ -2121,6 +2144,9 @@ export class AstrologicService {
       .exec();
   }
 
+  /*
+    Development and maintenance
+  */
   async matchStations(key: string, jd: number): Promise<any> {
     const row = grahaValues.find(gr => gr.key === key);
     const num = row instanceof Object ? row.num : -1;
@@ -2147,6 +2173,10 @@ export class AstrologicService {
     };
   }
 
+  /*
+    Admin
+    AstroWebApp
+  */
   async transitionsByPlanet(
     num: number,
     startYear = 2000,
@@ -2176,6 +2206,9 @@ export class AstrologicService {
     return results;
   }
 
+  /*
+   * Admin, AstroWebApp
+   */
   async _transitionsByPlanet(
     num: number,
     startYear = 2000,
@@ -2195,6 +2228,9 @@ export class AstrologicService {
     return data;
   }
 
+  /*
+   * Development and Maintenance
+   */
   async speedPatternsByPlanet(num: number): Promise<Array<BodySpeed>> {
     let minJd = 0;
     const last2 = await this.bodySpeedModel

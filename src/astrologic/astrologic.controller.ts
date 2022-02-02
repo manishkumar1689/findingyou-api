@@ -3613,6 +3613,9 @@ export class AstrologicController {
     return res.json(data);
   }
 
+  /*
+   * AstroWebApp only
+   */
   @Get('charts-by-user/:userID/:start?/:limit?/:defaultOnly?')
   async fetchChartsByUser(
     @Res() res,
@@ -4284,6 +4287,9 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  /*
+   * AstroWebApp
+   */
   @Get('stations-by-planet/:planet/:startYear?/:endYear?')
   async stationsByPlanet(
     @Res() res,
@@ -4387,6 +4393,9 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
+  /*
+   * Development, maintenance and admin
+   */
   @Get('planet-stations/:planet/:dt/:current?')
   async planetStationSet(
     @Res() res,
@@ -4410,6 +4419,9 @@ export class AstrologicController {
     });
   }
 
+  /*
+   * Development, maintenance and admin
+   */
   @Get('all-planet-stations/:dt/:current?')
   async allPlanetStationSets(
     @Res() res,
