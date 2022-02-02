@@ -3265,7 +3265,7 @@ export class AstrologicController {
     const name1 = params.get('n1');
     const gender1 = params.get('g1');
     const skipCache = params.has('sk')
-      ? smartCastInt(params.get('sk'), 0) > 1
+      ? smartCastInt(params.get('sk'), 0) > 0
       : false;
     const showChartData = params.get('show') === 'c';
     const grahaKeyRef = params.has('gks') ? params.get('gks') : '';

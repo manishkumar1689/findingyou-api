@@ -1134,7 +1134,7 @@ export class Kuta {
     const [s1, s2] = dataSets;
     const [rel1, rel2] = matchNaturalGrahaMaitri(s1, s2);
     const protocolKey = this.itemOptions.get('grahamaitri');
-    const { variants } = settings;
+    const { max } = settings;
     const variantKeys = Object.keys(settings);
     if (protocolKey && variantKeys.includes(protocolKey)) {
       const femaleRel = femaleFirst ? rel1 : rel2;
@@ -1150,6 +1150,11 @@ export class Kuta {
         result.c2Value = this.diginityKey(dignities, rel2);
         if (scoreItem) {
           result.score = scoreItem.score;
+        }
+      }
+      if (max instanceof Object) {
+        if (Object.keys(max).includes(protocolKey)) {
+          result.max = smartCastFloat(max[protocolKey]);
         }
       }
     }
