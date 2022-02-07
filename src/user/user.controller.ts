@@ -337,7 +337,9 @@ export class UserController {
   ) {
     start = smartCastInt(start, 0);
     limit = smartCastInt(limit, 100);
-    const criteria = request.query;
+    const { query } = request;
+    const criteria = query instanceof Object ? query : {};
+    const criteriaKeys = Object.keys(criteria);
     let activeOnly = true;
     if (criteria.admin) {
       activeOnly = false;
@@ -348,14 +350,31 @@ export class UserController {
       criteria,
       activeOnly,
     );
-    const total = await this.userService.count(criteria, activeOnly);
-    return res.status(HttpStatus.OK).json({
-      start,
-      total,
-      perPage: limit,
-      num: users.length,
-      items: users,
-    });
+    let grandTotal = -1;
+    let activeTotal = -1;
+    let total = 0;
+    const hasFilterKeys =
+      criteriaKeys.filter(k => ['totals', 'admin'].includes(k) === false)
+        .length > 0;
+    if (criteriaKeys.includes('totals')) {
+      activeTotal = await this.userService.count({}, true);
+      grandTotal = await this.userService.count({}, true);
+    }
+    if (!hasFilterKeys && grandTotal > 0) {
+      total = grandTotal;
+    } else {
+      total = await this.userService.count(criteria, activeOnly);
+    }
+    if (criteria)
+      return res.status(HttpStatus.OK).json({
+        start,
+        total,
+        grandTotal,
+        activeTotal,
+        perPage: limit,
+        num: users.length,
+        items: users,
+      });
   }
 
   @Get('list-csv/:startDt?/:endDt?')
@@ -1929,6 +1948,9 @@ export class UserController {
     return res.send(result);
   }
 
+  /*
+   * Aux. method used with public user objects
+   */
   mapPublicUser(
     user: User,
     facetedQuestions: any[] = [],
@@ -1986,6 +2008,10 @@ export class UserController {
     };
   }
 
+  /*
+   * WebWidgets
+   * Deletes a simple astro pair object within a public user record
+   */
   @Delete('public-pair-delete/:uid/:key')
   async deletePublicPair(@Res() res, @Param('uid') uid, @Param('key') key) {
     const { exists, removed } = await this.userService.removePublicPreference(
@@ -2000,6 +2026,10 @@ export class UserController {
     return res.status(status).json({ valid: exists, removed });
   }
 
+  /*
+   * WebWidgets and Admin
+   * Fetches public users for use with the widget admin area.
+   */
   @Get('public-users/:start?/:limit?')
   async getPublicUsers(
     @Res() res,
@@ -2019,6 +2049,11 @@ export class UserController {
     return res.json(items);
   }
 
+  /*
+   * WebWidgets
+   * Fetches public user info identified by their email or ID for use with simple
+   * widgets where no privacy is required.
+   */
   @Get('public-user/:ref/:refMode?')
   async getPublicUser(
     @Res() res,
