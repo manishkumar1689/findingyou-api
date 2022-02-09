@@ -12,7 +12,7 @@ import {
 import { MessageService } from './message.service';
 import { CreateMessageDTO } from './dto/create-message.dto';
 import { isValidObjectId } from 'mongoose';
-import { notEmptyString } from 'src/lib/validators';
+import { notEmptyString } from '../lib/validators';
 
 @Controller('Message')
 export class MessageController {

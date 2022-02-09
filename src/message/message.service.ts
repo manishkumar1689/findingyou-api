@@ -4,7 +4,7 @@ import * as htmlToText from 'html-to-text';
 import { InjectModel } from '@nestjs/mongoose';
 import { Message } from './interfaces/message.interface';
 import { CreateMessageDTO } from './dto/create-message.dto';
-import { isNumeric } from 'src/lib/validators';
+import { isNumeric } from '../lib/validators';
 import { mailDetails, mailService, webBaseUrl } from '../.config';
 
 @Injectable()
