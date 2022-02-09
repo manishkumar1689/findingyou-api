@@ -1,20 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpService } from '@nestjs/common';
 import { Model } from 'mongoose';
-/*import * as htmlToText from 'html-to-text';*/
+import * as htmlToText from 'html-to-text';
 import { InjectModel } from '@nestjs/mongoose';
 import { Message } from './interfaces/message.interface';
-import { MailerService, mail } from '@nest-modules/mailer';
 import { CreateMessageDTO } from './dto/create-message.dto';
+import { isNumeric } from 'src/lib/validators';
 import { mailDetails, mailService, webBaseUrl } from '../.config';
-import { isNumeric } from '../lib/validators';
-//import { logMail, logMailError } from '../lib/logger';
-//import { sendElasticMail } from '../lib/elasticmail';
 
 @Injectable()
 export class MessageService {
   constructor(
     @InjectModel('Message') private readonly messageModel: Model<Message>,
-    private readonly mailerService: MailerService,
+    private http: HttpService,
   ) {}
   // fetch all Messages
   async getAllMessage(): Promise<Message[]> {
@@ -30,8 +27,13 @@ export class MessageService {
     return Messages;
   }
   // Get a single Message
-  async getMessage(snippetID): Promise<Message> {
+  async getMessage(snippetID = ''): Promise<Message> {
     const snippet = await this.messageModel.findById(snippetID).exec();
+    return snippet;
+  }
+
+  async getByKey(key = ''): Promise<Message> {
+    const snippet = await this.messageModel.findOne({ key }).exec();
     return snippet;
   }
   // post a single Message
@@ -41,7 +43,7 @@ export class MessageService {
   }
   // Edit Message details
   async updateMessage(
-    messageID,
+    messageID = '',
     createMessageDTO: CreateMessageDTO,
   ): Promise<Message> {
     const updatedMessage = await this.messageModel.findByIdAndUpdate(
@@ -52,57 +54,36 @@ export class MessageService {
     return updatedMessage;
   }
 
-  async mail(key: string, email: string, toName: string): Promise<void> {
-    const message = await this.messageModel.findOne({ key });
-    const sendParams = this.transformMailParams(message, email, toName);
-
-    this.sendMail(sendParams, key);
+  // Edit Message details
+  async updateByKey(
+    key = '',
+    createMessageDTO: CreateMessageDTO,
+  ): Promise<Message> {
+    const updatedMessage = await this.messageModel.findOneAndUpdate(
+      { key },
+      createMessageDTO,
+      { new: true },
+    );
+    return updatedMessage;
   }
 
-  async resetMail(
-    email: string,
-    toName: string,
-    link: string = '',
-  ): Promise<void> {
-    const message = await this.messageModel.findOne({ key: 'password_reset' });
+  async resetMail(email: string, toName: string, link = ''): Promise<void> {
+    const message = await this.getByKey('password_reset');
     const mode = isNumeric(link) ? 'number' : 'web';
-    const sendParams = this.transformMailParams(message, email, toName, link, mode);
-
+    const sendParams = this.transformMailParams(
+      message,
+      email,
+      toName,
+      link,
+      mode,
+    );
     this.sendMail(sendParams, 'password_reset');
   }
 
-  public sendMail(sendParams, key: string = '') {
+  public sendMail(sendParams, key = '') {
     switch (mailService.provider) {
-      case 'elasticmail/api':
-        /* sendElasticMail(sendParams, (response, type) => {
-          switch (type) {
-            case 'error':
-              logMailError(response, key);
-              break;
-            default:
-              if (response.data instanceof Object) {
-                let data = {
-                  ...sendParams,
-                  ...response.data,
-                };
-                logMail(data, key);
-              } else {
-                logMail(response, key);
-              }
-
-              break;
-          }
-        }); */
-        break;
-      default:
-        /* this.mailerService
-          .sendMail(sendParams)
-          .then(data => {
-            logMail(data, key);
-          })
-          .catch(e => {
-            logMailError(e, key);
-          }); */
+      case 'google/appengine':
+        this.http.post(mailService.uri, sendParams);
         break;
     }
   }
@@ -111,14 +92,15 @@ export class MessageService {
     message: Message,
     email: string,
     toName: string,
-    resetLink: string = '',
-    mode = 'web'
+    resetLink = '',
+    mode = 'web',
   ) {
-    let params = {
+    const params = {
       to: email,
       from: mailDetails.fromAddress,
       subject: '',
       html: '',
+      text: '',
       toName,
       fromName: message.fromName,
       // plain: '',
@@ -138,16 +120,9 @@ export class MessageService {
           body = body.replace('%reset_link', resetLink);
         }
       }
-      if (body.indexOf('%access_link') > 0) {
-        if (mode === 'web') {
-          const fullAccessUrl = webBaseUrl + '/user/login';
-          const linkTag =
-            '<a href="' + fullAccessUrl + '">' + fullAccessUrl + '</a>';
-          body = body.replace('%access_link', linkTag);
-        }
-      }
       body = body.replace(/<p[^>]*?>\s*<br[^>]*?>\s*<\/p>/gi, '<p></p>');
       params.html = body;
+      params.text = htmlToText(body, { wordwrap: 80 });
     }
     return params;
   }

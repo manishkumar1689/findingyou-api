@@ -181,6 +181,26 @@ export class UserController {
     });
   }
 
+  @Get('email-match/:email')
+  async emailMatch(@Res() res, @Param('email') email) {
+    const user = await this.userService.findOneByEmail(email);
+    const valid = user instanceof Object;
+    const userObj = valid
+      ? {
+          nickName: user.nickName,
+          fullName: user.fullName,
+          identifier: user.identifier,
+          roles: user.roles,
+          active: user.active,
+        }
+      : {};
+    const result = {
+      valid,
+      user: userObj,
+    };
+    return res.json(result);
+  }
+
   /*
     #mobile
     #admin

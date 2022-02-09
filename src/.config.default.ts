@@ -77,10 +77,10 @@ export const mailDetails = {
 };
 
 export const mailService = {
-  provider: 'elasticmail/api',
+  provider: 'google/appengine',
   userName: '',
-  apiKey: '',
-  secret: '',
+  apiKey: 'djJhd-(8',
+  uri: 'https://direct-return-340513.ew.r.appspot.com',
 };
 
 export const imageSizes = {

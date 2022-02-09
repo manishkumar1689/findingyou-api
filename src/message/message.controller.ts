@@ -6,15 +6,13 @@ import {
   Post,
   Body,
   Put,
-  Query,
-  NotFoundException,
   Delete,
   Param,
 } from '@nestjs/common';
 import { MessageService } from './message.service';
 import { CreateMessageDTO } from './dto/create-message.dto';
-//import { readSentLog, readSentLogCsv } from '../lib/logger';
-import { smartCastInt, smartCastString } from '../lib/converters';
+import { isValidObjectId } from 'mongoose';
+import { notEmptyString } from 'src/lib/validators';
 
 @Controller('Message')
 export class MessageController {
@@ -30,16 +28,30 @@ export class MessageController {
     });
   }
 
-  @Put('/edit/:messageID')
+  @Put('/edit/:msgRef')
   async edit(
     @Res() res,
-    @Param('messageID') messageID,
+    @Param('msgRef') msgRef,
     @Body() createMessageDTO: CreateMessageDTO,
   ) {
-    const message = await this.messageService.updateMessage(
-      messageID,
-      createMessageDTO,
-    );
+    const hasRef = notEmptyString(msgRef, 3);
+    const useID = hasRef && isValidObjectId(msgRef);
+    const useKey = hasRef && /^[a-z0-9]+[a-z0-9_]+[a-z0-9]+$/.test(msgRef);
+    const hasValidRef = useID || useKey;
+    let message = null;
+    if (hasValidRef) {
+      if (useID) {
+        message = await this.messageService.updateMessage(
+          msgRef,
+          createMessageDTO,
+        );
+      } else {
+        message = await this.messageService.updateByKey(
+          msgRef,
+          createMessageDTO,
+        );
+      }
+    }
     const msg =
       message instanceof Object
         ? 'Message has been updated successfully'
@@ -61,25 +73,17 @@ export class MessageController {
   @Get('/item/:messageID')
   async get(@Res() res, @Param('messageID') messageID) {
     const message = await this.messageService.getMessage(messageID);
-    if (!message) {
-      throw new NotFoundException('Message does not exist!');
-    }
-    return res.status(HttpStatus.OK).json(message);
+    const status =
+      message instanceof Object ? HttpStatus.OK : HttpStatus.NOT_FOUND;
+    return res.status(status).json(message);
   }
 
-  @Get('/log/:limit?/:format?')
-  async readLog(@Res() res, @Param('limit') limit, @Param('format') format) {
-    const limitInt = smartCastInt(limit, 100);
-    const returnType = smartCastString(format, 'json');
-    /* if (returnType === 'json') {
-      const data = await readSentLog(limit);
-      return res.status(HttpStatus.OK).json(data);
-    } else {
-      const data = await readSentLogCsv(limit);
-      const filename = 'mail-log-' + dateTimeSuffix() + '.csv';
-      res.setHeader('Content-disposition', 'attachment; filename=' + filename);
-      res.set('Content-Type', 'text/csv');
-      return res.status(HttpStatus.OK).end(data);
-    } */
+  // Fetch a particular Message by key
+  @Get('/item/:key')
+  async getByKey(@Res() res, @Param('key') key) {
+    const message = await this.messageService.getByKey(key);
+    const status =
+      message instanceof Object ? HttpStatus.OK : HttpStatus.NOT_FOUND;
+    return res.status(status).json(message);
   }
 }

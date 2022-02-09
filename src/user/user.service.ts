@@ -331,7 +331,8 @@ export class UserService {
   // Get a single User
   async findOneByEmail(email: string, activeOnly = true): Promise<User> {
     const filter = new Map<string, any>();
-    filter.set('identifier', email);
+    const rgx = new RegExp('^' + email.replace(/\./g, '.') + '$', 'i');
+    filter.set('identifier', rgx);
     if (activeOnly) {
       filter.set('active', true);
     }
