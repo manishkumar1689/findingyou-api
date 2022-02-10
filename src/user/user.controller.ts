@@ -969,20 +969,21 @@ export class UserController {
       const row = permissionValues.find(pm => pm.key === key);
       return row instanceof Object ? row.name : toWords(key);
     };
-    const entryToPerm = ([key, value]) => {
+    const entryToRow = ([key, val], isLimit = false) => {
+      const value = isLimit ? val : typeof val === 'boolean' ? val : false;
       return {
         key,
         name: matchPermName(key),
         value,
       };
     };
+    const entryToPerm = entry => entryToRow(entry, false);
+    const entryToLimit = entry => entryToRow(entry, true);
     return res.status(HttpStatus.OK).json({
-      items: Object.entries(permObj)
-        .filter(entry => typeof entry[1] === 'boolean')
-        .map(entryToPerm),
+      items: Object.entries(permObj).map(entryToPerm),
       limits: Object.entries(permObj)
         .filter(entry => typeof entry[1] === 'number')
-        .map(entryToPerm),
+        .map(entryToLimit),
     });
   }
 

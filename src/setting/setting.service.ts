@@ -29,7 +29,9 @@ import { RedisService } from 'nestjs-redis';
 import * as Redis from 'ioredis';
 import { ProtocolSettings } from '../astrologic/lib/models/protocol-models';
 import { smartCastInt } from '../lib/converters';
-import permissionValues from '../user/settings/permissions';
+import permissionValues, {
+  limitPermissions,
+} from '../user/settings/permissions';
 import {
   analyseAnswers,
   filterMapSurveyByType,
@@ -418,6 +420,28 @@ export class SettingService {
     }
   }
 
+  async getFreeMemberLikeResetHours() {
+    const data = await this.getByKey('free_member_like_reset_limit');
+    return typeof data.value === 'number' ? data.value : 12;
+  }
+
+  async getEnabledPermissions(roleKeys: string[] = []) {
+    const data = await this.getPermissionData();
+    const permKeys = [];
+    if (roleKeys instanceof Array) {
+      roleKeys.forEach(roleKey => {
+        this.filterOverrides(permKeys, data, roleKey);
+      });
+    }
+    const entries = permKeys.map(key => {
+      const limitRow = data.limits.find(lm => lm.key === key);
+      const value =
+        limitRow instanceof Object ? smartCastInt(limitRow.value, 0) : true;
+      return [key, value];
+    });
+    return Object.fromEntries(entries);
+  }
+
   async getPermissions(roleKeys: string[] = [], skipCache = false) {
     const data = await this.getPermissionData(skipCache);
     const permKeys = [];
@@ -444,20 +468,12 @@ export class SettingService {
     const coreEntries = [...entries, ...otherKeys].filter(([k, v]) => {
       return rgx.test(k) === false && typeof v === 'boolean';
     });
-    const limitEntries = [...entries, ...otherKeys].filter(([k, v]) => {
-      return rgx.test(k) && typeof v === 'number';
-    });
     const limitRows: any[][] = [];
-    limitEntries.forEach(([k, v]) => {
-      const key = k.replace(rgx, '');
-      const mIndex = limitRows.findIndex(([k, v]) => k === key);
-      if (mIndex >= 0) {
-        if (limitRows[mIndex][1] < v) {
-          limitRows[mIndex][1] = v;
-        }
-      } else {
-        limitRows.push([key, smartCastInt(v)]);
-      }
+    limitPermissions.forEach(pv => {
+      const pvIndex = data.limits.findIndex(ld => ld.key === pv.key);
+      const pvValue =
+        pvIndex < 0 ? smartCastInt(pv.value) : data.limits[pvIndex].value;
+      limitRows.push([pv.key, pvValue]);
     });
     return Object.fromEntries([...limitRows, ...coreEntries]);
   }

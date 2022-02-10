@@ -214,16 +214,28 @@ export class FeedbackController {
       roles,
       likeStartTs,
     } = await this.userService.memberRolesAndLikeStart(from);
+    const nowTs = new Date().getTime();
     let numSwipes = await this.feedbackService.countRecentLikeability(
       from,
       value,
       likeStartTs,
     );
-    const perms = await this.settingService.getPermissions(roles);
-    const likePerms = Object.keys(perms).filter(p => p === maxKey);
-    const maxRating = hasLimits && likePerms.length > 0 ? perms[maxKey] : 1;
+    const perms = await this.settingService.getEnabledPermissions(roles);
+    const likeLimits = Object.entries(perms)
+      .filter(entry => entry[0].endsWith(maxKey))
+      .map(entry => smartCastInt(entry[1], 0));
+    let maxRating = intValue < 1 ? 1000000 : intValue === 1 ? 20 : 10;
+    if (hasLimits && likeLimits.length > 0) {
+      maxRating = Math.max(...likeLimits);
+    }
+    // the like Start timestamp is in the future and the action is like
+    // set the limit to zero
+    if (likeStartTs > nowTs && intValue > 0) {
+      maxRating = -1;
+    }
+
     const hasPaidRole = roles.some(rk => rk.includes('member'));
-    let data: any = { valid: false };
+    const data: any = { valid: false };
     const hasPrevPass = prevSwipe.valid && prevSwipe.value < 1;
     const isPass = intValue <= 0;
     // for free members set pass value to 0 if the other has liked them
@@ -240,11 +252,21 @@ export class FeedbackController {
         intValue = prevSwipe.value - 1;
       }
     }
-    /* if (value === 1 && !hasPaidRole) {
-      const maxRating = hasLimits && likePerms.length > 0 ? perms[maxKey] : 1;
-      console.log(roles, likeStartTs, perms);
-    } */
-    if ((numSwipes < maxRating || maxRating < 1) && prevPass > minRatingValue) {
+
+    data.remaining = maxRating > 0 ? maxRating - numSwipes : 0;
+    data.nextLikeStartTs = likeStartTs;
+    data.minutesToWait =
+      maxRating < 0 ? (nowTs - likeStartTs) / (60 * 1000) : 0;
+    data.roles = roles;
+    if (intValue === 1 && !hasPaidRole && data.remaining < 1) {
+      const hrsReset = await this.settingService.getFreeMemberLikeResetHours();
+      this.userService.updateLikeStartTs(from, hrsReset);
+    }
+    // skip maxRating check only if value is zero. If likes are used up, the value will be -1
+    if (
+      (numSwipes < maxRating || maxRating === 0) &&
+      prevPass > minRatingValue
+    ) {
       const flagData = {
         user: from,
         targetUser: to,
@@ -260,18 +282,14 @@ export class FeedbackController {
       if (sendMsg) {
         fcm = await this.sendNotification(flagData);
       }
-      data = {
-        valid,
-        flag,
-        fcm,
-        count: numSwipes,
-        roles,
-        maxRating,
-        prevSwipe,
-      };
+      data.valid = valid;
+      data.flag = flag;
+      data.fcm = fcm;
+      data.prevSwipe = prevSwipe;
       if (valid) {
         numSwipes++;
       }
+      data.count = numSwipes;
     }
     return res.status(HttpStatus.OK).json({ ...data, recipSwipe, hasPaidRole });
   }
