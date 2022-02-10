@@ -74,6 +74,9 @@ export class CreateUserDTO {
   readonly deviceToken?: string;
 
   @ApiProperty()
+  readonly likeStartTs?: number;
+
+  @ApiProperty()
   readonly login: Date;
 
   @ApiProperty()

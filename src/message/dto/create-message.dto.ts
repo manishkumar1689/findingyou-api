@@ -5,6 +5,9 @@ export class CreateMessageDTO {
   readonly key: string;
 
   @ApiProperty()
+  readonly lang: string;
+
+  @ApiProperty()
   readonly subject: string;
 
   @ApiProperty()

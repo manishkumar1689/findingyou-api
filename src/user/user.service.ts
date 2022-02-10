@@ -17,6 +17,7 @@ import * as moment from 'moment-timezone';
 import {
   inRange,
   isNumeric,
+  isNumericType,
   isSystemFileName,
   notEmptyString,
   validEmail,
@@ -297,15 +298,33 @@ export class UserService {
     return user;
   }
 
-  // Get a single User
-  async memberRoles(userID: string): Promise<string[]> {
-    const fields = ['roles'];
-    const user = await this.userModel
+  async getUserFields(userID = '', fields = []) {
+    return await this.userModel
       .findById(userID)
       .select(fields.join(' '))
       .exec();
+  }
+
+  // Get a single User
+  async memberRoles(userID: string): Promise<string[]> {
+    const user = await this.getUserFields(userID, ['roles']);
     const roles = user instanceof Object ? user.roles : [];
     return roles;
+  }
+
+  // Get a single User
+  async memberRolesAndLikeStart(
+    userID: string,
+  ): Promise<{ roles: string[]; likeStartTs: number }> {
+    const user = await this.getUserFields(userID, ['roles', 'likeStartTs']);
+    const matched = user instanceof Object;
+    const roles = matched ? user.roles : [];
+    const likeStartTs = matched
+      ? isNumericType(user.likeStartTs)
+        ? user.likeStartTs
+        : 0
+      : 0;
+    return { roles, likeStartTs };
   }
 
   async getUserDeviceToken(userID: string): Promise<string> {
@@ -648,6 +667,61 @@ export class UserService {
       message,
       reasonKey,
     };
+  }
+
+  async registerLogout(
+    userID = '',
+    userRef = '',
+  ): Promise<{
+    ts: number;
+    matched: boolean;
+    hasDeviceToken: boolean;
+    login: any;
+    loginTs: number;
+  }> {
+    const nowDt = new Date();
+    const result = {
+      ts: -1,
+      matched: false,
+      hasDeviceToken: false,
+      login: null,
+      loginTs: 0,
+    };
+    const user = await this.userModel
+      .findById(userID)
+      .select('identifier login deviceToken');
+    if (user instanceof Model) {
+      const { identifier, deviceToken, login } = user;
+      if (notEmptyString(identifier, 4) && notEmptyString(userRef)) {
+        if (identifier.toLowerCase() === userRef.toLowerCase()) {
+          const updated = await this.userModel.findByIdAndUpdate(userID, {
+            deviceToken: '',
+            modifiedAt: nowDt,
+          });
+          result.ts = nowDt.getTime();
+          result.hasDeviceToken = notEmptyString(deviceToken);
+          result.matched = updated instanceof Object;
+          if (login instanceof Date) {
+            result.login = login;
+            result.loginTs = login.getTime();
+          }
+        }
+      }
+    }
+    return result;
+  }
+
+  async updateLikeStartTs(userID = '', intervalHrs = 12) {
+    const nowDt = new Date();
+    const nowTs = nowDt.getTime();
+    const likeStartIntervalMs = intervalHrs * 60 * 60 * 1000;
+    const likeStartTs = nowTs + likeStartIntervalMs;
+    const user = await this.userModel.findByIdAndUpdate(userID, {
+      likeStartTs,
+      modifiedAt: nowDt,
+    });
+    const matched = user instanceof Object;
+    return matched ? likeStartTs : 0;
   }
 
   // Edit User password

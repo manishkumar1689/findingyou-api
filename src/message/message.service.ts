@@ -32,8 +32,41 @@ export class MessageService {
     return snippet;
   }
 
-  async getByKey(key = ''): Promise<Message> {
-    const snippet = await this.messageModel.findOne({ key }).exec();
+  async getByKey(key = ''): Promise<Message[]> {
+    const snippets = await this.messageModel.find({ key }).exec();
+    return snippets;
+  }
+
+  async getByKeyLang(key = '', lang = ''): Promise<Message> {
+    const snippets = await this.getByKey(key);
+    const hasLocale = lang.includes('-');
+    const langRoot = hasLocale ? lang.split('-').shift() : lang;
+    let snippet = null;
+    let index = -1;
+    if (snippets.length > 0) {
+      const langVersions = snippets.map(sn => {
+        let root = '';
+        let full = '';
+        if (typeof sn.lang === 'string') {
+          full = sn.lang;
+          root = sn.lang.split('-').shift();
+        }
+        return {
+          root,
+          full,
+        };
+      });
+      index = langVersions.findIndex(row => row.full === lang);
+      if (index < 0 && hasLocale) {
+        index = langVersions.findIndex(row => row.root === langRoot);
+        if (index < 0) {
+          index = langVersions.findIndex(row => row.root === langRoot);
+        }
+        if (index >= 0) {
+          snippet = snippets[index];
+        }
+      }
+    }
     return snippet;
   }
   // post a single Message
@@ -67,8 +100,13 @@ export class MessageService {
     return updatedMessage;
   }
 
-  async resetMail(email: string, toName: string, link = ''): Promise<void> {
-    const message = await this.getByKey('password_reset');
+  async resetMail(
+    email: string,
+    toName: string,
+    link = '',
+    lang = 'en',
+  ): Promise<void> {
+    const message = await this.getByKeyLang('password_reset', lang);
     const mode = isNumeric(link) ? 'number' : 'web';
     const sendParams = this.transformMailParams(
       message,

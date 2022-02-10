@@ -209,11 +209,16 @@ export class FeedbackController {
     let intValue = smartCastInt(value, 0);
     const maxKey = ['swipe', mapLikeability(intValue, true)].join('_');
     const hasLimits = notEmptyString(maxKey);
+
+    const {
+      roles,
+      likeStartTs,
+    } = await this.userService.memberRolesAndLikeStart(from);
     let numSwipes = await this.feedbackService.countRecentLikeability(
       from,
       value,
+      likeStartTs,
     );
-    const roles = await this.userService.memberRoles(from);
     const perms = await this.settingService.getPermissions(roles);
     const likePerms = Object.keys(perms).filter(p => p === maxKey);
     const maxRating = hasLimits && likePerms.length > 0 ? perms[maxKey] : 1;
@@ -235,6 +240,10 @@ export class FeedbackController {
         intValue = prevSwipe.value - 1;
       }
     }
+    /* if (value === 1 && !hasPaidRole) {
+      const maxRating = hasLimits && likePerms.length > 0 ? perms[maxKey] : 1;
+      console.log(roles, likeStartTs, perms);
+    } */
     if ((numSwipes < maxRating || maxRating < 1) && prevPass > minRatingValue) {
       const flagData = {
         user: from,

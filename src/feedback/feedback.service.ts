@@ -194,6 +194,15 @@ export class FeedbackService {
     }
   }
 
+  async countLikesGiven(userID = '', likeStartTs = 0) {
+    const startDt = new Date(likeStartTs);
+    return await this.flagModel.count({
+      user: userID,
+      value: { $gt: 0 },
+      modifiedAt: { $gte: startDt },
+    });
+  }
+
   async fetchFilteredUserInteractions(
     userId = '',
     notFlags = [],
@@ -477,14 +486,20 @@ export class FeedbackService {
     return result;
   }
 
-  async countRecentLikeability(userId: string, refNum = 1) {
+  async countRecentLikeability(userId: string, refNum = 1, likeStartTs = -1) {
     const nowTs = new Date().getTime();
-    const oneDayAgo = new Date(nowTs - 24 * 60 * 60 * 1000);
+    const sinceTs = likeStartTs > 0 ? nowTs - 24 * 60 * 60 * 1000 : likeStartTs;
+    const dateAgo = new Date(sinceTs);
+    const modifiedAt = {
+      $gte: dateAgo,
+    };
+    if (sinceTs > 0) {
+    }
     const criteria = {
       key: 'likeability',
       user: userId,
       value: refNum,
-      modifiedAt: { $gte: oneDayAgo },
+      modifiedAt,
     };
     return await this.flagModel.count(criteria);
   }
@@ -495,7 +510,9 @@ export class FeedbackService {
       user: userId,
       targetUser: otherUserId,
     };
-    const flag = await this.flagModel.findOne(criteria);
+    const flag = await this.flagModel
+      .findOne(criteria)
+      .select('key value user targetUser createdAt modifiedAt');
     return flag instanceof Model
       ? { ...flag.toObject(), valid: true }
       : { valid: false, value: 0 };

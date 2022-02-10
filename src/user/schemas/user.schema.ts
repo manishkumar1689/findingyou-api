@@ -77,6 +77,7 @@ export const UserSchema = new mongoose.Schema({
   status: [StatusSchema],
   deviceToken: String,
   token: String,
+  likeStartTs: { type: Number, default: 0 },
   login: { type: Date, default: null, required: false },
   createdAt: { type: Date, default: Date.now },
   modifiedAt: { type: Date, default: Date.now },

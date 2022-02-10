@@ -117,6 +117,7 @@ import permissionValues from './settings/permissions';
 import { EmailParams } from './interfaces/email-params';
 import { currentJulianDay } from '../astrologic/lib/julian-date';
 import { buildCoreAspects } from '../astrologic/lib/calc-orbs';
+import { LogoutDTO } from './dto/logout.dto';
 
 @Controller('user')
 export class UserController {
@@ -270,6 +271,39 @@ export class UserController {
       user: userData,
       valid,
     });
+  }
+
+  @Put('logout/:userID')
+  async logOut(
+    @Res() res,
+    @Param('userID') userID,
+    @Body() logoutDTO: LogoutDTO,
+  ) {
+    let status = HttpStatus.NOT_FOUND;
+    const result = {
+      valid: false,
+      ts: 0,
+      hasDeviceToken: false,
+      login: null,
+      loginTs: 0,
+    };
+    if (notEmptyString(userID) && isValidObjectId(userID)) {
+      const { identifier } = logoutDTO;
+      const logoutResult = await this.userService.registerLogout(
+        userID,
+        identifier,
+      );
+
+      result.ts = logoutResult.ts;
+      result.valid = logoutResult.matched;
+      result.hasDeviceToken = logoutResult.hasDeviceToken;
+      result.login = logoutResult.login;
+      result.loginTs = logoutResult.loginTs;
+      if (result.valid) {
+        status = HttpStatus.OK;
+      }
+    }
+    return res.status(status).json(result);
   }
 
   /*
