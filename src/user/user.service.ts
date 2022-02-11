@@ -711,17 +711,25 @@ export class UserService {
     return result;
   }
 
-  async updateLikeStartTs(userID = '', intervalHrs = 12) {
+  async updateLikeStartTs(userID = '', intervalHrs = 12, exactTs = -1) {
+    let likeStartTs = -1;
+    let matched = false;
     const nowDt = new Date();
-    const nowTs = nowDt.getTime();
-    const likeStartIntervalMs = intervalHrs * 60 * 60 * 1000;
-    const likeStartTs = nowTs + likeStartIntervalMs;
-    const user = await this.userModel.findByIdAndUpdate(userID, {
-      likeStartTs,
-      modifiedAt: nowDt,
-    });
-    const matched = user instanceof Object;
-    return matched ? likeStartTs : 0;
+    if (exactTs >= 0 && intervalHrs < 1) {
+      const nowTs = nowDt.getTime();
+      const likeStartIntervalMs = intervalHrs * 60 * 60 * 1000;
+      likeStartTs = nowTs + likeStartIntervalMs;
+    } else {
+      likeStartTs = exactTs;
+    }
+    if (likeStartTs >= 0) {
+      const user = await this.userModel.findByIdAndUpdate(userID, {
+        likeStartTs,
+        modifiedAt: nowDt,
+      });
+      matched = user instanceof Object;
+    }
+    return matched ? likeStartTs : -1;
   }
 
   // Edit User password

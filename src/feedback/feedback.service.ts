@@ -488,13 +488,11 @@ export class FeedbackService {
 
   async countRecentLikeability(userId: string, refNum = 1, likeStartTs = -1) {
     const nowTs = new Date().getTime();
-    const sinceTs = likeStartTs > 0 ? nowTs - 24 * 60 * 60 * 1000 : likeStartTs;
+    const sinceTs = likeStartTs > 0 ? likeStartTs : nowTs - 24 * 60 * 60 * 1000;
     const dateAgo = new Date(sinceTs);
     const modifiedAt = {
       $gte: dateAgo,
     };
-    if (sinceTs > 0) {
-    }
     const criteria = {
       key: 'likeability',
       user: userId,

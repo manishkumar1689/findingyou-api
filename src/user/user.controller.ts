@@ -118,6 +118,7 @@ import { EmailParams } from './interfaces/email-params';
 import { currentJulianDay } from '../astrologic/lib/julian-date';
 import { buildCoreAspects } from '../astrologic/lib/calc-orbs';
 import { LogoutDTO } from './dto/logout.dto';
+import { ResetDTO } from './dto/reset.dto';
 
 @Controller('user')
 export class UserController {
@@ -1390,6 +1391,25 @@ export class UserController {
     };
     const data = await this.editStatusItem(editStatusDTO, numBoosts);
     return res.json(data);
+  }
+
+  @Put('reset-likes/:userID')
+  async resetLikes(
+    @Res() res,
+    @Param('userID') userID,
+    @Body() resetDTO: ResetDTO,
+  ) {
+    const { ts } = resetDTO;
+    const result = { valid: false, ts: -1 };
+    if (isNumeric(ts)) {
+      let tsInt = smartCastInt(ts);
+      if (tsInt < 0) {
+        tsInt = new Date().getTime();
+        result.ts = await this.userService.updateLikeStartTs(userID, 0, tsInt);
+        result.valid = result.ts >= 0;
+      }
+    }
+    return res.json(result);
   }
 
   async editStatusItem(editStatusDTO: EditStatusDTO, numBoosts = 0) {

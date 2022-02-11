@@ -9,6 +9,7 @@ import {
   Query,
   Param,
   Delete,
+  Put,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { FeedbackService } from './feedback.service';
@@ -252,7 +253,6 @@ export class FeedbackController {
         intValue = prevSwipe.value - 1;
       }
     }
-
     data.remaining = maxRating > 0 ? maxRating - numSwipes : 0;
     data.nextLikeStartTs = likeStartTs;
     data.minutesToWait =
