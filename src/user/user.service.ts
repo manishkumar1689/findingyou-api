@@ -716,11 +716,11 @@ export class UserService {
     let matched = false;
     const nowDt = new Date();
     if (exactTs >= 0 && intervalHrs < 1) {
+      likeStartTs = exactTs;
+    } else {
       const nowTs = nowDt.getTime();
       const likeStartIntervalMs = intervalHrs * 60 * 60 * 1000;
       likeStartTs = nowTs + likeStartIntervalMs;
-    } else {
-      likeStartTs = exactTs;
     }
     if (likeStartTs >= 0) {
       const user = await this.userModel.findByIdAndUpdate(userID, {

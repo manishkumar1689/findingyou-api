@@ -7,6 +7,11 @@ import { CreateMessageDTO } from './dto/create-message.dto';
 import { isNumeric } from '../lib/validators';
 import { mailDetails, mailService, webBaseUrl } from '../.config';
 
+export interface MessageSet {
+  key: string;
+  items: Message[];
+}
+
 @Injectable()
 export class MessageService {
   constructor(
@@ -14,10 +19,27 @@ export class MessageService {
     private http: HttpService,
   ) {}
   // fetch all Messages
-  async getAllMessage(): Promise<Message[]> {
-    const Messages = await this.messageModel.find().exec();
-    return Messages;
+  async list(): Promise<Message[]> {
+    return await this.messageModel.find().exec();
   }
+
+  async listByKey(): Promise<MessageSet[]> {
+    const items = await this.list();
+    if (items.length > 0) {
+      const rows: MessageSet[] = [];
+      items.forEach(msg => {
+        const rowIndex = rows.findIndex(row => row.key === msg.key);
+        if (rowIndex < 0) {
+          rows.push({ key: msg.key, items: [msg] });
+        } else {
+          rows[rowIndex].items.push(msg);
+        }
+      });
+    } else {
+      return;
+    }
+  }
+
   // fetch all snippets with core fields only
   async getAll(): Promise<Message[]> {
     const Messages = await this.messageModel

@@ -63,14 +63,18 @@ export class MessageController {
   }
 
   // Retrieve Messages list
-  @Get('/list')
+  @Get('list')
   async getAllMessage(@Res() res) {
-    const messages = await this.messageService.getAllMessage();
-    return res.status(HttpStatus.OK).json(messages);
+    const messageSets = await this.messageService.listByKey();
+    const result = {
+      valid: messageSets.length > 0,
+      rows: messageSets,
+    };
+    return res.status(HttpStatus.OK).json(result);
   }
 
   // Fetch a particular Message using ID
-  @Get('/item/:messageID')
+  @Get('item/:messageID')
   async get(@Res() res, @Param('messageID') messageID) {
     const message = await this.messageService.getMessage(messageID);
     const status =
@@ -79,11 +83,15 @@ export class MessageController {
   }
 
   // Fetch a particular Message by key
-  @Get('/item/:key')
+  @Get('by-key/:key')
   async getByKey(@Res() res, @Param('key') key) {
-    const message = await this.messageService.getByKey(key);
-    const status =
-      message instanceof Object ? HttpStatus.OK : HttpStatus.NOT_FOUND;
-    return res.status(status).json(message);
+    const items = await this.messageService.getByKey(key);
+    const valid = items.length > 0;
+    const status = valid ? HttpStatus.OK : HttpStatus.NOT_FOUND;
+    const result = {
+      valid,
+      items: items,
+    };
+    return res.status(status).json(result);
   }
 }
