@@ -288,6 +288,7 @@ export class FeedbackController {
       data.prevSwipe = prevSwipe;
       if (valid) {
         numSwipes++;
+        data.remaining--;
       }
       data.count = numSwipes;
     }
