@@ -28,7 +28,7 @@ export class MessageController {
     });
   }
 
-  @Put('/edit/:msgRef')
+  @Put('edit/:msgRef')
   async edit(
     @Res() res,
     @Param('msgRef') msgRef,
@@ -66,8 +66,9 @@ export class MessageController {
   @Get('list')
   async getAllMessage(@Res() res) {
     const messageSets = await this.messageService.listByKey();
+    const valid = messageSets instanceof Array && messageSets.length > 0;
     const result = {
-      valid: messageSets.length > 0,
+      valid,
       rows: messageSets,
     };
     return res.status(HttpStatus.OK).json(result);

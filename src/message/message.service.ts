@@ -20,13 +20,13 @@ export class MessageService {
   ) {}
   // fetch all Messages
   async list(): Promise<Message[]> {
-    return await this.messageModel.find().exec();
+    return await this.messageModel.find({});
   }
 
   async listByKey(): Promise<MessageSet[]> {
     const items = await this.list();
+    const rows: MessageSet[] = [];
     if (items.length > 0) {
-      const rows: MessageSet[] = [];
       items.forEach(msg => {
         const rowIndex = rows.findIndex(row => row.key === msg.key);
         if (rowIndex < 0) {
@@ -35,9 +35,8 @@ export class MessageService {
           rows[rowIndex].items.push(msg);
         }
       });
-    } else {
-      return;
     }
+    return rows;
   }
 
   // fetch all snippets with core fields only
