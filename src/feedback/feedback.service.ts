@@ -512,7 +512,7 @@ export class FeedbackService {
     };
     const flag = await this.flagModel
       .findOne(criteria)
-      .select('key value user targetUser createdAt modifiedAt');
+      .select('-_id key value modifiedAt');
     return flag instanceof Model
       ? { ...flag.toObject(), valid: true }
       : { valid: false, value: 0 };

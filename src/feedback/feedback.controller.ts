@@ -235,7 +235,7 @@ export class FeedbackController {
     }
 
     const hasPaidRole = roles.some(rk => rk.includes('member'));
-    const data: any = { valid: false };
+    const data: any = { valid: false, updated: false };
     const hasPrevPass = prevSwipe.valid && prevSwipe.value < 1;
     const isPass = intValue <= 0;
     // for free members set pass value to 0 if the other has liked them
@@ -286,9 +286,10 @@ export class FeedbackController {
       data.flag = flag;
       data.fcm = fcm;
       data.prevSwipe = prevSwipe;
-      if (valid) {
+      if (valid && prevSwipe.value !== intValue) {
         numSwipes++;
         data.remaining--;
+        data.updated = true;
       }
       data.count = numSwipes;
     }
