@@ -58,14 +58,14 @@ export class MessageService {
     return snippets;
   }
 
-  async getByKeyLang(key = '', lang = ''): Promise<Message> {
-    const snippets = await this.getByKey(key);
+  async getByKeyLang(key = '', lang = '', exact = false): Promise<Message> {
+    const items = await this.getByKey(key);
     const hasLocale = lang.includes('-');
     const langRoot = hasLocale ? lang.split('-').shift() : lang;
-    let snippet = null;
+    let message = null;
     let index = -1;
-    if (snippets.length > 0) {
-      const langVersions = snippets.map(sn => {
+    if (items.length > 0) {
+      const langVersions = items.map(sn => {
         let root = '';
         let full = '';
         if (typeof sn.lang === 'string') {
@@ -78,17 +78,17 @@ export class MessageService {
         };
       });
       index = langVersions.findIndex(row => row.full === lang);
-      if (index < 0 && hasLocale) {
+      if (index < 0 && hasLocale && !exact) {
         index = langVersions.findIndex(row => row.root === langRoot);
         if (index < 0) {
           index = langVersions.findIndex(row => row.root === langRoot);
         }
-        if (index >= 0) {
-          snippet = snippets[index];
-        }
+      }
+      if (index >= 0) {
+        message = items[index];
       }
     }
-    return snippet;
+    return message;
   }
   // post a single Message
   async addMessage(createMessageDTO: CreateMessageDTO): Promise<Message> {
@@ -109,16 +109,26 @@ export class MessageService {
   }
 
   // Edit Message details
-  async updateByKey(
-    key = '',
-    createMessageDTO: CreateMessageDTO,
-  ): Promise<Message> {
-    const updatedMessage = await this.messageModel.findOneAndUpdate(
-      { key },
-      createMessageDTO,
-      { new: true },
-    );
-    return updatedMessage;
+  async updateByKey(key = '', items: CreateMessageDTO[]): Promise<MessageSet> {
+    const msgSet: MessageSet = { key, items: [] };
+    const modifiedAt = new Date();
+    for (const item of items) {
+      const msg = await this.getByKeyLang(item.key, item.lang, true);
+      let saved = null;
+      if (msg instanceof Object) {
+        saved = await this.updateMessage(msg._id, { ...item, modifiedAt });
+      } else {
+        saved = await this.addMessage({
+          ...item,
+          createdAt: modifiedAt,
+          modifiedAt,
+        });
+      }
+      if (saved instanceof Object) {
+        msgSet.items.push(saved);
+      }
+    }
+    return msgSet;
   }
 
   async resetMail(

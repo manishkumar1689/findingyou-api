@@ -19,7 +19,7 @@ export class MessageController {
   constructor(private messageService: MessageService) {}
 
   // add a Message
-  @Post('/create')
+  @Post('create')
   async addMessage(@Res() res, @Body() createMessageDTO: CreateMessageDTO) {
     const message = await this.messageService.addMessage(createMessageDTO);
     return res.status(HttpStatus.OK).json({
@@ -28,29 +28,20 @@ export class MessageController {
     });
   }
 
-  @Put('edit/:msgRef')
+  @Put('edit/:msgId')
   async edit(
     @Res() res,
-    @Param('msgRef') msgRef,
+    @Param('msgId') msgId,
     @Body() createMessageDTO: CreateMessageDTO,
   ) {
-    const hasRef = notEmptyString(msgRef, 3);
-    const useID = hasRef && isValidObjectId(msgRef);
-    const useKey = hasRef && /^[a-z0-9]+[a-z0-9_]+[a-z0-9]+$/.test(msgRef);
-    const hasValidRef = useID || useKey;
+    const hasRef = notEmptyString(msgId, 20);
+    const hasValidRef = hasRef && isValidObjectId(msgId);
     let message = null;
     if (hasValidRef) {
-      if (useID) {
-        message = await this.messageService.updateMessage(
-          msgRef,
-          createMessageDTO,
-        );
-      } else {
-        message = await this.messageService.updateByKey(
-          msgRef,
-          createMessageDTO,
-        );
-      }
+      message = await this.messageService.updateMessage(
+        msgId,
+        createMessageDTO,
+      );
     }
     const msg =
       message instanceof Object
@@ -59,6 +50,24 @@ export class MessageController {
     return res.status(HttpStatus.OK).json({
       msg,
       message,
+    });
+  }
+
+  @Put('edit-set/:key')
+  async saveByKey(
+    @Res() res,
+    @Param('key') key,
+    @Body() items: CreateMessageDTO[],
+  ) {
+    const result = await this.messageService.updateByKey(key, items);
+    const valid = result instanceof Object && result.items.length > 0;
+    const msg = valid
+      ? 'Message set has been updated successfully'
+      : 'Invalid data';
+    return res.status(HttpStatus.OK).json({
+      valid,
+      msg,
+      result,
     });
   }
 
