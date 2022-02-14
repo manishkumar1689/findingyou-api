@@ -1399,15 +1399,21 @@ export class UserController {
     @Param('userID') userID,
     @Body() resetDTO: ResetDTO,
   ) {
-    const { ts } = resetDTO;
+    const { ts, value } = resetDTO;
     const result = { valid: false, ts: -1 };
     if (isNumeric(ts)) {
       let tsInt = smartCastInt(ts);
+      const likeIntVal = isNumeric(value) ? smartCastInt(value, 1) : 1;
       if (tsInt < 0) {
         tsInt = new Date().getTime();
-        result.ts = await this.userService.updateLikeStartTs(userID, 0, tsInt);
-        result.valid = result.ts >= 0;
       }
+      result.ts = await this.userService.updateLikeStartTs(
+        userID,
+        0,
+        likeIntVal,
+        tsInt,
+      );
+      result.valid = result.ts >= 0;
     }
     return res.json(result);
   }

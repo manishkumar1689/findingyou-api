@@ -40,6 +40,7 @@ import {
 } from './lib/mappers';
 import { FacetedItemDTO } from './dto/faceted-item.dto';
 import eventTypeValues from '../astrologic/lib/settings/event-type-values';
+import { mapLikeability } from 'src/lib/notifications';
 
 @Injectable()
 export class SettingService {
@@ -476,6 +477,24 @@ export class SettingService {
       limitRows.push([pv.key, pvValue]);
     });
     return Object.fromEntries([...limitRows, ...coreEntries]);
+  }
+
+  async getMaxRatingLimit(roles: string[] = [], value = 0) {
+    const maxKeyParts = ['swipe', mapLikeability(value, true)]
+      .join('_')
+      .split('|');
+    const maxKey = maxKeyParts.length > 0 ? maxKeyParts[0] : 'wxyz';
+    const maxKey2 = maxKeyParts.length > 1 ? maxKeyParts[1] : maxKey;
+    const hasLimits = notEmptyString(maxKey);
+    const perms = await this.getEnabledPermissions(roles);
+    const likeLimits = Object.entries(perms)
+      .filter(entry => entry[0].endsWith(maxKey) || entry[0].endsWith(maxKey2))
+      .map(entry => smartCastInt(entry[1], 0));
+    let maxRating = value < 1 ? 1000000 : value === 1 ? 20 : 5;
+    if (hasLimits && likeLimits.length > 0) {
+      maxRating = Math.max(...likeLimits);
+    }
+    return maxRating;
   }
 
   filterOverrides(permKeys: string[] = [], permData = null, roleKey = '') {

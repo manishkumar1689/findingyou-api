@@ -315,8 +315,16 @@ export class UserService {
   // Get a single User
   async memberRolesAndLikeStart(
     userID: string,
-  ): Promise<{ roles: string[]; likeStartTs: number }> {
-    const user = await this.getUserFields(userID, ['roles', 'likeStartTs']);
+  ): Promise<{
+    roles: string[];
+    likeStartTs: number;
+    superlikeStartTs: number;
+  }> {
+    const user = await this.getUserFields(userID, [
+      'roles',
+      'likeStartTs',
+      'superlikeStartTs',
+    ]);
     const matched = user instanceof Object;
     const roles = matched ? user.roles : [];
     const likeStartTs = matched
@@ -324,7 +332,12 @@ export class UserService {
         ? user.likeStartTs
         : 0
       : 0;
-    return { roles, likeStartTs };
+    const superlikeStartTs = matched
+      ? isNumericType(user.superlikeStartTs)
+        ? user.superlikeStartTs
+        : 0
+      : 0;
+    return { roles, likeStartTs, superlikeStartTs };
   }
 
   async getUserDeviceToken(userID: string): Promise<string> {
@@ -711,25 +724,38 @@ export class UserService {
     return result;
   }
 
-  async updateLikeStartTs(userID = '', intervalHrs = 12, exactTs = -1) {
-    let likeStartTs = -1;
+  /*
+  @param string userID
+  @param int intervalHrs
+  @param int likeVal 
+  @param int exactTs // -1 equals use current time + interval
+  */
+  async updateLikeStartTs(
+    userID = '',
+    intervalHrs = 12,
+    likeVal = 1,
+    exactTs = -1,
+  ) {
+    let startTs = -1;
     let matched = false;
     const nowDt = new Date();
     if (exactTs >= 0 && intervalHrs < 1) {
-      likeStartTs = exactTs;
+      startTs = exactTs;
     } else {
       const nowTs = nowDt.getTime();
       const likeStartIntervalMs = intervalHrs * 60 * 60 * 1000;
-      likeStartTs = nowTs + likeStartIntervalMs;
+      startTs = nowTs + likeStartIntervalMs;
     }
-    if (likeStartTs >= 0) {
+    if (startTs >= 0) {
+      const likeStartEdit =
+        likeVal < 2 ? { likeStartTs: startTs } : { superlikeStartTs: startTs };
       const user = await this.userModel.findByIdAndUpdate(userID, {
-        likeStartTs,
+        ...likeStartEdit,
         modifiedAt: nowDt,
       });
       matched = user instanceof Object;
     }
-    return matched ? likeStartTs : -1;
+    return matched ? startTs : -1;
   }
 
   // Edit User password

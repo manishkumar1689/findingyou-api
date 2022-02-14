@@ -77,6 +77,9 @@ export class CreateUserDTO {
   readonly likeStartTs?: number;
 
   @ApiProperty()
+  readonly superlikeStartTs?: number;
+
+  @ApiProperty()
   readonly login: Date;
 
   @ApiProperty()

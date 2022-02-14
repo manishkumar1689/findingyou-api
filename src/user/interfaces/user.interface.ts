@@ -29,6 +29,7 @@ export interface User extends Document {
   readonly deviceToken: string;
   readonly token: string;
   readonly likeStartTs: number;
+  readonly superlikeStartTs: number;
   readonly login: Date;
   readonly createdAt: Date;
   readonly modifiedAt: Date;

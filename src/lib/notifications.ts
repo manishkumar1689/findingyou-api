@@ -49,10 +49,10 @@ export const mapUserFlag = (item, toMode = false, likeMode = false): IFlag => {
   }
 };
 
-export const mapLikeability = (value = -1, zeroAsPass = false) => {
+export const mapLikeability = (value = -1, zeroAsPass = false): string => {
   switch (value) {
     case 2:
-      return 'superlike';
+      return 'superlike|superstar';
     case 1:
       return 'like';
     case 0:
