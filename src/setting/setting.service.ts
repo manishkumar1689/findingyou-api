@@ -40,7 +40,7 @@ import {
 } from './lib/mappers';
 import { FacetedItemDTO } from './dto/faceted-item.dto';
 import eventTypeValues from '../astrologic/lib/settings/event-type-values';
-import { mapLikeability } from 'src/lib/notifications';
+import { mapLikeability } from '../lib/notifications';
 
 @Injectable()
 export class SettingService {
