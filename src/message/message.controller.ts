@@ -8,6 +8,7 @@ import {
   Put,
   Delete,
   Param,
+  Query,
 } from '@nestjs/common';
 import { MessageService } from './message.service';
 import { CreateMessageDTO } from './dto/create-message.dto';
@@ -58,8 +59,11 @@ export class MessageController {
     @Res() res,
     @Param('key') key,
     @Body() items: CreateMessageDTO[],
+    @Query() query,
   ) {
-    const result = await this.messageService.updateByKey(key, items);
+    const delRef = Object.keys(query).includes('del') ? query.del : '';
+    const deleteIds = notEmptyString(delRef, 20) ? delRef.split(',') : [];
+    const result = await this.messageService.updateByKey(key, items, deleteIds);
     const valid = result instanceof Object && result.items.length > 0;
     const msg = valid
       ? 'Message set has been updated successfully'

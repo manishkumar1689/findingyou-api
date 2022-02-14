@@ -9,6 +9,10 @@ export const MessageSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  active: {
+    type: Boolean,
+    default: true,
+  },
   subject: {
     type: String,
     required: true,

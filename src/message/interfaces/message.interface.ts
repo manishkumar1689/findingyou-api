@@ -3,6 +3,7 @@ import { Document } from 'mongoose';
 export interface Message extends Document {
   readonly key: string;
   readonly lang: string;
+  readonly active: boolean;
   readonly subject: string;
   readonly body: string;
   readonly fromName: string;

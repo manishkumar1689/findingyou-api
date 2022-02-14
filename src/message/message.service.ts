@@ -35,6 +35,18 @@ export class MessageService {
           rows[rowIndex].items.push(msg);
         }
       });
+      for (const row of rows) {
+        let defEngIndex = row.items.findIndex(r => r.lang === 'en');
+        if (defEngIndex < 0) {
+          defEngIndex = row.items.findIndex(r => r.lang === 'en');
+        }
+        if (defEngIndex > 0) {
+          const defRow = row.items.splice(defEngIndex, 1);
+          row.items.unshift(defRow[0]);
+          const boolToInt = (b: boolean) => (b ? 1 : -1);
+          row.items.sort((a, b) => boolToInt(a.active) - boolToInt(b.active));
+        }
+      }
     }
     return rows;
   }
@@ -109,17 +121,39 @@ export class MessageService {
   }
 
   // Edit Message details
-  async updateByKey(key = '', items: CreateMessageDTO[]): Promise<MessageSet> {
+  async updateByKey(
+    key = '',
+    items: CreateMessageDTO[],
+    deleteIds: string[] = [],
+  ): Promise<MessageSet> {
     const msgSet: MessageSet = { key, items: [] };
     const modifiedAt = new Date();
+    await this.messageModel.updateMany({ key }, { active: false });
+    if (deleteIds.length > 0) {
+      for (const delId of deleteIds) {
+        await this.messageModel.findByIdAndDelete(delId);
+      }
+    }
     for (const item of items) {
       const msg = await this.getByKeyLang(item.key, item.lang, true);
+      const edited = {
+        key: item.key,
+        lang: item.lang,
+        active: item.active,
+        subject: item.subject,
+        body: item.body,
+        fromName: item.fromName,
+        fromMail: item.fromMail,
+      } as CreateMessageDTO;
       let saved = null;
       if (msg instanceof Object) {
-        saved = await this.updateMessage(msg._id, { ...item, modifiedAt });
+        saved = await this.updateMessage(msg._id, {
+          ...edited,
+          modifiedAt,
+        });
       } else {
         saved = await this.addMessage({
-          ...item,
+          ...edited,
           createdAt: modifiedAt,
           modifiedAt,
         });
@@ -128,6 +162,7 @@ export class MessageService {
         msgSet.items.push(saved);
       }
     }
+
     return msgSet;
   }
 
