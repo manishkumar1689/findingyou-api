@@ -77,7 +77,9 @@ const filterLike = (row = null, userID = '') => {
 export const mapLikeabilityRelation = (item = null): FlagVal => {
   if (item instanceof Object) {
     const { value, modifiedAt } = item;
-    const keyVal = mapLikeability(value);
+    const keyVal = mapLikeability(value)
+      .split('|')
+      .shift();
     return { value: keyVal, modifiedAt };
   } else {
     return { value: '' };
