@@ -285,19 +285,22 @@ export class UserController {
       valid: false,
       ts: 0,
       hasDeviceToken: false,
+      deviceTokenMatched: false,
       login: null,
       loginTs: 0,
     };
     if (notEmptyString(userID) && isValidObjectId(userID)) {
-      const { identifier } = logoutDTO;
+      const { identifier, deviceToken } = logoutDTO;
       const logoutResult = await this.userService.registerLogout(
         userID,
         identifier,
+        deviceToken,
       );
 
       result.ts = logoutResult.ts;
       result.valid = logoutResult.matched;
       result.hasDeviceToken = logoutResult.hasDeviceToken;
+      result.deviceTokenMatched = logoutResult.deviceTokenMatched;
       result.login = logoutResult.login;
       result.loginTs = logoutResult.loginTs;
       if (result.valid) {

@@ -685,10 +685,12 @@ export class UserService {
   async registerLogout(
     userID = '',
     userRef = '',
+    deviceTokenRef = '',
   ): Promise<{
     ts: number;
     matched: boolean;
     hasDeviceToken: boolean;
+    deviceTokenMatched: boolean;
     login: any;
     loginTs: number;
   }> {
@@ -697,6 +699,7 @@ export class UserService {
       ts: -1,
       matched: false,
       hasDeviceToken: false,
+      deviceTokenMatched: false,
       login: null,
       loginTs: 0,
     };
@@ -705,19 +708,31 @@ export class UserService {
       .select('identifier login deviceToken');
     if (user instanceof Model) {
       const { identifier, deviceToken, login } = user;
-      if (notEmptyString(identifier, 4) && notEmptyString(userRef)) {
-        if (identifier.toLowerCase() === userRef.toLowerCase()) {
-          const updated = await this.userModel.findByIdAndUpdate(userID, {
-            deviceToken: '',
-            modifiedAt: nowDt,
-          });
-          result.ts = nowDt.getTime();
-          result.hasDeviceToken = notEmptyString(deviceToken);
-          result.matched = updated instanceof Object;
-          if (login instanceof Date) {
-            result.login = login;
-            result.loginTs = login.getTime();
-          }
+      const hasDeviceTokenRef = notEmptyString(deviceTokenRef, 6);
+      const deviceTokenMatched = hasDeviceTokenRef
+        ? deviceTokenRef === deviceToken
+        : false;
+      const mayMatchIdentifier =
+        notEmptyString(identifier, 4) && notEmptyString(userRef);
+      const matched =
+        deviceTokenMatched ||
+        (mayMatchIdentifier &&
+          identifier.toLowerCase() === userRef.toLowerCase());
+      if (matched) {
+        const edited = deviceTokenMatched
+          ? {
+              deviceToken: '',
+              modifiedAt: nowDt,
+            }
+          : { modifiedAt: nowDt };
+        const updated = await this.userModel.findByIdAndUpdate(userID, edited);
+        result.ts = nowDt.getTime();
+        result.deviceTokenMatched = deviceTokenMatched;
+        result.hasDeviceToken = notEmptyString(deviceToken);
+        result.matched = updated instanceof Object;
+        if (login instanceof Date) {
+          result.login = login;
+          result.loginTs = login.getTime();
         }
       }
     }
