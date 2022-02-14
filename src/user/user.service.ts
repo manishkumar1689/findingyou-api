@@ -263,6 +263,11 @@ export class UserService {
           case 'agerange':
             filter.set('preferences', this.translateAgeRangeWithin(val));
             break;
+          case 'profile':
+            if (smartCastInt(val, 0) > 0) {
+              filter.set('profiles.mediaItems.type', 'image');
+            }
+            break;
           case 'ids':
             if (val instanceof Array) {
               filter.set('_id', {

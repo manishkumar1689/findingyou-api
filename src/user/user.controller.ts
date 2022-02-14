@@ -683,6 +683,9 @@ export class UserController {
     let simpleMode = 'basic';
     let ayanamshaKey = 'true_citra';
     const queryKeys = Object.keys(query);
+    if (queryKeys.includes('profile') === false) {
+      query.profile = 1;
+    }
     let filterIds = [];
     let hasFilterIds = false;
     //const notLiked = queryKeys.includes('notliked');
