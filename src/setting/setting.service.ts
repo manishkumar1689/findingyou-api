@@ -4,7 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Setting } from './interfaces/setting.interface';
 import { CreateSettingDTO } from './dto/create-setting.dto';
 import defaultFlags from './sources/flags';
-import { notEmptyString } from '../lib/validators';
+import { isNumeric, notEmptyString } from '../lib/validators';
 import { Protocol } from './interfaces/protocol.interface';
 import { ProtocolDTO } from './dto/protocol.dto';
 import { mergeRoddenValues } from '../astrologic/lib/settings/rodden-scale-values';
@@ -701,6 +701,37 @@ export class SettingService {
       minValue = likeability.range[0];
     }
     return minValue;
+  }
+
+  async swipeMemberRepeatInterval(
+    overrideMins = -1,
+    resetCache = false,
+  ): Promise<number> {
+    let value = 720;
+    if (overrideMins < 1) {
+      const cKey = 'members__repeat_interval';
+      if (!resetCache) {
+        const cached = await this.redisGet(cKey);
+        if (isNumeric(cached)) {
+          const intVal = smartCastInt(cached, 0);
+          if (intVal > 0) {
+            value = intVal;
+          }
+        }
+      } else {
+        const setting = await this.getByKey(cKey);
+        if (setting instanceof Object) {
+          const intVal = smartCastInt(setting.value, 0);
+          if (intVal > 0) {
+            value = intVal;
+            this.redisSet(cKey, value);
+          }
+        }
+      }
+    } else {
+      value = overrideMins;
+    }
+    return value;
   }
 
   async getProtocol(itemID: string) {

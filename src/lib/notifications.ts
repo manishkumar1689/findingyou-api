@@ -180,16 +180,36 @@ export const mapFlagItems = (flagKey = ''): FlagItem => {
   }
 };
 
-export const subFilterFlagItems = (flag: IFlag, fi: FlagItem) => {
+export const subFilterFlagItems = (
+  flag: IFlag,
+  fi: FlagItem,
+  excludeAllStartTs = -1,
+) => {
+  let excludeIfRecent = false;
+  if (excludeAllStartTs > 100000) {
+    const refTs = new Date(flag.modifiedAt).getTime();
+
+    excludeIfRecent = refTs >= excludeAllStartTs;
+    /* console.log(
+      refTs,
+      excludeIfRecent,
+      excludeAllStartTs,
+      (refTs - excludeAllStartTs) / 1000,
+    ); */
+  }
   return (
     flag.key === 'likeability' &&
-    ((fi.op === 'eq' && fi.value === flag.value) ||
+    (excludeIfRecent ||
+      (fi.op === 'eq' && fi.value === flag.value) ||
       (fi.op === 'lt' && flag.value < fi.value))
   );
 };
 
-export const filterLikeabilityFlags = (flag: IFlag, flagItems: FlagItem[]) =>
-  flagItems.some(fi => subFilterFlagItems(flag, fi));
+export const filterLikeabilityFlags = (
+  flag: IFlag,
+  flagItems: FlagItem[],
+  excludeAllStartTs = -1,
+) => flagItems.some(fi => subFilterFlagItems(flag, fi, excludeAllStartTs));
 
 export const filterLikeabilityContext = (context = '') => {
   switch (context) {

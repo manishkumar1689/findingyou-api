@@ -114,11 +114,11 @@ import {
 import { PaymentDTO } from './dto/payment.dto';
 import { toWords } from '../astrologic/lib/helpers';
 import permissionValues from './settings/permissions';
-import { EmailParams } from './interfaces/email-params';
 import { currentJulianDay } from '../astrologic/lib/julian-date';
 import { buildCoreAspects } from '../astrologic/lib/calc-orbs';
 import { LogoutDTO } from './dto/logout.dto';
 import { ResetDTO } from './dto/reset.dto';
+import { EmailParamsDTO } from './dto/email-params.dto';
 
 @Controller('user')
 export class UserController {
@@ -698,6 +698,12 @@ export class UserController {
     const context = queryKeys.includes('context') ? query.context : '';
     const hasContext = hasUser && notEmptyString(context, 2);
     const params = hasContext ? filterLikeabilityContext(context) : query;
+    const overrideMins = queryKeys.includes('rpm')
+      ? smartCastInt(query.rpm, 0)
+      : -1;
+    const repeatInterval = await this.settingService.swipeMemberRepeatInterval(
+      overrideMins,
+    );
     const searchMode = context === 'search';
     const paramKeys = Object.keys(params);
     // filter ids by members who have liked or superliked the referenced user
@@ -709,7 +715,6 @@ export class UserController {
       'likeability',
       'likability',
     ];
-
     if (
       queryKeys.includes('user') &&
       paramKeys.some(k => likeabilityKeys.includes(k))
@@ -732,6 +737,7 @@ export class UserController {
           refNum,
           gte,
           mutualMode,
+          repeatInterval,
         );
         const skipMutuality = !mutual && !unrated;
         filterIds =
@@ -804,6 +810,7 @@ export class UserController {
       trueFlags,
       preFetchFlags,
       searchMode,
+      repeatInterval,
     );
     if (includedIds instanceof Array && trueFlags.length > 0) {
       filterIds = includedIds;
@@ -2434,24 +2441,26 @@ export class UserController {
   }
 
   @Post('test-mail')
-  async testMail(@Res() res, @Body() inData: EmailParams) {
-    const { email, subject, html } = inData;
-    const result = await this.sendMail({ email, subject, html });
+  async testMail(@Res() res, @Body() inData: EmailParamsDTO) {
+    const result = await this.sendMail(inData);
     return res.json(result);
   }
 
-  async sendMail(emailParams: EmailParams) {
-    const { email, subject, html, from } = emailParams;
+  async sendMail(emailParams: EmailParamsDTO) {
+    const { to, subject, html, from, fromName } = emailParams;
     const result = { valid: false, sent: false, error: null, response: null };
     const fromAddress = notEmptyString(from) ? from : mailDetails.fromAddress;
+    const senderName = notEmptyString(fromName)
+      ? fromName
+      : mailDetails.fromName;
     const payload = {
-      to: email, // list of receivers
+      to, // list of receivers
       from: fromAddress, // sender address
+      fromName: senderName,
       subject,
-      text: htmlToPlainText(html),
-      html, // HTML body content
+      body: html,
     };
-    await this.mailerService
+    await this.messageService
       .sendMail(payload)
       .then(data => {
         result.sent = true;

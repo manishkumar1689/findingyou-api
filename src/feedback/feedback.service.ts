@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { yearsAgoString } from '../astrologic/lib/date-funcs';
+import { minutesAgoTs, yearsAgoString } from '../astrologic/lib/date-funcs';
 import { extractDocId, extractSimplified } from '../lib/entities';
 import { notEmptyString, validISODateString } from '../lib/validators';
 import { CreateFlagDTO } from './dto/create-flag.dto';
@@ -82,6 +82,7 @@ export class FeedbackService {
       : typeof startDate === 'number'
       ? yearsAgoString(startDate)
       : yearsAgoString(1);
+
     const criteria: Map<string, any> = new Map();
     if (otherUserIds.length > 0) {
       criteria.set('$or', [
@@ -145,8 +146,12 @@ export class FeedbackService {
     refNum = 1,
     gte = false,
     mutualMode = 0,
+    repeatInterval = 0,
   ) {
     const valueFilter = gte ? { $gte: refNum } : refNum;
+    const excludeStartTs = minutesAgoTs(repeatInterval);
+    const excludeStartDt = new Date(excludeStartTs);
+
     const dt = validISODateString(startDate)
       ? startDate
       : typeof startDate === 'number'
@@ -154,7 +159,7 @@ export class FeedbackService {
       : yearsAgoString(1);
     const criteriaObj = {
       key: 'likeability',
-      value: valueFilter,
+      $or: [{ value: valueFilter }, { modifiedAt: { $gte: excludeStartDt } }],
       modifiedAt: { $gte: dt },
     };
     const criteriaObj1 = { ...criteriaObj, targetUser: userId };
@@ -209,9 +214,10 @@ export class FeedbackService {
     trueFlags = [],
     preFetchFlags = false,
     searchMode = false,
+    repeatInterval = 0,
   ) {
     const userFlags = preFetchFlags
-      ? await this.getAllUserInteractions(userId, 1)
+      ? await this.getAllUserInteractions(userId, 1, [])
       : { to: [], from: [], likeability: { to: [], from: [] } };
     const hasNotFlags = notFlags instanceof Array && notFlags.length > 0;
     const hasTrueFlags = trueFlags instanceof Array && trueFlags.length > 0;
@@ -237,10 +243,17 @@ export class FeedbackService {
     const toFlags = preFetchFlags ? [...toLikeFlags, ...to] : [];
 
     const excludeLikedMinVal = filterLiked2 ? 2 : filterLiked1 ? 1 : 3;
+
+    const excludedRecent = repeatInterval > 0;
+    const excludeAllStartTs = excludedRecent
+      ? minutesAgoTs(repeatInterval)
+      : -1;
     const excludedIds =
       !preFetchFlags || searchMode
         ? fromFlags
-            .filter(flag => filterLikeabilityFlags(flag, notFlagItems))
+            .filter(flag =>
+              filterLikeabilityFlags(flag, notFlagItems, excludeAllStartTs),
+            )
             .map(flag => flag.user)
         : [];
 

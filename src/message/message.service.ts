@@ -4,7 +4,7 @@ import * as htmlToText from 'html-to-text';
 import { InjectModel } from '@nestjs/mongoose';
 import { Message } from './interfaces/message.interface';
 import { CreateMessageDTO } from './dto/create-message.dto';
-import { isNumeric } from '../lib/validators';
+import { isNumeric, notEmptyString } from '../lib/validators';
 import { mailDetails, mailService, webBaseUrl } from '../.config';
 
 export interface MessageSet {
@@ -173,23 +173,59 @@ export class MessageService {
     lang = 'en',
   ): Promise<void> {
     const message = await this.getByKeyLang('password_reset', lang);
-    const mode = isNumeric(link) ? 'number' : 'web';
+    const mode = isNumeric(link) ? 'sms' : 'web';
+    const buildPlain = mailService.requirePlainText;
     const sendParams = this.transformMailParams(
       message,
       email,
       toName,
       link,
+      buildPlain,
       mode,
     );
     this.sendMail(sendParams, 'password_reset');
   }
 
-  public sendMail(sendParams, key = '') {
+  async sendMail(sendParams, key = '') {
+    const buildApikeyParams = () => {
+      const options: any = {};
+      if (notEmptyString(mailService.apiKey)) {
+        const b64Key = Buffer.from(mailService.apiKey, 'utf8').toString(
+          'base64',
+        );
+        options.headers = {
+          apikey: b64Key,
+        };
+      }
+      return options;
+    };
+    let result: any = null;
     switch (mailService.provider) {
       case 'google/appengine':
         this.http.post(mailService.uri, sendParams);
         break;
+      case 'google/mailgo':
+        await this.http
+          .post(mailService.uri, sendParams, buildApikeyParams())
+          .toPromise()
+          .then(rs => {
+            if (rs instanceof Object) {
+              const { data } = rs;
+              result = data;
+            }
+          })
+          .catch(e => {
+            result = e;
+          });
+        break;
     }
+    return {
+      key,
+      uri: mailService.uri,
+      params: buildApikeyParams(),
+      provider: mailService.provider,
+      result,
+    };
   }
 
   public transformMailParams(
@@ -197,13 +233,14 @@ export class MessageService {
     email: string,
     toName: string,
     resetLink = '',
+    buildPlain = false,
     mode = 'web',
   ) {
     const params = {
       to: email,
       from: mailDetails.fromAddress,
       subject: '',
-      html: '',
+      body: '',
       text: '',
       toName,
       fromName: message.fromName,
@@ -225,8 +262,10 @@ export class MessageService {
         }
       }
       body = body.replace(/<p[^>]*?>\s*<br[^>]*?>\s*<\/p>/gi, '<p></p>');
-      params.html = body;
-      params.text = htmlToText(body, { wordwrap: 80 });
+      params.body = body;
+      if (buildPlain) {
+        params.text = htmlToText(body, { wordwrap: 80 });
+      }
     }
     return params;
   }

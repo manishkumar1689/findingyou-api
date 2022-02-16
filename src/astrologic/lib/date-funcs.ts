@@ -329,6 +329,12 @@ export const yearsAgoString = (years = 1): string => {
     .shift();
 };
 
+export const minutesAgoTs = (repeatIntervalMins: number) => {
+  const nowTs = new Date().getTime();
+  const msAgo = repeatIntervalMins * 60 * 1000;
+  return nowTs - msAgo;
+};
+
 export const utcDate = (dt: Date | string) => {
   return moment.utc(dt);
 };

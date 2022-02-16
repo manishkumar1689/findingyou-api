@@ -76,11 +76,20 @@ export const mailDetails = {
   fromAddress: 'marketing@findingyou.me',
 };
 
-export const mailService = {
+/* export const mailService = {
   provider: 'google/appengine',
   userName: '',
   apiKey: 'djJhd-(8',
   uri: 'https://direct-return-340513.ew.r.appspot.com',
+  requirePlainText: true,
+}; */
+
+export const mailService = {
+  provider: 'google/mailgo',
+  userName: 'support@findingyou.co',
+  apiKey: 'djJhd-(8',
+  uri: 'http://localhost:7912',
+  requirePlainText: false,
 };
 
 export const imageSizes = {
