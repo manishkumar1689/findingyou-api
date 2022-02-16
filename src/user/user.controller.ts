@@ -2447,7 +2447,7 @@ export class UserController {
   }
 
   async sendMail(emailParams: EmailParamsDTO) {
-    const { to, subject, html, from, fromName } = emailParams;
+    const { to, toName, subject, html, from, fromName } = emailParams;
     const result = { valid: false, sent: false, error: null, response: null };
     const fromAddress = notEmptyString(from) ? from : mailDetails.fromAddress;
     const senderName = notEmptyString(fromName)
@@ -2455,6 +2455,7 @@ export class UserController {
       : mailDetails.fromName;
     const payload = {
       to, // list of receivers
+      toName,
       from: fromAddress, // sender address
       fromName: senderName,
       subject,
