@@ -692,9 +692,11 @@ export class UserController {
     const hasUser =
       queryKeys.includes('user') && notEmptyString(query.user, 16);
     const userId = hasUser ? query.user : '';
-    const isPaidMember = hasUser
-      ? await this.userService.isPaidMember(userId)
-      : false;
+    const enforcePaidMembership = await this.settingService.enforcePaidMembershipLogic();
+    const isPaidMember =
+      hasUser && enforcePaidMembership
+        ? await this.userService.isPaidMember(userId)
+        : !enforcePaidMembership;
     const context = queryKeys.includes('context') ? query.context : '';
     const hasContext = hasUser && notEmptyString(context, 2);
     const params = hasContext ? filterLikeabilityContext(context) : query;
@@ -2464,8 +2466,16 @@ export class UserController {
     await this.messageService
       .sendMail(payload)
       .then(data => {
-        result.sent = true;
-        result.valid = true;
+        const keys = data instanceof Object ? Object.keys(data) : [];
+        const hasResult =
+          keys.length > 0 &&
+          keys.includes('result') &&
+          data.result instanceof Object;
+        const validResponse = hasResult
+          ? Object.keys(data.result).includes('stack') === false
+          : false;
+        result.sent = validResponse && data.result.sent === true;
+        result.valid = validResponse;
         result.response = data;
       })
       .catch(e => {

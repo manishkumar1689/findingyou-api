@@ -733,6 +733,22 @@ export class SettingService {
     }
     return value;
   }
+  async enforcePaidMembershipLogic(resetCache = false): Promise<boolean> {
+    let value = false;
+    const cKey = 'members__enforce_paid_logic';
+    if (!resetCache) {
+      const cached = await this.redisGet(cKey);
+      if (cached === true || cached === false) {
+        value = cached;
+      }
+    } else {
+      const setting = await this.getByKey(cKey);
+      if (setting instanceof Object) {
+        value = setting.value === true;
+      }
+    }
+    return value;
+  }
 
   async getProtocol(itemID: string) {
     return await this.protocolModel.findById(itemID);
