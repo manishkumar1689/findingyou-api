@@ -1694,7 +1694,7 @@ export class UserService {
   buildNearQuery(coordsStr = '') {
     if (
       notEmptyString(coordsStr) &&
-      /^-?\d+(\.\d+),-?\d+(\.\d+)(\,\d+(\.\d+)?)?$/.test(coordsStr)
+      /^-?\d+(\.\d+)?,-?\d+(\.\d+)?(\,\d+(\.\d+)?)?$/.test(coordsStr)
     ) {
       const [lat, lng, km] = coordsStr
         .split(',')

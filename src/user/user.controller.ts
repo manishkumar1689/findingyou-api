@@ -820,16 +820,6 @@ export class UserController {
       filterIds = includedIds;
       hasFilterIds = true;
     }
-
-    console.log({
-      trueFlags,
-      notFlags,
-      repeatInterval,
-      excludedIds,
-      includedIds,
-      filterIds,
-      hasFilterIds,
-    });
     const queryParams = hasFilterIds ? { query, ids: filterIds } : query;
     if (hasUser) {
       excludedIds.push(userId);
