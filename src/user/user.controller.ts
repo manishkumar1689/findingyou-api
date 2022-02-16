@@ -692,20 +692,11 @@ export class UserController {
     const hasUser =
       queryKeys.includes('user') && notEmptyString(query.user, 16);
     const userId = hasUser ? query.user : '';
-    const enforcePaidMembership = await this.settingService.enforcePaidMembershipLogic();
-    const isPaidMember =
-      hasUser && enforcePaidMembership
-        ? await this.userService.isPaidMember(userId)
-        : !enforcePaidMembership;
+
     const context = queryKeys.includes('context') ? query.context : '';
     const hasContext = hasUser && notEmptyString(context, 2);
     const params = hasContext ? filterLikeabilityContext(context) : query;
-    const overrideMins = queryKeys.includes('rpm')
-      ? smartCastInt(query.rpm, 0)
-      : -1;
-    const repeatInterval = await this.settingService.swipeMemberRepeatInterval(
-      overrideMins,
-    );
+    let repeatInterval = -1;
     const searchMode = context === 'search';
     const paramKeys = Object.keys(params);
     // filter ids by members who have liked or superliked the referenced user
@@ -739,7 +730,6 @@ export class UserController {
           refNum,
           gte,
           mutualMode,
-          repeatInterval,
         );
         const skipMutuality = !mutual && !unrated;
         filterIds =
@@ -777,14 +767,27 @@ export class UserController {
     };
     let notFlags = [];
     let trueFlags = [];
+    // Filter search swipe listing
     if (hasContext && searchMode) {
       //notFlags = ['like', 'superlike', 'passed3'];
+      const enforcePaidMembership = await this.settingService.enforcePaidMembershipLogic();
+      const isPaidMember =
+        hasUser && enforcePaidMembership
+          ? await this.userService.isPaidMember(userId)
+          : !enforcePaidMembership;
       notFlags = ['passed3'];
       if (isPaidMember) {
         notFlags.push('notliked');
       } else {
         notFlags.push('notliked2');
       }
+
+      const overrideMins = queryKeys.includes('rpm')
+        ? smartCastInt(query.rpm, 0)
+        : -1;
+      repeatInterval = await this.settingService.swipeMemberRepeatInterval(
+        overrideMins,
+      );
     } else {
       const notFlagStr = queryKeys.includes('nf')
         ? query.nf
@@ -799,7 +802,6 @@ export class UserController {
       notFlags = notEmptyString(notFlagStr) ? notFlagStr.split(',') : [];
       trueFlags = notEmptyString(trueFlagStr) ? trueFlagStr.split(',') : [];
     }
-
     const preFetchFlags = notFlags.length > 0 || trueFlags.length > 0;
     const prefOptions = await this.settingService.getPreferences();
     const {
@@ -818,6 +820,16 @@ export class UserController {
       filterIds = includedIds;
       hasFilterIds = true;
     }
+
+    console.log({
+      trueFlags,
+      notFlags,
+      repeatInterval,
+      excludedIds,
+      includedIds,
+      filterIds,
+      hasFilterIds,
+    });
     const queryParams = hasFilterIds ? { query, ids: filterIds } : query;
     if (hasUser) {
       excludedIds.push(userId);

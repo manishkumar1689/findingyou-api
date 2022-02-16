@@ -146,11 +146,8 @@ export class FeedbackService {
     refNum = 1,
     gte = false,
     mutualMode = 0,
-    repeatInterval = 0,
   ) {
     const valueFilter = gte ? { $gte: refNum } : refNum;
-    const excludeStartTs = minutesAgoTs(repeatInterval);
-    const excludeStartDt = new Date(excludeStartTs);
 
     const dt = validISODateString(startDate)
       ? startDate
@@ -159,7 +156,7 @@ export class FeedbackService {
       : yearsAgoString(1);
     const criteriaObj = {
       key: 'likeability',
-      $or: [{ value: valueFilter }, { modifiedAt: { $gte: excludeStartDt } }],
+      value: valueFilter,
       modifiedAt: { $gte: dt },
     };
     const criteriaObj1 = { ...criteriaObj, targetUser: userId };
