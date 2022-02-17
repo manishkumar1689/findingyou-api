@@ -519,6 +519,7 @@ export class UserService {
         case 'fullName':
         case 'imageUri':
         case 'mode':
+        case 'deviceToken':
           userData.set(key, val);
           break;
         case 'identifier':
