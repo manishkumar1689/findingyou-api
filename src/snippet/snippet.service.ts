@@ -227,7 +227,7 @@ export class SnippetService {
     lang = 'en',
   ): Promise<{ title: string; body: string }> {
     const type = value === 2 ? 'superlike' : 'like';
-    const snKey = ['feedback', [type, 'notification']].join('__');
+    const snKey = ['feedback', [type, 'notification'].join('_')].join('__');
     const storedSnippet = await this.getByKey(snKey);
     const title = 'FindingYou ' + capitalize(type);
     let body = '';
@@ -244,7 +244,9 @@ export class SnippetService {
         if (langIndex >= 0) {
           const version = storedSnippet.values[langIndex];
           if (version instanceof Object) {
-            body = version.text.replace('%user_name', nickName);
+            body = version.text
+              .replace('%nick_name', nickName)
+              .replace('%user_name', nickName);
           }
         }
       }
