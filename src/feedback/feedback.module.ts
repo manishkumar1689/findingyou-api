@@ -11,6 +11,9 @@ import { SettingSchema } from '../setting/schemas/setting.schema';
 import { SettingService } from '../setting/setting.service';
 import { ProtocolSchema } from '../setting/schemas/protocol.schema';
 import { PredictiveRuleSetSchema } from '../setting/schemas/predictive-rule-set.schema';
+import { SnippetService } from '../snippet/snippet.service';
+import { SnippetSchema } from '../snippet/schemas/snippet.schema';
+import { TranslatedItemSchema } from '../snippet/schemas/translated-item.schema';
 
 @Module({
   imports: [
@@ -23,9 +26,11 @@ import { PredictiveRuleSetSchema } from '../setting/schemas/predictive-rule-set.
       { name: 'Setting', schema: SettingSchema },
       { name: 'Protocol', schema: ProtocolSchema },
       { name: 'PredictiveRuleSet', schema: PredictiveRuleSetSchema },
+      { name: 'Snippet', schema: SnippetSchema },
+      { name: 'TranslatedItem', schema: TranslatedItemSchema },
     ]),
   ],
-  providers: [FeedbackService, UserService, SettingService],
+  providers: [FeedbackService, UserService, SettingService, SnippetService],
   controllers: [FeedbackController],
 })
 export class FeedbackModule {}

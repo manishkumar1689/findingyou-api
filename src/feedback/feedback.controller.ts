@@ -23,6 +23,7 @@ import { sanitize, smartCastInt } from '../lib/converters';
 import { objectToMap } from '../lib/entities';
 import { isValidObjectId } from 'mongoose';
 import { fromBase64 } from '../lib/hash';
+import { SnippetService } from '../snippet/snippet.service';
 
 @Controller('feedback')
 export class FeedbackController {
@@ -30,6 +31,7 @@ export class FeedbackController {
     private feedbackService: FeedbackService,
     private userService: UserService,
     private settingService: SettingService,
+    private snippetService: SnippetService,
   ) {}
 
   @Get('list-by-target/:user?/:key?')
@@ -152,7 +154,11 @@ export class FeedbackController {
     return res.json(data);
   }
 
-  async sendNotification(createFlagDTO: CreateFlagDTO) {
+  async sendNotification(
+    createFlagDTO: CreateFlagDTO,
+    customTitle = '',
+    customBody = '',
+  ) {
     const targetDeviceToken = await this.userService.getUserDeviceToken(
       createFlagDTO.targetUser,
     );
@@ -165,14 +171,21 @@ export class FeedbackController {
         type === 'title_text' &&
         value instanceof Object &&
         Object.keys(value).includes('title');
-      if (plainText || titleText) {
-        const title = plainText ? key.replace(/_/g, ' ') : value.title;
-        const body = plainText
+      const hasCustomTitle = notEmptyString(customTitle, 3);
+      if (plainText || titleText || customTitle) {
+        const hasCustomBody = notEmptyString(customBody, 3);
+        const title = hasCustomTitle
+          ? customTitle
+          : plainText
+          ? key.replace(/_/g, ' ')
+          : value.title;
+        const body = hasCustomBody
+          ? customBody
+          : plainText
           ? notEmptyString(value, 2)
             ? value
             : 'Someone has interacted with you.'
           : value.text;
-
         fcm = await pushMessage(targetDeviceToken, title, body, {
           key,
           type,
@@ -274,7 +287,12 @@ export class FeedbackController {
       const sendMsg = intValue >= 1;
       let fcm = {};
       if (sendMsg) {
-        fcm = await this.sendNotification(flagData);
+        const nickName = await this.userService.getNickName(flagData.user);
+        const { title, body } = await this.snippetService.buildRatingTitleBody(
+          nickName,
+          intValue,
+        );
+        fcm = await this.sendNotification(flagData, title, body);
       }
       data.valid = valid;
       data.flag = flag;

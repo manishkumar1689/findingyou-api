@@ -146,19 +146,27 @@ export class UserService {
     return users;
   }
 
-  async getBasicById(uid: string) {
+  async getBasicById(uid: string, nickNameOnly = false) {
+    const fields = nickNameOnly
+      ? 'nickName'
+      : '_id active nickName roles profiles preferences';
     const items = await this.userModel
       .find({
         _id: uid,
         active: true,
       })
-      .select('_id active nickName roles profiles preferences');
+      .select(fields);
     let user = null;
     if (items.length > 0) {
-      const users = items.map(this.mapBasicUser);
+      const users = nickNameOnly ? items : items.map(this.mapBasicUser);
       user = users[0];
     }
     return user;
+  }
+
+  async getNickName(uid: string): Promise<string> {
+    const userRec = await this.getBasicById(uid);
+    return userRec instanceof Object ? userRec.nickName : '';
   }
 
   async count(criteria: any = null, activeOnly = true): Promise<number> {

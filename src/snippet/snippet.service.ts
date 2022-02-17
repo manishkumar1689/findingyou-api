@@ -9,6 +9,7 @@ import { extractDocId, hashMapToObject, extractObject } from '../lib/entities';
 import { v2 } from '@google-cloud/translate';
 import { googleTranslate } from '../.config';
 import { notEmptyString } from '../lib/validators';
+import { capitalize } from '../astrologic/lib/helpers';
 const { Translate } = v2;
 
 @Injectable()
@@ -218,6 +219,41 @@ export class SnippetService {
       }
       return newSnippet.save();
     }
+  }
+
+  async buildRatingTitleBody(
+    nickName,
+    value: number,
+    lang = 'en',
+  ): Promise<{ title: string; body: string }> {
+    const type = value === 2 ? 'superlike' : 'like';
+    const snKey = ['feedback', [type, 'notification']].join('__');
+    const storedSnippet = await this.getByKey(snKey);
+    const title = 'FindingYou ' + capitalize(type);
+    let body = '';
+    if (storedSnippet instanceof Object) {
+      if (storedSnippet.values instanceof Array) {
+        const langRoot = lang.split('-').shift();
+        let langIndex = storedSnippet.values.findIndex(tr => tr.lang === lang);
+        if (langIndex < 0 && langRoot !== lang) {
+          langIndex = storedSnippet.values.findIndex(tr => tr.lang === lang);
+          if (langIndex < 0 && langRoot !== 'en') {
+            langIndex = storedSnippet.values.findIndex(tr => tr.lang === 'en');
+          }
+        }
+        if (langIndex >= 0) {
+          const version = storedSnippet.values[langIndex];
+          if (version instanceof Object) {
+            body = version.text.replace('%user_name', nickName);
+          }
+        }
+      }
+    }
+    if (body.length < 3) {
+      const action = `${type}d`;
+      body = `${nickName} has ${action} you`;
+    }
+    return { title, body };
   }
 
   async lastModified(lang = 'en') {
