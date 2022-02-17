@@ -186,6 +186,7 @@ export class FeedbackController {
             ? value
             : 'Someone has interacted with you.'
           : value.text;
+        console.log(title, body);
         fcm = await pushMessage(targetDeviceToken, title, body, {
           key,
           type,
@@ -288,9 +289,14 @@ export class FeedbackController {
       let fcm = {};
       if (sendMsg) {
         const nickName = await this.userService.getNickName(flagData.user);
+        const lang = await this.userService.getPreferredLang(
+          flagData.targetUser,
+        );
         const { title, body } = await this.snippetService.buildRatingTitleBody(
           nickName,
           intValue,
+          recipSwipe.value,
+          lang,
         );
         fcm = await this.sendNotification(flagData, title, body);
       }

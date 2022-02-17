@@ -146,27 +146,38 @@ export class UserService {
     return users;
   }
 
-  async getBasicById(uid: string, nickNameOnly = false) {
-    const fields = nickNameOnly
-      ? 'nickName'
-      : '_id active nickName roles profiles preferences';
+  async getBasicById(uid: string, fields = []) {
+    const fieldList =
+      fields.length > 0
+        ? fields.join(' ')
+        : '_id active nickName roles profiles preferences';
     const items = await this.userModel
       .find({
         _id: uid,
         active: true,
       })
-      .select(fields);
+      .select(fieldList);
     let user = null;
     if (items.length > 0) {
-      const users = nickNameOnly ? items : items.map(this.mapBasicUser);
+      const users = fields.length > 0 ? items : items.map(this.mapBasicUser);
       user = users[0];
     }
     return user;
   }
 
   async getNickName(uid: string): Promise<string> {
-    const userRec = await this.getBasicById(uid);
+    const userRec = await this.getBasicById(uid, ['nickName']);
     return userRec instanceof Object ? userRec.nickName : '';
+  }
+
+  async getPreferredLang(uid: string): Promise<string> {
+    const userRec = await this.getBasicById(uid, ['preferences']);
+    const langRow =
+      userRec instanceof Object
+        ? userRec.preferences.find(p => p.key === 'language')
+        : null;
+    const lang = langRow instanceof Object ? langRow.value : 'en';
+    return lang;
   }
 
   async count(criteria: any = null, activeOnly = true): Promise<number> {
@@ -233,6 +244,7 @@ export class UserService {
     excludedIds: string[] = [],
   ): object => {
     const filter = new Map<string, any>();
+    let notSkipHideFromExplore = true;
     if (criteria instanceof Object) {
       const keys = Object.keys(criteria);
       for (const key of keys) {
@@ -285,8 +297,24 @@ export class UserService {
               });
             }
             break;
+          case 'hidden':
+            notSkipHideFromExplore = smartCastInt(val, 0) < 1;
+            break;
         }
       }
+    }
+    if (notSkipHideFromExplore) {
+      filter.set('preferences', {
+        $elemMatch: { key: 'hide_from_explore', value: false },
+      });
+      /* filter.set('$or', [
+        { 'preferences.key': { $ne: 'hide_from_explore' } },
+        {
+          preferences: {
+            $elemMatch: { key: 'hide_from_explore', value: false },
+          },
+        },
+      ]); */
     }
     filter.set('active', true);
     filter.set('roles', { $nin: ['superadmin', 'admin', 'blocked', 'editor'] });

@@ -1,4 +1,4 @@
-import { HttpService, Injectable } from '@nestjs/common';
+import { Body, HttpService, Injectable } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Snippet } from './interfaces/snippet.interface';
@@ -10,6 +10,7 @@ import { v2 } from '@google-cloud/translate';
 import { googleTranslate } from '../.config';
 import { notEmptyString } from '../lib/validators';
 import { capitalize } from '../astrologic/lib/helpers';
+import { text } from 'express';
 const { Translate } = v2;
 
 @Injectable()
@@ -221,39 +222,66 @@ export class SnippetService {
     }
   }
 
-  async buildRatingTitleBody(
-    nickName,
-    value: number,
-    lang = 'en',
-  ): Promise<{ title: string; body: string }> {
-    const type = value === 2 ? 'superlike' : 'like';
-    const snKey = ['feedback', [type, 'notification'].join('_')].join('__');
-    const storedSnippet = await this.getByKey(snKey);
-    const title = 'FindingYou ' + capitalize(type);
-    let body = '';
-    if (storedSnippet instanceof Object) {
-      if (storedSnippet.values instanceof Array) {
-        const langRoot = lang.split('-').shift();
-        let langIndex = storedSnippet.values.findIndex(tr => tr.lang === lang);
-        if (langIndex < 0 && langRoot !== lang) {
-          langIndex = storedSnippet.values.findIndex(tr => tr.lang === lang);
-          if (langIndex < 0 && langRoot !== 'en') {
-            langIndex = storedSnippet.values.findIndex(tr => tr.lang === 'en');
-          }
+  extractSnippetText(storedSnippet: Snippet, lang = 'en') {
+    let text = '';
+    if (storedSnippet.values instanceof Array) {
+      const langRoot = lang.split('-').shift();
+      let langIndex = storedSnippet.values.findIndex(tr => tr.lang === lang);
+      if (langIndex < 0 && langRoot !== lang) {
+        langIndex = storedSnippet.values.findIndex(tr => tr.lang === lang);
+        if (langIndex < 0 && langRoot !== 'en') {
+          langIndex = storedSnippet.values.findIndex(tr => tr.lang === 'en');
         }
-        if (langIndex >= 0) {
-          const version = storedSnippet.values[langIndex];
-          if (version instanceof Object) {
-            body = version.text
-              .replace('%nick_name', nickName)
-              .replace('%user_name', nickName);
-          }
+      }
+      if (langIndex >= 0) {
+        const version = storedSnippet.values[langIndex];
+        if (version instanceof Object) {
+          text = version.text;
         }
       }
     }
+    return text;
+  }
+
+  async getSnippetText(key = '', lang = '') {
+    let text = '';
+    const storedSnippet = await this.getByKey(key);
+    if (storedSnippet instanceof Model) {
+      text = this.extractSnippetText(storedSnippet, lang);
+    }
+    return text;
+  }
+
+  async buildRatingTitleBody(
+    nickName,
+    value: number,
+    recipValue = 0,
+    lang = 'en',
+  ): Promise<{ title: string; body: string }> {
+    const isMatch = recipValue > 0;
+    const type =
+      value === 2 && (!isMatch || recipValue === 2) ? 'superlike' : 'like';
+    const subKey = isMatch ? 'match_notification' : 'notification';
+    const snKey = ['feedback', [type, subKey].join('_')].join('__');
+    const snTitleKey = [
+      'feedback',
+      [type, 'notification_title'].join('_'),
+    ].join('__');
+    let body = await this.getSnippetText(snKey, lang);
+
+    let title = await this.getSnippetText(snTitleKey, lang);
+    if (title.length < 3) {
+      const actionName = isMatch ? 'Match' : capitalize(type);
+      title = 'FindingYou ' + actionName;
+    }
+
     if (body.length < 3) {
       const action = `${type}d`;
       body = `${nickName} has ${action} you`;
+    } else {
+      body = body
+        .replace('%nick_name', nickName)
+        .replace('%user_name', nickName);
     }
     return { title, body };
   }
