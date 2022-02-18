@@ -689,8 +689,7 @@ export class UserController {
     let filterIds = [];
     let hasFilterIds = false;
     //const notLiked = queryKeys.includes('notliked');
-    const hasUser =
-      queryKeys.includes('user') && notEmptyString(query.user, 16);
+    let hasUser = queryKeys.includes('user') && notEmptyString(query.user, 16);
     const userId = hasUser ? query.user : '';
 
     const context = queryKeys.includes('context') ? query.context : '';
@@ -768,12 +767,26 @@ export class UserController {
     let notFlags = [];
     let trueFlags = [];
     // Filter search swipe listing
+    let userAge = -1;
     if (hasContext && searchMode) {
       //notFlags = ['like', 'superlike', 'passed3'];
       const enforcePaidMembership = await this.settingService.enforcePaidMembershipLogic();
+
+      const userInfo = hasUser
+        ? await this.userService.getBasicById(userId)
+        : null;
+      hasUser = userInfo instanceof Object;
+      userAge = hasUser ? userInfo.age : -1;
+
+      if (userAge > 17) {
+        query.ageRange = userAge;
+      }
+      if (hasUser && userInfo.hasAgeRange) {
+        query.age = userInfo.ageRange;
+      }
       const isPaidMember =
         hasUser && enforcePaidMembership
-          ? await this.userService.isPaidMember(userId)
+          ? userInfo.isPaidMember
           : !enforcePaidMembership;
       notFlags = ['passed3'];
       if (isPaidMember) {
@@ -820,7 +833,8 @@ export class UserController {
       filterIds = includedIds;
       hasFilterIds = true;
     }
-    const queryParams = hasFilterIds ? { query, ids: filterIds } : query;
+    const queryParams = hasFilterIds ? { ...query, ids: filterIds } : query;
+
     if (hasUser) {
       excludedIds.push(userId);
     }

@@ -31,6 +31,7 @@ import { PaymentDTO } from './dto/payment.dto';
 import { ProfileDTO } from './dto/profile.dto';
 import { MatchedOption, PrefKeyValue } from './settings/preference-options';
 import {
+  extractArrayFromKeyedItems,
   extractBooleanFromKeyedItems,
   smartCastBool,
   smartCastFloat,
@@ -98,8 +99,8 @@ export class UserService {
     const obj =
       item instanceof Object
         ? item
-        : { _id: '', nickName: '', roles: [], profiles: [] };
-    const { _id, nickName, roles, profiles, preferences } = obj;
+        : { _id: '', nickName: '', roles: [], profiles: [], dob: null };
+    const { _id, nickName, dob, roles, profiles, preferences } = obj;
     let profileImg = '';
     if (profiles instanceof Array && profiles.length > 0) {
       const { mediaItems } = profiles[0];
@@ -117,13 +118,36 @@ export class UserService {
       'hide_from_explore',
       false,
     );
+
+    const ageRange = extractArrayFromKeyedItems(
+      preferences,
+      'age_range',
+      [0, 0],
+      2,
+    );
+
+    let isPaidMember = false;
+    if (roles instanceof Array && roles.length > 0) {
+      isPaidMember = roles.some(rk => rk.includes('member'));
+    }
+    let age = -1;
+    if (dob instanceof Date) {
+      const currTs = new Date().getTime();
+      const dobTs = dob.getTime();
+      const ageTs = currTs - dobTs;
+      age = ageTs / (365.25 * 24 * 60 * 60 * 1000);
+    }
     return {
       _id,
       nickName,
       roles,
+      age,
+      ageRange,
+      hasAgeRange: ageRange[0] > 0,
       profileImg,
       showOnlineStatus,
       hideFromExplore,
+      isPaidMember,
     };
   }
 
@@ -150,7 +174,7 @@ export class UserService {
     const fieldList =
       fields.length > 0
         ? fields.join(' ')
-        : '_id active nickName roles profiles preferences';
+        : '_id active nickName dob roles profiles preferences';
     const items = await this.userModel
       .find({
         _id: uid,
@@ -244,6 +268,7 @@ export class UserService {
     excludedIds: string[] = [],
   ): object => {
     const filter = new Map<string, any>();
+    const prefAndConditions: any[] = [];
     let notSkipHideFromExplore = true;
     if (criteria instanceof Object) {
       const keys = Object.keys(criteria);
@@ -276,12 +301,12 @@ export class UserService {
             filter.set('dob', this.translateAgeRange(val));
             break;
           case 'genders':
-            filter.set('preferences', this.translateTargetGenders(val));
+            prefAndConditions.push(this.translateTargetGenders(val));
             break;
           case 'age_range':
           case 'ageRange':
           case 'agerange':
-            filter.set('preferences', this.translateAgeRangeWithin(val));
+            prefAndConditions.push(this.translateAgeRangeWithin(val));
             break;
           case 'profile':
             if (smartCastInt(val, 0) > 0) {
@@ -304,17 +329,19 @@ export class UserService {
       }
     }
     if (notSkipHideFromExplore) {
-      filter.set('preferences', {
+      prefAndConditions.push({
         $elemMatch: { key: 'hide_from_explore', value: false },
       });
-      /* filter.set('$or', [
-        { 'preferences.key': { $ne: 'hide_from_explore' } },
-        {
-          preferences: {
-            $elemMatch: { key: 'hide_from_explore', value: false },
-          },
-        },
-      ]); */
+    }
+    if (prefAndConditions.length > 0) {
+      filter.set(
+        '$and',
+        prefAndConditions.map(cond => {
+          return {
+            preferences: cond,
+          };
+        }),
+      );
     }
     filter.set('active', true);
     filter.set('roles', { $nin: ['superadmin', 'admin', 'blocked', 'editor'] });
@@ -1750,11 +1777,17 @@ export class UserService {
     }
   }
 
-  translateAgeRange(strAges = '') {
+  translateAgeRange(ageRangeRef = null) {
     let min = 18;
-    let max = 30;
-    if (/^\d+(,\d+)$/.test(strAges.trim())) {
-      const parts = strAges.split(',');
+    let max = 120;
+    if (ageRangeRef instanceof Array && ageRangeRef.length > 1) {
+      min = smartCastInt(ageRangeRef[0], 18);
+      max = smartCastInt(ageRangeRef[1], 120);
+    } else if (
+      typeof ageRangeRef === 'string' &&
+      /^\s*\d+(,\d+)\s*$/.test(ageRangeRef)
+    ) {
+      const parts = ageRangeRef.split(',');
       min = parseInt(parts.shift(), 10);
       const targetMax =
         parts.length > 0 ? parseInt(parts.shift(), 10) : min + 10;
@@ -1814,7 +1847,8 @@ export class UserService {
     return {
       $elemMatch: {
         key: 'age_range',
-        value: { $gte: age, $lte: age },
+        'value.0': { $lte: age },
+        'value.1': { $gte: age },
       },
     };
   }

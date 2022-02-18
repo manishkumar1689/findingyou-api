@@ -186,7 +186,6 @@ export class FeedbackController {
             ? value
             : 'Someone has interacted with you.'
           : value.text;
-        console.log(title, body);
         fcm = await pushMessage(targetDeviceToken, title, body, {
           key,
           type,

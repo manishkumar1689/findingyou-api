@@ -197,6 +197,18 @@ export const extractBooleanFromKeyedItems = (
   return matched && typeof item.value === 'boolean' ? item.value : defaultValue;
 };
 
+export const extractArrayFromKeyedItems = (
+  items: any[] = [],
+  key = '',
+  defaultValue = [],
+  minLen = 2,
+): boolean => {
+  const { matched, item } = extractKeyedItem(items, key);
+  return matched && item.value instanceof Array && item.value.length >= minLen
+    ? item.value
+    : defaultValue;
+};
+
 export const htmlToPlainText = (html = ''): string => {
   if (notEmptyString(html)) {
     return convert(html, { wordwrap: 130 });
