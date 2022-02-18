@@ -33,6 +33,8 @@ import { MatchedOption, PrefKeyValue } from './settings/preference-options';
 import {
   extractArrayFromKeyedItems,
   extractBooleanFromKeyedItems,
+  extractKeyedItemValue,
+  extractStringFromKeyedItems,
   smartCastBool,
   smartCastFloat,
   smartCastInt,
@@ -42,6 +44,7 @@ import { PreferenceDTO } from './dto/preference.dto';
 import { matchFileTypeAndMime } from '../lib/files';
 import { PublicUser } from './interfaces/public-user.interface';
 import { normalizedToPreference } from '../setting/lib/mappers';
+import { defaultPushNotifications } from '../lib/notifications';
 
 const userEditPaths = [
   'fullName',
@@ -126,6 +129,16 @@ export class UserService {
       2,
     );
 
+    const pnData = extractKeyedItemValue(
+      preferences,
+      'push_notifications',
+      'array',
+    );
+
+    const pushNotifications = pnData.matched
+      ? pnData.item
+      : defaultPushNotifications;
+
     let isPaidMember = false;
     if (roles instanceof Array && roles.length > 0) {
       isPaidMember = roles.some(rk => rk.includes('member'));
@@ -143,6 +156,7 @@ export class UserService {
       roles,
       age,
       ageRange,
+      pushNotifications,
       hasAgeRange: ageRange[0] > 0,
       profileImg,
       showOnlineStatus,
@@ -194,13 +208,32 @@ export class UserService {
     return userRec instanceof Object ? userRec.nickName : '';
   }
 
-  async getPreferredLang(uid: string): Promise<string> {
+  async getPreferredLangAndPnOptions(
+    uid: string,
+    withPn = true,
+  ): Promise<{ lang: string; pushNotifications: string[] }> {
     const userRec = await this.getBasicById(uid, ['preferences']);
-    const langRow =
-      userRec instanceof Object
-        ? userRec.preferences.find(p => p.key === 'language')
-        : null;
-    const lang = langRow instanceof Object ? langRow.value : 'en';
+    const prefs =
+      userRec instanceof Object && userRec.preferences instanceof Array
+        ? userRec.preferences
+        : [];
+    const lang = extractStringFromKeyedItems(prefs, 'language', 'en');
+    let pushNotifications = [];
+    if (withPn) {
+      const pnData = extractKeyedItemValue(
+        prefs,
+        'push_notifications',
+        'array',
+      );
+      pushNotifications = pnData.matched
+        ? pnData.item
+        : defaultPushNotifications;
+    }
+    return { lang, pushNotifications };
+  }
+
+  async getPreferredLang(uid: string): Promise<string> {
+    const { lang } = await this.getPreferredLangAndPnOptions(uid, false);
     return lang;
   }
 

@@ -226,3 +226,11 @@ export const filterLikeabilityContext = (context = '') => {
       return {};
   }
 };
+
+export const defaultPushNotifications = [
+  'astro_insights',
+  'been_matched',
+  'been_liked',
+  'been_superliked',
+  'message_received',
+];

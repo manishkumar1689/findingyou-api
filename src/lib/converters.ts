@@ -188,6 +188,37 @@ export const extractKeyedItem = (items: any[] = [], key = ''): MatchedItem => {
   return { item: matchedItem, matched: matchedItem instanceof Object };
 };
 
+export const extractKeyedItemValue = (
+  items: any[] = [],
+  key = '',
+  type = 'any',
+): MatchedItem => {
+  const matchedItem = items.find(item => item.key === key);
+  let matched = matchedItem instanceof Object;
+  const value = matched ? matchedItem.value : null;
+  if (matched) {
+    switch (type) {
+      case 'string':
+        matched = typeof value === 'string';
+        break;
+      case 'number':
+        matched = typeof value === 'number';
+        break;
+      case 'bool':
+      case 'boolean':
+        matched = typeof value === 'boolean';
+        break;
+      case 'array':
+        matched = value instanceof Array;
+        break;
+      case 'object':
+        matched = value instanceof Object && !(value instanceof Array);
+        break;
+    }
+  }
+  return { item: value, matched };
+};
+
 export const extractBooleanFromKeyedItems = (
   items: any[] = [],
   key = '',
@@ -197,12 +228,21 @@ export const extractBooleanFromKeyedItems = (
   return matched && typeof item.value === 'boolean' ? item.value : defaultValue;
 };
 
+export const extractStringFromKeyedItems = (
+  items: any[] = [],
+  key = '',
+  defaultValue = '',
+): string => {
+  const { matched, item } = extractKeyedItem(items, key);
+  return matched && typeof item.value === 'string' ? item.value : defaultValue;
+};
+
 export const extractArrayFromKeyedItems = (
   items: any[] = [],
   key = '',
   defaultValue = [],
   minLen = 2,
-): boolean => {
+): any[] => {
   const { matched, item } = extractKeyedItem(items, key);
   return matched && item.value instanceof Array && item.value.length >= minLen
     ? item.value

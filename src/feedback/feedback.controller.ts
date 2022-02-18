@@ -287,17 +287,33 @@ export class FeedbackController {
       const sendMsg = intValue >= 1;
       let fcm = {};
       if (sendMsg) {
-        const nickName = await this.userService.getNickName(flagData.user);
-        const lang = await this.userService.getPreferredLang(
+        const {
+          lang,
+          pushNotifications,
+        } = await this.userService.getPreferredLangAndPnOptions(
           flagData.targetUser,
         );
-        const { title, body } = await this.snippetService.buildRatingTitleBody(
-          nickName,
-          intValue,
-          recipSwipe.value,
-          lang,
-        );
-        fcm = await this.sendNotification(flagData, title, body);
+        const pnKey =
+          recipSwipe.value > 0
+            ? 'been_matched'
+            : intValue > 1
+            ? 'been_superliked'
+            : 'been_liked';
+        const maySend = pushNotifications.includes(pnKey);
+        if (maySend) {
+          const nickName = await this.userService.getNickName(flagData.user);
+
+          const {
+            title,
+            body,
+          } = await this.snippetService.buildRatingTitleBody(
+            nickName,
+            intValue,
+            recipSwipe.value,
+            lang,
+          );
+          fcm = await this.sendNotification(flagData, title, body);
+        }
       }
       data.valid = valid;
       data.flag = flag;
