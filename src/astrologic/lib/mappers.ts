@@ -1,10 +1,10 @@
 /*
  * Methods to convert Maps to objects and to simplify complex objects
  */
-import { notEmptyString } from '../../lib/validators';
+import { isNumeric, notEmptyString } from '../../lib/validators';
 import { jdToDateParts } from './date-funcs';
 import { shortenName } from './helpers';
-import { KeyValueNum } from './models/chart';
+import { KeyValueNum, Placeref } from './models/chart';
 import { LngLat, Toponym } from './interfaces';
 import { sanitize } from '../../lib/converters';
 
@@ -25,7 +25,7 @@ export const objectToMap = obj => {
 };
 
 export const simplifyObject = (obj, keys = []) => {
-  let newObj = {};
+  const newObj: any = {};
   if (obj instanceof Object) {
     Object.entries(obj).forEach(entry => {
       const [k, v] = entry;
@@ -141,11 +141,10 @@ const extractFromKeyValueArray = (
 };
 
 export const mapKaranaTithiYoga = (inData = null) => {
-  const kty = new KaranaTithiYoga();
   const keys = Object.keys(inData);
-  let tithi = { num: 0, lord: '' };
-  let yoga = { num: 0, lord: '' };
-  let karana = { num: 0, lord: '' };
+  const tithi = { num: 0, lord: '' };
+  const yoga = { num: 0, lord: '' };
+  const karana = { num: 0, lord: '' };
   let sunMoonAngle = 0;
   if (inData instanceof Object) {
     if (keys.includes('numValues') && inData.numValues instanceof Array) {
@@ -202,7 +201,7 @@ export const mapToponyms = (
       name: tp.name,
       fullName: tp.fullName,
       type: tp.type,
-      geo: { lat: tp.lat, lng: tp.lng },
+      geo: geo,
     };
   });
 
@@ -244,4 +243,36 @@ export const mapToponyms = (
     });
   }
   return placenames;
+};
+
+export const mapGeoPlacenames = (
+  places: Placeref[],
+  geo: LngLat,
+  locality = '',
+) => {
+  const toponyms = places.map(pc => {
+    const { fullName, name, type, geo, lat, lng } = pc;
+    const hasGeo = geo instanceof Object;
+    const latVal = hasGeo ? geo.lat : lat;
+    const lngVal = hasGeo ? geo.lng : lng;
+    return {
+      fullName,
+      name,
+      type,
+      lat: latVal,
+      lng: lngVal,
+    };
+  });
+  return mapToponyms(toponyms, geo, locality);
+};
+
+export const extractCorePlaceNames = (placenames: Placeref[] = []): string => {
+  const detailTypes = ['PSCD', 'STRT'];
+  return placenames.length > 0
+    ? placenames
+        .filter(pl => detailTypes.includes(pl.type) === false)
+        .map(pl => pl.name)
+        .reverse()
+        .join(', ')
+    : '';
 };

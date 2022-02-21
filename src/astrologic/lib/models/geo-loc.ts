@@ -1,9 +1,9 @@
 import { isNumeric } from '../../../lib/validators';
 
 export class GeoLoc {
-  lat: number = 0;
-  lng: number = 0;
-  alt: number = 0;
+  lat = 0;
+  lng = 0;
+  alt = 0;
 
   constructor(geoData: any = null) {
     if (geoData instanceof Object) {

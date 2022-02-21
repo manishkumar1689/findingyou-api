@@ -33,6 +33,7 @@ import { MatchedOption, PrefKeyValue } from './settings/preference-options';
 import {
   extractArrayFromKeyedItems,
   extractBooleanFromKeyedItems,
+  extractFloatFromKeyedItems,
   extractKeyedItemValue,
   extractStringFromKeyedItems,
   smartCastBool,
@@ -102,8 +103,15 @@ export class UserService {
     const obj =
       item instanceof Object
         ? item
-        : { _id: '', nickName: '', roles: [], profiles: [], dob: null };
-    const { _id, nickName, dob, roles, profiles, preferences } = obj;
+        : {
+            _id: '',
+            nickName: '',
+            geo: { lat: 0, lng: 0 },
+            roles: [],
+            profiles: [],
+            dob: null,
+          };
+    const { _id, nickName, dob, geo, roles, profiles, preferences } = obj;
     let profileImg = '';
     if (profiles instanceof Array && profiles.length > 0) {
       const { mediaItems } = profiles[0];
@@ -122,12 +130,22 @@ export class UserService {
       false,
     );
 
+    const maxDistance = extractFloatFromKeyedItems(
+      preferences,
+      'max_distance',
+      100,
+    );
+
     const ageRange = extractArrayFromKeyedItems(
       preferences,
       'age_range',
       [0, 0],
       2,
     );
+
+    const hasAgeRange = ageRange.length > 0 && ageRange[0] > 0;
+
+    const lang = extractStringFromKeyedItems(preferences, 'language', 'en');
 
     const pnData = extractKeyedItemValue(
       preferences,
@@ -150,17 +168,24 @@ export class UserService {
       const ageTs = currTs - dobTs;
       age = ageTs / (365.25 * 24 * 60 * 60 * 1000);
     }
+    const geoObj =
+      geo instanceof Object
+        ? { lat: geo.lat, lng: geo.lng }
+        : { lat: 0, lng: 0 };
     return {
       _id,
       nickName,
       roles,
+      geo: geoObj,
       age,
       ageRange,
       pushNotifications,
-      hasAgeRange: ageRange[0] > 0,
+      hasAgeRange,
       profileImg,
       showOnlineStatus,
       hideFromExplore,
+      maxDistance,
+      lang,
       isPaidMember,
     };
   }
@@ -188,7 +213,7 @@ export class UserService {
     const fieldList =
       fields.length > 0
         ? fields.join(' ')
-        : '_id active nickName dob roles profiles preferences';
+        : '_id active nickName dob geo roles profiles preferences';
     const items = await this.userModel
       .find({
         _id: uid,
@@ -207,6 +232,45 @@ export class UserService {
     const userRec = await this.getBasicById(uid, ['nickName']);
     return userRec instanceof Object ? userRec.nickName : '';
   }
+
+  /* async updatePrefValue(userID = '', key = '', value = null, type = 'string') {
+    const rec = await this.userModel.findById(userID).select('preferences');
+    if (type === 'integer') {
+      value = parseInt(value, 10);
+    }
+    let result = {};
+    if (rec instanceof Model) {
+      const hasPref =
+        rec.preferences instanceof Array
+          ? rec.preferences.some(pr => pr.key === key)
+          : false;
+      const edited = hasPref
+        ? {
+            $set: { 'preferences.$[outer].value': value },
+          }
+        : {
+            $push: {
+              preferences: {
+                type,
+                key,
+                value,
+              },
+            },
+          };
+      const options = hasPref
+        ? {
+            arrayFilters: [
+              {
+                'outer.key': key,
+              },
+            ],
+          }
+        : {};
+      result = await rec.update(edited, options);
+      return { result, edited, options };
+    }
+    return { result };
+  } */
 
   async getPreferredLangAndPnOptions(
     uid: string,
@@ -616,6 +680,7 @@ export class UserService {
         case 'imageUri':
         case 'mode':
         case 'deviceToken':
+        case 'pob':
           userData.set(key, val);
           break;
         case 'identifier':
@@ -1135,11 +1200,32 @@ export class UserService {
     }
   }
 
-  async registerLogin(userID: string, deviceToken = ''): Promise<string> {
+  async registerLogin(
+    userID: string,
+    deviceToken = '',
+    geo = null,
+  ): Promise<string> {
     const login = new Date().toISOString();
     const hasDeviceToken = notEmptyString(deviceToken, 5);
-    const edited = hasDeviceToken ? { login, deviceToken } : { login };
-    const user = await this.userModel.findByIdAndUpdate(userID, edited);
+    const geoKeys = geo instanceof Object ? Object.keys(geo) : [];
+    const hasGeo = geoKeys.includes('lat') && geoKeys.includes('lng');
+    const edited: Map<string, any> = new Map();
+    edited.set('login', login);
+    if (hasDeviceToken) {
+      edited.set('deviceToken', deviceToken);
+    }
+    if (hasGeo) {
+      const nullVal =
+        (geo.lat === 0 && geo.lng === 0) ||
+        !isNumeric(geo.lat) ||
+        !isNumeric(geo.lng);
+      if (!nullVal) {
+        edited.set('geo', geo);
+        edited.set('coords', [geo.lng, geo.lat]);
+      }
+    }
+    const editedObj = Object.fromEntries(edited.entries());
+    const user = await this.userModel.findByIdAndUpdate(userID, editedObj);
     if (user) {
       return login;
     } else {
@@ -1198,6 +1284,7 @@ export class UserService {
           nickName: 1,
           active: 1,
           dob: 1,
+          pob: 1,
           'placenames.fullname': 1,
           'placenames.type': 1,
           'placenames.name': 1,

@@ -134,7 +134,12 @@ import {
   PredictiveRule,
   Protocol,
 } from './lib/models/protocol-models';
-import { mapNestedKaranaTithiYoga, mapToponyms } from './lib/mappers';
+import {
+  extractCorePlaceNames,
+  mapGeoPlacenames,
+  mapNestedKaranaTithiYoga,
+  mapToponyms,
+} from './lib/mappers';
 import { CreateSettingDTO } from '../setting/dto/create-setting.dto';
 import typeTags from './lib/settings/relationship-types';
 import { KeyName } from './lib/interfaces';
@@ -1400,6 +1405,7 @@ export class AstrologicController {
       alt,
       isDefaultBirthChart,
       locality,
+      pob,
       notes,
       tz,
       tzOffset,
@@ -1461,16 +1467,34 @@ export class AstrologicController {
             fetchFull,
           );
           if (chartData instanceof Object) {
+            const localityRef = notEmptyString(locality)
+              ? locality
+              : notEmptyString(pob, 4)
+              ? pob.split(',').shift()
+              : '';
+            const placenames = mapGeoPlacenames(
+              geoInfo.toponyms,
+              geo,
+              localityRef,
+            );
+            const pobRef = notEmptyString(pob, 4)
+              ? pob
+              : extractCorePlaceNames(placenames);
             data.shortTz = toShortTzAbbr(dtUtc, geoInfo.tz);
             // Update DOB field in the user table
+            const userMap: Map<string, any> = new Map();
             if (hasValidDatetime) {
-              const userData = {
-                dob: utcDate(datetime),
-              } as CreateUserDTO;
+              userMap.set('dob', utcDate(datetime));
+            }
+            if (notEmptyString(pobRef, 3)) {
+              userMap.set('pob', pobRef);
+            }
+            if (userMap.size > 0) {
+              const userData = Object.fromEntries(
+                userMap.entries(),
+              ) as CreateUserDTO;
               this.userService.updateUser(user, userData);
             }
-            const placenames = mapToponyms(geoInfo.toponyms, geo, locality);
-
             const progressItems = await buildSingleProgressSetKeyValues(
               chartData.jd,
             );

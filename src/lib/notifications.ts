@@ -190,12 +190,6 @@ export const subFilterFlagItems = (
     const refTs = new Date(flag.modifiedAt).getTime();
 
     excludeIfRecent = refTs >= excludeAllStartTs;
-    /* console.log(
-      refTs,
-      excludeIfRecent,
-      excludeAllStartTs,
-      (refTs - excludeAllStartTs) / 1000,
-    ); */
   }
   return (
     flag.key === 'likeability' &&

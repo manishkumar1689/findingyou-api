@@ -30,7 +30,12 @@ import {
   validISODateString,
   isString,
 } from '../lib/validators';
-import { htmlToPlainText, smartCastInt, toStartRef } from '../lib/converters';
+import {
+  htmlToPlainText,
+  smartCastFloat,
+  smartCastInt,
+  toStartRef,
+} from '../lib/converters';
 import { Request } from 'express';
 import {
   fromBase64,
@@ -784,6 +789,16 @@ export class UserController {
       if (hasUser && userInfo.hasAgeRange) {
         query.age = userInfo.ageRange;
       }
+      if (queryKeys.includes('near') === false && hasUser) {
+        let maxDistKm = userInfo.maxDistance;
+        if (queryKeys.includes('km') && isNumeric(query.km)) {
+          const km = smartCastFloat(query.km, 0);
+          if (km > 0) {
+            maxDistKm = km;
+          }
+        }
+        query.near = [userInfo.geo.lat, userInfo.geo.lng, maxDistKm].join(',');
+      }
       const isPaidMember =
         hasUser && enforcePaidMembership
           ? userInfo.isPaidMember
@@ -1363,11 +1378,13 @@ export class UserController {
       }
       if (valid) {
         extractObjectAndMerge(user, userData, ['password', 'status', 'token']);
+
         const userID = extractDocId(user);
-        const { deviceToken } = loginDTO;
+        const { deviceToken, geo } = loginDTO;
         const loginDt = await this.userService.registerLogin(
           userID,
           deviceToken,
+          geo,
         );
         userData.set('login', loginDt);
         if (notEmptyString(deviceToken, 5)) {
@@ -2413,6 +2430,29 @@ export class UserController {
   }
 
   /*
+    testing
+  */
+  /* 
+  @Get('test-pref-update/:userID/:key/:value/:type?')
+  async testPrefUpdate(
+    @Res() res,
+    @Param('userID') userID,
+    @Param('key') key,
+    @Param('value') value,
+    @Param('type') type,
+  ) {
+    const typeRef = notEmptyString(type) ? type : 'string';
+    const result = await this.userService.updatePrefValue(
+      userID,
+      key,
+      value,
+      typeRef,
+    );
+    return res.json(result);
+  }
+ */
+
+  /*
     #development
   */
   @Post('bulk/sample-import')
@@ -2443,6 +2483,9 @@ export class UserController {
     return res.status(HttpStatus.OK).json(items);
   }
 
+  /*
+    development
+  */
   async saveImportedUser(item: SampleRecordDTO) {
     const astrobankPart = 'astro-databank/';
     const identifier = item.url.includes(astrobankPart)

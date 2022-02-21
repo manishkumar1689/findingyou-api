@@ -77,6 +77,8 @@ import { combineCharts, filterBmMatchRow } from '../chart-funcs';
 import { locStringToGeo } from '../converters';
 import { keyValuesToSimpleObject } from '../../../lib/converters';
 import { currentJulianDay } from '../julian-date';
+import { extractCorePlaceNames } from '../mappers';
+import { GeoPos } from '../../interfaces/geo-pos';
 
 export interface Subject {
   name: string;
@@ -103,11 +105,20 @@ export interface GrahaTransition {
   datetime: Date;
 }
 
-export interface Placename {
+export interface Placetype {
   name: string;
   fullName: string;
   type: string;
+}
+
+export interface Placename extends Placetype {
   geo: GeoLoc;
+}
+
+export interface Placeref extends Placetype {
+  geo: GeoPos;
+  lat?: number;
+  lng?: number;
 }
 
 export interface LngLat {
@@ -1250,14 +1261,7 @@ export class Chart {
   }
 
   get corePlacenames(): string {
-    const detailTypes = ['PSCD', 'STRT'];
-    return this.placenames.length > 0
-      ? this.placenames
-          .filter(pl => detailTypes.includes(pl.type) === false)
-          .map(pl => pl.name)
-          .reverse()
-          .join(', ')
-      : '';
+    return extractCorePlaceNames(this.placenames);
   }
 
   getTransitions() {

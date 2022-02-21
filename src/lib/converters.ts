@@ -237,6 +237,15 @@ export const extractStringFromKeyedItems = (
   return matched && typeof item.value === 'string' ? item.value : defaultValue;
 };
 
+export const extractFloatFromKeyedItems = (
+  items: any[] = [],
+  key = '',
+  defaultValue = 0,
+): string => {
+  const { matched, item } = extractKeyedItem(items, key);
+  return matched && typeof item.value === 'number' ? item.value : defaultValue;
+};
+
 export const extractArrayFromKeyedItems = (
   items: any[] = [],
   key = '',

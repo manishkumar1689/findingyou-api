@@ -68,6 +68,9 @@ export class ChartInputDTO {
   readonly locality?: string;
 
   @ApiProperty()
+  readonly pob?: string; // full search place name as entered, not just the locality
+
+  @ApiProperty()
   readonly tzOffset?: number;
 
   @ApiProperty()

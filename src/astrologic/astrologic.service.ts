@@ -1104,6 +1104,7 @@ export class AstrologicService {
     const steps = [
       {
         $match: {
+          'placenames.geo.lat': { $exists: true },
           $or: [
             {
               'placenames.geo.lat': latRange,

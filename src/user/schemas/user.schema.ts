@@ -71,6 +71,11 @@ export const UserSchema = new mongoose.Schema({
     default: '',
   },
   dob: { type: Date, default: null, required: false },
+  pob: {
+    type: String,
+    required: false,
+    default: '',
+  },
   active: Boolean,
   test: Boolean,
   boosts: { type: Number, required: false, default: 0 },
