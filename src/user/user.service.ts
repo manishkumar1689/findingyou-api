@@ -56,6 +56,7 @@ const userEditPaths = [
   'gender',
   'active',
   'dob',
+  'pob',
   'test',
   'geo',
   'placenames',
