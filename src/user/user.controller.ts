@@ -1716,10 +1716,11 @@ export class UserController {
         const resetLink = '/reset/' + toBase64(userID + '__' + user.token);
         //data.set('token', user.token);
         const resetNumber = tokenTo6Digits(user.token);
-        data.set('number', resetNumber);
+        data.set('webMode', webMode);
         if (webMode) {
           data.set('link', resetLink);
         } else {
+          data.set('number', resetNumber);
           data.set('reset', true);
         }
         const resetHash = webMode ? resetLink : resetNumber;
