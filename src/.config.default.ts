@@ -92,6 +92,8 @@ export const mailService = {
   requirePlainText: false,
 };
 
+export const accountWebBase = 'https://accounts.findingyou.me';
+
 export const imageSizes = {
   thumb: {
     mode: 'resize',

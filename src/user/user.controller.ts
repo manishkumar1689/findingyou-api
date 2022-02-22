@@ -1713,7 +1713,7 @@ export class UserController {
     data.set('valid', false);
     if (user) {
       if (notEmptyString(user.token, 6)) {
-        const resetLink = '/user/reset/' + toBase64(userID + '__' + user.token);
+        const resetLink = '/reset/' + toBase64(userID + '__' + user.token);
         //data.set('token', user.token);
         const resetNumber = tokenTo6Digits(user.token);
         data.set('number', resetNumber);

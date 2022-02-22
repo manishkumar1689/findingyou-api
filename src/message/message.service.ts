@@ -5,7 +5,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Message } from './interfaces/message.interface';
 import { CreateMessageDTO } from './dto/create-message.dto';
 import { isNumeric, notEmptyString } from '../lib/validators';
-import { mailDetails, mailService, webBaseUrl } from '../.config';
+import { accountWebBase, mailDetails, mailService } from '../.config';
 
 export interface MessageSet {
   key: string;
@@ -254,7 +254,7 @@ export class MessageService {
         .replace('%full_name', toName)
         .replace('%email', email);
       if (resetLink) {
-        const fullLink = webBaseUrl + resetLink;
+        const fullLink = accountWebBase + resetLink;
         if (mode === 'web') {
           body = body.replace('%reset_link', fullLink);
         } else {
