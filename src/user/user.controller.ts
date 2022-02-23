@@ -1725,7 +1725,9 @@ export class UserController {
         }
         const resetHash = webMode ? resetLink : resetNumber;
         data.set('valid', true);
-        const userName = [user.fullName, user.nickName].join(' ');
+        const userName = notEmptyString(user.fullName)
+          ? user.fullName
+          : user.nickName;
         this.messageService.resetMail(user.identifier, userName, resetHash);
       }
     }

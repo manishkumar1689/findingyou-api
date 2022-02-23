@@ -6,6 +6,7 @@ import { Message } from './interfaces/message.interface';
 import { CreateMessageDTO } from './dto/create-message.dto';
 import { isNumeric, notEmptyString } from '../lib/validators';
 import { accountWebBase, mailDetails, mailService } from '../.config';
+import { replaceMessagePlaceholders } from './lib/mappers';
 
 export interface MessageSet {
   key: string;
@@ -199,6 +200,16 @@ export class MessageService {
       }
       return options;
     };
+    const toHTMLMailParams = sendParams => {
+      if (sendParams instanceof Object) {
+        const entries = Object.entries(sendParams).filter(
+          entry => entry[0] !== 'text',
+        );
+        return Object.fromEntries(entries);
+      } else {
+        return sendParams;
+      }
+    };
     let result: any = null;
     switch (mailService.provider) {
       case 'google/appengine':
@@ -206,7 +217,11 @@ export class MessageService {
         break;
       case 'google/mailgo':
         await this.http
-          .post(mailService.uri, sendParams, buildApikeyParams())
+          .post(
+            mailService.uri,
+            toHTMLMailParams(sendParams),
+            buildApikeyParams(),
+          )
           .toPromise()
           .then(rs => {
             if (rs instanceof Object) {
@@ -250,18 +265,20 @@ export class MessageService {
       params.from = message.fromMail;
       params.subject = message.subject;
 
-      let body = message.body
-        .replace('%full_name', toName)
-        .replace('%email', email);
+      let body = message.body;
+      const placeholders: Map<string, string> = new Map();
+      placeholders.set('full_name', toName);
+      placeholders.set('email', email);
       if (resetLink) {
-        const fullLink = accountWebBase + resetLink;
-        if (mode === 'web') {
-          body = body.replace('%reset_link', fullLink);
-        } else {
-          body = body.replace('%reset_link', resetLink);
-        }
+        const fullLink =
+          mode === 'web' ? accountWebBase + resetLink : resetLink;
+        /* placeholders.body = body
+          .replace('%reset_link', fullLink)
+          .replace('#reset_link', fullLink); */
+        placeholders.set('reset_link', fullLink);
       }
-      body = body.replace(/<p[^>]*?>\s*<br[^>]*?>\s*<\/p>/gi, '<p></p>');
+      body = replaceMessagePlaceholders(body, placeholders);
+      //body = body.replace(/<p[^>]*?>\s*<br[^>]*?>\s*<\/p>/gi, '<p></p>');
       params.body = body;
       if (buildPlain) {
         params.text = htmlToText(body, { wordwrap: 80 });
