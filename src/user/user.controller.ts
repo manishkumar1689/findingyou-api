@@ -124,6 +124,7 @@ import { buildCoreAspects } from '../astrologic/lib/calc-orbs';
 import { LogoutDTO } from './dto/logout.dto';
 import { ResetDTO } from './dto/reset.dto';
 import { EmailParamsDTO } from './dto/email-params.dto';
+import { filterByLang } from 'src/lib/mappers';
 
 @Controller('user')
 export class UserController {
@@ -1236,7 +1237,10 @@ export class UserController {
     const hasLang =
       notEmptyString(lang, 2) && ['all', '--'].includes(lang) === false;
 
-    let data: any = { valid: false, cached: false };
+    let data: any = {
+      valid: false,
+      cached: false,
+    };
     if (validStored) {
       data = { ...stored, cached: true };
     } else {
@@ -1246,9 +1250,6 @@ export class UserController {
       }
     }
     if (hasLang) {
-      const langParts = lang.split('-');
-      const hasLocale = langParts.length > 1 && langParts[1].length > 1;
-      const langRoot = langParts[0];
       const isSurvey =
         data.items.length > 0 &&
         data.items.some(item => {
@@ -1272,30 +1273,13 @@ export class UserController {
           } = item;
           let localisedPrompt = prompt;
           if (hasVersions && versions instanceof Array) {
-            let index = versions.findIndex(v => v.lang === lang);
-            if (index < 0 && hasLocale) {
-              index = versions.findIndex(v => v.lang.startsWith(langRoot));
-            }
-            if (index >= 0) {
-              localisedPrompt = versions[index].text;
-            }
+            localisedPrompt = filterByLang(versions, lang);
           }
           return { key, prompt: localisedPrompt, domain, subdomain, inverted };
         });
         data.options = data.options.map(opt => {
           const { key, values } = opt;
-          let value = '';
-          if (values instanceof Array) {
-            let index = values.findIndex(v => v.lang === lang);
-            if (index < 0 && hasLocale) {
-              index = values.findIndex(v => v.lang.startsWith(langRoot));
-            }
-            if (index >= 0) {
-              value = values[index].text;
-            } else if (values.length > 0) {
-              value = values[0].text;
-            }
-          }
+          const value = filterByLang(values, lang);
           return { key, value };
         });
       }
