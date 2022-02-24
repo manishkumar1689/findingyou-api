@@ -1220,10 +1220,11 @@ export class UserController {
     #admin
     Fetch preference options
   */
-  @Get('preferences/:key?/:refresh?')
+  @Get('preferences/:key?/:lang?/:refresh?')
   async listPreferenceOptions(
     @Res() res,
     @Param('key') key,
+    @Param('lang') lang,
     @Param('refresh') refresh,
   ) {
     const showAll = key === 'all';
@@ -1232,6 +1233,9 @@ export class UserController {
     const cacheKey = ['preferences_listing', surveyKey].join('_');
     const stored = cached ? await this.redisGet(cacheKey) : null;
     const validStored = stored instanceof Object && stored.valid;
+    const hasLang =
+      notEmptyString(lang, 2) && ['all', '--'].includes(lang) === false;
+
     let data: any = { valid: false, cached: false };
     if (validStored) {
       data = { ...stored, cached: true };
@@ -1240,6 +1244,62 @@ export class UserController {
       if (data.valid && data.items instanceof Array) {
         this.redisSet(cacheKey, data);
       }
+    }
+    if (hasLang) {
+      const langParts = lang.split('-');
+      const hasLocale = langParts.length > 1 && langParts[1].length > 1;
+      const langRoot = langParts[0];
+      const isSurvey =
+        data.items.length > 0 &&
+        data.items.some(item => {
+          const itemKeys = Object.keys(item);
+          if (itemKeys.includes('domain') && itemKeys.includes('hasVersions')) {
+            return item.hasVersions;
+          } else {
+            return false;
+          }
+        });
+      if (isSurvey) {
+        data.items = data.items.map(item => {
+          const {
+            key,
+            prompt,
+            domain,
+            subdomain,
+            inverted,
+            versions,
+            hasVersions,
+          } = item;
+          let localisedPrompt = prompt;
+          if (hasVersions && versions instanceof Array) {
+            let index = versions.findIndex(v => v.lang === lang);
+            if (index < 0 && hasLocale) {
+              index = versions.findIndex(v => v.lang.startsWith(langRoot));
+            }
+            if (index >= 0) {
+              localisedPrompt = versions[index].text;
+            }
+          }
+          return { key, prompt: localisedPrompt, domain, subdomain, inverted };
+        });
+        data.options = data.options.map(opt => {
+          const { key, values } = opt;
+          let value = '';
+          if (values instanceof Array) {
+            let index = values.findIndex(v => v.lang === lang);
+            if (index < 0 && hasLocale) {
+              index = values.findIndex(v => v.lang.startsWith(langRoot));
+            }
+            if (index >= 0) {
+              value = values[index].text;
+            } else if (values.length > 0) {
+              value = values[0].text;
+            }
+          }
+          return { key, value };
+        });
+      }
+      data.lang = lang;
     }
     return res.status(HttpStatus.OK).json(data);
   }
