@@ -2011,6 +2011,7 @@ export class UserController {
           },
         );
         result.categories = Object.fromEntries(categoryEntries);
+        result.valid = result.answers.length > 0;
       }
     }
     return res.json(result);
