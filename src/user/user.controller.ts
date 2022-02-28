@@ -1945,7 +1945,8 @@ export class UserController {
     @Body() prefs: PreferenceDTO[],
   ) {
     const matchedType = /jung/.test(type) ? 'jungian' : 'faceted';
-    const cached = isNumeric(reset) && smartCastInt(reset, 0) > 0;
+    const notCached = isNumeric(reset) && smartCastInt(reset, 0) > 0;
+    const cached = !notCached;
     const preferences = prefs.map(pr => {
       const { key, value } = pr;
       const adjustedValue = value - big5FacetedScaleOffset;
