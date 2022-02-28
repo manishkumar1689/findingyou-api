@@ -121,7 +121,7 @@ import { buildCoreAspects } from '../astrologic/lib/calc-orbs';
 import { LogoutDTO } from './dto/logout.dto';
 import { ResetDTO } from './dto/reset.dto';
 import { EmailParamsDTO } from './dto/email-params.dto';
-import { filterByLang } from '../lib/mappers';
+import { extractSnippet, filterByLang } from '../lib/mappers';
 
 @Controller('user')
 export class UserController {
@@ -1935,14 +1935,17 @@ export class UserController {
   /*
     #admin
   */
-  @Put('survey/save/:type/:userID')
+  @Put('survey/save/:type/:userID/:lang?/:reset?')
   async saveSurvey(
     @Res() res,
     @Param('type') type,
     @Param('userID') userID,
+    @Param('lang') lang,
+    @Param('reset') reset,
     @Body() prefs: PreferenceDTO[],
   ) {
     const matchedType = /jung/.test(type) ? 'jungian' : 'faceted';
+    const cached = isNumeric(reset) && smartCastInt(reset, 0) > 0;
     const preferences = prefs.map(pr => {
       const { key, value } = pr;
       const adjustedValue = value - big5FacetedScaleOffset;
@@ -1950,6 +1953,10 @@ export class UserController {
     });
     const data = await this.userService.savePreferences(userID, preferences);
     const isJungian = matchedType === 'jungian';
+    const matchedLang =
+      notEmptyString(lang, 1) && /[a-z][a-z][a-z]?(-[A-Z][A-Z])/.test(lang)
+        ? lang
+        : 'en';
     const result: any = { valid: false, answers: [], analysis: {} };
     if (data instanceof Object && data.valid) {
       const { surveys } = await this.settingService.getSurveyData();
@@ -1970,6 +1977,41 @@ export class UserController {
           ? summariseJungianAnswers(result.answers)
           : analyseAnswers(type, result.answers)
         : {};
+      if (isJungian) {
+        result.letters = Object.keys(result.analysis)
+          .join('')
+          .toLowerCase();
+        const spectra = ['IE', 'SN', 'FT', 'JP'];
+        const feedbackItems = await this.getFacetedFeedbackItems(
+          matchedType,
+          cached,
+        );
+        const snKeys = [
+          ['_', 'name', result.letters].join('_'),
+          ['_', 'type', result.letters].join('_'),
+        ];
+        result.title = '';
+        result.text = '';
+        snKeys.forEach(sk => {
+          if (sk.includes('_name_')) {
+            result.title = extractSnippet(feedbackItems, sk, matchedLang);
+          } else {
+            result.text = extractSnippet(feedbackItems, sk, matchedLang);
+          }
+        });
+        const categoryEntries = Object.entries(result.analysis).map(
+          ([key, value], si) => {
+            const polarity = spectra[si];
+            const segment = value <= 20 ? 'ave' : 'high';
+            const snKey = ['_', 'sub', polarity, key, segment]
+              .join('_')
+              .toLowerCase();
+            const text = extractSnippet(feedbackItems, snKey, matchedLang);
+            return [polarity, text];
+          },
+        );
+        result.categories = Object.fromEntries(categoryEntries);
+      }
     }
     return res.json(result);
   }

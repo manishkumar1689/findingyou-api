@@ -1,10 +1,12 @@
-export interface KeyLang {
-  key: string;
+import { Snippet } from '../snippet/interfaces/snippet.interface';
+
+export interface LangText {
+  text: string;
   lang: string;
   [key: string]: any;
 }
 
-export const filterByLang = (values: KeyLang[], lang = 'en') => {
+export const filterByLang = (values: LangText[], lang = 'en') => {
   const langRoot = lang.split('-').shift();
   const hasLocale = langRoot !== lang && langRoot.length > 1;
   let value = '';
@@ -20,4 +22,17 @@ export const filterByLang = (values: KeyLang[], lang = 'en') => {
     }
   }
   return value;
+};
+
+export const extractSnippet = (
+  items: Snippet[] = [],
+  keyEnd = '',
+  lang = 'en',
+) => {
+  const snippet = items.find(sn => sn.key.endsWith(keyEnd));
+  let text = '';
+  if (snippet instanceof Object && snippet.values instanceof Array) {
+    text = filterByLang(snippet.values, lang);
+  }
+  return text;
 };

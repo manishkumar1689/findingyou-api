@@ -96,7 +96,6 @@ export const compareSurveyScoreSets = (
 
 const applyAdjustedScore = (value = 0, offset = 0, inverted = false) => {
   let score = smartCastInt(value, 0) + offset;
-  console.log({ value, offset });
   if (inverted) {
     if (offset === 0) {
       score = defaultFacetedScaleRange + 1 - score;
