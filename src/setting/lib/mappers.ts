@@ -96,6 +96,7 @@ export const compareSurveyScoreSets = (
 
 const applyAdjustedScore = (value = 0, offset = 0, inverted = false) => {
   let score = smartCastInt(value, 0) + offset;
+  console.log({ value, offset });
   if (inverted) {
     if (offset === 0) {
       score = defaultFacetedScaleRange + 1 - score;
@@ -355,6 +356,42 @@ const analyseJungianAnswers = (
     }
   });
   return domainItems;
+};
+
+export interface JungianSet {
+  I?: number;
+  E?: number;
+  F?: number;
+  T?: number;
+  J?: number;
+  P?: number;
+  S?: number;
+  N?: number;
+}
+
+export const summariseJungianAnswers = (
+  answers: FacetedBig5Set[] = [],
+): JungianSet => {
+  const domainItems: Map<string, number> = new Map();
+  const domains = ['IE', 'SN', 'FT', 'JP'];
+  domains.forEach(domKey => {
+    const dItems = answers.filter(an => an.domain === domKey);
+    dItems.sort((a, b) => a.facet - b.facet);
+    const count = dItems.length;
+    const score = calcJungianScaleResult(domKey, dItems);
+    // to be determined
+    const pc = calcFacetedItemPercent(
+      score,
+      count,
+      defaultFacetedScaleRange,
+      true,
+    );
+    const domKeyIndex = pc <= 50 ? 0 : 1;
+    const domResult = pc <= 50 ? (50 - pc) * 2 : (pc - 50) * 2;
+    const resultLetter = domKey.charAt(domKeyIndex);
+    domainItems.set(resultLetter, domResult);
+  });
+  return Object.fromEntries(domainItems.entries());
 };
 
 const mergeJungianFeedback = (obj = null, fbItems: Snippet[] = []) => {

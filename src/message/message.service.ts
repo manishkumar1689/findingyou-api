@@ -7,6 +7,7 @@ import { CreateMessageDTO } from './dto/create-message.dto';
 import { isNumeric, notEmptyString } from '../lib/validators';
 import { accountWebBase, mailDetails, mailService } from '../.config';
 import { replaceMessagePlaceholders } from './lib/mappers';
+import { readRawFile } from '../lib/files';
 
 export interface MessageSet {
   key: string;
@@ -187,6 +188,11 @@ export class MessageService {
     this.sendMail(sendParams, 'password_reset');
   }
 
+  emailFooter() {
+    const text = readRawFile('email_footer_en.snippet.html', 'files');
+    return text;
+  }
+
   async sendMail(sendParams, key = '') {
     const buildApikeyParams = () => {
       const options: any = {};
@@ -263,22 +269,28 @@ export class MessageService {
     };
     if (message) {
       params.from = message.fromMail;
-      params.subject = message.subject;
 
       let body = message.body;
       const placeholders: Map<string, string> = new Map();
       placeholders.set('full_name', toName);
+      placeholders.set('nick_name', toName);
       placeholders.set('email', email);
       if (resetLink) {
         const fullLink =
           mode === 'web' ? accountWebBase + resetLink : resetLink;
-        /* placeholders.body = body
-          .replace('%reset_link', fullLink)
-          .replace('#reset_link', fullLink); */
         placeholders.set('reset_link', fullLink);
       }
+      params.subject = replaceMessagePlaceholders(
+        message.subject,
+        placeholders,
+      );
       body = replaceMessagePlaceholders(body, placeholders);
-      //body = body.replace(/<p[^>]*?>\s*<br[^>]*?>\s*<\/p>/gi, '<p></p>');
+      body = body.replace(/<p[^>]*?>\s*<br[^>]*?>\s*<\/p>/gi, '<p></p>');
+
+      const footer = this.emailFooter();
+      if (notEmptyString(footer)) {
+        body += footer;
+      }
       params.body = body;
       if (buildPlain) {
         params.text = htmlToText(body, { wordwrap: 80 });

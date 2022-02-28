@@ -30,12 +30,7 @@ import {
   validISODateString,
   isString,
 } from '../lib/validators';
-import {
-  htmlToPlainText,
-  smartCastFloat,
-  smartCastInt,
-  toStartRef,
-} from '../lib/converters';
+import { smartCastFloat, smartCastInt, toStartRef } from '../lib/converters';
 import { Request } from 'express';
 import {
   fromBase64,
@@ -103,6 +98,8 @@ import {
   normalizeFacetedPromptItem,
   filterMapSurveyByType,
   mergePsychometricFeedback,
+  summariseJungianAnswers,
+  big5FacetedScaleOffset,
 } from '../setting/lib/mappers';
 import { PublicUserDTO } from './dto/public-user.dto';
 import { User } from './interfaces/user.interface';
@@ -124,7 +121,7 @@ import { buildCoreAspects } from '../astrologic/lib/calc-orbs';
 import { LogoutDTO } from './dto/logout.dto';
 import { ResetDTO } from './dto/reset.dto';
 import { EmailParamsDTO } from './dto/email-params.dto';
-import { filterByLang } from 'src/lib/mappers';
+import { filterByLang } from '../lib/mappers';
 
 @Controller('user')
 export class UserController {
@@ -1236,7 +1233,6 @@ export class UserController {
     const validStored = stored instanceof Object && stored.valid;
     const hasLang =
       notEmptyString(lang, 2) && ['all', '--'].includes(lang) === false;
-
     let data: any = {
       valid: false,
       cached: false,
@@ -1282,8 +1278,8 @@ export class UserController {
           const value = filterByLang(values, lang);
           return { key, value };
         });
+        data.lang = lang;
       }
-      data.lang = lang;
     }
     return res.status(HttpStatus.OK).json(data);
   }
@@ -1934,6 +1930,48 @@ export class UserController {
   ) {
     const data = await this.userService.savePreferences(userID, preferences);
     return res.json(data);
+  }
+
+  /*
+    #admin
+  */
+  @Put('survey/save/:type/:userID')
+  async saveSurvey(
+    @Res() res,
+    @Param('type') type,
+    @Param('userID') userID,
+    @Body() prefs: PreferenceDTO[],
+  ) {
+    const matchedType = /jung/.test(type) ? 'jungian' : 'faceted';
+    const preferences = prefs.map(pr => {
+      const { key, value } = pr;
+      const adjustedValue = value - big5FacetedScaleOffset;
+      return { key, value: adjustedValue, type: matchedType };
+    });
+    const data = await this.userService.savePreferences(userID, preferences);
+    const isJungian = matchedType === 'jungian';
+    const result: any = { valid: false, answers: [], analysis: {} };
+    if (data instanceof Object && data.valid) {
+      const { surveys } = await this.settingService.getSurveyData();
+      const optType =
+        matchedType === 'jungian'
+          ? 'jungian_options'
+          : 'faceted_personality_options';
+      const jungian = surveys.find(sv => sv.key === optType);
+      const questions = jungian instanceof Object ? jungian.items : [];
+      result.answers = filterMapSurveyByType(
+        preferences,
+        matchedType,
+        questions,
+      );
+      const completed = result.answers.length >= questions.length;
+      result.analysis = completed
+        ? isJungian
+          ? summariseJungianAnswers(result.answers)
+          : analyseAnswers(type, result.answers)
+        : {};
+    }
+    return res.json(result);
   }
 
   async getFacetedFeedbackItems(
