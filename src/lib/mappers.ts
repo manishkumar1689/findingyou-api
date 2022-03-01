@@ -36,3 +36,7 @@ export const extractSnippet = (
   }
   return text;
 };
+
+export const filterCorePreference = (pr: any) =>
+  pr instanceof Object &&
+  ['faceted', 'jungian', 'simple_astro_pair'].includes(pr.type) === false;

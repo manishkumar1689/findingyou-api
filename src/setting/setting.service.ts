@@ -42,6 +42,7 @@ import {
 import { FacetedItemDTO } from './dto/faceted-item.dto';
 import eventTypeValues from '../astrologic/lib/settings/event-type-values';
 import { mapLikeability } from '../lib/notifications';
+import { filterCorePreference } from '../lib/mappers';
 
 @Injectable()
 export class SettingService {
@@ -240,53 +241,54 @@ export class SettingService {
     multiscaleData: any[] = [],
     simpleMode = false,
   ) {
-    const big5 = surveys.find(sv => sv.key === 'faceted_personality_options');
-    const jungian = surveys.find(sv => sv.key === 'jungian_options');
     const preferenceItems = preferences
-      .filter(
-        pr =>
-          pr instanceof Object &&
-          ['faceted', 'jungian', 'simple_astro_pair'].includes(pr.type) ===
-            false,
-      )
+      .filter(filterCorePreference)
       .map(pref => transformUserPreferences(pref, surveys, multiscaleData));
 
-    const facetedQuestions = big5 instanceof Object ? big5.items : [];
-    const jungianQuestions = jungian instanceof Object ? jungian.items : [];
-    let facetedAnswers = [];
-    let facetedAnalysis = {};
-    let jungianAnswers = [];
-    let jungianAnalysis = {};
+    if (surveys.length > 0) {
+      const big5 = surveys.find(sv => sv.key === 'faceted_personality_options');
+      const jungian = surveys.find(sv => sv.key === 'jungian_options');
+      const facetedQuestions = big5 instanceof Object ? big5.items : [];
+      const jungianQuestions = jungian instanceof Object ? jungian.items : [];
+      let facetedAnswers = [];
+      let facetedAnalysis = {};
+      let jungianAnswers = [];
+      let jungianAnalysis = {};
 
-    if (facetedQuestions instanceof Array && facetedQuestions.length > 0) {
-      facetedAnswers = filterMapSurveyByType(
-        preferences,
-        'faceted',
-        facetedQuestions,
-      );
-      const facetedCompleted = facetedAnswers.length >= facetedQuestions.length;
-      facetedAnalysis = facetedCompleted
-        ? analyseAnswers('faceted', facetedAnswers)
-        : {};
-      jungianAnswers = filterMapSurveyByType(
-        preferences,
-        'jungian',
-        jungianQuestions,
-      );
-      const jungianCompleted = jungianAnswers.length >= jungianQuestions.length;
-      jungianAnalysis = jungianCompleted
-        ? simpleMode
-          ? summariseJungianAnswers(jungianAnswers)
-          : analyseAnswers('jungian', jungianAnswers)
-        : {};
+      if (facetedQuestions instanceof Array && facetedQuestions.length > 0) {
+        facetedAnswers = filterMapSurveyByType(
+          preferences,
+          'faceted',
+          facetedQuestions,
+        );
+        const facetedCompleted =
+          facetedAnswers.length >= facetedQuestions.length;
+        facetedAnalysis = facetedCompleted
+          ? analyseAnswers('faceted', facetedAnswers)
+          : {};
+        jungianAnswers = filterMapSurveyByType(
+          preferences,
+          'jungian',
+          jungianQuestions,
+        );
+        const jungianCompleted =
+          jungianAnswers.length >= jungianQuestions.length;
+        jungianAnalysis = jungianCompleted
+          ? simpleMode
+            ? summariseJungianAnswers(jungianAnswers)
+            : analyseAnswers('jungian', jungianAnswers)
+          : {};
+      }
+      return {
+        preferences: preferenceItems,
+        facetedAnswers,
+        facetedAnalysis,
+        jungianAnswers,
+        jungianAnalysis,
+      };
+    } else {
+      return { preferences: preferenceItems };
     }
-    return {
-      preferences: preferenceItems,
-      facetedAnswers,
-      facetedAnalysis,
-      jungianAnswers,
-      jungianAnalysis,
-    };
   }
 
   async getSurveys(skipCache = false) {

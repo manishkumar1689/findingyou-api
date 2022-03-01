@@ -121,7 +121,11 @@ import { buildCoreAspects } from '../astrologic/lib/calc-orbs';
 import { LogoutDTO } from './dto/logout.dto';
 import { ResetDTO } from './dto/reset.dto';
 import { EmailParamsDTO } from './dto/email-params.dto';
-import { extractSnippet, filterByLang } from '../lib/mappers';
+import {
+  extractSnippet,
+  filterByLang,
+  filterCorePreference,
+} from '../lib/mappers';
 
 @Controller('user')
 export class UserController {
@@ -875,10 +879,10 @@ export class UserController {
             otherUserIds,
           )
         : userFlags;
-    const {
+    /* const {
       surveys,
       multiscaleData,
-    } = await this.settingService.getSurveyData();
+    } = await this.settingService.getSurveyData(); */
     for (const user of users) {
       const chartObj = await this.astrologicService.getUserBirthChart(user._id);
       const hasChart = chartObj instanceof Object;
@@ -888,20 +892,11 @@ export class UserController {
           : simplifyChart(chartObj, ayanamshaKey, simpleMode)
         : {};
       const refUserId = user._id.toString();
-      let preferences = [];
-      let facetedAnalysis: any = {};
-      let jungianAnalysis: any = {};
-      if (user.preferences instanceof Array && user.preferences.length > 0) {
-        const prefData = await this.settingService.processPreferenceData(
-          user.preferences,
-          surveys,
-          multiscaleData,
-          true,
-        );
-        preferences = prefData.preferences;
-        facetedAnalysis = prefData.facetedAnalysis;
-        jungianAnalysis = prefData.jungianAnalysis;
-      }
+      const preferences =
+        user.preferences instanceof Array && user.preferences.length > 0
+          ? user.preferences.filter(filterCorePreference)
+          : [];
+
       const filteredFlags = hasUser
         ? {
             from: flags.from
@@ -921,8 +916,6 @@ export class UserController {
       items.push({
         ...user,
         preferences,
-        jungianAnalysis,
-        facetedAnalysis,
         chart,
         hasChart,
         flags: filteredFlags,
