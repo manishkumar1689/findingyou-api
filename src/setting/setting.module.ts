@@ -8,6 +8,7 @@ import { UserSchema } from '../user/schemas/user.schema';
 import { ProtocolSchema } from './schemas/protocol.schema';
 import { PredictiveRuleSetSchema } from './schemas/predictive-rule-set.schema';
 import { PublicUserSchema } from '../user/schemas/public-user.schema';
+import { AnswerSetSchema } from '../user/schemas/answer-set.schema';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { PublicUserSchema } from '../user/schemas/public-user.schema';
       { name: 'PredictiveRuleSet', schema: PredictiveRuleSetSchema },
       { name: 'User', schema: UserSchema },
       { name: 'PublicUser', schema: PublicUserSchema },
+      { name: 'AnswerSet', schema: AnswerSetSchema },
     ]),
   ],
   providers: [SettingService, UserService],

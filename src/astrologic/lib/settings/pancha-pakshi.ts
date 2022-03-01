@@ -1,7 +1,7 @@
 import { GeoPos } from '../../interfaces/geo-pos';
 import { calcMoonDataJd, getSunMoonSpecialValues } from '../core';
 import { julToISODate } from '../date-funcs';
-import { KeyNum, KeyNumValue } from '../interfaces';
+import { KeyNum, KeyValueNum } from '../../../lib/interfaces';
 import { Chart } from '../models/chart';
 import { toIndianTimeJd } from '../transitions';
 
@@ -1057,7 +1057,7 @@ export const calcPanchaPakshiStrength = (
 };
 
 export const calcSubPeriods = (
-  subPeriods: KeyNumValue[],
+  subPeriods: KeyValueNum[],
   birds: KeyNum[],
   birthBirdNum = 0,
   startJd = 0,

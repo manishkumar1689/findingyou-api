@@ -700,6 +700,7 @@ export class UserController {
     const params = hasContext ? filterLikeabilityContext(context) : query;
     let repeatInterval = -1;
     const searchMode = context === 'search';
+    const filteredForUser = hasUser && searchMode;
     const paramKeys = Object.keys(params);
     // filter ids by members who have liked or superliked the referenced user
     const likeabilityKeys = [
@@ -856,6 +857,7 @@ export class UserController {
       limitInt,
       queryParams,
       excludedIds,
+      filteredForUser,
     );
     const users = this.userService.filterByPreferences(
       data,
@@ -888,14 +890,17 @@ export class UserController {
       const refUserId = user._id.toString();
       let preferences = [];
       let facetedAnalysis: any = {};
+      let jungianAnalysis: any = {};
       if (user.preferences instanceof Array && user.preferences.length > 0) {
         const prefData = await this.settingService.processPreferenceData(
           user.preferences,
           surveys,
           multiscaleData,
+          true,
         );
         preferences = prefData.preferences;
         facetedAnalysis = prefData.facetedAnalysis;
+        jungianAnalysis = prefData.jungianAnalysis;
       }
       const filteredFlags = hasUser
         ? {
@@ -916,6 +921,7 @@ export class UserController {
       items.push({
         ...user,
         preferences,
+        jungianAnalysis,
         facetedAnalysis,
         chart,
         hasChart,
@@ -1952,68 +1958,73 @@ export class UserController {
       const adjustedValue = value - big5FacetedScaleOffset;
       return { key, value: adjustedValue, type: matchedType };
     });
-    const data = await this.userService.savePreferences(userID, preferences);
+    // remove this later
+    //const data = await this.userService.savePreferences(userID, preferences);
     const isJungian = matchedType === 'jungian';
     const matchedLang =
       notEmptyString(lang, 1) && /[a-z][a-z][a-z]?(-[A-Z][A-Z])/.test(lang)
         ? lang
         : 'en';
     const result: any = { valid: false, answers: [], analysis: {} };
-    if (data instanceof Object && data.valid) {
-      const { surveys } = await this.settingService.getSurveyData();
-      const optType =
-        matchedType === 'jungian'
-          ? 'jungian_options'
-          : 'faceted_personality_options';
-      const jungian = surveys.find(sv => sv.key === optType);
-      const questions = jungian instanceof Object ? jungian.items : [];
-      result.answers = filterMapSurveyByType(
-        preferences,
+    //if (data instanceof Object && data.valid) {
+    const { surveys } = await this.settingService.getSurveyData();
+
+    const optType =
+      matchedType === 'jungian'
+        ? 'jungian_options'
+        : 'faceted_personality_options';
+    const jungian = surveys.find(sv => sv.key === optType);
+    const questions = jungian instanceof Object ? jungian.items : [];
+    result.answers = filterMapSurveyByType(preferences, matchedType, questions);
+    if (questions.length > 0) {
+      await this.userService.saveSurveyAnswersKeyVals(
+        userID,
         matchedType,
+        prefs,
         questions,
       );
-      const completed = result.answers.length >= questions.length;
-      result.analysis = completed
-        ? isJungian
-          ? summariseJungianAnswers(result.answers)
-          : analyseAnswers(type, result.answers)
-        : {};
-      if (isJungian) {
-        result.letters = Object.keys(result.analysis)
-          .join('')
-          .toLowerCase();
-        const spectra = ['IE', 'SN', 'FT', 'JP'];
-        const feedbackItems = await this.getFacetedFeedbackItems(
-          matchedType,
-          cached,
-        );
-        const snKeys = [
-          ['_', 'name', result.letters].join('_'),
-          ['_', 'type', result.letters].join('_'),
-        ];
-        result.title = '';
-        result.text = '';
-        snKeys.forEach(sk => {
-          if (sk.includes('_name_')) {
-            result.title = extractSnippet(feedbackItems, sk, matchedLang);
-          } else {
-            result.text = extractSnippet(feedbackItems, sk, matchedLang);
-          }
-        });
-        const categoryEntries = Object.entries(result.analysis).map(
-          ([key, value], si) => {
-            const polarity = spectra[si];
-            const segment = value <= 20 ? 'ave' : 'high';
-            const snKey = ['_', 'sub', polarity, key, segment]
-              .join('_')
-              .toLowerCase();
-            const text = extractSnippet(feedbackItems, snKey, matchedLang);
-            return [polarity, text];
-          },
-        );
-        result.categories = Object.fromEntries(categoryEntries);
-        result.valid = result.answers.length > 0;
-      }
+    }
+    const completed = result.answers.length >= questions.length;
+    result.analysis = completed
+      ? isJungian
+        ? summariseJungianAnswers(result.answers)
+        : analyseAnswers(type, result.answers)
+      : {};
+    if (isJungian) {
+      result.letters = Object.keys(result.analysis)
+        .join('')
+        .toLowerCase();
+      const spectra = ['IE', 'SN', 'FT', 'JP'];
+      const feedbackItems = await this.getFacetedFeedbackItems(
+        matchedType,
+        cached,
+      );
+      const snKeys = [
+        ['_', 'name', result.letters].join('_'),
+        ['_', 'type', result.letters].join('_'),
+      ];
+      result.title = '';
+      result.text = '';
+      snKeys.forEach(sk => {
+        if (sk.includes('_name_')) {
+          result.title = extractSnippet(feedbackItems, sk, matchedLang);
+        } else {
+          result.text = extractSnippet(feedbackItems, sk, matchedLang);
+        }
+      });
+      const categoryEntries = Object.entries(result.analysis).map(
+        ([key, value], si) => {
+          const polarity = spectra[si];
+          const segment = value <= 20 ? 'ave' : 'high';
+          const snKey = ['_', 'sub', polarity, key, segment]
+            .join('_')
+            .toLowerCase();
+          const text = extractSnippet(feedbackItems, snKey, matchedLang);
+          return [polarity, text];
+        },
+      );
+      result.categories = Object.fromEntries(categoryEntries);
+      result.valid = result.answers.length > 0;
     }
     return res.json(result);
   }

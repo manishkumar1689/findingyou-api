@@ -17,6 +17,7 @@ import { UserSchema } from './user/schemas/user.schema';
 import { AppGateway } from './app.gateway';
 import { FeedbackModule } from './feedback/feedback.module';
 import { PublicUserSchema } from './user/schemas/public-user.schema';
+import { AnswerSetSchema } from './user/schemas/answer-set.schema';
 
 @Module({
   imports: [
@@ -31,6 +32,10 @@ import { PublicUserSchema } from './user/schemas/public-user.schema';
       {
         name: 'PublicUser',
         schema: PublicUserSchema,
+      },
+      {
+        name: 'AnswerSet',
+        schema: AnswerSetSchema,
       },
     ]),
     RedisModule.register(redisOptions),

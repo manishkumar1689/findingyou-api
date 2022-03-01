@@ -1,12 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class PreferenceDTO {
+export class AnswerDTO {
   @ApiProperty()
   readonly key: string;
-
   @ApiProperty()
-  readonly value: any;
-
+  readonly value: number;
   @ApiProperty()
-  readonly type?: string;
+  readonly domain: string;
+  @ApiProperty()
+  readonly subdomain: number;
 }

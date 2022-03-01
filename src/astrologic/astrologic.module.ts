@@ -16,6 +16,7 @@ import { SettingService } from '../setting/setting.service';
 import { ProtocolSchema } from '../setting/schemas/protocol.schema';
 import { PredictiveRuleSetSchema } from '../setting/schemas/predictive-rule-set.schema';
 import { PublicUserSchema } from '../user/schemas/public-user.schema';
+import { AnswerSetSchema } from '../user/schemas/answer-set.schema';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { PublicUserSchema } from '../user/schemas/public-user.schema';
       { name: 'Lexeme', schema: LexemeSchema },
       { name: 'User', schema: UserSchema },
       { name: 'PublicUser', schema: PublicUserSchema },
+      { name: 'AnswerSet', schema: AnswerSetSchema },
       { name: 'PairedChart', schema: PairedChartSchema },
       { name: 'GeoName', schema: GeoNameSchema },
       { name: 'Setting', schema: SettingSchema },

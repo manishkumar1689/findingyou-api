@@ -5,9 +5,10 @@ import { Preference } from '../../user/interfaces/preference.interface';
 import { isNumeric, notEmptyString } from '../../lib/validators';
 import {
   Big5ScaleMap,
-  FacetedBig5Set,
+  FacetedSet,
   JungianScaleMap,
   ScalePreferenceAnswer,
+  SimpleResult,
 } from './interfaces';
 import { FacetedItemDTO } from '../dto/faceted-item.dto';
 import { Snippet } from '../../snippet/interfaces/snippet.interface';
@@ -108,7 +109,7 @@ export const normalizeFacetedAnswer = (
   facetedResponse: ScalePreferenceAnswer,
   sourcePrefs: PreferenceOption[],
   applyOffset = true,
-): FacetedBig5Set => {
+): FacetedSet => {
   const { key, value } = facetedResponse;
   const sq = sourcePrefs.find(s => s.key === key);
   const offset = applyOffset ? big5FacetedScaleOffset : 0;
@@ -177,7 +178,7 @@ const calcFacetedItemPercent = (
   score = 0,
   count = 0,
   max = -1,
-  rescaleFromMiddle = false,
+  rescaleFromMiddle = true,
 ): number => {
   const maxTotal = max > 1 ? count * max : count * defaultFacetedScaleRange;
   const scaledScore = rescaleFromMiddle ? score - count : score;
@@ -229,7 +230,7 @@ export const matchFacetedFeedback = (
 };
 
 const analyseBig5Answers = (
-  answers: FacetedBig5Set[] = [],
+  answers: FacetedSet[] = [],
   feedbackItems: Snippet[] = [],
 ) => {
   const hasFeedback =
@@ -283,17 +284,22 @@ const analyseBig5Answers = (
   return domainItems;
 };
 
-const calcJungianScaleResult = (domKey = '', answers: FacetedBig5Set[]) => {
+const calcJungianScaleResult = (
+  domKey = '',
+  answers: FacetedSet[],
+  hasScore = true,
+) => {
   let result = 0;
   const formula = facetedJungianFormulae.find(f => f.domain === domKey);
   if (formula instanceof Object) {
     result = formula.start;
     formula.sequence.forEach((op, index) => {
+      const rowVal = hasScore ? answers[index].score : answers[index].value;
       if (index < answers.length) {
         if (op === '+') {
-          result += answers[index].score;
+          result += rowVal;
         } else {
-          result -= answers[index].score;
+          result -= rowVal;
         }
       }
     });
@@ -302,7 +308,7 @@ const calcJungianScaleResult = (domKey = '', answers: FacetedBig5Set[]) => {
 };
 
 const analyseJungianAnswers = (
-  answers: FacetedBig5Set[] = [],
+  answers: FacetedSet[] = [],
   feedbackItems: Snippet[] = [],
 ) => {
   const hasFeedback =
@@ -368,29 +374,70 @@ export interface JungianSet {
   N?: number;
 }
 
-export const summariseJungianAnswers = (
-  answers: FacetedBig5Set[] = [],
-): JungianSet => {
+export const synopsiseJungianAnswers = (
+  answers: FacetedSet[] = [],
+  rescale = 0,
+  asRanges = false,
+): Map<string, number> => {
   const domainItems: Map<string, number> = new Map();
   const domains = ['IE', 'SN', 'FT', 'JP'];
-  domains.forEach(domKey => {
-    const dItems = answers.filter(an => an.domain === domKey);
-    dItems.sort((a, b) => a.facet - b.facet);
-    const count = dItems.length;
-    const score = calcJungianScaleResult(domKey, dItems);
-    // to be determined
-    const pc = calcFacetedItemPercent(
-      score,
-      count,
-      defaultFacetedScaleRange,
-      true,
-    );
-    const domKeyIndex = pc <= 50 ? 0 : 1;
-    const domResult = pc <= 50 ? (50 - pc) * 2 : (pc - 50) * 2;
-    const resultLetter = domKey.charAt(domKeyIndex);
-    domainItems.set(resultLetter, domResult);
-  });
+  const hasAnswers = answers.length > 0 && answers[0] instanceof Object;
+  const ansKeys = hasAnswers ? Object.keys(answers[0]) : [];
+  const hasFacet = ansKeys.includes('facet');
+  const hasScore = ansKeys.includes('score');
+  if (hasAnswers) {
+    domains.forEach(domKey => {
+      const dItems = answers
+        .filter(an => an.domain === domKey)
+        .map(ans => {
+          if (rescale !== 0) {
+            if (hasScore) {
+              return { ...ans, score: ans.score + rescale };
+            } else {
+              return { ...ans, value: ans.value + rescale };
+            }
+          } else {
+            return ans;
+          }
+        });
+      dItems.sort((a, b) => {
+        return hasFacet ? a.facet - b.facet : a.subdomain - b.subdomain;
+      });
+      const count = dItems.length;
+      const score = calcJungianScaleResult(domKey, dItems, hasScore);
+      // to be determined
+      const pc = calcFacetedItemPercent(score, count, defaultFacetedScaleRange);
+      const domKeyIndex = pc <= 50 ? 0 : 1;
+      const domResult = pc <= 50 ? (50 - pc) * 2 : (pc - 50) * 2;
+      const resultLetter = domKey.charAt(domKeyIndex);
+      if (asRanges) {
+        const domRangeVal = domKeyIndex < 1 ? 0 - domResult : domResult;
+        domainItems.set(domKey, domRangeVal);
+      } else {
+        domainItems.set(resultLetter, domResult);
+      }
+    });
+  }
+  return domainItems;
+};
+
+export const summariseJungianAnswers = (
+  answers: FacetedSet[] = [],
+): JungianSet => {
+  const domainItems = synopsiseJungianAnswers(answers);
   return Object.fromEntries(domainItems.entries());
+};
+
+export const jungianAnswersToResults = (
+  answers: FacetedSet[] = [],
+): SimpleResult[] => {
+  const domainMap = synopsiseJungianAnswers(answers, 3, true);
+  return [...domainMap.entries()].map(([domain, value]) => {
+    return {
+      domain,
+      value,
+    };
+  });
 };
 
 const mergeJungianFeedback = (obj = null, fbItems: Snippet[] = []) => {
@@ -448,7 +495,7 @@ export const mergePsychometricFeedback = (
 
 export const analyseAnswers = (
   type = 'faceted',
-  answers: FacetedBig5Set[],
+  answers: FacetedSet[],
   feedbackItems: Snippet[] = [],
 ) => {
   const domainItems =
@@ -498,7 +545,7 @@ export const filterMapSurveyByType = (
   preferences: any[],
   sType = '',
   facetedQuestions,
-): FacetedBig5Set[] => {
+): FacetedSet[] => {
   return preferences
     .filter(pr => pr.type === sType)
     .map(pref => normalizeFacetedAnswer(pref, facetedQuestions));

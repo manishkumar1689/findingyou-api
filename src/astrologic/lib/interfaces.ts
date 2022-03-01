@@ -1,3 +1,5 @@
+import { KeyNumValue } from '../../lib/interfaces';
+
 export interface KeyLabel {
   key: string;
   label: string;
@@ -12,11 +14,6 @@ export interface KeyNameMax {
   key: string;
   name: string;
   maxScore?: number;
-}
-
-export interface KeyNumValue {
-  key: string;
-  value: number;
 }
 
 export interface LngLat {
@@ -35,11 +32,6 @@ export interface KeyLng {
   key: string;
   lng: number;
   sign?: number;
-}
-
-export interface KeyNum {
-  key: string;
-  num: number;
 }
 
 export interface SurfaceTSData {

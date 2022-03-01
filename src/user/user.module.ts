@@ -22,6 +22,7 @@ import { GeoNameSchema } from '../geo/schemas/geo-name.schema';
 import { PredictiveRuleSetSchema } from '../setting/schemas/predictive-rule-set.schema';
 import { FeedbackSchema } from '../feedback/schemas/feedback.schema';
 import { FlagSchema } from '../feedback/schemas/flag.schema';
+import { AnswerSetSchema } from './schemas/answer-set.schema';
 
 @Global()
 @Module({
@@ -30,6 +31,7 @@ import { FlagSchema } from '../feedback/schemas/flag.schema';
     MongooseModule.forFeature([
       { name: 'User', schema: UserSchema },
       { name: 'PublicUser', schema: PublicUserSchema },
+      { name: 'AnswerSet', schema: AnswerSetSchema },
       { name: 'Message', schema: MessageSchema },
       { name: 'Setting', schema: SettingSchema },
       { name: 'GeoName', schema: GeoNameSchema },

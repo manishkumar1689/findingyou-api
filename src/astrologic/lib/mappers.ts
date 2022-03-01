@@ -1,10 +1,11 @@
 /*
  * Methods to convert Maps to objects and to simplify complex objects
  */
-import { isNumeric, notEmptyString } from '../../lib/validators';
+import { notEmptyString } from '../../lib/validators';
 import { jdToDateParts } from './date-funcs';
 import { shortenName } from './helpers';
-import { KeyValueNum, Placeref } from './models/chart';
+import { Placeref } from './models/chart';
+import { KeyNumValue } from '../../lib/interfaces';
 import { LngLat, Toponym } from './interfaces';
 import { sanitize } from '../../lib/converters';
 
@@ -90,9 +91,9 @@ export const mapSubChartMeta = (chart: any) => {
 };
 
 export class KaranaTithiYoga {
-  karana: KeyValueNum = { key: '', value: 0 };
-  tithi: KeyValueNum = { key: '', value: 0 };
-  yoga: KeyValueNum = { key: '', value: 0 };
+  karana: KeyNumValue = { key: '', value: 0 };
+  tithi: KeyNumValue = { key: '', value: 0 };
+  yoga: KeyNumValue = { key: '', value: 0 };
   sunMoonAngle = 0;
 
   constructor(inData = null) {

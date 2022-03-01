@@ -1,11 +1,11 @@
 import { GeoLoc } from './geo-loc';
 import {
-  KeyNumValue,
   AyanamshaItem,
   SurfaceTSData,
   ProgressSetItem,
   ProgressResult,
 } from '../interfaces';
+import { KeyNumValue } from '../../../lib/interfaces';
 import {
   subtractLng360,
   calcVargaSet,
@@ -126,11 +126,6 @@ export interface LngLat {
   lat: number;
 }
 
-export interface KeyValueNum {
-  key: string;
-  value: number;
-}
-
 export interface BaseGraha {
   key: string;
   num: number;
@@ -214,7 +209,7 @@ export interface RashiItemSet {
 
 export interface NumValueSet {
   num: number;
-  items: Array<KeyValueNum>;
+  items: Array<KeyNumValue>;
 }
 
 export interface KeyPairVal {

@@ -39,13 +39,20 @@ import {
   smartCastBool,
   smartCastFloat,
   smartCastInt,
+  smartCastString,
 } from '../lib/converters';
 import { MediaItemDTO } from './dto/media-item.dto';
 import { PreferenceDTO } from './dto/preference.dto';
 import { matchFileTypeAndMime } from '../lib/files';
 import { PublicUser } from './interfaces/public-user.interface';
-import { normalizedToPreference } from '../setting/lib/mappers';
+import {
+  jungianAnswersToResults,
+  normalizedToPreference,
+} from '../setting/lib/mappers';
 import { defaultPushNotifications } from '../lib/notifications';
+import { AnswerDTO } from './dto/answer.dto';
+import { AnswerSet } from './interfaces/answer-set.interface';
+import { KeyNumValue } from '../lib/interfaces';
 
 const userEditPaths = [
   'fullName',
@@ -81,6 +88,8 @@ export class UserService {
     @InjectModel('User') private readonly userModel: Model<User>,
     @InjectModel('PublicUser')
     private readonly publicUserModel: Model<PublicUser>,
+    @InjectModel('AnswerSet')
+    private readonly answerSetModel: Model<AnswerSet>,
     private readonly mailerService: MailerService,
   ) {}
   // fetch all Users
@@ -364,6 +373,7 @@ export class UserService {
   buildMemberCriteria = (
     criteria: object,
     excludedIds: string[] = [],
+    filteredForUser = false,
   ): object => {
     const filter = new Map<string, any>();
     const prefAndConditions: any[] = [];
@@ -431,7 +441,7 @@ export class UserService {
         $elemMatch: { key: 'hide_from_explore', value: false },
       });
     }
-    if (prefAndConditions.length > 0) {
+    if (prefAndConditions.length > 0 && filteredForUser) {
       filter.set(
         '$and',
         prefAndConditions.map(cond => {
@@ -1253,9 +1263,14 @@ export class UserService {
     limit = 100,
     criteria = null,
     excludedIds: string[] = [],
+    filteredForUser = false,
   ) {
     //const userID = Object.keys(criteria).includes('user')? criteria.user : '';
-    const matchCriteria = this.buildMemberCriteria(criteria, excludedIds);
+    const matchCriteria = this.buildMemberCriteria(
+      criteria,
+      excludedIds,
+      filteredForUser,
+    );
     let nearStage = null;
     if (Object.keys(criteria).includes('near')) {
       const geoMatch = this.buildNearQuery(criteria.near);
@@ -2275,6 +2290,100 @@ export class UserService {
       valid = true;
     }
     return valid;
+  }
+
+  async saveSurveyAnswers(
+    userID = '',
+    type = 'jungian',
+    answers: AnswerDTO[] = [],
+    shift = -3,
+  ) {
+    const adjustedAnswers = answers.map(answer => {
+      const { key, value, domain, subdomain } = answer;
+      const newValue = value + shift;
+      return { key, value: newValue, domain, subdomain };
+    });
+    const dt = new Date();
+    const baseSet = {
+      answers: adjustedAnswers,
+      createdAt: dt,
+      modifiedAt: dt,
+    };
+    const answerSet = {
+      user: userID,
+      type,
+      ...baseSet,
+    };
+    const current = await this.getAnswerSet(userID, type);
+    if (current instanceof Object) {
+      await this.answerSetModel.update({ userID, type }, baseSet);
+    } else {
+      const newSet = new this.answerSetModel(answerSet);
+      await newSet.save();
+    }
+    return answerSet;
+  }
+
+  async saveSurveyAnswersKeyVals(
+    userID = '',
+    type = 'jungian',
+    answers: KeyNumValue[] = [],
+    questions: any[],
+    shift = -3,
+  ) {
+    const adjustedAnswers = answers.map(answer => {
+      const { key, value } = answer;
+      const question = questions.find(q => q.key === key);
+      const hasQ = question instanceof Object;
+      const domain = hasQ ? smartCastString(question.domain, '') : '';
+      const subdomain = hasQ ? smartCastInt(question.subdomain, 0) : 0;
+      const newValue = value + shift;
+      return { key, value: newValue, domain, subdomain };
+    });
+    const dt = new Date();
+    const baseSet = {
+      answers: adjustedAnswers,
+      createdAt: dt,
+      modifiedAt: dt,
+    };
+    const answerSet = {
+      user: userID,
+      type,
+      ...baseSet,
+    };
+    const current = await this.getAnswerSet(userID, type);
+    if (current instanceof Object) {
+      await this.answerSetModel.updateOne({ userID, type }, baseSet);
+    } else {
+      const newSet = new this.answerSetModel(answerSet);
+      const s = await newSet.save();
+    }
+    const analysisRows = jungianAnswersToResults(adjustedAnswers);
+    const currUser = await this.getBasicById(userID, ['surveys']);
+    if (currUser instanceof Object && analysisRows.length > 0) {
+      const surveys = currUser.surveys instanceof Array ? currUser.surveys : [];
+      const surveyIndex = surveys.findIndex(cs => cs.type === type);
+      if (surveyIndex < 0) {
+        surveys.push({
+          type,
+          values: analysisRows,
+        });
+      } else {
+        surveys[surveyIndex].values = analysisRows;
+      }
+      await this.userModel.findByIdAndUpdate(
+        userID,
+        { surveys },
+        {
+          new: true,
+        },
+      );
+    }
+    return { answerSet, analysisRows, currUser };
+  }
+
+  async getAnswerSet(userID = '', type = '') {
+    return await this.answerSetModel.findOne({ user: userID, type });
   }
 
   async getPublicUser(ref = '', refType = 'identifier') {

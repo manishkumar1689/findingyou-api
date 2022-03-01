@@ -7,6 +7,7 @@ import { TranslatedItemSchema } from './schemas/translated-item.schema';
 import { UserSchema } from '../user/schemas/user.schema';
 import { UserService } from '../user/user.service';
 import { PublicUserSchema } from '../user/schemas/public-user.schema';
+import { AnswerSetSchema } from '../user/schemas/answer-set.schema';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { PublicUserSchema } from '../user/schemas/public-user.schema';
       { name: 'TranslatedItem', schema: TranslatedItemSchema },
       { name: 'User', schema: UserSchema },
       { name: 'PublicUser', schema: PublicUserSchema },
+      { name: 'AnswerSet', schema: AnswerSetSchema },
     ]),
   ],
   providers: [SnippetService, UserService],

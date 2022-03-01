@@ -4,6 +4,7 @@ import { FeedbackController } from './feedback.controller';
 import { UserService } from '../user/user.service';
 import { UserSchema } from '../user/schemas/user.schema';
 import { PublicUserSchema } from '../user/schemas/public-user.schema';
+import { AnswerSetSchema } from '../user/schemas/answer-set.schema';
 import { FeedbackSchema } from './schemas/feedback.schema';
 import { FlagSchema } from './schemas/flag.schema';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -23,6 +24,7 @@ import { TranslatedItemSchema } from '../snippet/schemas/translated-item.schema'
       { name: 'Flag', schema: FlagSchema },
       { name: 'User', schema: UserSchema },
       { name: 'PublicUser', schema: PublicUserSchema },
+      { name: 'AnswerSet', schema: AnswerSetSchema },
       { name: 'Setting', schema: SettingSchema },
       { name: 'Protocol', schema: ProtocolSchema },
       { name: 'PredictiveRuleSet', schema: PredictiveRuleSetSchema },

@@ -6,6 +6,7 @@ import { GeoSchema } from './geo.schema';
 import { PlacenameSchema } from './placename.schema';
 import { PreferenceSchema } from './preference.schema';
 import { ContactSchema } from './contact.schema';
+import { SurveyResultsSchema } from './survey-results.schema';
 
 export const UserSchema = new mongoose.Schema({
   fullName: String, // formal full name
@@ -62,6 +63,11 @@ export const UserSchema = new mongoose.Schema({
   },
   preferences: {
     type: [PreferenceSchema],
+    default: [],
+    required: false,
+  },
+  surveys: {
+    type: [SurveyResultsSchema],
     default: [],
     required: false,
   },

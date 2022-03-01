@@ -1,5 +1,5 @@
 import { convert } from 'html-to-text';
-import { KeyNumValue } from '../astrologic/lib/interfaces';
+import { KeyNumValue } from './interfaces';
 import { isNumeric, notEmptyString } from './validators';
 
 export const objectToQueryString = (obj: any): string => {
@@ -30,7 +30,7 @@ export const mapToQueryString = (map: Map<string, any>): string => {
   return objectToQueryString(Object.fromEntries(map));
 };
 
-export const smartCastString = (item = null, defVal = '') => {
+export const smartCastString = (item = null, defVal = ''): string => {
   let out = defVal;
   switch (typeof item) {
     case 'string':
@@ -44,7 +44,11 @@ export const smartCastString = (item = null, defVal = '') => {
   return out;
 };
 
-export const smartCastNumber = (item: any, defVal = 0, isInt = false) => {
+export const smartCastNumber = (
+  item: any,
+  defVal = 0,
+  isInt = false,
+): number => {
   let out = defVal;
   if (typeof item === 'string') {
     if (item.length > 0) {
@@ -58,15 +62,15 @@ export const smartCastNumber = (item: any, defVal = 0, isInt = false) => {
   return out;
 };
 
-export const smartCastInt = (item: any, defVal = 0) => {
+export const smartCastInt = (item: any, defVal = 0): number => {
   return smartCastNumber(item, defVal, true);
 };
 
-export const smartCastFloat = (item: any, defVal = 0) => {
+export const smartCastFloat = (item: any, defVal = 0): number => {
   return smartCastNumber(item, defVal, false);
 };
 
-export const smartCastBool = (item: any, defVal = false) => {
+export const smartCastBool = (item: any, defVal = false): boolean => {
   let intVal = defVal ? 1 : 0;
   if (typeof item === 'string') {
     if (item.length > 0) {

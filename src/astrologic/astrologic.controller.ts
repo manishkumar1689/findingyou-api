@@ -395,7 +395,7 @@ export class AstrologicController {
     #mobile
   */
   @Get('pancha-pakshi/:chartID/:loc/:dt?/:mode?/:showTrans?')
-  async pankshaPanchaDaySet(
+  async panchaPanchaDaySet(
     @Res() res,
     @Param('chartID') chartID,
     @Param('loc') loc,

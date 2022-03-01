@@ -36,6 +36,7 @@ import {
   analyseAnswers,
   filterMapSurveyByType,
   normalizeFacetedAnswer,
+  summariseJungianAnswers,
   transformUserPreferences,
 } from './lib/mappers';
 import { FacetedItemDTO } from './dto/faceted-item.dto';
@@ -237,6 +238,7 @@ export class SettingService {
     preferences: any[],
     surveys: any[] = [],
     multiscaleData: any[] = [],
+    simpleMode = false,
   ) {
     const big5 = surveys.find(sv => sv.key === 'faceted_personality_options');
     const jungian = surveys.find(sv => sv.key === 'jungian_options');
@@ -273,7 +275,9 @@ export class SettingService {
       );
       const jungianCompleted = jungianAnswers.length >= jungianQuestions.length;
       jungianAnalysis = jungianCompleted
-        ? analyseAnswers('jungian', jungianAnswers)
+        ? simpleMode
+          ? summariseJungianAnswers(jungianAnswers)
+          : analyseAnswers('jungian', jungianAnswers)
         : {};
     }
     return {
