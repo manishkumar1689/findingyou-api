@@ -1,4 +1,5 @@
 import * as Redis from 'ioredis';
+import { Model } from 'mongoose';
 
 export const updateSubEntity = (source, data: any) => {
   if (data instanceof Object && source instanceof Object) {
@@ -73,16 +74,41 @@ export const extractObject = (obj: any) => {
   return matchedVal;
 };
 
+export const removeObjectId = (item = null) => {
+  const obj = item instanceof Object ? extractObject(item) : item;
+  if (obj instanceof Object) {
+    if (obj instanceof Array) {
+      return obj.map(removeObjectId);
+    } else {
+      const keys = Object.keys(obj);
+      if (keys.includes('_id')) {
+        delete obj._id;
+      }
+      keys.forEach(k => {
+        if (obj[k] instanceof Object) {
+          obj[k] = removeObjectId(obj[k]);
+        }
+      });
+    }
+  }
+  return obj;
+};
+
 export const extractObjectAndMerge = (
   obj: any,
   data: Map<string, any>,
   exclude: string[],
+  removeInnerIds = false,
 ) => {
   const matchedObj = extractObject(obj);
   if (matchedObj) {
     Object.entries(matchedObj).forEach(entry => {
       if (exclude.indexOf(entry[0]) < 0 && entry[0] !== '__v') {
-        data.set(entry[0], entry[1]);
+        const val =
+          removeInnerIds && entry[1] instanceof Object
+            ? removeObjectId(entry[1])
+            : entry[1];
+        data.set(entry[0], val);
       }
     });
   }

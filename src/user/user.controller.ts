@@ -1416,7 +1416,12 @@ export class UserController {
         userData.set('msg', 'Invalid password');
       }
       if (valid) {
-        extractObjectAndMerge(user, userData, ['password', 'status', 'token']);
+        extractObjectAndMerge(
+          user,
+          userData,
+          ['password', 'status', 'token'],
+          true,
+        );
 
         const userID = extractDocId(user);
         const { deviceToken, geo } = loginDTO;
