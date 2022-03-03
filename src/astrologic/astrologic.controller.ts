@@ -133,12 +133,12 @@ import {
   matchOrbFromGrid,
   PredictiveRule,
   Protocol,
+  translateActionToGerund,
 } from './lib/models/protocol-models';
 import {
   extractCorePlaceNames,
   mapGeoPlacenames,
   mapNestedKaranaTithiYoga,
-  mapToponyms,
 } from './lib/mappers';
 import { CreateSettingDTO } from '../setting/dto/create-setting.dto';
 import typeTags from './lib/settings/relationship-types';
@@ -453,6 +453,45 @@ export class AstrologicController {
 
           data.set('transitions', transitions);
           data.set('birthTransitions', birthTransitions);
+          const rules = await this.settingService.getPPRules();
+          data.set('rules', rules);
+          const ym1 = data.get('yamas');
+          const ym2 = data.get('yamas2');
+          const birthBird = data.get('bird').birth;
+          const rulingBird = data.get('bird').current.ruling.key;
+          const dyingBird = data.get('bird').current.dying.key;
+          if (
+            ym1 instanceof Array &&
+            ym1.length > 0 &&
+            ym2 instanceof Array &&
+            ym2.length > 0
+          ) {
+            const periods = [
+              ...ym1.map(y => y.subs),
+              ...ym2.map(y => y.subs),
+            ].map(subs => {
+              let yamaScore = 0;
+              return subs.map((sub, si) => {
+                let subScore = 0;
+                for (const r of rules) {
+                  if (r.from === 'panchapakshi') {
+                    if (r.action === sub.key) {
+                      if (r.onlyAtStart && si === 0) {
+                        yamaScore = r.score;
+                      } else {
+                        subScore += r.score;
+                      }
+                    }
+                  }
+                }
+                const score = yamaScore + subScore;
+                return { ...sub, score };
+              });
+            });
+            data.set('periods', periods);
+            const totals = rules.map(r => r.max);
+            data.set('totals', totals);
+          }
         }
         status = HttpStatus.OK;
       }

@@ -2087,7 +2087,7 @@ export const processTransitDashaRuleSet = (
   return { valid, start, end };
 };
 
-const translateActionToGerund = (action: string) => {
+export const translateActionToGerund = (action: string) => {
   const suffix = action
     .split('_')
     .pop()

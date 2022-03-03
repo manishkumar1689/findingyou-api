@@ -27,7 +27,10 @@ import multipleKeyScales from '../user/settings/multiscales';
 import { PreferenceOption } from '../user/interfaces/preference-option.interface';
 import { RedisService } from 'nestjs-redis';
 import * as Redis from 'ioredis';
-import { ProtocolSettings } from '../astrologic/lib/models/protocol-models';
+import {
+  ProtocolSettings,
+  translateActionToGerund,
+} from '../astrologic/lib/models/protocol-models';
 import { smartCastInt } from '../lib/converters';
 import permissionValues, {
   limitPermissions,
@@ -920,14 +923,21 @@ export class SettingService {
     return result;
   }
 
-  async getRuleSets(userRef = null, activeOnly = false) {
-    const byUsers = userRef instanceof Array;
-    const byUser = !byUsers && notEmptyString(userRef, 16);
+  async getRuleSets(filterRef = null, activeOnly = false, filterByUser = true) {
+    const filterByType = !filterByUser && notEmptyString(filterRef, 3);
+    const byUsers = filterByUser && filterRef instanceof Array;
+    const byUser = filterByUser && !byUsers && notEmptyString(filterRef, 16);
     const filter: Map<string, any> = new Map();
-    if (byUsers) {
-      filter.set('user', { $in: userRef });
-    } else if (byUser) {
-      filter.set('user', userRef);
+    if (filterByUser) {
+      if (byUsers) {
+        if (filterRef.length > 0) {
+          filter.set('user', { $in: filterRef });
+        }
+      } else if (byUser) {
+        filter.set('user', filterRef);
+      }
+    } else if (filterByType) {
+      filter.set('type', filterRef);
     }
     if (activeOnly) {
       filter.set('active', true);
@@ -935,6 +945,48 @@ export class SettingService {
     const criteria = Object.fromEntries(filter);
     const items = await this.predictiveRuleSetModel.find(criteria);
     return items;
+  }
+
+  async getRuleSetsByType(type = '', activeOnly = true) {
+    return await this.getRuleSets(type, activeOnly, false);
+  }
+
+  async getPPRules() {
+    const rules = await this.getRuleSetsByType('panchapakshi');
+    const simpleRules = rules
+      .filter(rs => {
+        return rs.conditionSet.conditionRefs.length > 0;
+      })
+      .map(rs => {
+        const cond = rs.conditionSet.conditionRefs[0];
+        let scRow = rs.scores.find(sc => sc.key === 'generic');
+        let score = 0;
+        let max = 10;
+        if (!scRow && rs.scores.length > 0) {
+          scRow = rs.scores[0];
+        }
+        if (scRow instanceof Object) {
+          score = scRow.value;
+          max = scRow.maxScore;
+        }
+        const action = translateActionToGerund(cond.context);
+        const key = cond.c1Key.split('__').pop();
+        const onlyAtStart = key === 'yama_action';
+        const context = cond.context.replace('action_', '');
+        const always = context.startsWith('action_is_');
+        return {
+          from: cond.fromMode,
+          to: cond.toMode,
+          key,
+          context,
+          action,
+          onlyAtStart,
+          always,
+          score,
+          max,
+        };
+      });
+    return simpleRules;
   }
 
   async deleteProtocol(id = '') {
