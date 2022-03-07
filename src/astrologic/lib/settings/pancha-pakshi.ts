@@ -12,6 +12,7 @@ import { matchPPTransitRule } from '../models/protocol-models';
 import { matchDikBalaTransition } from './graha-values';
 import { notEmptyString } from '../../../lib/validators';
 import { GeoLoc } from '../models/geo-loc';
+import { matchCurrentDashaLord } from '../models/dasha-set';
 
 const birdMap = { 1: 'vulture', 2: 'owl', 3: 'crow', 4: 'cock', 5: 'peacock' };
 
@@ -71,6 +72,19 @@ export const birdRelations = {
 export interface Yama {
   value: number;
   sub: number;
+}
+
+export interface SubYama {
+  bird: string;
+  key: string;
+  value: string;
+  start: string;
+  end: string;
+  current?: false;
+  direction?: string;
+  rulers?: string[];
+  relation?: string;
+  score?: number;
 }
 
 export const birdActivitiesDirections = [
@@ -1201,6 +1215,8 @@ export const panchaPakshiDayNightSet = async (
   data.set('setDt', julToISODate(setJd));
   data.set('nextRiseDt', julToISODate(iTime.nextRise.jd));
   data.set('isDayTime', iTime.isDayTime);
+  data.set('bornDayTime', chart.indianTime.isDayTime);
+  data.set('bornWeekDay', chart.indianTime.weekDayNum);
   chart.setAyanamshaItemByNum(27);
   const moon = chart.graha('mo');
   const moonJd = fetchNightAndDay ? iTime.rise.jd : jd;
@@ -1297,6 +1313,93 @@ export const toTransitKey = (abbr: string) => {
   }
 };
 
+interface BirdSet {
+  birth: string;
+  rulingDay: string;
+  rulingNight: string;
+  dying: string;
+}
+
+const mapBirdSet = (ppData: Map<string, any> = new Map()): BirdSet => {
+  const bird = ppData.get('bird');
+  if (bird instanceof Object) {
+    const { birth } = bird;
+    const isDayTime = ppData.get('isDayTime');
+    isDayTime;
+    const bornDayTime = ppData.get('bornDayTime');
+    const bornWeekDay = ppData.get('bornWeekDay');
+    const rulingDay = isDayTime
+      ? bird.current.ruling.key
+      : bird.next.ruling.key;
+    const rulingNight = isDayTime
+      ? bird.next.ruling.key
+      : bird.current.ruling.key;
+    const dying = bird.current.dying.key;
+    return {
+      birth,
+      rulingDay,
+      rulingNight,
+      dying,
+    };
+  } else {
+    return {
+      birth: '',
+      rulingDay: '',
+      rulingNight: '',
+      dying: '',
+    };
+  }
+};
+
+const transitContexts = [
+  'as',
+  'mc',
+  'ds',
+  'ic',
+  'dik_bala_transition',
+  'dasha_lord',
+  'antardasha_lord',
+  'yoga_karaka',
+  'lord_5_9',
+  'lord_1_4_7_10',
+  'lord_6_8_12',
+  'yogi_graha',
+  'avayogi_graha',
+];
+
+/*
+['birth_bird_graha',
+'day_ruling_bird_graha',
+'day_dying_bird_graha',
+'yama_ruling_graha',
+'yama_eating_graha',
+'yama_walking_graha',
+'yama_sleeping_graha',
+'yama_dying_graha',
+'fortune',
+'spirit',
+'brighu_bindu',
+'yogi_point',
+'yogi_graha',
+'avayogi_point',
+'avayogi_graha']
+*/
+const filterDashaLordByObjectType = (
+  dashaLord: string,
+  allSubs: SubYama[] = [],
+  birdsSet: BirdSet,
+  subKey = '',
+): SubYama[] => {
+  switch (subKey) {
+    /* case 'birth_bird_graha':
+      return birdSet.birth === dasha allSubs; */
+    case 'day_ruling_bird_graha':
+      return allSubs;
+    default:
+      return allSubs.filter(sub => sub.rulers.includes(dashaLord));
+  }
+};
+
 export const calculatePanchaPakshiData = async (
   chart: Chart,
   jd = 0,
@@ -1355,10 +1458,23 @@ export const calculatePanchaPakshiData = async (
         ? [...ym1.map(y => y.subs), ...ym2.map(y => y.subs)]
         : [];
       const allSubs = allYamasWithSubs.reduce((a, b) => a.concat(b));
-      /* const birthBird = data.get('bird').birth;
-          const rulingBird = data.get('bird').current.ruling.key;
-          const dyingBird = data.get('bird').current.dying.key; */
+      console.log(allSubs[0]);
+      const bird = data.get('bird');
+
       const rData = [];
+      const hasDashaMatches = transitRules.some(r =>
+        r.context.startsWith('dasha_'),
+      );
+      const hasDasha2Matches = transitRules.some(r =>
+        r.context.startsWith('antardasha_'),
+      );
+      const dashaLord = hasDashaMatches
+        ? matchCurrentDashaLord(chart, jd, 1).key
+        : '';
+      const dasha2Lord = hasDasha2Matches
+        ? matchCurrentDashaLord(chart, jd, 2).key
+        : '';
+      const birdSet = mapBirdSet(data);
       data.set('valid', true);
       for (const r of transitRules) {
         const pp2 = await matchPPTransitRule(
@@ -1428,22 +1544,35 @@ export const calculatePanchaPakshiData = async (
             }
           }
         }
+        if (r.context.startsWith('dasha_')) {
+          subs = allSubs.filter(sub => sub.rulers.includes(dashaLord));
+        } else if (r.context.startsWith('antardasha_')) {
+          subs = allSubs.filter(sub => sub.rulers.includes(dasha2Lord));
+        }
         const matched = matchedJd > 0 || pp2.valid || subs.length > 0;
-        rData.push({
-          rule: r,
-          isTr,
-          matchedJd,
-          matched,
-          subs,
-          trRef,
-          data: pp2,
-        });
+        if (matched) {
+          if (subs.length < 1) {
+            if (pp2.yama instanceof Object && pp2.yama.subs instanceof Array) {
+              subs = pp2.yama.subs;
+            }
+          }
+          rData.push({
+            rule: r,
+            isTr,
+            matchedJd,
+            matched,
+            subs,
+            trRef,
+            data: pp2,
+          });
+        }
       }
       //data.set('rules', rData);
       const hasSubs = rData.some(r => r.subs.length > 0);
       const matchedRules = hasSubs ? rData.filter(r => r.subs.length > 0) : [];
-      data.set('hasSubs', hasSubs);
-      data.set('matchedRules', matchedRules);
+      data.set('numSubMatches', matchedRules.length);
+      data.set('hasSubMatches', hasSubs);
+      //data.set('matchedRules', matchedRules);
 
       const periods = allYamasWithSubs.map(subs => {
         let yamaScore = 0;
@@ -1498,6 +1627,10 @@ export const calculatePanchaPakshiData = async (
       );
       const totals = rules.map(r => r.max);
       data.set('totals', totals);
+      data.set(
+        'max',
+        totals.reduce((a, b) => a + b, 0),
+      );
     }
   }
   return data;
