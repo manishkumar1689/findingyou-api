@@ -969,14 +969,17 @@ export class SettingService {
           score = scRow.value;
           max = scRow.maxScore;
         }
-        const action = translateActionToGerund(cond.context);
         const key = cond.c1Key.split('__').pop();
         const onlyAtStart = key === 'yama_action';
-        const context = cond.context.replace('action_', '');
+        const context = cond.context;
         const always = context.startsWith('action_is_');
+        const action = cond.context.startsWith('action_')
+          ? translateActionToGerund(cond.context.replace('action_', ''))
+          : cond.context;
         return {
           from: cond.fromMode,
           to: cond.toMode,
+          c1Key: cond.c1Key,
           key,
           context,
           action,

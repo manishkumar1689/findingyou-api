@@ -1,9 +1,17 @@
 import { GeoPos } from '../../interfaces/geo-pos';
-import { calcMoonDataJd, getSunMoonSpecialValues } from '../core';
+import {
+  buildCurrentAndBirthExtendedTransitions,
+  calcMoonDataJd,
+  getSunMoonSpecialValues,
+} from '../core';
 import { julToISODate } from '../date-funcs';
 import { KeyNum, KeyValueNum } from '../../../lib/interfaces';
 import { Chart } from '../models/chart';
 import { toIndianTimeJd } from '../transitions';
+import { matchPPTransitRule } from '../models/protocol-models';
+import { matchDikBalaTransition } from './graha-values';
+import { notEmptyString } from '../../../lib/validators';
+import { GeoLoc } from '../models/geo-loc';
 
 const birdMap = { 1: 'vulture', 2: 'owl', 3: 'crow', 4: 'cock', 5: 'peacock' };
 
@@ -1274,5 +1282,213 @@ export const panchaPakshiDayNightSet = async (
   }
   data.set('special', special);
   data.set('valid', yamaData.yamas.length === 5);
+  return data;
+};
+
+export const toTransitKey = (abbr: string) => {
+  const key = abbr.toLowerCase();
+  switch (key) {
+    case 'ds':
+      return 'set';
+    case 'as':
+      return 'rise';
+    default:
+      return key;
+  }
+};
+
+export const calculatePanchaPakshiData = async (
+  chart: Chart,
+  jd = 0,
+  geo: GeoLoc,
+  rules: any[],
+  showTransitions = false,
+  fetchNightAndDay = true,
+): Promise<Map<string, any>> => {
+  let data: Map<string, any> = new Map(
+    Object.entries({
+      jd: 0,
+      dtUtc: '',
+      valid: false,
+      geo: null,
+      rise: 0,
+      set: 0,
+      nextRise: 0,
+      riseDt: '',
+      setDt: '',
+      nextRiseDt: '',
+      moon: null,
+      bird: null,
+      yamas: [],
+    }),
+  );
+  const ppData = await panchaPakshiDayNightSet(
+    jd,
+    geo,
+    chart,
+    fetchNightAndDay,
+  );
+  if (ppData.get('valid')) {
+    data = new Map([...data, ...ppData]);
+    data.set('message', 'valid data set');
+  }
+  if (showTransitions) {
+    const {
+      transitions,
+      birthTransitions,
+    } = await buildCurrentAndBirthExtendedTransitions(chart, geo, jd);
+
+    data.set('transitions', transitions);
+    data.set('birthTransitions', birthTransitions);
+    const transitRules = rules.filter(r => r.from.startsWith('pa') === false);
+    const ppRules = rules.filter(r => r.from.startsWith('pa'));
+    //data.set('rules', rules);
+    const ym1 = data.get('yamas');
+    const ym2 = data.get('yamas2');
+    const hasYamas =
+      ym1 instanceof Array &&
+      ym1.length > 0 &&
+      ym2 instanceof Array &&
+      ym2.length > 0;
+    if (hasYamas) {
+      const allYamasWithSubs = hasYamas
+        ? [...ym1.map(y => y.subs), ...ym2.map(y => y.subs)]
+        : [];
+      const allSubs = allYamasWithSubs.reduce((a, b) => a.concat(b));
+      /* const birthBird = data.get('bird').birth;
+          const rulingBird = data.get('bird').current.ruling.key;
+          const dyingBird = data.get('bird').current.dying.key; */
+      const rData = [];
+      data.set('valid', true);
+      for (const r of transitRules) {
+        const pp2 = await matchPPTransitRule(
+          jd,
+          geo,
+          ppData,
+          chart,
+          r.key,
+          r.context,
+          r.from,
+        );
+        const isTr = ['as', 'ds', 'ic', 'mc', 'dik_bala_transition'].includes(
+          r.action,
+        );
+        const trRef = isTr ? r.key.replace(/_point$/, '') : '';
+        let matchedJd = -1;
+        const relTransItems =
+          r.from === 'birth' ? birthTransitions : transitions;
+        let subs = [];
+        if (r.key.endsWith('_graha')) {
+          const trKey = toTransitKey(r.context);
+          if (r.key.includes('ing_') && r.key.startsWith('yama')) {
+            const actKey = r.key.split('_')[1];
+            subs = allSubs
+              .filter(s => s.key === actKey)
+              .filter(s => {
+                const relRows = relTransItems.filter(rt =>
+                  s.rulers.includes(rt.key),
+                );
+                return relRows.some(rr => {
+                  if (Object.keys(rr).includes(trKey)) {
+                    /*  console.log(
+                      s.start,
+                      rr[trKey].jd,
+                      s.end,
+                      rr[trKey].jd >= s.start,
+                      rr[trKey].jd < s.end,
+                      s.end,
+                      r.key,
+                      rr.key,
+                      trKey,
+                    ); */
+                    return rr[trKey].jd >= s.start && rr[trKey].jd < s.end;
+                  } else {
+                    return false;
+                  }
+                });
+              });
+          }
+        }
+        if (isTr) {
+          const relTr = relTransItems.find(
+            tr => tr.key.toLowerCase() === trRef,
+          );
+          if (relTr instanceof Object) {
+            const rk = toTransitKey(r.action);
+            if (rk.length < 5 && Object.keys(relTr).includes(rk)) {
+              matchedJd = relTr[rk].jd;
+            } else if (rk.startsWith('dik')) {
+              const dikBalaTrans = matchDikBalaTransition(rk);
+              if (
+                notEmptyString(dikBalaTrans) &&
+                Object.keys(relTr).includes(dikBalaTrans)
+              ) {
+                matchedJd = relTr[dikBalaTrans].jd;
+              }
+            }
+          }
+        }
+        const matched = matchedJd > 0 || pp2.valid || subs.length > 0;
+        rData.push({
+          rule: r,
+          isTr,
+          matchedJd,
+          matched,
+          subs,
+          trRef,
+          data: pp2,
+        });
+      }
+      //data.set('rules', rData);
+      const hasSubs = rData.some(r => r.subs.length > 0);
+      const matchedRules = hasSubs ? rData.filter(r => r.subs.length > 0) : [];
+      data.set('hasSubs', hasSubs);
+      data.set('matchedRules', matchedRules);
+
+      const periods = allYamasWithSubs.map(subs => {
+        let yamaScore = 0;
+        return subs
+          .map((sub, si) => {
+            let subScore = 0;
+            for (const r of ppRules) {
+              if (r.action === sub.key) {
+                if (r.onlyAtStart && si === 0) {
+                  yamaScore = r.score;
+                } else {
+                  subScore += r.score;
+                }
+              }
+            }
+            let subRuleScore = 0;
+            if (hasSubs) {
+              const matchedSubRules = matchedRules
+                .map(mr => {
+                  const matchedSubs = mr.subs.filter(
+                    s2 => s2.start === sub.start && s2.end === sub.end,
+                  );
+                  return {
+                    matchedSubs,
+                    rule: mr.rule,
+                  };
+                })
+                .filter(mr => mr.matchedSubs.length > 0);
+
+              if (matchedSubRules.length > 0) {
+                subRuleScore = matchedSubRules
+                  .map(mr => mr.rule.score)
+                  .reduce((a, b) => a + b, 0);
+                //console.log(subRuleScore);
+              }
+            }
+            const score = yamaScore + subScore + subRuleScore;
+            return { ...sub, score };
+          })
+          .filter(row => row.score > 0);
+      });
+      data.set('periods', periods);
+      const totals = rules.map(r => r.max);
+      data.set('totals', totals);
+    }
+  }
   return data;
 };

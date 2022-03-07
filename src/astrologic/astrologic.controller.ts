@@ -57,7 +57,6 @@ import {
   calcAllStars,
   calcDeclination,
   buildExtendedTransitions,
-  builldCurrentAndBirthExtendedTransitions,
   calcBaseLngSetJd,
 } from './lib/core';
 import {
@@ -130,7 +129,10 @@ import {
   assessChart,
   compatibilityResultSetHasScores,
   Condition,
+  matchContextType,
   matchOrbFromGrid,
+  matchPPTransitBirdGraha,
+  matchPPTransitRule,
   PredictiveRule,
   Protocol,
   translateActionToGerund,
@@ -148,7 +150,11 @@ import { TagDTO } from './dto/tag.dto';
 import { RuleSetDTO } from '../setting/dto/rule-set.dto';
 import { SingleCore } from './interfaces/single-core';
 import { AssignPairedDTO } from './dto/assign-paired.dto';
-import { matchPlanetNum } from './lib/settings/graha-values';
+import {
+  hasDikBala,
+  matchDikBalaTransition,
+  matchPlanetNum,
+} from './lib/settings/graha-values';
 import { CreateUserDTO } from '../user/dto/create-user.dto';
 import {
   assignDashaBalances,
@@ -169,7 +175,11 @@ import {
 } from './lib/settings/ashtakavarga-values';
 import { GeoPos } from './interfaces/geo-pos';
 import { processPredictiveRuleSet } from './lib/predictions';
-import { panchaPakshiDayNightSet } from './lib/settings/pancha-pakshi';
+import {
+  calculatePanchaPakshiData,
+  panchaPakshiDayNightSet,
+  toTransitKey,
+} from './lib/settings/pancha-pakshi';
 import { PairsSetDTO } from './dto/pairs-set.dto';
 import { randomCompatibilityText } from './lib/settings/compatibility-texts';
 import {
@@ -406,19 +416,8 @@ export class AstrologicController {
     let status = HttpStatus.BAD_REQUEST;
     let data: Map<string, any> = new Map(
       Object.entries({
-        jd: 0,
-        dtUtc: '',
         valid: false,
-        geo: null,
-        rise: 0,
-        set: 0,
-        nextRise: 0,
-        riseDt: '',
-        setDt: '',
-        nextRiseDt: '',
-        moon: null,
-        bird: null,
-        yamas: [],
+        message: '',
       }),
     );
     const fetchNightAndDay = mode === 'dual';
@@ -435,65 +434,20 @@ export class AstrologicController {
       if (valid) {
         const chartObj = hasChart ? chartData.toObject() : {};
         const chart = new Chart(chartObj);
-        const ppData = await panchaPakshiDayNightSet(
+        const rules = showTransitions
+          ? await this.settingService.getPPRules()
+          : [];
+        data = await calculatePanchaPakshiData(
+          chart,
           jd,
           geo,
-          chart,
+          rules,
+          showTransitions,
           fetchNightAndDay,
         );
-        if (ppData.get('valid')) {
-          data = new Map([...data, ...ppData]);
-          data.set('message', 'valid data set');
+        if (data.get('valid') === true) {
+          status = HttpStatus.OK;
         }
-        if (showTransitions) {
-          const {
-            transitions,
-            birthTransitions,
-          } = await builldCurrentAndBirthExtendedTransitions(chart, geo, jd);
-
-          data.set('transitions', transitions);
-          data.set('birthTransitions', birthTransitions);
-          const rules = await this.settingService.getPPRules();
-          data.set('rules', rules);
-          const ym1 = data.get('yamas');
-          const ym2 = data.get('yamas2');
-          const birthBird = data.get('bird').birth;
-          const rulingBird = data.get('bird').current.ruling.key;
-          const dyingBird = data.get('bird').current.dying.key;
-          if (
-            ym1 instanceof Array &&
-            ym1.length > 0 &&
-            ym2 instanceof Array &&
-            ym2.length > 0
-          ) {
-            const periods = [
-              ...ym1.map(y => y.subs),
-              ...ym2.map(y => y.subs),
-            ].map(subs => {
-              let yamaScore = 0;
-              return subs.map((sub, si) => {
-                let subScore = 0;
-                for (const r of rules) {
-                  if (r.from === 'panchapakshi') {
-                    if (r.action === sub.key) {
-                      if (r.onlyAtStart && si === 0) {
-                        yamaScore = r.score;
-                      } else {
-                        subScore += r.score;
-                      }
-                    }
-                  }
-                }
-                const score = yamaScore + subScore;
-                return { ...sub, score };
-              });
-            });
-            data.set('periods', periods);
-            const totals = rules.map(r => r.max);
-            data.set('totals', totals);
-          }
-        }
-        status = HttpStatus.OK;
       }
     } else {
       data.set('message', 'Invalid parameters');

@@ -742,7 +742,7 @@ export const buildExtendedTransitions = async (
   return { jd, transitions, showGeoData, showSunData };
 };
 
-export const builldCurrentAndBirthExtendedTransitions = async (
+export const buildCurrentAndBirthExtendedTransitions = async (
   chart: Chart,
   geo: GeoLoc,
   jd = 0,
@@ -777,7 +777,7 @@ export const builldCurrentAndBirthExtendedTransitions = async (
     }
   }
   const ds = await calcTransposedGrahaTransitions(jd, geo, gps);
-  const birthTransitions = ds
+  const birthTransitions: TransitionData[] = ds
     .filter(
       gSet =>
         gSet instanceof Object && Object.keys(gSet).includes('transitions'),

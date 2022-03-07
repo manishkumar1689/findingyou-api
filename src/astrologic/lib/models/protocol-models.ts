@@ -2261,15 +2261,15 @@ export const matchSubYamaSetByAction = (
   return { ...matchedYama, isNight };
 };
 
-export const matchPPTransitBirdGraha = async (
+export const matchPPTransitBirdGrahaWithData = async (
   currJd = 0,
   geo: GeoPos,
+  ppData: Map<string, any>,
   chart: Chart,
   refKey: string,
   contextType: ContextType,
   transitMode = 'transit',
 ) => {
-  const ppData = await panchaPakshiDayNightSet(currJd, geo, chart, true);
   const bird = ppData.get('bird');
   const dayYamas = ppData.get('yamas');
   const nightYamas = ppData.get('yamas2');
@@ -2349,7 +2349,6 @@ export const matchPPTransitBirdGraha = async (
       }
       break;
   }
-
   const dtUtc = julToISODate(currJd);
   const yama = matchedYama instanceof Object ? matchedYama : matchedNightYama;
   valid = yama instanceof Object;
@@ -2419,6 +2418,47 @@ export const matchPPTransitBirdGraha = async (
     }
   }
   return { valid, yama, birdKey, isNight, rulers };
+};
+
+export const matchPPTransitBirdGraha = async (
+  currJd = 0,
+  geo: GeoPos,
+  chart: Chart,
+  refKey: string,
+  contextType: ContextType,
+  transitMode = 'transit',
+) => {
+  const ppData = await panchaPakshiDayNightSet(currJd, geo, chart, true);
+  return await matchPPTransitBirdGrahaWithData(
+    currJd,
+    geo,
+    ppData,
+    chart,
+    refKey,
+    contextType,
+    transitMode,
+  );
+};
+
+export const matchPPTransitRule = async (
+  currJd = 0,
+  geo: GeoPos,
+  ppData: Map<string, any>,
+  chart: Chart,
+  refKey: string,
+  context: string,
+  transitMode = 'transit',
+) => {
+  const ct = matchContextType(context);
+  return await matchPPTransitBirdGrahaWithData(
+    currJd,
+    geo,
+    ppData,
+    chart,
+    refKey,
+    ct,
+    transitMode,
+  );
 };
 
 const matchPPMode = (cond: Condition) => {
