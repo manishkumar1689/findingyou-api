@@ -1447,45 +1447,55 @@ export const calculatePanchaPakshiData = async (
 
       const periods = allYamasWithSubs.map(subs => {
         let yamaScore = 0;
-        return subs
-          .map((sub, si) => {
-            let subScore = 0;
-            for (const r of ppRules) {
-              if (r.action === sub.key) {
-                if (r.onlyAtStart && si === 0) {
-                  yamaScore = r.score;
-                } else {
-                  subScore += r.score;
-                }
+        return subs.map((sub, si) => {
+          let subScore = 0;
+          for (const r of ppRules) {
+            if (r.action === sub.key) {
+              if (r.onlyAtStart && si === 0) {
+                yamaScore = r.score;
+              } else {
+                subScore += r.score;
               }
             }
-            let subRuleScore = 0;
-            if (hasSubs) {
-              const matchedSubRules = matchedRules
-                .map(mr => {
-                  const matchedSubs = mr.subs.filter(
-                    s2 => s2.start === sub.start && s2.end === sub.end,
-                  );
-                  return {
-                    matchedSubs,
-                    rule: mr.rule,
-                  };
-                })
-                .filter(mr => mr.matchedSubs.length > 0);
+          }
+          let subRuleScore = 0;
+          if (hasSubs) {
+            const matchedSubRules = matchedRules
+              .map(mr => {
+                const matchedSubs = mr.subs.filter(
+                  s2 => s2.start === sub.start && s2.end === sub.end,
+                );
+                return {
+                  matchedSubs,
+                  rule: mr.rule,
+                };
+              })
+              .filter(mr => mr.matchedSubs.length > 0);
 
-              if (matchedSubRules.length > 0) {
-                subRuleScore = matchedSubRules
-                  .map(mr => mr.rule.score)
-                  .reduce((a, b) => a + b, 0);
-                //console.log(subRuleScore);
-              }
+            if (matchedSubRules.length > 0) {
+              subRuleScore = matchedSubRules
+                .map(mr => mr.rule.score)
+                .reduce((a, b) => a + b, 0);
+              //console.log(subRuleScore);
             }
-            const score = yamaScore + subScore + subRuleScore;
-            return { ...sub, score };
-          })
-          .filter(row => row.score > 0);
+          }
+          const score = yamaScore + subScore + subRuleScore;
+          return { ...sub, score };
+        });
       });
-      data.set('periods', periods);
+      data.set(
+        'periods',
+        periods
+          .reduce((a, b) => a.concat(b), [])
+          .map(p => {
+            const { start, end, score } = p;
+            return {
+              start,
+              end,
+              score,
+            };
+          }),
+      );
       const totals = rules.map(r => r.max);
       data.set('totals', totals);
     }

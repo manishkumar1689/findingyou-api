@@ -404,14 +404,13 @@ export class AstrologicController {
   /*
     #mobile
   */
-  @Get('pancha-pakshi/:chartID/:loc/:dt?/:mode?/:showTrans?')
+  @Get('pancha-pakshi/:chartID/:loc/:dt?/:mode?')
   async panchaPanchaDaySet(
     @Res() res,
     @Param('chartID') chartID,
     @Param('loc') loc,
     @Param('dt') dt,
     @Param('mode') mode,
-    @Param('showTrans') showTrans,
   ) {
     let status = HttpStatus.BAD_REQUEST;
     let data: Map<string, any> = new Map(
@@ -420,8 +419,9 @@ export class AstrologicController {
         message: '',
       }),
     );
-    const fetchNightAndDay = mode === 'dual';
-    const showTransitions = showTrans === 'trans';
+    const fetchNightAndDay = ['dual', 'trans', 'rules'].includes(mode);
+    const showTransitions = ['trans', 'rules'].includes(mode);
+    const processRules = mode === 'rules';
     if (notEmptyString(chartID) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const { dtUtc, jd } = matchJdAndDatetime(dt);
@@ -434,7 +434,7 @@ export class AstrologicController {
       if (valid) {
         const chartObj = hasChart ? chartData.toObject() : {};
         const chart = new Chart(chartObj);
-        const rules = showTransitions
+        const rules = processRules
           ? await this.settingService.getPPRules()
           : [];
         data = await calculatePanchaPakshiData(
