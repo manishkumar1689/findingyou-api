@@ -1791,7 +1791,6 @@ export const calculatePanchaPakshiData = async (
               subRuleScore = matchedSubRules
                 .map(mr => mr.rule.score)
                 .reduce((a, b) => a + b, 0);
-              //console.log(subRuleScore);
             }
           }
           const score = yamaScore + subScore + subRuleScore;
