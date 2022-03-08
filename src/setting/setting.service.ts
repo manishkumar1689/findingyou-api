@@ -46,7 +46,7 @@ import { FacetedItemDTO } from './dto/faceted-item.dto';
 import eventTypeValues from '../astrologic/lib/settings/event-type-values';
 import { mapLikeability } from '../lib/notifications';
 import { filterCorePreference } from '../lib/mappers';
-import { mapPPCondition } from 'src/astrologic/lib/settings/pancha-pakshi';
+import { mapPPCondition } from '../astrologic/lib/settings/pancha-pakshi';
 
 @Injectable()
 export class SettingService {
