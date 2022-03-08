@@ -178,7 +178,6 @@ import { processPredictiveRuleSet } from './lib/predictions';
 import {
   calculatePanchaPakshiData,
   panchaPakshiDayNightSet,
-  toTransitKey,
 } from './lib/settings/pancha-pakshi';
 import { PairsSetDTO } from './dto/pairs-set.dto';
 import { randomCompatibilityText } from './lib/settings/compatibility-texts';
@@ -4467,6 +4466,9 @@ export class AstrologicController {
     });
   }
 
+  /*
+    admin
+  */
   @Get('relationship-types')
   async getRelTypes(@Res() res) {
     const key = 'relationship_types';
@@ -4500,6 +4502,9 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(defaultTags);
   }
 
+  /*
+  admin
+  */
   @Get('settings/:filter?')
   async listSettings(@Res() res, @Param('filter') filter) {
     let filters: Array<string> = [];

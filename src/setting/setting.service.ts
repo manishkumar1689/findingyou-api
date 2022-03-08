@@ -46,6 +46,7 @@ import { FacetedItemDTO } from './dto/faceted-item.dto';
 import eventTypeValues from '../astrologic/lib/settings/event-type-values';
 import { mapLikeability } from '../lib/notifications';
 import { filterCorePreference } from '../lib/mappers';
+import { mapPPCondition } from 'src/astrologic/lib/settings/pancha-pakshi';
 
 @Injectable()
 export class SettingService {
@@ -923,7 +924,11 @@ export class SettingService {
     return result;
   }
 
-  async getRuleSets(filterRef = null, activeOnly = false, filterByUser = true) {
+  async getRuleSets(
+    filterRef = null,
+    activeOnly = false,
+    filterByUser = true,
+  ): Promise<PredictiveRuleSet[]> {
     const filterByType = !filterByUser && notEmptyString(filterRef, 3);
     const byUsers = filterByUser && filterRef instanceof Array;
     const byUser = filterByUser && !byUsers && notEmptyString(filterRef, 16);
@@ -947,7 +952,10 @@ export class SettingService {
     return items;
   }
 
-  async getRuleSetsByType(type = '', activeOnly = true) {
+  async getRuleSetsByType(
+    type = '',
+    activeOnly = true,
+  ): Promise<PredictiveRuleSet[]> {
     return await this.getRuleSets(type, activeOnly, false);
   }
 
@@ -959,35 +967,15 @@ export class SettingService {
       })
       .map(rs => {
         const cond = rs.conditionSet.conditionRefs[0];
-        let scRow = rs.scores.find(sc => sc.key === 'generic');
-        let score = 0;
-        let max = 10;
-        if (!scRow && rs.scores.length > 0) {
-          scRow = rs.scores[0];
-        }
-        if (scRow instanceof Object) {
-          score = scRow.value;
-          max = scRow.maxScore;
-        }
-        const key = cond.c1Key.split('__').pop();
-        const onlyAtStart = key === 'yama_action';
-        const context = cond.context;
-        const always = context.startsWith('action_is_');
-        const action = cond.context.startsWith('action_')
-          ? translateActionToGerund(cond.context.replace('action_', ''))
-          : cond.context;
-        return {
-          from: cond.fromMode,
-          to: cond.toMode,
-          c1Key: cond.c1Key,
-          key,
-          context,
-          action,
-          onlyAtStart,
-          always,
-          score,
-          max,
-        };
+        const siblings =
+          rs.conditionSet.conditionRefs.length > 1
+            ? rs.conditionSet.conditionRefs
+                .slice(1)
+                .map(c => mapPPCondition(c, rs))
+            : [];
+        const ppCond = mapPPCondition(cond, rs);
+        const { operator } = rs.conditionSet;
+        return { ...ppCond, siblings, operator };
       });
     return simpleRules;
   }

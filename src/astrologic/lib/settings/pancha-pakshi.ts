@@ -7,12 +7,17 @@ import {
 import { julToISODate } from '../date-funcs';
 import { KeyNum, KeyValueNum } from '../../../lib/interfaces';
 import { Chart } from '../models/chart';
-import { toIndianTimeJd } from '../transitions';
-import { matchPPTransitRule } from '../models/protocol-models';
+import { toIndianTimeJd, TransitionData } from '../transitions';
+import {
+  matchPPTransitRule,
+  translateActionToGerund,
+  Condition,
+} from '../models/protocol-models';
 import { matchDikBalaTransition } from './graha-values';
 import { notEmptyString } from '../../../lib/validators';
 import { GeoLoc } from '../models/geo-loc';
 import { matchCurrentDashaLord } from '../models/dasha-set';
+import { PredictiveRuleSet } from '../../../setting/interfaces/predictive-rule-set.interface';
 
 const birdMap = { 1: 'vulture', 2: 'owl', 3: 'crow', 4: 'cock', 5: 'peacock' };
 
@@ -85,6 +90,7 @@ export interface SubYama {
   rulers?: string[];
   relation?: string;
   score?: number;
+  isDayTime?: boolean;
 }
 
 export const birdActivitiesDirections = [
@@ -552,6 +558,24 @@ export const panchaStrengthBaseValues = [
   },
 ];
 
+// { 1: 'vulture', 2: 'owl', 3: 'crow', 4: 'cock', 5: 'peacock' };
+export const birdGrahas = {
+  waxing: [
+    { num: 1, rulers: ['me', 'mo'] },
+    { num: 2, rulers: ['ju'] },
+    { num: 3, rulers: ['ra', 'sa'] },
+    { num: 4, rulers: ['su', 'ma', 'ke'] },
+    { num: 5, rulers: ['ve'] },
+  ],
+  waning: [
+    { num: 1, rulers: ['me'] },
+    { num: 2, rulers: ['ju'] },
+    { num: 3, rulers: ['ra', 'sa', 'mo'] },
+    { num: 4, rulers: ['su', 'ma', 'ke'] },
+    { num: 5, rulers: ['ve'] },
+  ],
+};
+
 export const birdRulers = [
   { num: 1, death: ['ju', 'sa'], day: ['su', 'ma'], night: ['ve'] },
   { num: 5, death: ['me'], day: ['sa'], night: ['ju'] },
@@ -811,6 +835,17 @@ const matchBirdKeyByNum = (num = 0) => {
 const matchBirdNumByKey = (key = ''): number => {
   const pair = Object.entries(birdMap).find(entry => entry[1] === key);
   return pair instanceof Array ? parseInt(pair[0]) : 0;
+};
+
+export const birdGrahasByKey = (birdKey = '', waxing = true) => {
+  const bn = matchBirdNumByKey(birdKey);
+  if (bn > 0) {
+    const segment = waxing ? 'waxing' : 'waning';
+    const row = birdGrahas[segment].find(r => r.num === bn);
+    return row instanceof Object ? row.rulers : [];
+  } else {
+    return [];
+  }
 };
 
 export const matchBirdByNak = (nakNum = 0, waxing = false) => {
@@ -1313,45 +1348,132 @@ export const toTransitKey = (abbr: string) => {
   }
 };
 
-interface BirdSet {
-  birth: string;
-  rulingDay: string;
-  rulingNight: string;
-  dying: string;
+interface BirdGraha {
+  bird: string;
+  grahas: string[];
 }
 
-const mapBirdSet = (ppData: Map<string, any> = new Map()): BirdSet => {
-  const bird = ppData.get('bird');
-  if (bird instanceof Object) {
+interface DayNightBirdGraha {
+  day: BirdGraha;
+  night: BirdGraha;
+}
+
+class BirdGrahaSet {
+  birth: BirdGraha;
+  ruling: DayNightBirdGraha;
+  dying: BirdGraha;
+
+  constructor(ppData: Map<string, any> = new Map()) {
+    const bird = ppData.has('bird')
+      ? ppData.get('bird')
+      : {
+          birth: '',
+          current: {
+            dying: '',
+            ruling: '',
+          },
+        };
+    const moon = ppData.get('moon');
     const { birth } = bird;
-    const isDayTime = ppData.get('isDayTime');
-    isDayTime;
-    const bornDayTime = ppData.get('bornDayTime');
-    const bornWeekDay = ppData.get('bornWeekDay');
+    const isDayTime = ppData.has('isDayTime') ? ppData.get('isDayTime') : true;
+    const firstSegment = isDayTime ? 'current' : 'next';
+    const waxing = moon instanceof Object ? moon[firstSegment].waxing : true;
+    const dying = bird.current.dying.key;
     const rulingDay = isDayTime
       ? bird.current.ruling.key
       : bird.next.ruling.key;
     const rulingNight = isDayTime
       ? bird.next.ruling.key
       : bird.current.ruling.key;
-    const dying = bird.current.dying.key;
-    return {
-      birth,
-      rulingDay,
-      rulingNight,
-      dying,
+    const birthBirdGraha = birdGrahasByKey(birth, waxing);
+    const rulingDayGraha = birdGrahasByKey(rulingDay, waxing);
+    const rulingNightGraha = birdGrahasByKey(rulingNight, waxing);
+    const dyingGraha = birdGrahasByKey(dying, waxing);
+    this.birth = {
+      bird: birth,
+      grahas: birthBirdGraha,
     };
-  } else {
-    return {
-      birth: '',
-      rulingDay: '',
-      rulingNight: '',
-      dying: '',
+    this.ruling = {
+      day: {
+        bird: rulingDay,
+        grahas: rulingDayGraha,
+      },
+      night: {
+        bird: rulingNight,
+        grahas: rulingNightGraha,
+      },
+    };
+    this.dying = {
+      bird: dying,
+      grahas: dyingGraha,
     };
   }
+
+  matchGrahas(type = '', isDayTime = false): string[] {
+    switch (type) {
+      case 'ruling':
+        const segment = isDayTime ? 'day' : 'night';
+        return this.ruling[segment].grahas;
+      case 'birth':
+      case 'dying':
+        return this[type].grahas;
+      default:
+        return [];
+    }
+  }
+
+  matchBird(type = '', isDayTime = false): string {
+    switch (type) {
+      case 'ruling':
+        const segment = isDayTime ? 'day' : 'night';
+        return this.ruling[segment].bird;
+      case 'birth':
+      case 'dying':
+        return this[type].bird;
+      default:
+        return '';
+    }
+  }
+}
+
+const mapBirdSet = (ppData: Map<string, any> = new Map()): BirdGrahaSet => {
+  return new BirdGrahaSet(ppData);
 };
 
-const transitContexts = [
+export const mapPPCondition = (condRef = null, rs: PredictiveRuleSet) => {
+  const cond = new Condition(condRef);
+  let scRow = rs.scores.find(sc => sc.key === 'generic');
+  let score = 0;
+  let max = 10;
+  if (!scRow && rs.scores.length > 0) {
+    scRow = rs.scores[0];
+  }
+  if (scRow instanceof Object) {
+    score = scRow.value;
+    max = scRow.maxScore;
+  }
+  const key = cond.c1Key.split('__').pop();
+  const onlyAtStart = key === 'yama_action';
+  const context = cond.context;
+  const always = context.startsWith('action_is_');
+  const action = cond.context.startsWith('action_')
+    ? translateActionToGerund(cond.context.replace('action_', ''))
+    : cond.context;
+  return {
+    from: cond.fromMode,
+    to: cond.toMode,
+    c1Key: cond.c1Key,
+    key,
+    context,
+    action,
+    onlyAtStart,
+    always,
+    score,
+    max,
+  };
+};
+
+/* const transitContexts = [
   'as',
   'mc',
   'ds',
@@ -1365,7 +1487,7 @@ const transitContexts = [
   'lord_6_8_12',
   'yogi_graha',
   'avayogi_graha',
-];
+]; */
 
 /*
 ['birth_bird_graha',
@@ -1387,16 +1509,67 @@ const transitContexts = [
 const filterDashaLordByObjectType = (
   dashaLord: string,
   allSubs: SubYama[] = [],
-  birdsSet: BirdSet,
+  birdsSet: BirdGrahaSet,
   subKey = '',
 ): SubYama[] => {
   switch (subKey) {
-    /* case 'birth_bird_graha':
-      return birdSet.birth === dasha allSubs; */
     case 'day_ruling_bird_graha':
-      return allSubs;
+      return allSubs.filter(sub =>
+        birdsSet.matchGrahas('ruling', sub.isDayTime).includes(dashaLord),
+      );
+    case 'day_dying_bird_graha':
+      return allSubs.filter(sub =>
+        birdsSet.matchGrahas('dying', sub.isDayTime).includes(dashaLord),
+      );
+    case 'yama_ruling_graha':
+    case 'yama_eating_graha':
+    case 'yama_walking_graha':
+    case 'yama_sleeping_graha':
+    case 'yama_dying_graha':
+      return allSubs.filter(
+        sub => sub.rulers.includes(dashaLord) && subKey.includes(sub.key),
+      );
     default:
-      return allSubs.filter(sub => sub.rulers.includes(dashaLord));
+      return [];
+  }
+};
+
+export const matchTransitionRangeRaw = (
+  rk = '',
+  relTr: TransitionData,
+): number[] => {
+  switch (rk) {
+    case 'as':
+    case 'rise':
+    case 'rising':
+      return [relTr.rise.jd, relTr.mc.jd];
+    case 'ds':
+    case 'set':
+    case 'setting':
+      return [relTr.mc.jd, relTr.set.jd];
+    case 'mc':
+    case 'ic':
+      const orbMin15 = 1 / (24 * 4);
+      return [relTr[rk].jd - orbMin15, relTr[rk].jd + orbMin15];
+    default:
+      return [];
+  }
+};
+
+export const matchTransitionRange = (
+  rk = '',
+  relTr: TransitionData,
+): number[] => {
+  const range = matchTransitionRangeRaw(rk, relTr);
+  if (range.length > 1) {
+    const first = range[0];
+    let second = range[1];
+    if (first > second) {
+      second += 1;
+    }
+    return [first, second];
+  } else {
+    return range;
   }
 };
 
@@ -1457,9 +1630,13 @@ export const calculatePanchaPakshiData = async (
       const allYamasWithSubs = hasYamas
         ? [...ym1.map(y => y.subs), ...ym2.map(y => y.subs)]
         : [];
-      const allSubs = allYamasWithSubs.reduce((a, b) => a.concat(b));
-      console.log(allSubs[0]);
-      const bird = data.get('bird');
+      const dayFirst = ppData.get('isDayTime');
+      const allSubs = allYamasWithSubs
+        .reduce((a, b) => a.concat(b))
+        .map((s, i) => {
+          const isDayTime = dayFirst ? i < 25 : i >= 25;
+          return { ...s, isDayTime };
+        });
 
       const rData = [];
       const hasDashaMatches = transitRules.some(r =>
@@ -1474,7 +1651,7 @@ export const calculatePanchaPakshiData = async (
       const dasha2Lord = hasDasha2Matches
         ? matchCurrentDashaLord(chart, jd, 2).key
         : '';
-      const birdSet = mapBirdSet(data);
+      const birdGrahaSet = mapBirdSet(data);
       data.set('valid', true);
       for (const r of transitRules) {
         const pp2 = await matchPPTransitRule(
@@ -1490,7 +1667,7 @@ export const calculatePanchaPakshiData = async (
           r.action,
         );
         const trRef = isTr ? r.key.replace(/_point$/, '') : '';
-        let matchedJd = -1;
+        let matchedRange = [];
         const relTransItems =
           r.from === 'birth' ? birthTransitions : transitions;
         let subs = [];
@@ -1532,24 +1709,31 @@ export const calculatePanchaPakshiData = async (
           if (relTr instanceof Object) {
             const rk = toTransitKey(r.action);
             if (rk.length < 5 && Object.keys(relTr).includes(rk)) {
-              matchedJd = relTr[rk].jd;
+              matchedRange = matchTransitionRange(rk, relTr);
             } else if (rk.startsWith('dik')) {
               const dikBalaTrans = matchDikBalaTransition(rk);
               if (
                 notEmptyString(dikBalaTrans) &&
                 Object.keys(relTr).includes(dikBalaTrans)
               ) {
-                matchedJd = relTr[dikBalaTrans].jd;
+                matchedRange = matchTransitionRange(dikBalaTrans, relTr);
               }
             }
           }
         }
-        if (r.context.startsWith('dasha_')) {
-          subs = allSubs.filter(sub => sub.rulers.includes(dashaLord));
-        } else if (r.context.startsWith('antardasha_')) {
-          subs = allSubs.filter(sub => sub.rulers.includes(dasha2Lord));
+        const isDahsha = r.context.startsWith('dasha_');
+        const isDasha2 = !isDahsha && r.context.startsWith('antardasha_');
+        if (isDahsha || isDasha2) {
+          const refDashaLord = isDasha2 ? dasha2Lord : dashaLord;
+          subs = filterDashaLordByObjectType(
+            refDashaLord,
+            allSubs,
+            birdGrahaSet,
+            r.key,
+          );
         }
-        const matched = matchedJd > 0 || pp2.valid || subs.length > 0;
+
+        const matched = matchedRange.length > 1 || pp2.valid || subs.length > 0;
         if (matched) {
           if (subs.length < 1) {
             if (pp2.yama instanceof Object && pp2.yama.subs instanceof Array) {
@@ -1559,7 +1743,7 @@ export const calculatePanchaPakshiData = async (
           rData.push({
             rule: r,
             isTr,
-            matchedJd,
+            matchedRange,
             matched,
             subs,
             trRef,
@@ -1569,10 +1753,12 @@ export const calculatePanchaPakshiData = async (
       }
       //data.set('rules', rData);
       const hasSubs = rData.some(r => r.subs.length > 0);
-      const matchedRules = hasSubs ? rData.filter(r => r.subs.length > 0) : [];
+      const matchedRules = hasSubs
+        ? rData.filter(r => r.subs.length > 0 || r.matchedRange.length > 1)
+        : [];
       data.set('numSubMatches', matchedRules.length);
       data.set('hasSubMatches', hasSubs);
-      //data.set('matchedRules', matchedRules);
+      data.set('matchedRules', matchedRules);
 
       const periods = allYamasWithSubs.map(subs => {
         let yamaScore = 0;
@@ -1612,25 +1798,53 @@ export const calculatePanchaPakshiData = async (
           return { ...sub, score };
         });
       });
-      data.set(
-        'periods',
-        periods
-          .reduce((a, b) => a.concat(b), [])
-          .map(p => {
-            const { start, end, score } = p;
-            return {
-              start,
-              end,
-              score,
-            };
-          }),
-      );
-      const totals = rules.map(r => r.max);
-      data.set('totals', totals);
-      data.set(
-        'max',
-        totals.reduce((a, b) => a + b, 0),
-      );
+      const subPeriods = periods
+        .reduce((a, b) => a.concat(b), [])
+        .map(p => {
+          const { start, end, score } = p;
+          return {
+            start,
+            end,
+            score,
+          };
+        });
+      if (subPeriods.length === 50) {
+        const startJd = subPeriods[0].start;
+        const endJd = subPeriods[49].end;
+        const totals = rules.map(r => r.max);
+        data.set('totals', totals);
+        data.set(
+          'max',
+          totals.reduce((a, b) => a + b, 0),
+        );
+        data.set('startJd', startJd);
+        data.set('endJd', endJd);
+        const minsDay = 24 * 60;
+        const minJd = 1 / minsDay;
+        const scores = [];
+        const dayLength = endJd - startJd;
+        const maxMins = Math.ceil(dayLength * minsDay);
+        for (let i = 0; i < maxMins; i++) {
+          const currJd = startJd + minJd * i;
+          const refSub = subPeriods.find(
+            sp => currJd >= sp.start && currJd <= sp.end,
+          );
+          let minuteScore = 0;
+          if (refSub instanceof Object) {
+            minuteScore += refSub.score;
+          }
+          matchedRules.forEach(mr => {
+            if (mr.matchedRange.length > 1) {
+              const [start, end] = mr.matchedRange;
+              if (currJd >= start && currJd <= end) {
+                minuteScore += mr.rule.score;
+              }
+            }
+          });
+          scores.push(minuteScore);
+        }
+        data.set('minutes', scores);
+      }
     }
   }
   return data;
