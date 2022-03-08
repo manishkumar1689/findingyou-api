@@ -1534,43 +1534,69 @@ const filterDashaLordByObjectType = (
   }
 };
 
-export const matchTransitionRangeRaw = (
-  rk = '',
-  relTr: TransitionData,
-): number[] => {
+export class TransitionOrb {
+  start = 0;
+  end = 0;
+
+  constructor(peak = 0, orb = 0) {
+    if (peak > 0 && orb > 0) {
+      this.start = peak - orb;
+      this.end = peak + orb;
+    }
+  }
+
+  get valid() {
+    return this.start > 0 && this.end > this.start;
+  }
+
+  get span(): number {
+    return this.end - this.start;
+  }
+
+  get halfSpan(): number {
+    return this.span / 2;
+  }
+
+  get mid(): number {
+    return this.end - this.halfSpan;
+  }
+
+  inRange(jd = 0) {
+    return this.valid && jd >= this.start && jd <= this.end;
+  }
+
+  calcScore(jd = 0, score = 0): number {
+    const distJd = Math.abs(this.mid - jd);
+    const dist = 1 - distJd / this.halfSpan;
+    return score * dist;
+  }
+}
+
+export const matchTransitionPeak = (rk = '', relTr: TransitionData): number => {
   switch (rk) {
     case 'as':
     case 'rise':
     case 'rising':
-      return [relTr.rise.jd, relTr.mc.jd];
+      return relTr.rise.jd;
     case 'ds':
     case 'set':
     case 'setting':
-      return [relTr.mc.jd, relTr.set.jd];
+      return relTr.set.jd;
     case 'mc':
     case 'ic':
-      const orbMin15 = 1 / (24 * 4);
-      return [relTr[rk].jd - orbMin15, relTr[rk].jd + orbMin15];
+      return relTr[rk].jd;
     default:
-      return [];
+      return -1;
   }
 };
 
 export const matchTransitionRange = (
   rk = '',
   relTr: TransitionData,
-): number[] => {
-  const range = matchTransitionRangeRaw(rk, relTr);
-  if (range.length > 1) {
-    const first = range[0];
-    let second = range[1];
-    if (first > second) {
-      second += 1;
-    }
-    return [first, second];
-  } else {
-    return range;
-  }
+): TransitionOrb => {
+  const orbMin = (1 / (24 * 60)) * 10;
+  const peak = matchTransitionPeak(rk, relTr);
+  return new TransitionOrb(peak, orbMin);
 };
 
 export const calculatePanchaPakshiData = async (
@@ -1667,7 +1693,7 @@ export const calculatePanchaPakshiData = async (
           r.action,
         );
         const trRef = isTr ? r.key.replace(/_point$/, '') : '';
-        let matchedRange = [];
+        let matchedRange = new TransitionOrb(0, 0);
         const relTransItems =
           r.from === 'birth' ? birthTransitions : transitions;
         let subs = [];
@@ -1683,17 +1709,6 @@ export const calculatePanchaPakshiData = async (
                 );
                 return relRows.some(rr => {
                   if (Object.keys(rr).includes(trKey)) {
-                    /*  console.log(
-                      s.start,
-                      rr[trKey].jd,
-                      s.end,
-                      rr[trKey].jd >= s.start,
-                      rr[trKey].jd < s.end,
-                      s.end,
-                      r.key,
-                      rr.key,
-                      trKey,
-                    ); */
                     return rr[trKey].jd >= s.start && rr[trKey].jd < s.end;
                   } else {
                     return false;
@@ -1733,7 +1748,7 @@ export const calculatePanchaPakshiData = async (
           );
         }
 
-        const matched = matchedRange.length > 1 || pp2.valid || subs.length > 0;
+        const matched = matchedRange.valid || pp2.valid || subs.length > 0;
         if (matched) {
           if (subs.length < 1) {
             if (pp2.yama instanceof Object && pp2.yama.subs instanceof Array) {
@@ -1754,7 +1769,7 @@ export const calculatePanchaPakshiData = async (
       //data.set('rules', rData);
       const hasSubs = rData.some(r => r.subs.length > 0);
       const matchedRules = hasSubs
-        ? rData.filter(r => r.subs.length > 0 || r.matchedRange.length > 1)
+        ? rData.filter(r => r.subs.length > 0 || r.matchedRange.valid)
         : [];
       data.set('numSubMatches', matchedRules.length);
       data.set('hasSubMatches', hasSubs);
@@ -1833,11 +1848,8 @@ export const calculatePanchaPakshiData = async (
             minuteScore += refSub.score;
           }
           matchedRules.forEach(mr => {
-            if (mr.matchedRange.length > 1) {
-              const [start, end] = mr.matchedRange;
-              if (currJd >= start && currJd <= end) {
-                minuteScore += mr.rule.score;
-              }
+            if (mr.matchedRange.inRange(currJd)) {
+              minuteScore += mr.matchedRange.calcScore(currJd, mr.rule.score);
             }
           });
           scores.push(minuteScore);
