@@ -1537,6 +1537,11 @@ const filterDashaLordByObjectType = (
   subKey = '',
 ): SubYama[] => {
   switch (subKey) {
+    case 'birth_bird_graha':
+      return allSubs.filter(sub =>
+        birdsSet.matchGrahas('birth', sub.isDayTime).includes(dashaLord),
+      );
+      break;
     case 'day_ruling_bird_graha':
       return allSubs.filter(sub =>
         birdsSet.matchGrahas('ruling', sub.isDayTime).includes(dashaLord),
@@ -1717,10 +1722,11 @@ export const calculatePanchaPakshiData = async (
           r.action,
         );
         const trRef = isTr ? r.key.replace(/_point$/, '') : '';
-        let matchedRange = new TransitionOrb(0, 0);
+        const matchedRanges: TransitionOrb[] = [];
         const relTransItems =
           r.from === 'birth' ? birthTransitions : transitions;
         let subs = [];
+        let grahaKeys = [];
         if (r.key.endsWith('_graha')) {
           const trKey = toTransitKey(r.context);
           if (r.key.includes('ing_') && r.key.startsWith('yama')) {
@@ -1739,23 +1745,28 @@ export const calculatePanchaPakshiData = async (
                   }
                 });
               });
+          } else if (r.key.startsWith('birth_bird_')) {
+            grahaKeys = birdGrahaSet.matchGrahas('birth', true);
           }
         }
         if (isTr) {
-          const relTr = relTransItems.find(
-            tr => tr.key.toLowerCase() === trRef,
-          );
-          if (relTr instanceof Object) {
-            const rk = toTransitKey(r.action);
-            if (rk.length < 5 && Object.keys(relTr).includes(rk)) {
-              matchedRange = matchTransitionRange(rk, relTr);
-            } else if (rk.startsWith('dik')) {
-              const dikBalaTrans = matchDikBalaTransition(rk);
-              if (
-                notEmptyString(dikBalaTrans) &&
-                Object.keys(relTr).includes(dikBalaTrans)
-              ) {
-                matchedRange = matchTransitionRange(dikBalaTrans, relTr);
+          const relTrs = relTransItems.filter(tr => {
+            const rKey = tr.key.toLowerCase();
+            return rKey === trRef || grahaKeys.includes(rKey);
+          });
+          if (relTrs.length > 0) {
+            for (const relTr of relTrs) {
+              const rk = toTransitKey(r.action);
+              if (rk.length < 5 && Object.keys(relTr).includes(rk)) {
+                matchedRanges.push(matchTransitionRange(rk, relTr));
+              } else if (rk.startsWith('dik')) {
+                const dikBalaTrans = matchDikBalaTransition(rk);
+                if (
+                  notEmptyString(dikBalaTrans) &&
+                  Object.keys(relTr).includes(dikBalaTrans)
+                ) {
+                  matchedRanges.push(matchTransitionRange(dikBalaTrans, relTr));
+                }
               }
             }
           }
@@ -1772,7 +1783,8 @@ export const calculatePanchaPakshiData = async (
           );
         }
 
-        const matched = matchedRange.valid || pp2.valid || subs.length > 0;
+        const matched =
+          matchedRanges.length > 0 || pp2.valid || subs.length > 0;
         if (matched) {
           if (subs.length < 1) {
             if (pp2.yama instanceof Object && pp2.yama.subs instanceof Array) {
@@ -1782,7 +1794,7 @@ export const calculatePanchaPakshiData = async (
           rData.push({
             rule: r,
             isTr,
-            matchedRange,
+            matchedRanges,
             matched,
             subs,
             trRef,
@@ -1793,7 +1805,7 @@ export const calculatePanchaPakshiData = async (
       //data.set('rules', rData);
       const hasSubs = rData.some(r => r.subs.length > 0);
       const matchedRules = hasSubs
-        ? rData.filter(r => r.subs.length > 0 || r.matchedRange.valid)
+        ? rData.filter(r => r.subs.length > 0 || r.matchedRanges.length > 0)
         : [];
       data.set('numSubMatches', matchedRules.length);
       data.set('hasSubMatches', hasSubs);
@@ -1872,8 +1884,12 @@ export const calculatePanchaPakshiData = async (
             minuteScore += refSub.score;
           }
           matchedRules.forEach(mr => {
-            if (mr.matchedRange.inRange(currJd)) {
-              minuteScore += mr.matchedRange.calcScore(currJd, mr.rule.score);
+            if (mr.matchedRanges.length > 0) {
+              for (const mRange of mr.matchedRanges) {
+                if (mRange.inRange(currJd)) {
+                  minuteScore += mRange.calcScore(currJd, mr.rule.score);
+                }
+              }
             }
           });
           scores.push(minuteScore);
