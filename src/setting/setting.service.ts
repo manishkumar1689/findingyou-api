@@ -46,7 +46,10 @@ import { FacetedItemDTO } from './dto/faceted-item.dto';
 import eventTypeValues from '../astrologic/lib/settings/event-type-values';
 import { mapLikeability } from '../lib/notifications';
 import { filterCorePreference } from '../lib/mappers';
-import { mapPPCondition } from '../astrologic/lib/settings/pancha-pakshi';
+import {
+  mapPPCondition,
+  PPRule,
+} from '../astrologic/lib/settings/pancha-pakshi';
 
 @Injectable()
 export class SettingService {
@@ -959,7 +962,7 @@ export class SettingService {
     return await this.getRuleSets(type, activeOnly, false);
   }
 
-  async getPPRules() {
+  async getPPRules(): Promise<PPRule[]> {
     const rules = await this.getRuleSetsByType('panchapakshi');
     const simpleRules = rules
       .filter(rs => {
@@ -967,15 +970,7 @@ export class SettingService {
       })
       .map(rs => {
         const cond = rs.conditionSet.conditionRefs[0];
-        const siblings =
-          rs.conditionSet.conditionRefs.length > 1
-            ? rs.conditionSet.conditionRefs
-                .slice(1)
-                .map(c => mapPPCondition(c, rs))
-            : [];
-        const ppCond = mapPPCondition(cond, rs);
-        const { operator } = rs.conditionSet;
-        return { ...ppCond, siblings, operator };
+        return mapPPCondition(cond, rs);
       });
     return simpleRules;
   }

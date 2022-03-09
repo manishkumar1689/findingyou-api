@@ -1440,55 +1440,61 @@ const mapBirdSet = (ppData: Map<string, any> = new Map()): BirdGrahaSet => {
   return new BirdGrahaSet(ppData);
 };
 
-/* export class PPRule {
-  from = 's';
+export class PPRule {
+  from = '';
   to = '';
   key = '';
   context = '';
   action = '';
-  onlyAtStart = '';
-  always = '';
-  score = '';
-  max = '';
+  onlyAtStart = false;
+  always = false;
+  score = 0;
+  max = 10;
   siblings = [];
   operator = '';
+  isMaster = false;
 
-  constructor(condRef = null, rs: PredictiveRuleSet, isMaster = false) {
-
+  constructor(rs: PredictiveRuleSet, condRef = null, isMaster = true) {
+    const cond = new Condition(condRef);
+    let scRow = rs.scores.find(sc => sc.key === 'generic');
+    if (!scRow && rs.scores.length > 0) {
+      scRow = rs.scores[0];
+    }
+    if (scRow instanceof Object) {
+      this.score = scRow.value;
+      this.max = scRow.maxScore;
+    }
+    if (cond instanceof Object) {
+      const condKeys = Object.keys(cond);
+      if (condKeys.includes('context')) {
+        this.from = cond.fromMode;
+        this.to = cond.toMode;
+        this.key = cond.c1Key.split('__').pop();
+        this.onlyAtStart = this.key === 'yama_action';
+        this.context = cond.context;
+        this.always = cond.context.startsWith('action_is_');
+        this.action = cond.context.startsWith('action_')
+          ? translateActionToGerund(cond.context.replace('action_', ''))
+          : cond.context;
+      }
+      if (isMaster) {
+        this.isMaster = true;
+        this.operator = rs.conditionSet.operator;
+        if (rs.conditionSet.conditionRefs.length > 1) {
+          this.siblings =
+            rs.conditionSet.conditionRefs.length > 1
+              ? rs.conditionSet.conditionRefs
+                  .slice(1)
+                  .map(c => new PPRule(rs, c, false))
+              : [];
+        }
+      }
+    }
   }
-} */
+}
 
 export const mapPPCondition = (condRef = null, rs: PredictiveRuleSet) => {
-  const cond = new Condition(condRef);
-  let scRow = rs.scores.find(sc => sc.key === 'generic');
-  let score = 0;
-  let max = 10;
-  if (!scRow && rs.scores.length > 0) {
-    scRow = rs.scores[0];
-  }
-  if (scRow instanceof Object) {
-    score = scRow.value;
-    max = scRow.maxScore;
-  }
-  const key = cond.c1Key.split('__').pop();
-  const onlyAtStart = key === 'yama_action';
-  const context = cond.context;
-  const always = context.startsWith('action_is_');
-  const action = cond.context.startsWith('action_')
-    ? translateActionToGerund(cond.context.replace('action_', ''))
-    : cond.context;
-  return {
-    from: cond.fromMode,
-    to: cond.toMode,
-    c1Key: cond.c1Key,
-    key,
-    context,
-    action,
-    onlyAtStart,
-    always,
-    score,
-    max,
-  };
+  return new PPRule(rs, condRef, true);
 };
 
 /* const transitContexts = [
@@ -1791,7 +1797,7 @@ export const calculatePanchaPakshiData = async (
         : [];
       data.set('numSubMatches', matchedRules.length);
       data.set('hasSubMatches', hasSubs);
-      data.set('matchedRules', matchedRules);
+      data.set('rules', rules);
 
       const periods = allYamasWithSubs.map(subs => {
         let yamaScore = 0;

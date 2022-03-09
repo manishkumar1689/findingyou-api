@@ -129,13 +129,9 @@ import {
   assessChart,
   compatibilityResultSetHasScores,
   Condition,
-  matchContextType,
   matchOrbFromGrid,
-  matchPPTransitBirdGraha,
-  matchPPTransitRule,
   PredictiveRule,
   Protocol,
-  translateActionToGerund,
 } from './lib/models/protocol-models';
 import {
   extractCorePlaceNames,
@@ -150,11 +146,7 @@ import { TagDTO } from './dto/tag.dto';
 import { RuleSetDTO } from '../setting/dto/rule-set.dto';
 import { SingleCore } from './interfaces/single-core';
 import { AssignPairedDTO } from './dto/assign-paired.dto';
-import {
-  hasDikBala,
-  matchDikBalaTransition,
-  matchPlanetNum,
-} from './lib/settings/graha-values';
+import { matchPlanetNum } from './lib/settings/graha-values';
 import { CreateUserDTO } from '../user/dto/create-user.dto';
 import {
   assignDashaBalances,
