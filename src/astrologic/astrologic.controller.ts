@@ -425,8 +425,6 @@ export class AstrologicController {
     if (chartRef.includes('@') && chartRef.includes('.')) {
       chartID = await this.astrologicService.getChartIDByEmail(chartRef);
     }
-
-    console.log(notEmptyString(chartID), typeof chartID);
     if (notEmptyString(chartID) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const { dtUtc, jd } = matchJdAndDatetime(dt);
