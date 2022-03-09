@@ -1731,17 +1731,17 @@ export const calculatePanchaPakshiData = async (
           const trKey = toTransitKey(r.context);
           if (r.key.includes('ing_') && r.key.startsWith('yama')) {
             const actKey = r.key.split('_')[1];
-            subs = allSubs
+            allSubs
               .filter(s => s.key === actKey)
               .filter(s => {
                 const relRows = relTransItems.filter(rt =>
                   s.rulers.includes(rt.key),
                 );
-                return relRows.some(rr => {
+                relRows.forEach(rr => {
                   if (Object.keys(rr).includes(trKey)) {
-                    return rr[trKey].jd >= s.start && rr[trKey].jd < s.end;
-                  } else {
-                    return false;
+                    if (rr[trKey].jd >= s.start && rr[trKey].jd < s.end) {
+                      matchedRanges.push(matchTransitionRange(trKey, rr));
+                    }
                   }
                 });
               });
