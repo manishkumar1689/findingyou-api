@@ -1747,6 +1747,10 @@ export const calculatePanchaPakshiData = async (
               });
           } else if (r.key.startsWith('birth_bird_')) {
             grahaKeys = birdGrahaSet.matchGrahas('birth', true);
+          } else if (r.key.includes('ruling_bird_')) {
+            grahaKeys = birdGrahaSet.matchGrahas('ruling', true);
+          } else if (r.key.includes('dying_bird_')) {
+            grahaKeys = birdGrahaSet.matchGrahas('dying', true);
           }
         }
         if (isTr) {
