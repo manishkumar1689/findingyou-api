@@ -1440,6 +1440,24 @@ const mapBirdSet = (ppData: Map<string, any> = new Map()): BirdGrahaSet => {
   return new BirdGrahaSet(ppData);
 };
 
+/* export class PPRule {
+  from = 's';
+  to = '';
+  key = '';
+  context = '';
+  action = '';
+  onlyAtStart = '';
+  always = '';
+  score = '';
+  max = '';
+  siblings = [];
+  operator = '';
+
+  constructor(condRef = null, rs: PredictiveRuleSet, isMaster = false) {
+
+  }
+} */
+
 export const mapPPCondition = (condRef = null, rs: PredictiveRuleSet) => {
   const cond = new Condition(condRef);
   let scRow = rs.scores.find(sc => sc.key === 'generic');

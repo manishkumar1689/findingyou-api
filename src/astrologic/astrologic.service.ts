@@ -20,6 +20,7 @@ import roddenScaleValues, {
 } from './lib/settings/rodden-scale-values';
 import {
   addOrbRangeMatchStep,
+  buildChartLookupPath,
   buildLngRanges,
   buildPairedChartLookupPath,
   buildPairedChartProjection,
@@ -1086,6 +1087,29 @@ export class AstrologicService {
       .then(c => (chart = c))
       .catch(console.log);
     return chart;
+  }
+
+  async getChartIDByEmail(email: string): Promise<string> {
+    const lookupSteps = buildChartLookupPath();
+    const emailRgx = new RegExp('^' + email, 'i');
+    const rows = await this.chartModel.aggregate([
+      ...lookupSteps,
+      {
+        $match: {
+          isDefaultBirthChart: true,
+          'user.identifier': emailRgx,
+        },
+      },
+      {
+        $project: {
+          id: '$_id',
+        },
+      },
+    ]);
+    if (rows.length > 0) {
+      return rows[0].id.toString();
+    }
+    return '';
   }
 
   // get chart by ID

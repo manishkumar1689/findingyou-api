@@ -403,10 +403,10 @@ export class AstrologicController {
   /*
     #mobile
   */
-  @Get('pancha-pakshi/:chartID/:loc/:dt?/:mode?')
+  @Get('pancha-pakshi/:chartRef/:loc/:dt?/:mode?')
   async panchaPanchaDaySet(
     @Res() res,
-    @Param('chartID') chartID,
+    @Param('chartRef') chartRef,
     @Param('loc') loc,
     @Param('dt') dt,
     @Param('mode') mode,
@@ -421,11 +421,15 @@ export class AstrologicController {
     const fetchNightAndDay = ['dual', 'trans', 'rules'].includes(mode);
     const showTransitions = ['trans', 'rules'].includes(mode);
     const processRules = mode === 'rules';
+    let chartID = chartRef;
+    if (chartRef.includes('@') && chartRef.includes('.')) {
+      chartID = await this.astrologicService.getChartIDByEmail(chartRef);
+    }
+
+    console.log(notEmptyString(chartID), typeof chartID);
     if (notEmptyString(chartID) && notEmptyString(loc, 3)) {
       const geo = locStringToGeo(loc);
       const { dtUtc, jd } = matchJdAndDatetime(dt);
-      data.set('jd', jd);
-      data.set('dtUtc', dtUtc);
       const chartData = await this.astrologicService.getChart(chartID);
       const hasChart = chartData instanceof Model;
       const valid = hasChart && chartData.grahas.length > 1;
@@ -448,6 +452,8 @@ export class AstrologicController {
           status = HttpStatus.OK;
         }
       }
+      data.set('jd', jd);
+      data.set('dtUtc', dtUtc);
     } else {
       data.set('message', 'Invalid parameters');
     }

@@ -288,7 +288,7 @@ export const buildChartLookupPath = () => {
       },
     },
     {
-      $unwind: 'user',
+      $unwind: '$user',
     },
   ];
 };
