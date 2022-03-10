@@ -116,6 +116,16 @@ export const buildProgressBodySets = async (
   return progressSets;
 };
 
+export const buildCurrentProgressPositions = async (
+  birthJd = 0,
+  currJd = 0,
+  grahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa'],
+) => {
+  const progJd = toProgressionJD(birthJd, currJd);
+  const bodies = await calcLngsJd(progJd, grahaKeys);
+  return bodies;
+};
+
 export const buildProgressSetPairs = async (
   jd1 = 0,
   jd2 = 0,
