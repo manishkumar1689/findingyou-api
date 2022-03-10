@@ -14,7 +14,7 @@ import {
   Condition,
 } from '../models/protocol-models';
 import { matchDikBalaTransition } from './graha-values';
-import { notEmptyString } from '../../../lib/validators';
+import { isNumeric, notEmptyString } from '../../../lib/validators';
 import { GeoLoc } from '../models/geo-loc';
 import { matchCurrentDashaLord } from '../models/dasha-set';
 import { PredictiveRuleSet } from '../../../setting/interfaces/predictive-rule-set.interface';
@@ -1473,9 +1473,15 @@ export class PPRule {
         this.onlyAtStart = this.key === 'yama_action';
         this.context = cond.context;
         this.always = cond.context.startsWith('action_is_');
-        this.action = cond.context.startsWith('action_')
-          ? translateActionToGerund(cond.context.replace('action_', ''))
-          : cond.context;
+        if (cond.context.startsWith('action_')) {
+          this.action = translateActionToGerund(
+            cond.context.replace('action_', ''),
+          );
+        } else if (this.key.includes('ing_') && this.key.startsWith('yama_')) {
+          this.action = this.key.replace(/^yama_([a-z]*?ing)_[a-z]+$/, '$1');
+        } else {
+          this.action = cond.context;
+        }
       }
       if (isMaster) {
         this.isMaster = true;
@@ -1617,6 +1623,14 @@ export const matchTransitionPeak = (rk = '', relTr: TransitionData): number => {
     default:
       return -1;
   }
+};
+
+const mapLords = (chart: Chart, key = '') => {
+  const houseNums = key
+    .split('_')
+    .filter(isNumeric)
+    .map(n => parseInt(n, 10));
+  return houseNums.map(n => chart.matchLord(n));
 };
 
 export const matchTransitionRange = (
@@ -1786,7 +1800,14 @@ export const calculatePanchaPakshiData = async (
             r.key,
           );
         }
-
+        const isLord = r.context.startsWith('lord');
+        if (isLord) {
+          grahaKeys = mapLords(chart, r.context);
+          subs = allSubs.filter(
+            s =>
+              s.key === r.action && s.rulers.some(gk => grahaKeys.includes(gk)),
+          );
+        }
         const matched =
           matchedRanges.length > 0 || pp2.valid || subs.length > 0;
         if (matched) {
@@ -1798,6 +1819,7 @@ export const calculatePanchaPakshiData = async (
           rData.push({
             rule: r,
             isTr,
+            isLord,
             matchedRanges,
             matched,
             subs,
@@ -1829,6 +1851,7 @@ export const calculatePanchaPakshiData = async (
             }
           }
           let subRuleScore = 0;
+
           if (hasSubs) {
             const matchedSubRules = matchedRules
               .map(mr => {
