@@ -1723,7 +1723,7 @@ export const calculatePanchaPakshiData = async (
       const birdGrahaSet = mapBirdSet(data);
       data.set('valid', true);
       for (const r of transitRules) {
-        const pp2 = await matchPPTransitRule(
+        /* const pp2 = await matchPPTransitRule(
           jd,
           geo,
           ppData,
@@ -1731,7 +1731,7 @@ export const calculatePanchaPakshiData = async (
           r.key,
           r.context,
           r.from,
-        );
+        ); */
         const isTr = ['as', 'ds', 'ic', 'mc', 'dik_bala_transition'].includes(
           r.action,
         );
@@ -1821,14 +1821,14 @@ export const calculatePanchaPakshiData = async (
               s.key === r.action && s.rulers.some(gk => grahaKeys.includes(gk)),
           );
         }
-        const matched =
-          matchedRanges.length > 0 || pp2.valid || subs.length > 0;
+        /* const matched = matchedRanges.length > 0 || pp2.valid || subs.length > 0; */
+        const matched = matchedRanges.length > 0 || subs.length > 0;
         if (matched) {
-          if (subs.length < 1) {
+          /* if (subs.length < 1) {
             if (pp2.yama instanceof Object && pp2.yama.subs instanceof Array) {
               subs = pp2.yama.subs;
             }
-          }
+          } */
           rData.push({
             rule: r,
             isTr,
@@ -1837,7 +1837,6 @@ export const calculatePanchaPakshiData = async (
             matched,
             subs,
             trRef,
-            data: pp2,
           });
         }
       }
