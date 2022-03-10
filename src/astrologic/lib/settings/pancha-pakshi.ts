@@ -1858,7 +1858,7 @@ export const calculatePanchaPakshiData = async (
             if (r.action === sub.key) {
               if (r.onlyAtStart && si === 0) {
                 yamaScore = r.score;
-              } else {
+              } else if (!r.onlyAtStart) {
                 subScore += r.score;
               }
             }
