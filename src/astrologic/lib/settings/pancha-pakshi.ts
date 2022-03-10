@@ -1801,8 +1801,21 @@ export const calculatePanchaPakshiData = async (
           );
         }
         const isLord = r.context.startsWith('lord');
+        let filterByGrahasAndAction = isLord;
         if (isLord) {
           grahaKeys = mapLords(chart, r.context);
+        } else if (r.context === 'yoga_karaka') {
+          grahaKeys = [chart.yogaKaraka];
+          filterByGrahasAndAction = true;
+        } else if (r.context.endsWith('yogi_graha')) {
+          const objKey = r.context.includes('ayayogi') ? 'ayayogi' : 'yogi';
+          const gk = chart.matchObject(objKey);
+          if (gk) {
+            grahaKeys = [gk];
+            filterByGrahasAndAction = true;
+          }
+        }
+        if (filterByGrahasAndAction) {
           subs = allSubs.filter(
             s =>
               s.key === r.action && s.rulers.some(gk => grahaKeys.includes(gk)),
