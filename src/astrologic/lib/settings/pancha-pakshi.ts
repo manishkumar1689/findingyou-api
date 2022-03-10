@@ -1808,7 +1808,7 @@ export const calculatePanchaPakshiData = async (
           grahaKeys = [chart.yogaKaraka];
           filterByGrahasAndAction = true;
         } else if (r.context.endsWith('yogi_graha')) {
-          const objKey = r.context.includes('ayayogi') ? 'ayayogi' : 'yogi';
+          const objKey = r.context.includes('avayogi') ? 'avayogi' : 'yogi';
           const gk = chart.matchObject(objKey);
           if (gk) {
             grahaKeys = [gk];
