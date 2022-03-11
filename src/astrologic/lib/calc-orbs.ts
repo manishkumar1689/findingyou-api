@@ -1,5 +1,6 @@
 import { mapLngRange } from '../../lib/query-builders';
-import { ProgressResult } from './interfaces';
+import { relativeAngle } from './core';
+import { KeyLng, ProgressResult } from './interfaces';
 
 export interface AspectRow {
   key: string;
@@ -128,7 +129,7 @@ export const calcAspect = (
 export const buildCoreAspects = (
   p1Set: ProgressResult,
   p2Set: ProgressResult,
-  tolerance = 2.1,
+  tolerance = 2 + 1 / 60,
   showAll = false,
 ): AspectResultSet[] => {
   const p2Keys = Object.keys(p2Set.bodies);
@@ -306,4 +307,41 @@ export const calcOrbByMatrix = (
     orb,
     deg: targetDeg,
   };
+};
+
+export const calcAllAspectsFromLngs = (
+  firstSet: KeyLng[] = [],
+  secondSet: KeyLng[] = [],
+  aspectRows: AspectRow[] = [],
+  orb = 2 + 1 / 60,
+  notSame = false,
+  onlyWithMatches = true,
+) => {
+  const aspects = [];
+  firstSet.forEach(r1 => {
+    let diffs = [];
+    secondSet.forEach(r2 => {
+      const excludeSame = notSame && r1.key === r2.key;
+      if (!excludeSame) {
+        const angle = relativeAngle(r1.lng, r2.lng);
+        const matches = aspectRows
+          .map(ar => {
+            const diff = calcDist360(angle, ar.deg);
+            return {
+              key: ar.key,
+              diff,
+            };
+          })
+          .filter(ar => ar.diff < orb && diffs.includes(ar.diff) === false);
+        diffs = diffs.concat(matches.map(match => match.diff));
+        aspects.push({
+          k1: r1.key,
+          k2: r2.key,
+          value: angle,
+          matches,
+        });
+      }
+    });
+  });
+  return aspects.filter(as => !onlyWithMatches || as.matches.length > 0);
 };

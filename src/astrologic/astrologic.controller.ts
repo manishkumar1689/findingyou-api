@@ -125,7 +125,12 @@ import {
   Chart,
   generateBasicChart,
 } from './lib/models/chart';
-import { AspectSet, calcOrb } from './lib/calc-orbs';
+import {
+  aspects,
+  AspectSet,
+  calcOrb,
+  calcAllAspectsFromLngs,
+} from './lib/calc-orbs';
 import { AspectSetDTO } from './dto/aspect-set.dto';
 import {
   assessChart,
@@ -775,7 +780,7 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-  @Get('relative-postions')
+  @Get('current-trends')
   async getRelativePositions(@Res() res, @Query() query) {
     const params = query instanceof Object ? query : {};
     const paramKeys = Object.keys(params);
@@ -799,6 +804,7 @@ export class AstrologicController {
         grahaKeys = gks;
       }
     }
+    const aspectKeys = ['opposition', 'trine', 'square', 'conjunction'];
     const rsMap: Map<string, any> = new Map();
     rsMap.set('jd', jd);
     rsMap.set('dtUtc', dtUtc);
@@ -819,22 +825,59 @@ export class AstrologicController {
             lng,
           };
         });
+        const filteredBirthPos = birthPos.filter(r =>
+          grahaKeys.includes(r.key),
+        );
         birthPos.push({ key: 'as', lng: chart.ascendant });
-        const sunMcRow = chart.sun.transitions.find(tr => tr.type === 'mc');
+        /* const sunMcRow = chart.sun.transitions.find(tr => tr.type === 'mc');
         if (sunMcRow instanceof Object) {
           const sunPos = await calcLngJd(sunMcRow.jd, 'su');
           rsMap.set('sunMc', {
             jd: sunMcRow.jd,
             lng: sunPos,
           });
-        }
+        } */
+        rsMap.set('mc', chart.mc);
         rsMap.set('birth', birthPos);
         const progressPos = await buildCurrentProgressPositions(
           chart.jd,
           jd,
           grahaKeys,
         );
+
+        const filteredAspects = aspects.filter(as =>
+          aspectKeys.includes(as.key),
+        );
         rsMap.set('progress', progressPos);
+        const currentToBirth = calcAllAspectsFromLngs(
+          currentPos,
+          filteredBirthPos,
+          filteredAspects,
+          1,
+        );
+        const currentToProgressed = calcAllAspectsFromLngs(
+          currentPos,
+          progressPos,
+          filteredAspects,
+          1,
+        );
+        const progressedToBirth = calcAllAspectsFromLngs(
+          progressPos,
+          filteredBirthPos,
+          filteredAspects,
+          2 + 1 / 60,
+        );
+        const progressedToProgressed = calcAllAspectsFromLngs(
+          progressPos,
+          progressPos,
+          filteredAspects,
+          2 + 1 / 60,
+          true,
+        );
+        rsMap.set('currentToBirth', currentToBirth);
+        rsMap.set('currentToProgressed', currentToProgressed);
+        rsMap.set('progressedToBirth', progressedToBirth);
+        rsMap.set('progressedToProgressed', progressedToProgressed);
       }
     }
     return res.json(Object.fromEntries(rsMap.entries()));
