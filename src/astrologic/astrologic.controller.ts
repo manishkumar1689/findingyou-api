@@ -797,18 +797,15 @@ export class AstrologicController {
       cid = await this.astrologicService.getChartIDByEmail(params.email);
     }
 
-    let grahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa'];
-    if (paramKeys.includes('grahas')) {
-      const gks = params.grahas.split(',').filter(gk => gk.length === 2);
-      if (gks.length > 1) {
-        grahaKeys = gks;
-      }
-    }
+    const baseGrahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa'];
+
+    const currentGrahaKeys = [...baseGrahaKeys, 'ur', 'ne', 'pl'];
+
     const aspectKeys = ['opposition', 'trine', 'square', 'conjunction'];
     const rsMap: Map<string, any> = new Map();
     rsMap.set('jd', jd);
     rsMap.set('dtUtc', dtUtc);
-    const currentPos = await calcLngsJd(jd, grahaKeys);
+    const currentPos = await calcLngsJd(jd, currentGrahaKeys);
 
     rsMap.set('current', currentPos);
 
@@ -825,24 +822,13 @@ export class AstrologicController {
             lng,
           };
         });
-        const filteredBirthPos = birthPos.filter(r =>
-          grahaKeys.includes(r.key),
-        );
         birthPos.push({ key: 'as', lng: chart.ascendant });
-        /* const sunMcRow = chart.sun.transitions.find(tr => tr.type === 'mc');
-        if (sunMcRow instanceof Object) {
-          const sunPos = await calcLngJd(sunMcRow.jd, 'su');
-          rsMap.set('sunMc', {
-            jd: sunMcRow.jd,
-            lng: sunPos,
-          });
-        } */
-        rsMap.set('mc', chart.mc);
+        birthPos.push({ key: 'mc', lng: chart.mc });
         rsMap.set('birth', birthPos);
         const progressPos = await buildCurrentProgressPositions(
           chart.jd,
           jd,
-          grahaKeys,
+          baseGrahaKeys,
         );
 
         const filteredAspects = aspects.filter(as =>
@@ -851,7 +837,7 @@ export class AstrologicController {
         rsMap.set('progress', progressPos);
         const currentToBirth = calcAllAspectsFromLngs(
           currentPos,
-          filteredBirthPos,
+          birthPos,
           filteredAspects,
           1,
         );
@@ -863,7 +849,7 @@ export class AstrologicController {
         );
         const progressedToBirth = calcAllAspectsFromLngs(
           progressPos,
-          filteredBirthPos,
+          birthPos,
           filteredAspects,
           2 + 1 / 60,
         );

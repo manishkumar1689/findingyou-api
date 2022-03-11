@@ -83,11 +83,11 @@ swisseph.swe_set_sid_mode(swisseph[ephemerisDefaults.sid_mode], 0, 0);
 
 const degreeToSign = deg => Math.floor(deg / 30) + 1;
 
-const addCycleInclusive = (one = 0, two = 0, radix = 0) => {
+const addCycleInclusive = (one = 0, two = 0, radix = 12) => {
   return ((one - 1 + two) % radix) + 1;
 };
 
-const subtractCycleInclusive = (one, two, radix) => {
+const subtractCycleInclusive = (one = 0, two = 0, radix = 12) => {
   return ((one - 1 - two + radix) % radix) + 1;
 };
 
