@@ -1,5 +1,5 @@
 import { mapLngRange } from '../../lib/query-builders';
-import { calcLngsJd, relativeAngle } from './core';
+import { calcAyanamsha, calcLngsJd, relativeAngle } from './core';
 import { KeyLng, ProgressResult } from './interfaces';
 import { Chart } from './models/chart';
 import { buildCurrentProgressPositions } from './settings/progression';
@@ -57,6 +57,7 @@ export interface PairMatchSet {
   k1: string;
   k2: string;
   value: number;
+  lngs?: number[];
   matches: AspectMatchItem[];
 }
 
@@ -358,6 +359,7 @@ export const calcAllAspectsFromLngs = (
           k1: r1.key,
           k2: r2.key,
           value: angle,
+          lngs: [r1.lng, r2.lng],
           matches: matches.map(row => {
             const { key, diff } = row;
             return { key, diff };
@@ -395,11 +397,22 @@ const mapAspectMatchPairsAndKeys = (
       rm.key,
       row.k2,
     );
-    const { k1, k2, value } = row;
+    const reverse = typePair.length === 2 && typePair[0] === typePair[1];
+    if (reverse && snippetKey.length === 2) {
+      const subKey = snippetKey[1];
+      snippetKey.push(
+        subKey
+          .split('_')
+          .reverse()
+          .join('_'),
+      );
+    }
+    const { k1, k2, value, lngs } = row;
     return {
       k1,
       k2,
       value,
+      lngs,
       ...rm,
       snippetKey,
     };
@@ -408,6 +421,8 @@ const mapAspectMatchPairsAndKeys = (
 export const buildCurrentTrendsData = async (
   jd = 0,
   chart: Chart = new Chart(),
+  showMode = 'matches',
+  ayanamsaKey = 'true_citra',
 ) => {
   const baseGrahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa'];
 
@@ -415,11 +430,12 @@ export const buildCurrentTrendsData = async (
 
   const birthGrahaKeys = [...currentGrahaKeys, 'mc', 'as'];
 
+  const showPositions = ['charts', 'all'].includes(showMode);
+  const showAspectGroups = ['groups', 'all'].includes(showMode);
+
   const aspectKeys = ['opposition', 'trine', 'square', 'conjunction'];
   const rsMap: Map<string, any> = new Map();
   const currentPos = await calcLngsJd(jd, currentGrahaKeys);
-  rsMap.set('birth', []);
-  rsMap.set('current', currentPos);
 
   let birthPos = [];
   birthPos = chart.grahas.map(gr => {
@@ -431,18 +447,33 @@ export const buildCurrentTrendsData = async (
   });
   birthPos.push({ key: 'as', lng: chart.ascendant });
   birthPos.push({ key: 'mc', lng: chart.mc });
+
   const filteredBirthPos = birthPos.filter(row =>
     birthGrahaKeys.includes(row.key),
   );
-  rsMap.set('birth', filteredBirthPos);
-  const progressPos = await buildCurrentProgressPositions(
+  const progressData = await buildCurrentProgressPositions(
     chart.jd,
     jd,
     baseGrahaKeys,
   );
-
+  const progressPos = progressData.bodies;
   const filteredAspects = aspects.filter(as => aspectKeys.includes(as.key));
-  rsMap.set('progress', progressPos);
+  const ayaRow = chart.ayanamshas.find(row => row.key === ayanamsaKey);
+  const currentAya = await calcAyanamsha(jd, ayanamsaKey);
+  const progAya = await calcAyanamsha(progressData.pd, ayanamsaKey);
+  rsMap.set('ayanamshas', {
+    type: ayaRow.key,
+    natal: ayaRow.value,
+    transit: currentAya,
+    progressed: progAya,
+  });
+  rsMap.set('ayanamsha', ayaRow);
+  if (showPositions) {
+    rsMap.set('current', currentPos);
+    rsMap.set('birth', filteredBirthPos);
+    rsMap.set('progress', progressPos);
+  }
+
   const currentToBirth = calcAllAspectsFromLngs(
     currentPos,
     filteredBirthPos,
@@ -468,10 +499,13 @@ export const buildCurrentTrendsData = async (
     2 + 1 / 60,
     true,
   );
-  rsMap.set('currentToBirth', currentToBirth);
-  rsMap.set('currentToProgressed', currentToProgressed);
-  rsMap.set('progressedToBirth', progressedToBirth);
-  rsMap.set('progressedToProgressed', progressedToProgressed);
+  if (showAspectGroups) {
+    rsMap.set('currentToBirth', currentToBirth);
+    rsMap.set('currentToProgressed', currentToProgressed);
+    rsMap.set('progressedToBirth', progressedToBirth);
+    rsMap.set('progressedToProgressed', progressedToProgressed);
+  }
+
   const matches1 = currentToBirth.map(row =>
     mapAspectMatchPairsAndKeys(row, ['transit', 'natal']),
   );

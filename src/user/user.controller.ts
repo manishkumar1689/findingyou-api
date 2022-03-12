@@ -1621,6 +1621,12 @@ export class UserController {
     } else if (paramKeys.includes('user')) {
       cid = await this.astrologicService.getChartIDByUser(params.user);
     }
+
+    let showMode = 'matches';
+    if (paramKeys.includes('mode')) {
+      showMode = params.mode;
+    }
+
     let rsMap: Map<string, any> = new Map();
     rsMap.set('jd', jd);
     rsMap.set('dtUtc', dtUtc);
@@ -1630,7 +1636,44 @@ export class UserController {
 
       if (chartData instanceof Model) {
         const chart = new Chart(chartData.toObject());
-        const ctData = await buildCurrentTrendsData(jd, chart);
+        const ctData = await buildCurrentTrendsData(jd, chart, showMode);
+        const matches = ctData.get('matches');
+        if (matches instanceof Array) {
+          const keys = matches.map(m => {
+            const [cat, sub] = m.snippetKey;
+            return [cat, sub].join('__');
+          });
+          const snippets = await this.snippetService.getByKeys(
+            keys,
+            'current_trends',
+          );
+          const fullMatches = matches.map(m => {
+            const { k1, k2, value, key, diff, lngs, snippetKey } = m;
+            const category = ['current_trends', snippetKey[0]].join('__');
+            const fullKeys = [[category, snippetKey[1]]];
+            if (m.snippetKey.length > 2) {
+              fullKeys.push([category, snippetKey[2]]);
+            }
+            const sn = snippets.find(sn => sn.key);
+            let text = '';
+            if (sn instanceof Object) {
+              text = this.snippetService.extractSnippetText(sn, 'en');
+            }
+            return {
+              category: snippetKey[0],
+              k1,
+              k2,
+              value,
+              lngs,
+              key,
+              diff,
+              text,
+            };
+          });
+          if (fullMatches.length > 0) {
+            ctData.set('matches', fullMatches);
+          }
+        }
         rsMap = new Map([...rsMap, ...ctData]);
       }
     }

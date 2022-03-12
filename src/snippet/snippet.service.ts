@@ -154,7 +154,28 @@ export class SnippetService {
 
   async getByCategory(prefix = ''): Promise<Snippet[]> {
     const rgx = new RegExp('^' + prefix.replace(/__$/, '') + '__');
-    return await this.snippetModel.find({ key: rgx }).exec();
+    return await this.snippetModel.find({ key: rgx });
+  }
+
+  async getByKeys(
+    keys: string[] = [],
+    prefix = '',
+    prefixIsCategory = false,
+  ): Promise<Snippet[]> {
+    const hasPrefix = notEmptyString(prefix, 2);
+    const fullPrefix = hasPrefix
+      ? prefixIsCategory
+        ? prefix + '_'
+        : prefix
+      : '';
+    const fullKeys = hasPrefix
+      ? keys.map(k => [fullPrefix, k].join('_'))
+      : keys;
+    return await this.snippetModel.find({ key: { $in: fullKeys } });
+  }
+
+  async getByKeyInCategory(keys: string[] = [], category = '') {
+    return await this.getByKeys(keys, category, true);
   }
 
   // post a single Snippet

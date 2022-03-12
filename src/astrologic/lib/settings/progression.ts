@@ -121,9 +121,9 @@ export const buildCurrentProgressPositions = async (
   currJd = 0,
   grahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa'],
 ) => {
-  const progJd = toProgressionJD(birthJd, currJd);
-  const bodies = await calcLngsJd(progJd, grahaKeys);
-  return bodies;
+  const pd = toProgressionJD(birthJd, currJd);
+  const bodies = await calcLngsJd(pd, grahaKeys);
+  return { pd, bodies };
 };
 
 export const buildProgressSetPairs = async (
