@@ -1,6 +1,8 @@
 import { mapLngRange } from '../../lib/query-builders';
-import { relativeAngle } from './core';
+import { calcLngsJd, relativeAngle } from './core';
 import { KeyLng, ProgressResult } from './interfaces';
+import { Chart } from './models/chart';
+import { buildCurrentProgressPositions } from './settings/progression';
 
 export interface AspectRow {
   key: string;
@@ -43,6 +45,19 @@ export interface AspectResult {
 export interface AspectResultSet {
   key: string;
   results: AspectResult[];
+}
+
+export interface AspectMatchItem {
+  key: string;
+  diff: number;
+  diffKey?: string;
+}
+
+export interface PairMatchSet {
+  k1: string;
+  k2: string;
+  value: number;
+  matches: AspectMatchItem[];
 }
 
 export const orbMatrix: Array<Array<number>> = [
@@ -319,29 +334,165 @@ export const calcAllAspectsFromLngs = (
 ) => {
   const aspects = [];
   firstSet.forEach(r1 => {
-    let diffs = [];
+    let diffKeys = [];
     secondSet.forEach(r2 => {
       const excludeSame = notSame && r1.key === r2.key;
       if (!excludeSame) {
         const angle = relativeAngle(r1.lng, r2.lng);
         const matches = aspectRows
           .map(ar => {
-            const diff = calcDist360(angle, ar.deg);
+            const diff1 = calcDist360(angle, ar.deg);
+            const diff2 = calcDist360(ar.deg, angle);
+            const diff = Math.min(...[diff1, diff2]);
             return {
               key: ar.key,
               diff,
+              diffKey: [ar.key, diff].join('_'),
             };
           })
-          .filter(ar => ar.diff < orb && diffs.includes(ar.diff) === false);
-        diffs = diffs.concat(matches.map(match => match.diff));
+          .filter(
+            ar => ar.diff < orb && diffKeys.includes(ar.diffKey) === false,
+          );
+        diffKeys = diffKeys.concat(matches.map(match => match.diffKey));
         aspects.push({
           k1: r1.key,
           k2: r2.key,
           value: angle,
-          matches,
+          matches: matches.map(row => {
+            const { key, diff } = row;
+            return { key, diff };
+          }),
         });
       }
     });
   });
   return aspects.filter(as => !onlyWithMatches || as.matches.length > 0);
+};
+
+export const buildCurrentTrendsSnippetKeyPair = (
+  pair: string[] = [],
+  k1 = '',
+  aspect = '',
+  k2 = '',
+): string[] => {
+  let subKey = '';
+  let subCat = '';
+  if (pair.length === 2) {
+    subCat = pair.join('_');
+    subKey = [k1, aspect, k2].join('_');
+  }
+  return [subCat, subKey];
+};
+
+const mapAspectMatchPairsAndKeys = (
+  row: PairMatchSet,
+  typePair: string[] = [],
+) =>
+  row.matches.map(rm => {
+    const snippetKey = buildCurrentTrendsSnippetKeyPair(
+      typePair,
+      row.k1,
+      rm.key,
+      row.k2,
+    );
+    const { k1, k2, value } = row;
+    return {
+      k1,
+      k2,
+      value,
+      ...rm,
+      snippetKey,
+    };
+  });
+
+export const buildCurrentTrendsData = async (
+  jd = 0,
+  chart: Chart = new Chart(),
+) => {
+  const baseGrahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa'];
+
+  const currentGrahaKeys = [...baseGrahaKeys, 'ur', 'ne', 'pl'];
+
+  const birthGrahaKeys = [...currentGrahaKeys, 'mc', 'as'];
+
+  const aspectKeys = ['opposition', 'trine', 'square', 'conjunction'];
+  const rsMap: Map<string, any> = new Map();
+  const currentPos = await calcLngsJd(jd, currentGrahaKeys);
+  rsMap.set('birth', []);
+  rsMap.set('current', currentPos);
+
+  let birthPos = [];
+  birthPos = chart.grahas.map(gr => {
+    const { key, lng } = gr;
+    return {
+      key,
+      lng,
+    };
+  });
+  birthPos.push({ key: 'as', lng: chart.ascendant });
+  birthPos.push({ key: 'mc', lng: chart.mc });
+  const filteredBirthPos = birthPos.filter(row =>
+    birthGrahaKeys.includes(row.key),
+  );
+  rsMap.set('birth', filteredBirthPos);
+  const progressPos = await buildCurrentProgressPositions(
+    chart.jd,
+    jd,
+    baseGrahaKeys,
+  );
+
+  const filteredAspects = aspects.filter(as => aspectKeys.includes(as.key));
+  rsMap.set('progress', progressPos);
+  const currentToBirth = calcAllAspectsFromLngs(
+    currentPos,
+    filteredBirthPos,
+    filteredAspects,
+    1,
+  );
+  const currentToProgressed = calcAllAspectsFromLngs(
+    currentPos,
+    progressPos,
+    filteredAspects,
+    1,
+  );
+  const progressedToBirth = calcAllAspectsFromLngs(
+    progressPos,
+    filteredBirthPos,
+    filteredAspects,
+    2 + 1 / 60,
+  );
+  const progressedToProgressed = calcAllAspectsFromLngs(
+    progressPos,
+    progressPos,
+    filteredAspects,
+    2 + 1 / 60,
+    true,
+  );
+  rsMap.set('currentToBirth', currentToBirth);
+  rsMap.set('currentToProgressed', currentToProgressed);
+  rsMap.set('progressedToBirth', progressedToBirth);
+  rsMap.set('progressedToProgressed', progressedToProgressed);
+  const matches1 = currentToBirth.map(row =>
+    mapAspectMatchPairsAndKeys(row, ['transit', 'natal']),
+  );
+
+  const matches2 = currentToProgressed.map(row =>
+    mapAspectMatchPairsAndKeys(row, ['transit', 'progressed']),
+  );
+
+  const matches3 = progressedToBirth.map(row =>
+    mapAspectMatchPairsAndKeys(row, ['progressed', 'natal']),
+  );
+
+  const matches4 = progressedToProgressed.map(row =>
+    mapAspectMatchPairsAndKeys(row, ['progressed', 'progressed']),
+  );
+  const matches = [
+    ...matches1,
+    ...matches2,
+    ...matches3,
+    ...matches4,
+  ].reduce((a, b) => a.concat(b));
+  rsMap.set('matches', matches);
+  return rsMap;
 };

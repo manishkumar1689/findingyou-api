@@ -1089,16 +1089,22 @@ export class AstrologicService {
     return chart;
   }
 
-  async getChartIDByEmail(email: string): Promise<string> {
+  async getChartIDByUserRef(refKey: string, type = 'id'): Promise<string> {
     const lookupSteps = buildChartLookupPath();
-    const emailRgx = new RegExp('^' + email, 'i');
+    const filter: Map<string, any> = new Map();
+    filter.set('isDefaultBirthChart', true);
+    switch (type) {
+      case 'email':
+        filter.set('user.identifier', new RegExp('^' + refKey, 'i'));
+        break;
+      default:
+        filter.set('user', refKey);
+        break;
+    }
     const rows = await this.chartModel.aggregate([
       ...lookupSteps,
       {
-        $match: {
-          isDefaultBirthChart: true,
-          'user.identifier': emailRgx,
-        },
+        $match: Object.fromEntries(filter.entries()),
       },
       {
         $project: {
@@ -1110,6 +1116,14 @@ export class AstrologicService {
       return rows[0].id.toString();
     }
     return '';
+  }
+
+  async getChartIDByEmail(email: string): Promise<string> {
+    return await this.getChartIDByUserRef(email, 'email');
+  }
+
+  async getChartIDByUser(userID: string): Promise<string> {
+    return await this.getChartIDByUserRef(userID, 'id');
   }
 
   // get chart by ID

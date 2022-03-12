@@ -58,8 +58,6 @@ import {
   calcDeclination,
   buildExtendedTransitions,
   calcBaseLngSetJd,
-  calcLngsJd,
-  calcLngJd,
 } from './lib/core';
 import {
   calcAltitudeSE,
@@ -103,7 +101,6 @@ import {
   smartCastFloat,
   smartCastBool,
   roundNumber,
-  simpleObjectToKeyValues,
 } from '../lib/converters';
 import { PairedChartInputDTO } from './dto/paired-chart-input.dto';
 import {
@@ -125,12 +122,7 @@ import {
   Chart,
   generateBasicChart,
 } from './lib/models/chart';
-import {
-  aspects,
-  AspectSet,
-  calcOrb,
-  calcAllAspectsFromLngs,
-} from './lib/calc-orbs';
+import { AspectSet, calcOrb } from './lib/calc-orbs';
 import { AspectSetDTO } from './dto/aspect-set.dto';
 import {
   assessChart,
@@ -181,14 +173,12 @@ import {
 import { PairsSetDTO } from './dto/pairs-set.dto';
 import { randomCompatibilityText } from './lib/settings/compatibility-texts';
 import {
-  buildCurrentProgressPositions,
   buildProgressSetPairs,
   buildSingleProgressSet,
   buildSingleProgressSetKeyValues,
 } from './lib/settings/progression';
 import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
-import { currentJulianDay } from './lib/julian-date';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -778,95 +768,6 @@ export class AstrologicController {
       }
     }
     return res.status(HttpStatus.OK).json(data);
-  }
-
-  @Get('current-trends')
-  async getRelativePositions(@Res() res, @Query() query) {
-    const params = query instanceof Object ? query : {};
-    const paramKeys = Object.keys(params);
-    let dt = '';
-    if (paramKeys.includes('dt')) {
-      dt = params.dt;
-    }
-    const { dtUtc, jd } = matchJdAndDatetime(dt);
-    let cid = '';
-    if (paramKeys.includes('cid')) {
-      cid = params.cid;
-    }
-    if (paramKeys.includes('email')) {
-      cid = await this.astrologicService.getChartIDByEmail(params.email);
-    }
-
-    const baseGrahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa'];
-
-    const currentGrahaKeys = [...baseGrahaKeys, 'ur', 'ne', 'pl'];
-
-    const aspectKeys = ['opposition', 'trine', 'square', 'conjunction'];
-    const rsMap: Map<string, any> = new Map();
-    rsMap.set('jd', jd);
-    rsMap.set('dtUtc', dtUtc);
-    const currentPos = await calcLngsJd(jd, currentGrahaKeys);
-
-    rsMap.set('current', currentPos);
-
-    let birthPos = [];
-    if (isValidObjectId(cid)) {
-      const chartData = await this.astrologicService.getChart(cid);
-
-      if (chartData instanceof Model) {
-        const chart = new Chart(chartData.toObject());
-        birthPos = chart.grahas.map(gr => {
-          const { key, lng } = gr;
-          return {
-            key,
-            lng,
-          };
-        });
-        birthPos.push({ key: 'as', lng: chart.ascendant });
-        birthPos.push({ key: 'mc', lng: chart.mc });
-        rsMap.set('birth', birthPos);
-        const progressPos = await buildCurrentProgressPositions(
-          chart.jd,
-          jd,
-          baseGrahaKeys,
-        );
-
-        const filteredAspects = aspects.filter(as =>
-          aspectKeys.includes(as.key),
-        );
-        rsMap.set('progress', progressPos);
-        const currentToBirth = calcAllAspectsFromLngs(
-          currentPos,
-          birthPos,
-          filteredAspects,
-          1,
-        );
-        const currentToProgressed = calcAllAspectsFromLngs(
-          currentPos,
-          progressPos,
-          filteredAspects,
-          1,
-        );
-        const progressedToBirth = calcAllAspectsFromLngs(
-          progressPos,
-          birthPos,
-          filteredAspects,
-          2 + 1 / 60,
-        );
-        const progressedToProgressed = calcAllAspectsFromLngs(
-          progressPos,
-          progressPos,
-          filteredAspects,
-          2 + 1 / 60,
-          true,
-        );
-        rsMap.set('currentToBirth', currentToBirth);
-        rsMap.set('currentToProgressed', currentToProgressed);
-        rsMap.set('progressedToBirth', progressedToBirth);
-        rsMap.set('progressedToProgressed', progressedToProgressed);
-      }
-    }
-    return res.json(Object.fromEntries(rsMap.entries()));
   }
 
   @Get('next-p2/:chartID/:showISO?/:grahas?')

@@ -86,7 +86,10 @@ import {
 } from '../lib/notifications';
 import { isValidObjectId, Model } from 'mongoose';
 import { ActiveStatusDTO } from './dto/active-status.dto';
-import { dateAgoString } from '../astrologic/lib/date-funcs';
+import {
+  dateAgoString,
+  matchJdAndDatetime,
+} from '../astrologic/lib/date-funcs';
 import {
   cleanSnippet,
   mapSimplePreferenceOption,
@@ -117,7 +120,10 @@ import { PaymentDTO } from './dto/payment.dto';
 import { toWords } from '../astrologic/lib/helpers';
 import permissionValues from './settings/permissions';
 import { currentJulianDay } from '../astrologic/lib/julian-date';
-import { buildCoreAspects } from '../astrologic/lib/calc-orbs';
+import {
+  buildCoreAspects,
+  buildCurrentTrendsData,
+} from '../astrologic/lib/calc-orbs';
 import { LogoutDTO } from './dto/logout.dto';
 import { ResetDTO } from './dto/reset.dto';
 import { EmailParamsDTO } from './dto/email-params.dto';
@@ -1595,6 +1601,40 @@ export class UserController {
       ...userObj,
     };
     return res.status(HStatus).json(data);
+  }
+
+  @Get('current-trends')
+  async getRelativePositions(@Res() res, @Query() query) {
+    const params = query instanceof Object ? query : {};
+    const paramKeys = Object.keys(params);
+    let dt = '';
+    if (paramKeys.includes('dt')) {
+      dt = params.dt;
+    }
+    const { dtUtc, jd } = matchJdAndDatetime(dt);
+    let cid = '';
+    if (paramKeys.includes('cid')) {
+      cid = params.cid;
+    }
+    if (paramKeys.includes('email')) {
+      cid = await this.astrologicService.getChartIDByEmail(params.email);
+    } else if (paramKeys.includes('user')) {
+      cid = await this.astrologicService.getChartIDByUser(params.user);
+    }
+    let rsMap: Map<string, any> = new Map();
+    rsMap.set('jd', jd);
+    rsMap.set('dtUtc', dtUtc);
+
+    if (isValidObjectId(cid)) {
+      const chartData = await this.astrologicService.getChart(cid);
+
+      if (chartData instanceof Model) {
+        const chart = new Chart(chartData.toObject());
+        const ctData = await buildCurrentTrendsData(jd, chart);
+        rsMap = new Map([...rsMap, ...ctData]);
+      }
+    }
+    return res.json(Object.fromEntries(rsMap.entries()));
   }
 
   /*
