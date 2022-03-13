@@ -423,6 +423,7 @@ export const buildCurrentTrendsData = async (
   chart: Chart = new Chart(),
   showMode = 'matches',
   ayanamsaKey = 'true_citra',
+  tropical = true,
 ) => {
   const baseGrahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa'];
 
@@ -461,13 +462,14 @@ export const buildCurrentTrendsData = async (
   const ayaRow = chart.ayanamshas.find(row => row.key === ayanamsaKey);
   const currentAya = await calcAyanamsha(jd, ayanamsaKey);
   const progAya = await calcAyanamsha(progressData.pd, ayanamsaKey);
+  const lngMode = tropical ? 'tropical' : 'sidereal';
+  rsMap.set('lngMode', lngMode);
   rsMap.set('ayanamshas', {
-    type: ayaRow.key,
+    key: ayaRow.key,
     natal: ayaRow.value,
     transit: currentAya,
     progressed: progAya,
   });
-  rsMap.set('ayanamsha', ayaRow);
   if (showPositions) {
     rsMap.set('current', currentPos);
     rsMap.set('birth', filteredBirthPos);
