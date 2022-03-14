@@ -407,6 +407,7 @@ const mapAspectMatchPairsAndKeys = (
       row.k2,
     );
     const reverse = typePair.length === 2 && typePair[0] === typePair[1];
+    const relation = typePair.join('_');
     if (reverse && snippetKey.length === 2) {
       const subKey = snippetKey[1];
       snippetKey.push(
@@ -424,6 +425,7 @@ const mapAspectMatchPairsAndKeys = (
       lngs,
       ...rm,
       snippetKey,
+      relation
     };
   });
 

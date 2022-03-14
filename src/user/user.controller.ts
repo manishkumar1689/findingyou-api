@@ -1659,8 +1659,20 @@ export class UserController {
             }
             const sn = snippets.find(sn => sn.key);
             let text = '';
+            let title = '';
             if (sn instanceof Object) {
-              text = this.snippetService.extractSnippetText(sn, 'en');
+              const snText = this.snippetService.extractSnippetText(sn, 'en');
+              const parts = snText.split("\n");
+              const relType = m.relation.split('_').pop();
+              if (parts.length > 1) {
+                const first = parts.shift();
+                title = first.replace('#aspect', m.key).replace('#relation', relType);
+                text = parts.join('\n');
+              } else {
+                const action = m.category === 'progressed' ? 'Progressed' : 'Transiting';
+                title = `${action} ${m.k1} ${m.key} ${m.relType} ${m.k2}`
+                text = snText;
+              }
             }
             return {
               category: snippetKey[0],
@@ -1671,6 +1683,7 @@ export class UserController {
               key,
               diff,
               text,
+              title
             };
           });
           if (fullMatches.length > 0) {
