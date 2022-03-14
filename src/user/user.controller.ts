@@ -1631,12 +1631,15 @@ export class UserController {
     rsMap.set('jd', jd);
     rsMap.set('dtUtc', dtUtc);
 
+    const ayanamsaKey = paramKeys.includes('aya') && notEmptyString(params.aya, 5) && params.aya !== 'tropical' ? params.aya : 'true_citra';
+    const tropicalMode = paramKeys.includes('tropical') ? smartCastInt(params.tropical,0) > 0 : false;
+
     if (isValidObjectId(cid)) {
       const chartData = await this.astrologicService.getChart(cid);
 
       if (chartData instanceof Model) {
         const chart = new Chart(chartData.toObject());
-        const ctData = await buildCurrentTrendsData(jd, chart, showMode);
+        const ctData = await buildCurrentTrendsData(jd, chart, showMode, ayanamsaKey, tropicalMode);
         const matches = ctData.get('matches');
         if (matches instanceof Array) {
           const keys = matches.map(m => {
