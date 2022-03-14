@@ -121,14 +121,16 @@ export const buildCurrentProgressPositions = async (
   birthJd = 0,
   currJd = 0,
   grahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa'],
-  ayanamsaKey = 'tropical'
+  ayanamsaKey = 'true_citra',
+  tropical = false
 ) => {
   const pd = toProgressionJD(birthJd, currJd);
   let ayanamshaValue = 0;
   if (notEmptyString(ayanamsaKey, 5) && ayanamsaKey !== 'tropical') {
     ayanamshaValue = await calcAyanamsha(pd, ayanamsaKey)
   }
-  const bodies = await calcLngsJd(pd, grahaKeys, ayanamshaValue);
+  const ayaVal = tropical ? 0 : ayanamshaValue;
+  const bodies = await calcLngsJd(pd, grahaKeys, ayaVal);
   return { pd, bodies, ayanamshaValue };
 };
 

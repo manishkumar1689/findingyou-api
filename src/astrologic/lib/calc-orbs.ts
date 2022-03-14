@@ -432,8 +432,9 @@ export const buildCurrentTrendsData = async (
   chart: Chart = new Chart(),
   showMode = 'matches',
   ayanamsaKey = 'true_citra',
-  tropical = true,
+  tropical = false,
 ) => {
+  
   const rsMap: Map<string, any> = new Map();
   const baseGrahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa'];
 
@@ -444,34 +445,40 @@ export const buildCurrentTrendsData = async (
   const showPositions = ['charts', 'all'].includes(showMode);
   const showAspectGroups = ['groups', 'all'].includes(showMode);
 
+  const lngMode = tropical ? 'tropical' : 'sidereal';
+
   const progressData = await buildCurrentProgressPositions(
     chart.jd,
     jd,
     baseGrahaKeys,
-    'true_citra'
+    ayanamsaKey,
+    tropical
   );
-
+  
   const ayaRow = chart.ayanamshas.find(row => row.key === ayanamsaKey);
   const natalAyaVal = ayaRow instanceof Object ? ayaRow.value : 24;
-  const transitAyaVal = await calcAyanamsha(jd, ayanamsaKey);
-  const lngMode = tropical ? 'tropical' : 'sidereal';
+  const natalAyaValUsed = tropical? 0 : natalAyaVal;
+  const transitAyaVal = await calcAyanamsha(jd, ayanamsaKey)
+  const transitAyaValUsed = tropical ? 0 : transitAyaVal;
+  const progAyaVal = tropical? 0 : progressData.ayanamshaValue;
+  
   rsMap.set('lngMode', lngMode);
 
   rsMap.set('ayanamshas', {
     key: ayaRow.key,
     natal: natalAyaVal,
     transit: transitAyaVal,
-    progressed: progressData.ayanamshaValue,
+    progressed: progAyaVal,
   });
   const aspectKeys = Object.keys(aspectMap);
-  const currentPos = await calcLngsJd(jd, currentGrahaKeys, transitAyaVal);
+  const currentPos = await calcLngsJd(jd, currentGrahaKeys, transitAyaValUsed);
 
   let birthPos = [];
   birthPos = chart.grahas.map(gr => {
     const { key, lng } = gr;
     return {
       key,
-      lng: subtractLng360(lng, natalAyaVal),
+      lng: subtractLng360(lng, natalAyaValUsed),
     };
   });
   birthPos.push({ key: 'as', lng: chart.ascendant });
