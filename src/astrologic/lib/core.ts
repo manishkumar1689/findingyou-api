@@ -947,13 +947,14 @@ export const calcLngJd = async (jd: number, key: string): Promise<number> => {
 export const calcLngsJd = async (
   jd: number,
   keys: string[] = [],
+  ayanamshaValue = 0
 ): Promise<KeyLng[]> => {
   const gKeys =
     keys.length < 2 ? ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa'] : keys;
   const items: KeyLng[] = [];
   for (const key of gKeys) {
     const lng = await calcLngJd(jd, key);
-    items.push({ key, lng });
+    items.push({ key, lng: subtractLng360(lng, ayanamshaValue) });
   }
   return items;
 };

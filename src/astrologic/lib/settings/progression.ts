@@ -1,3 +1,4 @@
+import { notEmptyString } from '../../../lib/validators';
 import {
   keyValuesToSimpleObject,
   simpleObjectToKeyValues,
@@ -120,10 +121,15 @@ export const buildCurrentProgressPositions = async (
   birthJd = 0,
   currJd = 0,
   grahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa'],
+  ayanamsaKey = 'tropical'
 ) => {
   const pd = toProgressionJD(birthJd, currJd);
-  const bodies = await calcLngsJd(pd, grahaKeys);
-  return { pd, bodies };
+  let ayanamshaValue = 0;
+  if (notEmptyString(ayanamsaKey, 5) && ayanamsaKey !== 'tropical') {
+    ayanamshaValue = await calcAyanamsha(pd, ayanamsaKey)
+  }
+  const bodies = await calcLngsJd(pd, grahaKeys, ayanamshaValue);
+  return { pd, bodies, ayanamshaValue };
 };
 
 export const buildProgressSetPairs = async (
