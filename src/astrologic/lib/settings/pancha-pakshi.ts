@@ -1451,6 +1451,7 @@ export class PPRule {
   score = 0;
   max = 10;
   siblings = [];
+  matches: PPMatchRange[] = [];
   operator = '';
   isMaster = false;
 
@@ -1497,6 +1498,11 @@ export class PPRule {
       }
     }
   }
+
+  addMatch(start =0, end = 0, type = 'subyama', score = 10) {
+    this.matches.push({ start, end, type, score })
+  }
+
 }
 
 export const mapPPCondition = (condRef = null, rs: PredictiveRuleSet) => {
@@ -1605,6 +1611,13 @@ export class TransitionOrb {
     const dist = 1 - distJd / this.halfSpan;
     return score * dist;
   }
+}
+
+export interface PPMatchRange {
+  start: number;
+  end: number;
+  type: string;
+  score: number;
 }
 
 export const matchTransitionPeak = (rk = '', relTr: TransitionData): number => {
@@ -1754,7 +1767,9 @@ export const calculatePanchaPakshiData = async (
                 relRows.forEach(rr => {
                   if (Object.keys(rr).includes(trKey)) {
                     if (rr[trKey].jd >= s.start && rr[trKey].jd < s.end) {
-                      matchedRanges.push(matchTransitionRange(trKey, rr));
+                      const mRange = matchTransitionRange(trKey, rr);
+                      matchedRanges.push(mRange);
+                      r.addMatch(mRange.start, mRange.end, 'orb', r.score);
                     }
                   }
                 });
@@ -1848,17 +1863,20 @@ export const calculatePanchaPakshiData = async (
       data.set('numSubMatches', matchedRules.length);
       data.set('hasSubMatches', hasSubs);
       data.set('rules', rules);
-
       const periods = allYamasWithSubs.map(subs => {
         let yamaScore = 0;
+        const numSubs = subs.length;
         return subs.map((sub, si) => {
           let subScore = 0;
           for (const r of ppRules) {
             if (r.action === sub.key) {
               if (r.onlyAtStart && si === 0) {
                 yamaScore = r.score;
+                const endIndex = si + 4 < numSubs ? si + 4 : numSubs - 1;
+                r.addMatch(sub.start, subs[endIndex].end, 'subyama', r.score)
               } else if (!r.onlyAtStart) {
                 subScore += r.score;
+                r.addMatch(sub.start, sub.end, 'subyama', r.score)
               }
             }
           }

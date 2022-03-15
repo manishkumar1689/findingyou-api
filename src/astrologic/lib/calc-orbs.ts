@@ -41,6 +41,7 @@ export interface AspectResult {
   aspectDiff: number;
   diff: number;
   aspected?: boolean;
+  neg?: boolean;
 }
 
 export interface AspectResultSet {
@@ -52,6 +53,7 @@ export interface AspectMatchItem {
   key: string;
   diff: number;
   diffKey?: string;
+  neg?: boolean;
 }
 
 export interface PairMatchSet {
@@ -144,8 +146,8 @@ export const calcAspect = (
   let aspectDiff = 360;
   const diff = calcDist360(lng1, lng2);
   if (aspectRow instanceof Object) {
-    const aspectDiffs = aspectRow.angles.map(angle => calcDist360(diff, angle));
-    aspectDiff = Math.min(...aspectDiffs);
+    const aspectVals = aspectRow.angles.map(angle => calcDist360(diff, angle));
+    aspectDiff = Math.min(...aspectVals);
   }
   return { lng1, lng2, diff, aspectDiff };
 };
@@ -175,6 +177,7 @@ export const buildCoreAspects = (
               lng2: -1,
               diff: -1,
               aspectDiff: -1,
+              neg: false
             };
           }
         })
@@ -353,10 +356,12 @@ export const calcAllAspectsFromLngs = (
             const diff1 = calcDist360(angle, ar.deg);
             const diff2 = calcDist360(ar.deg, angle);
             const diff = Math.min(...[diff1, diff2]);
+            const neg = diff === diff1 ? (angle - ar.deg) < 0 : (ar.deg - angle) < 0;
             return {
               key: ar.key,
               diff,
               diffKey: [ar.key, diff].join('_'),
+              neg
             };
           })
           .filter(
@@ -369,8 +374,8 @@ export const calcAllAspectsFromLngs = (
           value: angle,
           lngs: [r1.lng, r2.lng],
           matches: matches.map(row => {
-            const { key, diff } = row;
-            return { key, diff };
+            const { key, diff, neg } = row;
+            return { key, diff, neg };
           }),
         });
       }
@@ -435,6 +440,7 @@ export const buildCurrentTrendsData = async (
   showMode = 'matches',
   ayanamsaKey = 'true_citra',
   tropical = false,
+  buildMatchRange = false,
 ) => {
   
   const rsMap: Map<string, any> = new Map();
@@ -552,6 +558,51 @@ export const buildCurrentTrendsData = async (
     ...matches3,
     ...matches4,
   ].reduce((a, b) => a.concat(b));
+  const matchRanges:Map<string, any[]> = new Map();
+  if (buildMatchRange && matches.length > 0) {
+    for (let i = -1; i < 15; i++) {
+      const cd = await buildCurrentTrendsData(jd + i, chart, showMode, ayanamsaKey, tropical, false);
+      const negToMultiple = (neg: boolean): number => neg ? -1 : 1;
+      const ms = cd.get('matches');
+      ms.forEach(m => {
+        const lk = [m.relation, m.k1, m.k2, m.key].join('_');
+        const mItems = matchRanges.has(lk)? matchRanges.get(lk) : [];
+        const orb = m.relation.includes('transit')? 1 : 2 + 1/60;
+        
+        const prev =  mItems.length > 0 ? mItems[mItems.length - 1].diff * negToMultiple(m.neg) : 0;
+        const curr = m.diff * negToMultiple(m.neg);
+        const rate = mItems.length > 0 ? Math.abs(prev - curr) : 0;
+        if (mItems.length === 1) {
+          mItems[0].rate = rate;
+        }
+        const prog = ((curr / orb  * 1) + 1) / 2;
+        const pc = prog * 100;
+        mItems.push({diff: m.diff, neg: m.neg, orb, day: i, rate, pc });
+        matchRanges.set(lk, mItems);
+      });
+    }
+    for (const k of matchRanges.keys()) {
+      const subItems = matchRanges.get(k);
+      const numItems = subItems.length;
+      const first = subItems[0];
+      const limit = first.orb / first.rate;
+      const outerItems = [{...first, limit}];
+      if (numItems > 1) {
+        const last = subItems[numItems - 1];
+        const limit = last.orb / last.rate;
+        if (first.pc > last.pc) {
+          const fpc = first.pc - 0;
+          outerItems[0] = {...first, pc: last.pc }
+          last.pc = fpc;
+        }
+        outerItems.push({...last, limit});
+      }
+      matchRanges.set(k, outerItems);
+    }
+  }
   rsMap.set('matches', matches);
+  if (buildMatchRange) {
+    rsMap.set('ranges', Object.fromEntries(matchRanges.entries()));
+  }
   return rsMap;
 };
