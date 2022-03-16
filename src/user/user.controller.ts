@@ -1696,7 +1696,7 @@ export class UserController {
         rsMap = new Map([...rsMap, ...ctData]);
       }
     }
-    const allowedKeys = ['jd', 'dtUtc', 'lngMode', 'matches'];
+    const allowedKeys = ['jd', 'dtUtc', 'ayanamshas','lngMode', 'matches'];
     if (['charts','all'].includes(showMode)) {
       allowedKeys.push('current', 'progress','birth');
     }

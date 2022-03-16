@@ -649,8 +649,7 @@ export const buildCurrentTrendsData = async (
             mItems[0].rate = rate;
           }
           const prog = ((curr / orb  * 1) + 1) / 2;
-          const pc = prog * 100;
-          mItems.push({diff: m.diff, neg: m.neg, orb, day: i, rate, pc });
+          mItems.push({diff: m.diff, neg: m.neg, orb, day: i, rate, prog });
           matchRanges.set(lk, mItems);
         });
       }
@@ -669,18 +668,19 @@ export const buildCurrentTrendsData = async (
           const [from, to, k1, k2, aspect] = k.split('_');
           const m2 = matchAspectFromMap(relData, from, to, k1, k2, aspect);
           if (m2.matched) {
-            const prog = ((m2.value  / first.orb  * 1) + 1) / 2;
-            const pc = prog * 100;
+            
+            //const pc = prog * 100;
             const prev = m2.value * negToMultiple(m2.neg);
             const curr = first.diff * negToMultiple(first.neg);
             const rate = Math.abs(prev - curr);
-            last = {...first, rate };
+            last = {...first, prog: 1 - first.prog, rate };
+            const prog = ((prev  / first.orb  * 1) + 1) / 2;
             first = {
               orb: first.orb,
               diff: m2.value,
               neg: m2.neg,
               day: prevDay,
-              pc,
+              prog,
               rate,
             }
             numItems++;
@@ -691,15 +691,16 @@ export const buildCurrentTrendsData = async (
       const outerItems = [{...first, limit}];
       if (numItems > 1) {
         const limit = last.orb / last.rate;
-        if (first.pc > last.pc) {
-          const fpc = first.pc - 0;
-          outerItems[0] = {...first, pc: last.pc }
-          last.pc = fpc;
+        if (first.prog > last.prog && !refMatch) {
+          const fpr = first.prog - 0;
+          outerItems[0] = {...first, prog: last.prog }
+          last.prog = fpr;
         }
         const endJd = jd + last.day;
         const startJd = jd + first.day;
-        const extraEnd = limit * (1 - (last.pc / 100));
-        const extraStart = limit * (first.pc / 100);
+        const projEnd = limit * (1 - last.prog);
+        const extraEnd = refMatch ? Math.abs(projEnd) : projEnd;
+        const extraStart = limit * first.prog;
         const range = [startJd - extraStart, endJd + extraEnd].map(j => { 
           const jdP = julToDateParts(j)
           return {
