@@ -1652,12 +1652,12 @@ export class UserController {
           );
           const fullMatches = matches.map(m => {
             const { k1, k2, value, key, diff, lngs, snippetKey, relation, start, end } = m;
-            const category = ['current_trends', snippetKey[0]].join('__');
-            const fullKeys = [[category, snippetKey[1]]];
+            const category = ['current_trends', snippetKey[0]].join('_');
+            const fullKeys = [[category, snippetKey[1]].join('__')];
             if (m.snippetKey.length > 2) {
-              fullKeys.push([category, snippetKey[2]]);
+              fullKeys.push([category, snippetKey[2]].join('__'));
             }
-            const sn = snippets.find(sn => sn.key);
+            const sn = snippets.find(s => fullKeys.includes(s.key));
             let text = '';
             let title = '';
             if (sn instanceof Object) {
@@ -1686,7 +1686,7 @@ export class UserController {
               start,
               end,
               text,
-              title
+              title,
             };
           });
           if (fullMatches.length > 0) {
