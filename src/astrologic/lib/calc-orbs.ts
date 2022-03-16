@@ -1,6 +1,7 @@
 import { mapLngRange } from '../../lib/query-builders';
 import { calcAyanamsha, calcLngsJd, relativeAngle } from './core';
 import { KeyLng, ProgressResult } from './interfaces';
+import { julToDateParts } from './julian-date';
 import { subtractLng360 } from './math-funcs';
 import { Chart } from './models/chart';
 import { buildCurrentProgressPositions } from './settings/progression';
@@ -336,6 +337,19 @@ export const calcOrbByMatrix = (
   };
 };
 
+const calcClosestAspectMatch = (aspectRow: AspectRow, angle = 0) => {
+  const diff1 = calcDist360(angle, aspectRow.deg);
+  const diff2 = calcDist360(aspectRow.deg, angle);
+  const diff = Math.min(...[diff1, diff2]);
+  const neg = diff === diff1 ? (angle - aspectRow.deg) < 0 : (aspectRow.deg - angle) < 0;
+  return {
+    key: aspectRow.key,
+    diff,
+    diffKey: [aspectRow.key, diff].join('_'),
+    neg
+  };
+}
+
 export const calcAllAspectsFromLngs = (
   firstSet: KeyLng[] = [],
   secondSet: KeyLng[] = [],
@@ -352,18 +366,7 @@ export const calcAllAspectsFromLngs = (
       if (!excludeSame) {
         const angle = relativeAngle(r1.lng, r2.lng);
         const matches = aspectRows
-          .map(ar => {
-            const diff1 = calcDist360(angle, ar.deg);
-            const diff2 = calcDist360(ar.deg, angle);
-            const diff = Math.min(...[diff1, diff2]);
-            const neg = diff === diff1 ? (angle - ar.deg) < 0 : (ar.deg - angle) < 0;
-            return {
-              key: ar.key,
-              diff,
-              diffKey: [ar.key, diff].join('_'),
-              neg
-            };
-          })
+          .map(ar => calcClosestAspectMatch(ar, angle))
           .filter(
             ar => ar.diff < orb && diffKeys.includes(ar.diffKey) === false,
           );
@@ -434,6 +437,69 @@ const mapAspectMatchPairsAndKeys = (
     };
   });
 
+
+const negToMultiple = (neg: boolean): number => neg ? -1 : 1;
+
+const matchChartGroupType = (from = '', to = ''): string => {
+  const combo = [from, to].join('_');
+  switch (combo) {
+    case 'transit_natal':
+      return 'currentToBirth';
+    case 'transit_progressed':
+      return 'currentToProgressed';
+    case 'progressed_natal':
+      return 'progressedToBirth';
+    case 'progressed_progressed':
+      return 'progressedToProgressed';
+    default:
+      return '-';
+  }
+}
+
+const matchChartType = (ref = ''): string => {
+  switch (ref) {
+    case 'transit':
+    case 'current':  
+      return 'current';
+    case 'progressed':
+      case 'progress':
+      return 'progress';
+    case 'natal':
+    case 'birth':
+      return 'birth';
+    default:
+      return '-';
+  }
+}
+
+export const matchAspectFromMap = (data: Map<string, any> = new Map(), from = '', to = '', k1 = '', k2 = '', aspect = '') => {
+  const reciprocal = from === to;
+  const ct1 = matchChartType(from);
+  const ct2 = reciprocal ? ct1 : matchChartType(to);
+  const result = { matched: false, value: 0, neg: false };
+  const grahas1 = data.has(ct1)? data.get(ct1) : [];
+  const grahas2 = reciprocal? grahas1 : data.has(ct2)? data.get(ct2) : [];
+  if (grahas1 instanceof Array && grahas1.length > 0 && grahas2 instanceof Array && grahas2.length > 0) {
+    const item1 = grahas1.find(row => row.key === k1);
+    const hasItem1 = item1 instanceof Object;
+    const lng1 = hasItem1 ? item1.lng : 0;
+    const item2 = grahas2.find(row => row.key === k2);
+    const hasItem2 = item2 instanceof Object;
+    const lng2 = hasItem2 ? item2.lng : 0;
+    if (hasItem1 && hasItem2) {
+      const ar = aspects.find(row => row.key === aspect);
+      if (ar instanceof Object) {
+        result.matched = true;
+        const angle = relativeAngle(lng1, lng2);
+        const aspMatch = calcClosestAspectMatch(ar, angle);
+        result.value = aspMatch.diff;
+        result.neg = aspMatch.neg;
+      }
+    }
+  } 
+  return result;
+}
+
 export const buildCurrentTrendsData = async (
   jd = 0,
   chart: Chart = new Chart(),
@@ -449,8 +515,6 @@ export const buildCurrentTrendsData = async (
   const currentGrahaKeys = [...baseGrahaKeys, 'ur', 'ne', 'pl'];
 
   const birthGrahaKeys = [...currentGrahaKeys, 'mc', 'as'];
-
-  const showPositions = ['charts', 'all'].includes(showMode);
   const showAspectGroups = ['groups', 'all'].includes(showMode);
 
   const lngMode = tropical ? 'tropical' : 'sidereal';
@@ -499,11 +563,10 @@ export const buildCurrentTrendsData = async (
   const progressPos = progressData.bodies;
   const filteredAspects = aspects.filter(as => aspectKeys.includes(as.key));
   
-  if (showPositions) {
-    rsMap.set('current', currentPos);
-    rsMap.set('birth', filteredBirthPos);
-    rsMap.set('progress', progressPos);
-  }
+  
+  rsMap.set('current', currentPos);
+  rsMap.set('birth', filteredBirthPos);
+  rsMap.set('progress', progressPos);
 
   const currentToBirth = calcAllAspectsFromLngs(
     currentPos,
@@ -559,48 +622,111 @@ export const buildCurrentTrendsData = async (
     ...matches4,
   ].reduce((a, b) => a.concat(b));
   const matchRanges:Map<string, any[]> = new Map();
+  const sampleMapSet: Map<number, Map<string, any>> = new Map();
   if (buildMatchRange && matches.length > 0) {
     for (let i = -1; i < 15; i++) {
-      const cd = await buildCurrentTrendsData(jd + i, chart, showMode, ayanamsaKey, tropical, false);
-      const negToMultiple = (neg: boolean): number => neg ? -1 : 1;
-      const ms = cd.get('matches');
-      ms.forEach(m => {
-        const lk = [m.relation, m.k1, m.k2, m.key].join('_');
-        const mItems = matchRanges.has(lk)? matchRanges.get(lk) : [];
-        const orb = m.relation.includes('transit')? 1 : 2 + 1/60;
-        
-        const prev =  mItems.length > 0 ? mItems[mItems.length - 1].diff * negToMultiple(m.neg) : 0;
-        const curr = m.diff * negToMultiple(m.neg);
-        const rate = mItems.length > 0 ? Math.abs(prev - curr) : 0;
-        if (mItems.length === 1) {
-          mItems[0].rate = rate;
+      let currMatches = [];
+      if (i !== 0) {
+        const cd = await buildCurrentTrendsData(jd + i, chart, 'charts', ayanamsaKey, tropical, false);
+        sampleMapSet.set(i, cd);
+        const ms = cd.get('matches');
+        if (ms instanceof Array) {
+          currMatches = ms;
         }
-        const prog = ((curr / orb  * 1) + 1) / 2;
-        const pc = prog * 100;
-        mItems.push({diff: m.diff, neg: m.neg, orb, day: i, rate, pc });
-        matchRanges.set(lk, mItems);
-      });
+      } else {
+        sampleMapSet.set(0, rsMap);
+        currMatches = matches;
+      }
+      if (currMatches.length > 0) {
+        currMatches.forEach(m => {
+          const lk = [m.relation, m.k1, m.k2, m.key].join('_');
+          const mItems = matchRanges.has(lk)? matchRanges.get(lk) : [];
+          const orb = m.relation.includes('transit')? 1 : 2 + 1/60;
+          const prev =  mItems.length > 0 ? mItems[mItems.length - 1].diff * negToMultiple(m.neg) : 0;
+          const curr = m.diff * negToMultiple(m.neg);
+          const rate = mItems.length > 0 ? Math.abs(prev - curr) : 0;
+          if (mItems.length === 1) {
+            mItems[0].rate = rate;
+          }
+          const prog = ((curr / orb  * 1) + 1) / 2;
+          const pc = prog * 100;
+          mItems.push({diff: m.diff, neg: m.neg, orb, day: i, rate, pc });
+          matchRanges.set(lk, mItems);
+        });
+      }
     }
     for (const k of matchRanges.keys()) {
       const subItems = matchRanges.get(k);
-      const numItems = subItems.length;
-      const first = subItems[0];
+      let numItems = subItems.length;
+      let first = subItems[0];
+      let last = numItems > 1 ? subItems[numItems - 1] : null;
       const limit = first.orb / first.rate;
+      let refMatch = false;
+      if (numItems < 2) {
+        const prevDay = first.day - 1;
+        if (first.day >= 0 && sampleMapSet.has(prevDay)) {
+          const relData = sampleMapSet.get(prevDay);
+          const [from, to, k1, k2, aspect] = k.split('_');
+          const m2 = matchAspectFromMap(relData, from, to, k1, k2, aspect);
+          if (m2.matched) {
+            const prog = ((m2.value  / first.orb  * 1) + 1) / 2;
+            const pc = prog * 100;
+            const prev = m2.value * negToMultiple(m2.neg);
+            const curr = first.diff * negToMultiple(first.neg);
+            const rate = Math.abs(prev - curr);
+            last = {...first, rate };
+            first = {
+              orb: first.orb,
+              diff: m2.value,
+              neg: m2.neg,
+              day: prevDay,
+              pc,
+              rate,
+            }
+            numItems++;
+            refMatch = true;
+          }
+        }
+      }
       const outerItems = [{...first, limit}];
       if (numItems > 1) {
-        const last = subItems[numItems - 1];
         const limit = last.orb / last.rate;
         if (first.pc > last.pc) {
           const fpc = first.pc - 0;
           outerItems[0] = {...first, pc: last.pc }
           last.pc = fpc;
         }
-        outerItems.push({...last, limit});
+        const endJd = jd + last.day;
+        const startJd = jd + first.day;
+        const extraEnd = limit * (1 - (last.pc / 100));
+        const extraStart = limit * (first.pc / 100);
+        const range = [startJd - extraStart, endJd + extraEnd].map(j => { 
+          const jdP = julToDateParts(j)
+          return {
+            jd: j,
+            dt: jdP.toISOString(),
+            un: jdP.unixTime
+          }
+         });
+        outerItems.push({...last, limit, range, refMatch});
       }
       matchRanges.set(k, outerItems);
     }
   }
-  rsMap.set('matches', matches);
+  rsMap.set('matches', matches.map(m => {
+    const rk = [m.relation, m.k1, m.k2, m.key].join('_');
+    let start: any = {};
+    let end: any = {};
+    if (matchRanges.has(rk)) {
+      const mrs = matchRanges.get(rk);
+      if (mrs.length > 1) {
+        start = mrs[1].range[0];
+        end = mrs[1].range[1];
+      }
+      
+    }
+    return {...m, start, end};
+  }));
   if (buildMatchRange) {
     rsMap.set('ranges', Object.fromEntries(matchRanges.entries()));
   }

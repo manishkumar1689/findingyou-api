@@ -1633,13 +1633,12 @@ export class UserController {
 
     const ayanamsaKey = paramKeys.includes('aya') && notEmptyString(params.aya, 5) && params.aya !== 'tropical' ? params.aya : 'true_citra';
     const tropicalMode = paramKeys.includes('tropical') ? smartCastInt(params.tropical,0) > 0 : false;
-    const buildMatchRange = paramKeys.includes('range') ? smartCastInt(params.range, 0) > 0 : false;
     if (isValidObjectId(cid)) {
       const chartData = await this.astrologicService.getChart(cid);
 
       if (chartData instanceof Model) {
         const chart = new Chart(chartData.toObject());
-        const ctData = await buildCurrentTrendsData(jd, chart, showMode, ayanamsaKey, tropicalMode, buildMatchRange);
+        const ctData = await buildCurrentTrendsData(jd, chart, showMode, ayanamsaKey, tropicalMode, true);
         const matches = ctData.get('matches');
         
         if (matches instanceof Array) {
@@ -1652,7 +1651,7 @@ export class UserController {
             'current_trends',
           );
           const fullMatches = matches.map(m => {
-            const { k1, k2, value, key, diff, lngs, snippetKey } = m;
+            const { k1, k2, value, key, diff, lngs, snippetKey, relation, start, end } = m;
             const category = ['current_trends', snippetKey[0]].join('__');
             const fullKeys = [[category, snippetKey[1]]];
             if (m.snippetKey.length > 2) {
@@ -1677,12 +1676,15 @@ export class UserController {
             }
             return {
               category: snippetKey[0],
+              relation,
               k1,
               k2,
               value,
               lngs,
               key,
               diff,
+              start,
+              end,
               text,
               title
             };
@@ -1694,7 +1696,14 @@ export class UserController {
         rsMap = new Map([...rsMap, ...ctData]);
       }
     }
-    return res.json(Object.fromEntries(rsMap.entries()));
+    const allowedKeys = ['jd', 'dtUtc', 'lngMode', 'matches'];
+    if (['charts','all'].includes(showMode)) {
+      allowedKeys.push('current', 'progress','birth');
+    }
+    if (['all'].includes(showMode)) {
+      allowedKeys.push('ranges', 'currentToBirth', 'currentToProgressed', 'progressedToBirth', 'progressedToProgressed');
+    }
+    return res.json(Object.fromEntries([...rsMap.entries()].filter(entry => allowedKeys.includes(entry[0]))));
   }
 
   /*
