@@ -179,6 +179,7 @@ import {
 } from './lib/settings/progression';
 import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
+import { julToDateParts } from './lib/julian-date';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -448,6 +449,87 @@ export class AstrologicController {
     }
     return res.status(status).json(Object.fromEntries(data));
   }
+
+  /*
+    #mobile
+  */
+    @Get('lucky-times/:chartRef/:loc/:dt?')
+    async ppLuckyTimes(
+      @Res() res,
+      @Param('chartRef') chartRef,
+      @Param('loc') loc,
+      @Param('dt') dt,
+    ) {
+      let status = HttpStatus.BAD_REQUEST;
+      const data: Map<string, any> = new Map(
+        Object.entries({
+          valid: false,
+          message: '',
+        }),
+      );
+      let chartID = chartRef;
+      if (chartRef.includes('@') && chartRef.includes('.')) {
+        chartID = await this.astrologicService.getChartIDByEmail(chartRef);
+      }
+      if (notEmptyString(chartID) && notEmptyString(loc, 3)) {
+        const geo = locStringToGeo(loc);
+        const { dtUtc, jd } = matchJdAndDatetime(dt);
+
+        data.set('jd', jd);
+        data.set('dtUtc', dtUtc);
+        const chartData = await this.astrologicService.getChart(chartID);
+        const hasChart = chartData instanceof Model;
+        const valid = hasChart && chartData.grahas.length > 1;
+        data.set('valid', valid);
+        if (valid) {
+          const chartObj = hasChart ? chartData.toObject() : {};
+          const chart = new Chart(chartObj);
+          const rules = await this.settingService.getPPRules();
+          const ppData = await calculatePanchaPakshiData(
+            chart,
+            jd,
+            geo,
+            rules,
+            true,
+            true,
+          );
+          if (ppData.get('valid') === true) {
+            status = HttpStatus.OK;
+            const keys = ['rules', 'minutes', 'totals', 'max'];
+            if (ppData.has('startJd') && ppData.has('endJd')) {
+              const startJd = ppData.get('startJd');
+              const startJdp = julToDateParts(startJd)
+              const endJd = ppData.get('endJd');
+              const endJdp = julToDateParts(endJd)
+              data.set('start', 
+                {
+                  jd: startJd,
+                  dt: startJdp.toISOString(),
+                  un: startJdp.unixTime
+                }
+              );
+              data.set('end', 
+                {
+                  jd: endJd,
+                  dt: endJdp.toISOString(),
+                  un: endJdp.unixTime
+                }
+              );
+            }
+            keys.forEach(k => {
+              if (ppData.has(k)) {
+                data.set(k, ppData.get(k));
+              }
+            })
+          } else {
+            data.set('valid', false);
+          }
+        }
+      } else {
+        data.set('message', 'Invalid parameters');
+      }
+      return res.status(status).json(Object.fromEntries(data));
+    }
 
   /*
     #astrotesting
