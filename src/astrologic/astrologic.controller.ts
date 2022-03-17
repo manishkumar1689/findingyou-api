@@ -508,6 +508,18 @@ export class AstrologicController {
                   un: startJdp.unixTime
                 }
               );
+              if (ppData.has('yamas')) {
+                const firstYamas = ppData.get('yamas');
+                if (firstYamas instanceof Array && firstYamas.length === 5) {
+                  const endYama = firstYamas[4];
+                  const jdP = julToDateParts(endYama.end);
+                  data.set('sunset', {
+                    jd: endYama.end,
+                    dt: jdP.toISOString(),
+                    un: jdP.unixTime
+                  });
+                }
+              }
               data.set('end', 
                 {
                   jd: endJd,
