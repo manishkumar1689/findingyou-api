@@ -9,7 +9,6 @@ import { KeyNum, KeyValueNum } from '../../../lib/interfaces';
 import { Chart } from '../models/chart';
 import { toIndianTimeJd, TransitionData } from '../transitions';
 import {
-  matchPPTransitRule,
   translateActionToGerund,
   Condition,
 } from '../models/protocol-models';
@@ -899,11 +898,11 @@ export const matchBirdKeyRulers = (
   return matchBirdRulers(birdNum, isDayTime, activity);
 };
 
-export const matchBirdRelationsKeys = (bird1 = '', bird2 = '') => {
+export const matchBirdRelationsKeys = (bird1 = '', bird2 = '', waxing = true) => {
   const birdValues = Object.values(birdMap);
   const num1 = birdValues.indexOf(bird1) + 1;
   const num2 = birdValues.indexOf(bird2) + 1;
-  return matchBirdRelations(num1, num2);
+  return matchBirdRelations(num1, num2, waxing);
 };
 
 export const matchBirdDayValue = (
@@ -1362,6 +1361,7 @@ class BirdGrahaSet {
   birth: BirdGraha;
   ruling: DayNightBirdGraha;
   dying: BirdGraha;
+  waxing = false;
 
   constructor(ppData: Map<string, any> = new Map()) {
     const bird = ppData.has('bird')
@@ -1377,7 +1377,7 @@ class BirdGrahaSet {
     const { birth } = bird;
     const isDayTime = ppData.has('isDayTime') ? ppData.get('isDayTime') : true;
     const firstSegment = isDayTime ? 'current' : 'next';
-    const waxing = moon instanceof Object ? moon[firstSegment].waxing : true;
+    this.waxing = moon instanceof Object ? moon[firstSegment].waxing : true;
     const dying = bird.current.dying.key;
     const rulingDay = isDayTime
       ? bird.current.ruling.key
@@ -1385,10 +1385,10 @@ class BirdGrahaSet {
     const rulingNight = isDayTime
       ? bird.next.ruling.key
       : bird.current.ruling.key;
-    const birthBirdGraha = birdGrahasByKey(birth, waxing);
-    const rulingDayGraha = birdGrahasByKey(rulingDay, waxing);
-    const rulingNightGraha = birdGrahasByKey(rulingNight, waxing);
-    const dyingGraha = birdGrahasByKey(dying, waxing);
+    const birthBirdGraha = birdGrahasByKey(birth, this.waxing);
+    const rulingDayGraha = birdGrahasByKey(rulingDay, this.waxing);
+    const rulingNightGraha = birdGrahasByKey(rulingNight, this.waxing);
+    const dyingGraha = birdGrahasByKey(dying, this.waxing);
     this.birth = {
       bird: birth,
       grahas: birthBirdGraha,
@@ -1736,15 +1736,6 @@ export const calculatePanchaPakshiData = async (
       const birdGrahaSet = mapBirdSet(data);
       data.set('valid', true);
       for (const r of transitRules) {
-        /* const pp2 = await matchPPTransitRule(
-          jd,
-          geo,
-          ppData,
-          chart,
-          r.key,
-          r.context,
-          r.from,
-        ); */
         const isTr = ['as', 'ds', 'ic', 'mc', 'dik_bala_transition'].includes(
           r.action,
         );
@@ -1836,6 +1827,7 @@ export const calculatePanchaPakshiData = async (
               s.key === r.action && s.rulers.some(gk => grahaKeys.includes(gk)),
           );
         }
+
         /* const matched = matchedRanges.length > 0 || pp2.valid || subs.length > 0; */
         const matched = matchedRanges.length > 0 || subs.length > 0;
         if (matched) {
@@ -1869,11 +1861,23 @@ export const calculatePanchaPakshiData = async (
         return subs.map((sub, si) => {
           let subScore = 0;
           for (const r of ppRules) {
-            if (r.action === sub.key) {
+            
+            const friendRel = r.context.includes('friend');
+            const isBirdRel = friendRel || r.context.includes('enemy');
+            if (isBirdRel) {
+              /* subs = allSubs.filter(sub => sub.) */
+              r.context.includes('friend');
+              const relLetter = matchBirdRelationsKeys(birdGrahaSet.birth.bird, sub.bird, birdGrahaSet.waxing);
+              const matchLetter = friendRel ? 'F' : 'E';
+              if (relLetter === matchLetter) {
+                subScore += r.score;
+                r.addMatch(sub.start, sub.end, 'subyama', r.score);
+              }
+            } else if (r.action === sub.key) {
               if (r.onlyAtStart && si === 0) {
                 yamaScore = r.score;
                 const endIndex = si + 4 < numSubs ? si + 4 : numSubs - 1;
-                r.addMatch(sub.start, subs[endIndex].end, 'subyama', r.score)
+                r.addMatch(sub.start, subs[endIndex].end, 'yama', r.score)
               } else if (!r.onlyAtStart) {
                 subScore += r.score;
                 r.addMatch(sub.start, sub.end, 'subyama', r.score)

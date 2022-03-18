@@ -5,6 +5,41 @@ import { ephemerisPath } from '../../.config';
 import fileValues from './settings/file-values';
 import { buildFullPath } from '../../lib/files';
 import { notEmptyString } from '../../lib/validators';
+
+
+
+/*
+@param path:string
+@return string
+*/
+const fetchFirstLines = path => {
+  let lines = [];
+  const liner = new lineByLine(path);
+  const yearRgx = /\b(19|20)\d\d\b/;
+  let line;
+  let lineNumber = 0;
+  let strLine = '';
+  let yearMatched = false;
+  while ((line = liner.next())) {
+    strLine = line.toString('ascii');
+    if (strLine.length > 7) {
+      lines.push(strLine);
+      if (yearRgx.test(strLine)) {
+        yearMatched = true;
+        break;
+      }
+    }
+    lineNumber++;
+    if (lineNumber > 6) {
+      break;
+    }
+  }
+  if (!yearMatched) {
+    lines = lines.length > 0 ? lines.splice(0, 1) : [];
+  }
+  return lines.length > 0 ? lines.join('\n') : null;
+};
+
 /*
 @param fn:string
 @return Object
@@ -50,38 +85,6 @@ export const deleteSwissEpheFile = (fn: string, subDir = '') => {
     isRemoved = true;
   }
   return isRemoved;
-};
-
-/*
-@param path:string
-@return string
-*/
-const fetchFirstLines = path => {
-  let lines = [];
-  const liner = new lineByLine(path);
-  const yearRgx = /\b(19|20)\d\d\b/;
-  let line;
-  let lineNumber = 0;
-  let strLine = '';
-  let yearMatched = false;
-  while ((line = liner.next())) {
-    strLine = line.toString('ascii');
-    if (strLine.length > 7) {
-      lines.push(strLine);
-      if (yearRgx.test(strLine)) {
-        yearMatched = true;
-        break;
-      }
-    }
-    lineNumber++;
-    if (lineNumber > 6) {
-      break;
-    }
-  }
-  if (!yearMatched) {
-    lines = lines.length > 0 ? lines.splice(0, 1) : [];
-  }
-  return lines.length > 0 ? lines.join('\n') : null;
 };
 
 /*
