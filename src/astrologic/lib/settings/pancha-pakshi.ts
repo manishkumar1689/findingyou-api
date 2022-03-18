@@ -1855,23 +1855,40 @@ export const calculatePanchaPakshiData = async (
       data.set('numSubMatches', matchedRules.length);
       data.set('hasSubMatches', hasSubs);
       data.set('rules', rules);
-      const periods = allYamasWithSubs.map(subs => {
+      let segmentScore = 0;
+      
+      const periods = allYamasWithSubs.map((subs, subIndex) => {
         let yamaScore = 0;
+        const segmentIndex = Math.floor(subIndex / 5) + 4;
+        const startSegment = subIndex % 5 === 0;
+        if (startSegment) {
+          segmentScore = 0;
+        }
         const numSubs = subs.length;
         return subs.map((sub, si) => {
           let subScore = 0;
           for (const r of ppRules) {
-            
+            const isSegment = r.key.includes('day_night');
             const friendRel = r.context.includes('friend');
             const isBirdRel = friendRel || r.context.includes('enemy');
             if (isBirdRel) {
-              /* subs = allSubs.filter(sub => sub.) */
-              r.context.includes('friend');
-              const relLetter = matchBirdRelationsKeys(birdGrahaSet.birth.bird, sub.bird, birdGrahaSet.waxing);
               const matchLetter = friendRel ? 'F' : 'E';
-              if (relLetter === matchLetter) {
-                subScore += r.score;
-                r.addMatch(sub.start, sub.end, 'subyama', r.score);
+              if (isSegment) {
+                if (startSegment) {
+                  const isDay = (segmentIndex < 5 && dayFirst) || (segmentIndex >= 5 && !dayFirst);
+                  const subActKey = r.context.includes('ruling') ? 'ruling' : 'dying';
+                  const relLetter = matchBirdRelationsKeys(birdGrahaSet.birth.bird, birdGrahaSet.matchBird(subActKey, isDay), birdGrahaSet.waxing);
+                  if (relLetter === matchLetter) {
+                    segmentScore += r.score;
+                    r.addMatch(sub.start, allYamasWithSubs[segmentIndex][4].end, 'segment', r.score);
+                  }
+                }
+              } else {
+                const relLetter = matchBirdRelationsKeys(birdGrahaSet.birth.bird, sub.bird, birdGrahaSet.waxing);
+                if (relLetter === matchLetter) {
+                  subScore += r.score;
+                  r.addMatch(sub.start, sub.end, 'subyama', r.score);
+                }
               }
             } else if (r.action === sub.key) {
               if (r.onlyAtStart && si === 0) {
@@ -1905,7 +1922,7 @@ export const calculatePanchaPakshiData = async (
                 .reduce((a, b) => a + b, 0);
             }
           }
-          const score = yamaScore + subScore + subRuleScore;
+          const score = yamaScore + subScore + subRuleScore + segmentScore;
           return { ...sub, score };
         });
       });
