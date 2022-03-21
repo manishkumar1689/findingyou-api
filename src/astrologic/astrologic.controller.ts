@@ -176,6 +176,7 @@ import {
   buildProgressSetPairs,
   buildSingleProgressSet,
   buildSingleProgressSetKeyValues,
+  calcProgressAspectsFromJds,
 } from './lib/settings/progression';
 import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
@@ -859,6 +860,30 @@ export class AstrologicController {
         } else {
           this.userService.savePreference(userId, pref);
         }
+      }
+    }
+    return res.status(HttpStatus.OK).json(data);
+  }
+
+  @Get('p2-simple/:c1/:c2')
+  async getProgressionSimple(@Res() res, @Param('c1') c1, @Param('c2') c2) {
+    const data: any = { valid: false, num: 0, numWithAspects: 0, items: [] };
+      const co1 = await this.astrologicService.getChart(c1);
+      const co2 = await this.astrologicService.getChart(c2);
+      let jd1 = 0;
+      let jd2 = 0;
+      if (co1 instanceof Object && co2 instanceof Object) {
+        const chart1 = new Chart(co1.toObject());
+        const chart2 = new Chart(co2.toObject());
+        jd1 = chart1.jd;
+        jd2 = chart2.jd;
+      }
+    if (jd1 > 0 && jd2 > 0) {
+      data.items = await calcProgressAspectsFromJds(jd1, jd2);
+      if (data.items instanceof Array) {
+        data.num = data.items.length;
+        data.numWithAspects = data.items.filter(item => item.pairs.some(pair => pair.aspects.length > 0)).length;
+        data.valid = data.num > 0;
       }
     }
     return res.status(HttpStatus.OK).json(data);

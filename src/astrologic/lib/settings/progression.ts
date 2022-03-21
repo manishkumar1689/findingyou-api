@@ -7,6 +7,10 @@ import { calcAyanamsha, calcLngsJd } from '../core';
 import { julToISODate } from '../date-funcs';
 import { KeyLng } from '../interfaces';
 import { dateStringToJulianDay } from '../julian-date';
+import { pairs } from 'rxjs';
+import { calcAspect } from '../calc-orbs';
+import { ITimeSchema } from 'src/astrologic/schemas/i-time.schema';
+import { subtractLng360 } from '../math-funcs';
 
 export interface JDProgress {
   pd: number;
@@ -188,6 +192,65 @@ export const buildSingleProgressSet = async (
   );
   return progSet;
 };
+
+export const buildSimpleProgressSetPairs = async (
+  jd1 = 0,
+  jd2 = 0,
+  showIsoDates = false
+) => {
+  return await buildProgressSetPairs(jd1, jd2, 10,2, 0.8, ['su', 've', 'ma'],
+    showIsoDates,
+  )
+}
+
+export const calcProgressAspectsFromProgressData = (pData: any, applyAyanamsha = true) => {
+  const { p1, p2} = pData;
+  const gPairs = [['su', 've'], ['ve', 've'], ['ve', 'ma']];
+  const aspKeys = ["conjunction","opposition", "trine", "square", "quincunx"];
+  let rows = [];
+  if (p1 instanceof Object && p2 instanceof Object) {
+    if (p1 instanceof Array && p2 instanceof Array) {
+      const numP2 = p2.length;
+      rows = p1.filter((_, itemIndex) => itemIndex < numP2).map((item, itemIndex) => {
+        const item2 = p2[itemIndex];
+        const pairs = gPairs.map(pair => {
+          const gps = pair[0] === pair[1] ? [pair] : [pair, [pair[1], pair[0]]];
+          return gps.map(([k1, k2]) => {
+              const aspectRows = aspKeys.map(aKey => {
+                const lng1 = applyAyanamsha ? subtractLng360(item.bodies[k1], item.ayanamsa) : item.bodies[k1];
+                const lng2 = applyAyanamsha ? subtractLng360(item2.bodies[k2], item2.ayanamsa) : item2.bodies[k2];
+                const asp = calcAspect(lng1, lng2, aKey);
+                return { key: aKey, ...asp };
+              });
+              const first = aspectRows[0];
+              const { lng1, lng2 } = first;
+              return { k1, k2, lng1, lng2, aspects: aspectRows.filter(row => row.aspectDiff <= 10).map(row => {
+                const { key, aspectDiff } = row;
+                return {
+                  key,
+                  distance: aspectDiff
+                }
+              })
+            }
+          })
+        }).reduce((a,b) => a.concat(b));
+        
+        return {
+          pd: item.pd,
+          jd: item.jd,
+          dt: item.dt,
+          pairs
+        }
+      });
+    }
+  }
+  return rows;
+}
+
+export const calcProgressAspectsFromJds = async (jd1 = 0, jd2 = 0, applyAyanamsha = true, showIsoDates = true) => {
+  const pd = await buildSimpleProgressSetPairs(jd1, jd2, showIsoDates);
+  return calcProgressAspectsFromProgressData(pd, applyAyanamsha);
+}
 
 export const buildSingleProgressSetKeyValues = async (jd = 0) => {
   const pgs = await buildSingleProgressSet(jd);
