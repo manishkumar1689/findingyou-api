@@ -6,10 +6,8 @@ import {
 import { calcAyanamsha, calcLngsJd } from '../core';
 import { julToISODate } from '../date-funcs';
 import { KeyLng } from '../interfaces';
-import { dateStringToJulianDay } from '../julian-date';
-import { pairs } from 'rxjs';
+import { dateStringToJulianDay, julToDateParts } from '../julian-date';
 import { calcAspect } from '../calc-orbs';
-import { ITimeSchema } from 'src/astrologic/schemas/i-time.schema';
 import { subtractLng360 } from '../math-funcs';
 
 export interface JDProgress {
@@ -58,7 +56,7 @@ export const toProgressionJD = (
 
 export const toProgressionJdIntervals = (
   birthJd = 0,
-  numYears = 20,
+  numYears = 22,
   numPerYer = 4,
   inFuture = 0.25,
   yearType = 'tropical',
@@ -177,13 +175,14 @@ export const buildProgressSetPairs = async (
 
 export const buildSingleProgressSet = async (
   jd = 0,
-  numSamples = 4,
+  numSamples = 22,
   progressKeys = ['su', 've', 'ma'],
   showIsoDates = false,
-  perYear = 4,
+  perYear = 2,
+  yearsAgo = 0
 ) => {
   const numYears = numSamples / perYear;
-  const futureFrac = 1 - 1 / perYear;
+  const futureFrac = (numYears - yearsAgo) / numYears;
   const intervals = toProgressionJdIntervals(jd, numYears, perYear, futureFrac);
   const progSet = await buildProgressBodySets(
     intervals,
@@ -206,7 +205,7 @@ export const buildSimpleProgressSetPairs = async (
 export const calcProgressAspectsFromProgressData = (pData: any, applyAyanamsha = true) => {
   const { p1, p2} = pData;
   const gPairs = [['su', 've'], ['ve', 've'], ['ve', 'ma']];
-  const aspKeys = ["conjunction","opposition", "trine", "square", "quincunx"];
+  const aspKeys = ["conjunction","opposition", "trine", "square"];
   let rows = [];
   if (p1 instanceof Object && p2 instanceof Object) {
     if (p1 instanceof Array && p2 instanceof Array) {
@@ -247,13 +246,36 @@ export const calcProgressAspectsFromProgressData = (pData: any, applyAyanamsha =
   return rows;
 }
 
-export const calcProgressAspectsFromJds = async (jd1 = 0, jd2 = 0, applyAyanamsha = true, showIsoDates = true) => {
+export const calcProgressAspectsFromJds = async (jd1 = 0, jd2 = 0, applyAyanamsha = true, showIsoDates = false) => {
   const pd = await buildSimpleProgressSetPairs(jd1, jd2, showIsoDates);
   return calcProgressAspectsFromProgressData(pd, applyAyanamsha);
 }
 
-export const buildSingleProgressSetKeyValues = async (jd = 0) => {
-  const pgs = await buildSingleProgressSet(jd);
+export const progressItemsToDataSet = (items: any[] = [], jd1 = 0, jd2 = 0) => {
+let num = 0;
+  let numWithAspects = 0;
+  if (items instanceof Array) {
+    num = items.length;
+    numWithAspects = items.filter(item => item.pairs.some(pair => pair.aspects.length > 0)).length;
+  }
+  return {
+    num,
+    numWithAspects,
+    jd1,
+    jd2,
+    items
+  }
+}
+
+export const calcProgressAspectDataFromProgressItems = (p1: any[] = [], p2: any[] = []) => {
+  const pdSet = { p1, p2 };
+  const items = calcProgressAspectsFromProgressData(pdSet, false);
+  return progressItemsToDataSet(items);
+}
+
+export const buildSingleProgressSetKeyValues = async (jd = 0, yearsAgo = 2, years = 11, perYear = 2) => {
+  const numSamples = years * perYear;
+  const pgs = await buildSingleProgressSet(jd, numSamples, ['su', 've', 'ma'], false, perYear, yearsAgo);
   return pgs.map(pItem => {
     const bodies = simpleObjectToKeyValues(pItem.bodies);
     return { ...pItem, bodies };

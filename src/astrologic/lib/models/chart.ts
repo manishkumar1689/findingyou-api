@@ -492,13 +492,7 @@ export class Chart {
       : naturalBenefics;
   }
 
-  matchProgressItem(refJd = 0, tolerance = 45): ProgressResult {
-    const jd = refJd > 1000 ? refJd : currentJulianDay();
-    const startJd = jd - tolerance;
-    const endJd = jd + tolerance;
-    const item = this.progressItems.find(
-      pi => pi.jd >= startJd && pi.jd <= endJd,
-    );
+  mapProgressItem(item: any = null) {
     if (item instanceof Object) {
       const { jd, pd, ayanamsha } = item;
       const bodies = keyValuesToSimpleObject(
@@ -520,6 +514,26 @@ export class Chart {
         applied: false,
       };
     }
+  }
+
+  matchProgressItem(refJd = 0, tolerance = 45): ProgressResult {
+    const jd = refJd > 1000 ? refJd : currentJulianDay();
+    const startJd = jd - tolerance;
+    const endJd = jd + tolerance;
+    const item = this.progressItems.find(
+      pi => pi.jd >= startJd && pi.jd <= endJd,
+    );
+    return this.mapProgressItem(item);
+  }
+
+  matchProgressItems(past = 2, future = 8): ProgressResult[] {
+    const currJd = currentJulianDay();
+    const jdAgo = currJd - (365.25 * past);
+    const jdFuture = currJd + (365.25 * (future + 0.5));
+    const items = this.progressItems.filter(
+      pi => pi.jd >= jdAgo && pi.jd <= jdFuture,
+    );
+    return items.map(this.mapProgressItem);
   }
 
   get kotaSvami() {
@@ -1046,6 +1060,15 @@ export class Chart {
 
   get hasIndianTime() {
     return this.indianTime instanceof Object;
+  }
+
+  get hasProgressItems() {
+    return this.progressItems instanceof Array && this.progressItems.length > 0;
+  }
+
+  get hasCurrentProgressItems() {
+    const currJd = currentJulianDay();
+    return this.hasProgressItems && this.progressItems.filter(pi => pi.jd > currJd);
   }
 
   localDate(fmt = 'euro1', timePrecision = 's') {

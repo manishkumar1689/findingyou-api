@@ -81,8 +81,7 @@ import { simplifyChart } from '../astrologic/lib/member-charts';
 import { MediaItemDTO } from './dto/media-item.dto';
 import {
   filterLikeabilityContext,
-  IFlag,
-  mapLikeabilityRelations,
+  UserFlagSet,
 } from '../lib/notifications';
 import { isValidObjectId, Model } from 'mongoose';
 import { ActiveStatusDTO } from './dto/active-status.dto';
@@ -539,6 +538,7 @@ export class UserController {
     @Query() query,
   ) {
     const limitInt = isNumeric(limit) ? smartCastInt(limit, 52) : 52;
+    const queryStringParams = query instanceof Object ? query : {};
     const yearMs = 365.25 * 24 * 60 * 60 * 1000;
     const userData = await this.getMember(userID);
     if (userData.valid) {
@@ -581,6 +581,7 @@ export class UserController {
         : ['m'];
 
       const queryParams = {
+        ...queryStringParams,
         user: userID,
         mode: 'complete',
         context: 'search',
@@ -593,7 +594,7 @@ export class UserController {
       const filterMap: Map<string, string> = new Map(Object.entries(query));
       const kutaTypeKeyRef = filterMap.has('kt')
         ? filterMap.get('kt')
-        : 'dashaashta';
+        : 'ashta';
       const kutaTypeKey = [
         'ashta',
         'dashaashta',
@@ -603,7 +604,7 @@ export class UserController {
         'all',
       ].includes(kutaTypeKeyRef)
         ? kutaTypeKeyRef
-        : 'dashaashta';
+        : 'ashta';
       const members = await this.fetchMembers(0, limitInt, queryParams, true);
       const kutaPairs = [];
       const kutaSet = await this.settingService.getKutaSettings();
@@ -619,7 +620,6 @@ export class UserController {
             c2: member.chart._id,
             totals: {
               ashta: calcAshtaKutaRowTotal(kutaRow),
-              dasha: calcDashaKutaRowTotal(kutaRow),
             },
             rows: kutaRow,
           });
@@ -627,7 +627,8 @@ export class UserController {
       }
       const ids = members.map(m => m._id);
       const mostActive = await this.feedbackService.rankByActivity(ids, 2);
-      const mostPopular = await this.feedbackService.rankByLikeability(ids);
+      //const mostPopular = await this.feedbackService.rankByLikeability(ids);
+      const mostPopular = [];
       const currJd = currentJulianDay();
       const p1Set = baseChart.matchProgressItem(currJd);
       const p2Charts: Chart[] = members.map(m => {
@@ -661,8 +662,6 @@ export class UserController {
         mostPopular,
         user,
         ratings,
-        p1Set,
-        p2,
         preferences: Object.fromEntries(preferenceMap.entries()),
       });
     } else {
@@ -704,7 +703,8 @@ export class UserController {
     //const notLiked = queryKeys.includes('notliked');
     let hasUser = queryKeys.includes('user') && notEmptyString(query.user, 16);
     const userId = hasUser ? query.user : '';
-
+    let refChart = null;
+    let hasRefChart = false;
     const context = queryKeys.includes('context') ? query.context : '';
     const hasContext = hasUser && notEmptyString(context, 2);
     const params = hasContext ? filterLikeabilityContext(context) : query;
@@ -775,23 +775,28 @@ export class UserController {
           break;
       }
     }
-    const filterFlagsByUser = (item: IFlag, userId = '') => {
-      return item.user.toString() === userId;
-    };
+    
     let notFlags = [];
     let trueFlags = [];
     // Filter search swipe listing
     let userAge = -1;
+    const userInfo = hasUser
+      ? await this.userService.getBasicById(userId)
+      : null;
+    hasUser = userInfo instanceof Object;
+    userAge = hasUser ? userInfo.age : -1;
+    if (hasUser) {
+      const chartObj = await this.astrologicService.getUserBirthChart(userId);
+      if (chartObj instanceof Model) {
+        refChart = new Chart(chartObj.toObject());
+        hasRefChart = refChart.grahas.length > 6;
+      }
+    }
     if (hasContext && searchMode) {
       //notFlags = ['like', 'superlike', 'passed3'];
       const enforcePaidMembership = await this.settingService.enforcePaidMembershipLogic();
 
-      const userInfo = hasUser
-        ? await this.userService.getBasicById(userId)
-        : null;
-      hasUser = userInfo instanceof Object;
-      userAge = hasUser ? userInfo.age : -1;
-
+      
       if (userAge > 17) {
         query.ageRange = userAge;
       }
@@ -840,7 +845,7 @@ export class UserController {
       trueFlags = notEmptyString(trueFlagStr) ? trueFlagStr.split(',') : [];
     }
     const preFetchFlags = notFlags.length > 0 || trueFlags.length > 0;
-    const prefOptions = await this.settingService.getPreferences();
+    //const prefOptions = await this.settingService.getPreferences();
     const {
       userFlags,
       excludedIds,
@@ -862,22 +867,22 @@ export class UserController {
     if (hasUser) {
       excludedIds.push(userId);
     }
-    const data = await this.userService.members(
+    const users = await this.userService.members(
       startInt,
       limitInt,
       queryParams,
       excludedIds,
       filteredForUser,
     );
-    const users = this.userService.filterByPreferences(
+   /*  const users = this.userService.filterByPreferences(
       data,
       query,
       prefOptions,
-    );
+    ); */
     const otherUserIds = preFetchFlags ? users.map(u => u._id) : [];
     const items = [];
 
-    const flags =
+    const flags: UserFlagSet =
       hasUser && !preFetchFlags
         ? await this.feedbackService.getAllUserInteractions(
             userId,
@@ -885,48 +890,15 @@ export class UserController {
             otherUserIds,
           )
         : userFlags;
-    /* const {
-      surveys,
-      multiscaleData,
-    } = await this.settingService.getSurveyData(); */
+    const kutaSet = await this.settingService.getKutaSettings();
+          
     for (const user of users) {
-      const chartObj = await this.astrologicService.getUserBirthChart(user._id);
-      const hasChart = chartObj instanceof Object;
-      const chart = hasChart
-        ? fullChart
-          ? new Chart(chartObj.toObject())
-          : simplifyChart(chartObj, ayanamshaKey, simpleMode)
-        : {};
-      const refUserId = user._id.toString();
-      const preferences =
-        user.preferences instanceof Array && user.preferences.length > 0
-          ? user.preferences.filter(filterCorePreference)
-          : [];
-
-      const filteredFlags = hasUser
-        ? {
-            from: flags.from
-              .filter(fl => filterFlagsByUser(fl, refUserId))
-              .map(fl => extractSimplified(fl, ['user'])),
-            to: flags.to
-              .filter(fl => filterFlagsByUser(fl, refUserId))
-              .map(fl => extractSimplified(fl, ['user'])),
-          }
-        : {};
-      const filteredLikes = hasUser
-        ? {
-            from: mapLikeabilityRelations(flags.likeability.from, refUserId),
-            to: mapLikeabilityRelations(flags.likeability.to, refUserId),
-          }
-        : {};
-      items.push({
-        ...user,
-        preferences,
-        chart,
-        hasChart,
-        flags: filteredFlags,
-        likeability: filteredLikes,
-      });
+      if (hasRefChart) {
+        const extraData = await this.astrologicService.expandUserWithChartData(user, flags, refChart, kutaSet, fullChart, ayanamshaKey, simpleMode);
+        if (extraData.hasChart) {
+          items.push(extraData);
+        }
+      }
     }
     items.sort((a, b) => (b.hasChart ? 1 : -1));
     return items;

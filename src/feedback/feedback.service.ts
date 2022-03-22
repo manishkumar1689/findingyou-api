@@ -6,11 +6,12 @@ import { extractDocId, extractSimplified } from '../lib/entities';
 import { notEmptyString, validISODateString } from '../lib/validators';
 import { CreateFlagDTO } from './dto/create-flag.dto';
 import { Feedback } from './interfaces/feedback.interface';
-import { Flag, SimpleFlag } from './interfaces/flag.interface';
+import { Flag, SimpleFlag} from './interfaces/flag.interface';
 import {
   filterLikeabilityFlags,
   mapFlagItems,
   mapUserFlag,
+  UserFlagSet,
 } from '../lib/notifications';
 import { smartCastInt } from '../lib/converters';
 
@@ -76,7 +77,7 @@ export class FeedbackService {
     user: string,
     startDate = null,
     otherUserIds = [],
-  ) {
+  ): Promise<UserFlagSet> {
     const dt = validISODateString(startDate)
       ? startDate
       : typeof startDate === 'number'

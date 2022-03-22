@@ -24,6 +24,15 @@ export interface IFlag {
   createdAt?: string;
 }
 
+export interface UserFlagSet {
+  to: IFlag[];
+  from: IFlag[];
+  likeability: {
+    to: IFlag[];
+    from: IFlag[];
+  }
+}
+
 export interface FlagVal {
   key?: string;
   value: any;

@@ -89,8 +89,11 @@ import { simplifyChart } from './lib/member-charts';
 import { getAshtakavargaBodyGrid } from './lib/settings/ashtakavarga-values';
 import { GeoPos } from './interfaces/geo-pos';
 import { ProgressItemDTO } from './dto/progress-item.dto';
-import { buildSingleProgressSetKeyValues } from './lib/settings/progression';
+import { buildSingleProgressSetKeyValues, calcProgressAspectsFromJds, progressItemsToDataSet } from './lib/settings/progression';
 import { currentJulianDay } from './lib/julian-date';
+import { filterCorePreference } from '../lib/mappers';
+import { mapLikeabilityRelations, UserFlagSet } from '../lib/notifications';
+import { User } from '../user/interfaces/user.interface';
 const { ObjectId } = Types;
 
 @Injectable()
@@ -407,6 +410,12 @@ export class AstrologicService {
 
     const items = await this.pairedChartModel.aggregate(steps);
     return items.length > 0 ? items[0] : null;
+  }
+
+
+  async progressAspectsFromJds(jd1 = 0, jd2 = 0) {
+    const items = await calcProgressAspectsFromJds(jd1, jd2);
+    return progressItemsToDataSet(items);
   }
 
   /* 
@@ -1020,7 +1029,10 @@ export class AstrologicService {
   async idsWithoutProgressItems(limit = 100) {
     const idRows = await this.chartModel
       .find({
-        progressItems: { $exists: false },
+        $or: [
+          { progressItems: { $exists: false } },
+          { progressItems: { $size: 0 } }
+        ]
       })
       .select('_id')
       .limit(limit);
@@ -1051,9 +1063,10 @@ export class AstrologicService {
         numProgressItems = pItems.length;
         const newProgressSet = await buildSingleProgressSetKeyValues(
           chartObj.jd,
+          2
         );
         let lastItemJd = 0;
-        if (pItems.length > 1) {
+        if (pItems.length > 6) {
           pItems.sort((a, b) => a.jd - b.jd);
           lastItemJd = pItems[pItems.length - 1].jd;
         }
@@ -1688,6 +1701,51 @@ export class AstrologicService {
     return await this.chartModel
       .findOne({ user: userID, isDefaultBirthChart: true })
       .exec();
+  }
+
+  async expandUserWithChartData(user: User, flags: UserFlagSet, refChart: ChartClass, kutaSet: any = null, fullChart = false, ayanamshaKey = 'true_citra', simpleMode = 'basic') {
+    const chartObj = await this.getUserBirthChart(user._id);
+    const hasChart = chartObj instanceof Object;
+    const chartSource = hasChart ? chartObj.toObject() : {};
+    const chart = new ChartClass(chartSource);
+    const chartData = hasChart ? fullChart ? chart : simplifyChart(chartSource, ayanamshaKey, simpleMode) : {};
+    const refUserId = user._id.toString();
+    const preferences =
+      user.preferences instanceof Array && user.preferences.length > 0
+        ? user.preferences.filter(filterCorePreference)
+        : [];
+    const filteredLikes = {
+          from: mapLikeabilityRelations(flags.likeability.from, refUserId),
+          to: mapLikeabilityRelations(flags.likeability.to, refUserId),
+        };
+    const kutaRow = hasChart? this._calcKutas(
+      refChart,
+      chart,
+      kutaSet,
+      'ashta',
+    ) : {};
+    return {
+      ...user,
+      hasChart,
+      chart: chartData,
+      preferences,
+      kutaRow,
+      likeability: filteredLikes,
+    };
+  }
+
+  _calcKutas(
+    c1: ChartClass,
+    c2: ChartClass,
+    kutaSet: Map<string, any> = new Map(),
+    kutaTypeKey = 'ashta',
+  ) {
+    c1.setAyanamshaItemByKey('true_citra');
+    c2.setAyanamshaItemByKey('true_citra');
+    const kutaBuilder = new Kuta(c1, c2);
+    kutaBuilder.loadCompatibility(kutaSet);
+    const grahaKeys = ['su', 'mo', 've', 'as'];
+    return kutaBuilder.calcAllSingleKutas(true, grahaKeys, kutaTypeKey, false);
   }
 
   async getChartsByUser(
