@@ -17,6 +17,7 @@ import { isNumeric, notEmptyString } from '../../../lib/validators';
 import { GeoLoc } from '../models/geo-loc';
 import { matchCurrentDashaLord } from '../models/dasha-set';
 import { PredictiveRuleSet } from '../../../setting/interfaces/predictive-rule-set.interface';
+import { julToDateParts } from '../julian-date';
 
 const birdMap = { 1: 'vulture', 2: 'owl', 3: 'crow', 4: 'cock', 5: 'peacock' };
 
@@ -1978,3 +1979,65 @@ export const calculatePanchaPakshiData = async (
   }
   return data;
 };
+
+
+export const calcLuckyTimes = async (chart: Chart, jd = 0, geo: GeoLoc, rules: any[] = [], dateMode = 'simple', showRules = true) => {
+  const data: Map<string, any> = new Map();
+  const ppData = await calculatePanchaPakshiData(
+    chart,
+    jd,
+    geo,
+    rules,
+    true,
+    true,
+  );
+  if (ppData.get('valid') === true) {
+    const keys = ['max', 'minutes'];
+    if (showRules) {
+      keys.push('rules');
+    }
+    const simpleDateMode = dateMode !== 'all';
+    if (ppData.has('startJd') && ppData.has('endJd')) {
+      const startJd = ppData.get('startJd');
+      const startJdp = julToDateParts(startJd)
+      const endJd = ppData.get('endJd');
+      const endJdp = julToDateParts(endJd);
+      const startUn = startJdp.unixTimeInt;
+      const start = simpleDateMode ? startUn :  {
+        jd: startJd,
+        dt: startJdp.toISOString(),
+        un: startUn
+      }
+      data.set('start', start);
+      if (ppData.has('yamas')) {
+        const firstYamas = ppData.get('yamas');
+        if (firstYamas instanceof Array && firstYamas.length === 5) {
+          const endYama = firstYamas[4];
+          const jdP = julToDateParts(endYama.end);
+          const ssUn = jdP.unixTimeInt;
+          const sunset = simpleDateMode ? ssUn : {
+            jd: endYama.end,
+            dt: jdP.toISOString(),
+            un: ssUn
+          };
+          data.set('sunset', sunset);
+        }
+      }
+      const endUn = endJdp.unixTimeInt
+      const end = simpleDateMode ? endUn : {
+        jd: endJd,
+        dt: endJdp.toISOString(),
+        un: endUn
+      };
+      data.set('end', end);
+    }
+    keys.forEach(k => {
+      if (ppData.has(k)) {
+        data.set(k, ppData.get(k));
+      }
+    })
+  } else {
+    data.set('valid', false);
+  }
+  return data;
+}

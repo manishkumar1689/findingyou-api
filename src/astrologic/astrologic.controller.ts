@@ -167,6 +167,7 @@ import {
 import { GeoPos } from './interfaces/geo-pos';
 import { processPredictiveRuleSet } from './lib/predictions';
 import {
+  calcLuckyTimes,
   calculatePanchaPakshiData,
   panchaPakshiDayNightSet,
 } from './lib/settings/pancha-pakshi';
@@ -177,7 +178,6 @@ import {
   buildSingleProgressSet,
   buildSingleProgressSetKeyValues,
   calcProgressAspectDataFromProgressItems,
-  calcProgressAspectsFromProgressData,
   calcProgressSummary,
 } from './lib/settings/progression';
 import { objectToMap } from '../lib/entities';
@@ -455,15 +455,18 @@ export class AstrologicController {
 
   /*
     #mobile
+    #testing
   */
-    @Get('lucky-times/:chartRef/:loc/:dt?')
+    @Get('lucky-times/:chartRef/:loc/:dt?/:dateMode')
     async ppLuckyTimes(
       @Res() res,
       @Param('chartRef') chartRef,
       @Param('loc') loc,
       @Param('dt') dt,
+      @Param('dtMode') dtMode,
     ) {
       let status = HttpStatus.BAD_REQUEST;
+      const dateMode = notEmptyString(dtMode)? dtMode.toLowerCase() : 'simple';
       const data: Map<string, any> = new Map(
         Object.entries({
           valid: false,
@@ -479,6 +482,7 @@ export class AstrologicController {
         const { dtUtc, jd } = matchJdAndDatetime(dt);
 
         data.set('jd', jd);
+        data.set('unix', julToDateParts(jd).unixTimeInt);
         data.set('dtUtc', dtUtc);
         const chartData = await this.astrologicService.getChart(chartID);
         const hasChart = chartData instanceof Model;
@@ -488,56 +492,12 @@ export class AstrologicController {
           const chartObj = hasChart ? chartData.toObject() : {};
           const chart = new Chart(chartObj);
           const rules = await this.settingService.getPPRules();
-          const ppData = await calculatePanchaPakshiData(
-            chart,
-            jd,
-            geo,
-            rules,
-            true,
-            true,
-          );
-          if (ppData.get('valid') === true) {
+          const ppData = await calcLuckyTimes(chart, jd, geo, rules, dateMode);
+          ppData.forEach((v, k) => {
+            data.set(k, v);
+          });
+          if (data.get('valid')) {
             status = HttpStatus.OK;
-            const keys = ['rules', 'minutes', 'totals', 'max'];
-            if (ppData.has('startJd') && ppData.has('endJd')) {
-              const startJd = ppData.get('startJd');
-              const startJdp = julToDateParts(startJd)
-              const endJd = ppData.get('endJd');
-              const endJdp = julToDateParts(endJd)
-              data.set('start', 
-                {
-                  jd: startJd,
-                  dt: startJdp.toISOString(),
-                  un: startJdp.unixTime
-                }
-              );
-              if (ppData.has('yamas')) {
-                const firstYamas = ppData.get('yamas');
-                if (firstYamas instanceof Array && firstYamas.length === 5) {
-                  const endYama = firstYamas[4];
-                  const jdP = julToDateParts(endYama.end);
-                  data.set('sunset', {
-                    jd: endYama.end,
-                    dt: jdP.toISOString(),
-                    un: jdP.unixTime
-                  });
-                }
-              }
-              data.set('end', 
-                {
-                  jd: endJd,
-                  dt: endJdp.toISOString(),
-                  un: endJdp.unixTime
-                }
-              );
-            }
-            keys.forEach(k => {
-              if (ppData.has(k)) {
-                data.set(k, ppData.get(k));
-              }
-            })
-          } else {
-            data.set('valid', false);
           }
         }
       } else {

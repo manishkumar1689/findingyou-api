@@ -243,6 +243,10 @@ export class JulDate {
     return julToUnixTime(this.jd);
   }
 
+  get unixTimeInt(): number {
+    return Math.round(julToUnixTime(this.jd));
+  }
+
   get unixMillisecs(): number {
     return this.unixTime * 1000;
   }

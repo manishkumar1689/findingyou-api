@@ -29,6 +29,7 @@ import {
   isNumeric,
   validISODateString,
   isString,
+  validLocationParameter,
 } from '../lib/validators';
 import { smartCastFloat, smartCastInt, toStartRef } from '../lib/converters';
 import { Request } from 'express';
@@ -112,7 +113,7 @@ import { PaymentDTO } from './dto/payment.dto';
 import { toWords } from '../astrologic/lib/helpers';
 import permissionValues from './settings/permissions';
 import {
-  buildCurrentTrendsData, matchDatePrecisionByDuration, mergeCurrentTrendsWithinSnippets,
+  buildCurrentTrendsData, mergeCurrentTrendsWithinSnippets,
 } from '../astrologic/lib/calc-orbs';
 import { LogoutDTO } from './dto/logout.dto';
 import { ResetDTO } from './dto/reset.dto';
@@ -123,6 +124,8 @@ import {
 } from '../lib/mappers';
 import { Kuta } from '../astrologic/lib/kuta';
 import { julToDateParts } from '../astrologic/lib/julian-date';
+import { calcLuckyTimes } from '../astrologic/lib/settings/pancha-pakshi';
+import { locStringToGeo } from '../astrologic/lib/converters';
 
 @Controller('user')
 export class UserController {
@@ -1589,7 +1592,10 @@ export class UserController {
     if (paramKeys.includes('mode')) {
       showMode = params.mode;
     }
-
+    const hasGeo = paramKeys.includes('loc')? validLocationParameter(params.loc) : false;
+    const geo = hasGeo ? locStringToGeo(params.loc) : null;
+    const showLuckyTimes = hasGeo? paramKeys.includes('lucky')? smartCastInt(params.lucky, 0) > 0 : false : false;
+    
     const dateMode = paramKeys.includes('date') ? params.date : 'simple';
 
     let rsMap: Map<string, any> = new Map();
@@ -1622,6 +1628,11 @@ export class UserController {
             ctData.set('aspectMatches', fullMatches);
           }
         }
+        if (showLuckyTimes) {
+          const rules = await this.settingService.getPPRules();
+          const ppData = await calcLuckyTimes(chart, jd, geo, rules, dateMode, false);
+          ctData.set('luckyTimes', Object.fromEntries(ppData.entries()));
+        }
         rsMap = new Map([...rsMap, ...ctData]);
       }
     }
@@ -1631,6 +1642,9 @@ export class UserController {
     }
     if (['all'].includes(showMode)) {
       allowedKeys.push('ranges', 'currentToBirth', 'currentToProgressed', 'progressedToBirth', 'progressedToProgressed');
+    }
+    if (showLuckyTimes) {
+      allowedKeys.push('luckyTimes');
     }
     return res.json(Object.fromEntries([...rsMap.entries()].filter(entry => allowedKeys.includes(entry[0]))));
   }
