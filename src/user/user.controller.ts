@@ -112,7 +112,7 @@ import { PaymentDTO } from './dto/payment.dto';
 import { toWords } from '../astrologic/lib/helpers';
 import permissionValues from './settings/permissions';
 import {
-  buildCurrentTrendsData,
+  buildCurrentTrendsData, matchDatePrecisionByDuration,
 } from '../astrologic/lib/calc-orbs';
 import { LogoutDTO } from './dto/logout.dto';
 import { ResetDTO } from './dto/reset.dto';
@@ -122,6 +122,7 @@ import {
   filterByLang,
 } from '../lib/mappers';
 import { Kuta } from '../astrologic/lib/kuta';
+import { julToDateParts } from '../astrologic/lib/julian-date';
 
 @Controller('user')
 export class UserController {
@@ -1584,14 +1585,16 @@ export class UserController {
     } else if (paramKeys.includes('user')) {
       cid = await this.astrologicService.getChartIDByUser(params.user);
     }
-
     let showMode = 'matches';
     if (paramKeys.includes('mode')) {
       showMode = params.mode;
     }
 
+    const dateMode = paramKeys.includes('date') ? params.date : 'simple';
+
     let rsMap: Map<string, any> = new Map();
     rsMap.set('jd', jd);
+    rsMap.set('unix', Math.round(julToDateParts(jd).unixTime) );
     rsMap.set('dtUtc', dtUtc);
 
     const ayanamsaKey = paramKeys.includes('aya') && notEmptyString(params.aya, 5) && params.aya !== 'tropical' ? params.aya : 'true_citra';
@@ -1601,7 +1604,7 @@ export class UserController {
 
       if (chartData instanceof Model) {
         const chart = new Chart(chartData.toObject());
-        const ctData = await buildCurrentTrendsData(jd, chart, showMode, ayanamsaKey, tropicalMode, true);
+        const ctData = await buildCurrentTrendsData(jd, chart, showMode, ayanamsaKey, tropicalMode, true, dateMode);
         const matches = ctData.get('matches');
         
         if (matches instanceof Array) {
@@ -1614,7 +1617,8 @@ export class UserController {
             'current_trends',
           );
           const fullMatches = matches.map(m => {
-            const { k1, k2, value, key, diff, lngs, snippetKey, relation, start, end } = m;
+            const { k1, k2, value, key, diff, lngs, snippetKey, relation, start, end, days } = m;
+            const precision = matchDatePrecisionByDuration(days);
             const category = ['current_trends', snippetKey[0]].join('_');
             const fullKeys = [[category, snippetKey[1]].join('__')];
             if (m.snippetKey.length > 2) {
@@ -1648,18 +1652,21 @@ export class UserController {
               diff,
               start,
               end,
+              days,
+              precision,
               text,
               title,
             };
           });
           if (fullMatches.length > 0) {
-            ctData.set('matches', fullMatches);
+            fullMatches.sort((a, b) => a.days - b.days )
+            ctData.set('aspectMatches', fullMatches);
           }
         }
         rsMap = new Map([...rsMap, ...ctData]);
       }
     }
-    const allowedKeys = ['jd', 'dtUtc', 'ayanamshas','lngMode', 'matches'];
+    const allowedKeys = ['jd', 'dtUtc', 'ayanamshas','lngMode', 'aspectMatches'];
     if (['charts','all'].includes(showMode)) {
       allowedKeys.push('current', 'progress','birth');
     }

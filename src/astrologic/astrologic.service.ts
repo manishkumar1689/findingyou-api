@@ -1103,30 +1103,40 @@ export class AstrologicService {
   }
 
   async getChartIDByUserRef(refKey: string, type = 'id'): Promise<string> {
-    const lookupSteps = buildChartLookupPath();
+    
+    let useAggregation = false;
     const filter: Map<string, any> = new Map();
     filter.set('isDefaultBirthChart', true);
     switch (type) {
       case 'email':
-        filter.set('user.identifier', new RegExp('^' + refKey, 'i'));
+        filter.set('u.identifier', new RegExp('^' + refKey, 'i'));
+        useAggregation = true;
         break;
       default:
         filter.set('user', refKey);
         break;
     }
-    const rows = await this.chartModel.aggregate([
-      ...lookupSteps,
-      {
-        $match: Object.fromEntries(filter.entries()),
-      },
-      {
-        $project: {
-          id: '$_id',
+    const criteria = Object.fromEntries(filter);
+    let rows: any[] = [];
+    if (useAggregation) {
+      const lookupSteps = buildChartLookupPath('u');
+      const steps = [
+        ...lookupSteps,
+        {
+          $match: criteria,
         },
-      },
-    ]);
+        {
+          $project: {
+            _id: '$_id',
+          },
+        },
+      ];
+      rows = await this.chartModel.aggregate(steps);
+    } else {
+      rows = await this.chartModel.find({user: refKey}).select('_id');
+    }
     if (rows.length > 0) {
-      return rows[0].id.toString();
+      return rows[0]._id.toString();
     }
     return '';
   }

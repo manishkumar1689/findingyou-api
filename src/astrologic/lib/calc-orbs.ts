@@ -500,6 +500,18 @@ export const matchAspectFromMap = (data: Map<string, any> = new Map(), from = ''
   return result;
 }
 
+export const matchDatePrecisionByDuration = (days = 0) => {
+  if (days <= 7) {
+    return 'm';
+  } else if (days <= 42) {
+    return 'h';
+  } else if (days <= 336) {
+    return 'd';
+  } else {
+    return 'mo';
+  }
+}
+
 export const buildCurrentTrendsData = async (
   jd = 0,
   chart: Chart = new Chart(),
@@ -507,8 +519,9 @@ export const buildCurrentTrendsData = async (
   ayanamsaKey = 'true_citra',
   tropical = false,
   buildMatchRange = false,
+  dateMode = 'simple'
 ) => {
-  
+  const simpleDateMode = dateMode !== 'all';
   const rsMap: Map<string, any> = new Map();
   const baseGrahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa'];
 
@@ -703,11 +716,12 @@ export const buildCurrentTrendsData = async (
         const extraStart = limit * first.prog;
         const range = [startJd - extraStart, endJd + extraEnd].map(j => { 
           const jdP = julToDateParts(j)
-          return {
+          const un = Math.round(jdP.unixTime);
+          return simpleDateMode ? un : {
             jd: j,
             dt: jdP.toISOString(),
-            un: jdP.unixTime
-          }
+            un,
+          };
          });
         outerItems.push({...last, limit, range, refMatch});
       }
@@ -716,17 +730,18 @@ export const buildCurrentTrendsData = async (
   }
   rsMap.set('matches', matches.map(m => {
     const rk = [m.relation, m.k1, m.k2, m.key].join('_');
-    let start: any = {};
-    let end: any = {};
+    let start: any = simpleDateMode? -1 : {};
+    let end: any = simpleDateMode? -1 : {};
+    let days = 0;
     if (matchRanges.has(rk)) {
       const mrs = matchRanges.get(rk);
       if (mrs.length > 1) {
         start = mrs[1].range[0];
         end = mrs[1].range[1];
+        days = simpleDateMode ? (end - start) / (24 * 60 * 60) : end.jd - start.jd;
       }
-      
     }
-    return {...m, start, end};
+    return {...m, start, end, days };
   }));
   if (buildMatchRange) {
     rsMap.set('ranges', Object.fromEntries(matchRanges.entries()));

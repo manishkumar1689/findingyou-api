@@ -277,18 +277,18 @@ export const buildPairedChartLookupPath = (): Array<any> => {
   ];
 };
 
-export const buildChartLookupPath = () => {
+export const buildChartLookupPath = (userAlias = 'user') => {
   return [
     {
       $lookup: {
         from: 'users',
         localField: 'user',
         foreignField: '_id',
-        as: 'user',
+        as: userAlias,
       },
     },
     {
-      $unwind: '$user',
+      $unwind: '$' + userAlias,
     },
   ];
 };
