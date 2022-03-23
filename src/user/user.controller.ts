@@ -108,19 +108,10 @@ import { User } from './interfaces/user.interface';
 import { mergeProgressSets } from '../astrologic/lib/settings/progression';
 import { IdSetDTO } from './dto/id-set.dto';
 import { basicSetToFullChart, Chart } from '../astrologic/lib/models/chart';
-import {
-  ashtaKeys,
-  calcAshtaKutaRowTotal,
-  calcDashaKutaRowTotal,
-  dashaKeys,
-  Kuta,
-} from '../astrologic/lib/kuta';
 import { PaymentDTO } from './dto/payment.dto';
 import { toWords } from '../astrologic/lib/helpers';
 import permissionValues from './settings/permissions';
-import { currentJulianDay } from '../astrologic/lib/julian-date';
 import {
-  buildCoreAspects,
   buildCurrentTrendsData,
 } from '../astrologic/lib/calc-orbs';
 import { LogoutDTO } from './dto/logout.dto';
@@ -129,8 +120,8 @@ import { EmailParamsDTO } from './dto/email-params.dto';
 import {
   extractSnippet,
   filterByLang,
-  filterCorePreference,
 } from '../lib/mappers';
+import { Kuta } from '../astrologic/lib/kuta';
 
 @Controller('user')
 export class UserController {
@@ -530,7 +521,7 @@ export class UserController {
     return res.json(items);
   }
 
-  @Get('swipe-deck/:userID/:limit?')
+  /* @Get('swipe-deck/:userID/:limit?')
   async swipeDeck(
     @Res() res,
     @Param('userID') userID,
@@ -553,13 +544,13 @@ export class UserController {
         user.preferences.map(pref => [pref.key, pref.value]),
       );
 
-      /* const interactions = await this.feedbackService.fetchByLikeability(
-      userID,
-      startDate,
-      refNum,
-      gte,
-      mutualMode,
-    ); */
+    //   const interactions = await this.feedbackService.fetchByLikeability(
+    //   userID,
+    //   startDate,
+    //   refNum,
+    //   gte,
+    //   mutualMode,
+    // ); 
       const ratings = await this.feedbackService.getRatings(userID);
       const minVal = -3;
       const age =
@@ -667,9 +658,9 @@ export class UserController {
     } else {
       return res.status(HttpStatus.NOT_FOUND).json({ valid: false });
     }
-  }
+  } */
 
-  async _calcKutas(
+  /* async _calcKutas(
     c1: Chart,
     c2: Chart,
     kutaSet: Map<string, any> = new Map(),
@@ -681,7 +672,7 @@ export class UserController {
     kutaBuilder.loadCompatibility(kutaSet);
     const grahaKeys = ['su', 'mo', 've', 'as'];
     return kutaBuilder.calcAllSingleKutas(true, grahaKeys, kutaTypeKey, false);
-  }
+  } */
 
   async fetchMembers(
     start = 0,
