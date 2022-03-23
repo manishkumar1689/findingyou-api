@@ -178,6 +178,7 @@ import {
   buildSingleProgressSetKeyValues,
   calcProgressAspectDataFromProgressItems,
   calcProgressAspectsFromProgressData,
+  calcProgressSummary,
 } from './lib/settings/progression';
 import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
@@ -886,6 +887,7 @@ export class AstrologicController {
         data.jd1 = pd.jd1;
         data.jd2 = pd.jd2;
         data.items = pd.items;
+        data.summary = calcProgressSummary(pd.items);
       }
     }
     return res.status(HttpStatus.OK).json(data);

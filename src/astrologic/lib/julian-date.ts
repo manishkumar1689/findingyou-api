@@ -3,6 +3,7 @@ export const epoch = {
   year: 1970, // ref year
   weekDay: 4, // weekday num of 1 Jan 1970
   secondOffset: (1 / 3600) * 0.3333, // best second offset in hours to account for leap seconds
+  yearLength: 365.25
 };
 
 export interface MonthDay {
@@ -133,6 +134,20 @@ export const unixTimeToJul = (ts = 0) => {
 export const currentJulianDay = (): number => {
   const ts = new Date().getTime() / 1000;
   return unixTimeToJul(ts);
+};
+
+/* 
+  Return the number of days from now
+*/
+export const daysFromNow = (jd = 0): number => {
+  return jd - currentJulianDay();
+};
+
+/* 
+  Return the number of years from now
+*/
+export const yearsFromNow = (jd = 0): number => {
+  return daysFromNow(jd) / epoch.yearLength;
 };
 
 /* 

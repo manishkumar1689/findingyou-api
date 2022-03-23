@@ -121,20 +121,32 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra', mode
   chart.mc = subtractLng360(smartCastFloat(chart.mc), ayanamshaVal);
   chart.vertex = subtractLng360(smartCastFloat(chart.vertex), ayanamshaVal);
   delete chart._id;
-  chart.ayanamshas = chart.ayanamshas.map(removeIds);
+  chart.ayanamshas = chart.ayanamshas.map(removeIds).filter(row => showExtraDataSets || row.key === ayanamshaKey);
   chart.upagrahas = chart.upagrahas.map(removeIds);
   /* if (chart.sphutas instanceof Array && ayanamshaIndex < chart.sphutas.length) {
     chart.sphutas = chart.sphutas[ayanamshaIndex].items.map(removeIds);
   } */
-  chart.sphutas = showExtraDataSets? matchAyanamshaDataSet(chart, 'sphutas', ayanamshaNum) : [];
-  chart.objects = showExtraDataSets? matchAyanamshaDataSet(chart, 'objects', ayanamshaNum) : [];
-  chart.numValues = showExtraDataSets? chart.numValues.map(removeIds) : [];
-  chart.stringValues = showExtraDataSets? chart.stringValues.map(removeIds) : [];
-  chart.rashis = showExtraDataSets? matchAyanamshaDataSet(chart, 'rashis', ayanamshaNum) : [];
+  
   if (chart.upagrahas instanceof Array  && chart.upagrahas.length > 0) {
     chart.upagrahas = showUpagrahas? chart.upagrahas.map(up => simplifyUpagraha(up, ayanamshaVal)) : [];
   }
   delete chart.__v;
+  if (!showExtraDataSets) {
+    delete chart.progressItems;
+    delete chart.upagrahas;
+    delete chart.sphutas;
+    delete chart.numValues;
+    delete chart.stringValues;
+    delete chart.objects;
+    delete chart.rashis;
+    delete chart.houses;
+  } else {
+    chart.sphutas = matchAyanamshaDataSet(chart, 'sphutas', ayanamshaNum);
+    chart.objects = matchAyanamshaDataSet(chart, 'objects', ayanamshaNum);
+    chart.numValues = chart.numValues.map(removeIds);
+    chart.stringValues = chart.stringValues.map(removeIds);
+    chart.rashis = matchAyanamshaDataSet(chart, 'rashis', ayanamshaNum);
+  }
   return chart;
 };
 

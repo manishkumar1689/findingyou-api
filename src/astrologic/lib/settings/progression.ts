@@ -6,7 +6,7 @@ import {
 import { calcAyanamsha, calcLngsJd } from '../core';
 import { julToISODate } from '../date-funcs';
 import { KeyLng } from '../interfaces';
-import { dateStringToJulianDay, julToDateParts } from '../julian-date';
+import { currentJulianDay, dateStringToJulianDay, julToDateParts } from '../julian-date';
 import { calcAspect } from '../calc-orbs';
 import { subtractLng360 } from '../math-funcs';
 
@@ -271,6 +271,31 @@ export const calcProgressAspectDataFromProgressItems = (p1: any[] = [], p2: any[
   const pdSet = { p1, p2 };
   const items = calcProgressAspectsFromProgressData(pdSet, false);
   return progressItemsToDataSet(items);
+}
+
+export const calcProgressSummary = (items: any[] = [], maxDistance = 2 + 1/60) => {
+  const mp: Map<string, any> = new Map();
+  const currJd = currentJulianDay();
+  items.forEach(item => {
+    if (item instanceof Object && Object.keys(item).includes('pairs')) {
+      for (const pair of item.pairs) {
+        if (pair.aspects.length > 0) {
+          for (const asItem of pair.aspects) {
+            if (asItem.distance <= maxDistance) {
+              const mk = [pair.k1, pair.k2, asItem.key].join('_');
+              const mItems = mp.has(mk)? mp.get(mk) : [];
+              mItems.push({
+                days: item.jd - currJd,
+                dist: asItem.distance
+              });
+              mp.set(mk, mItems);
+            }
+          }
+        }
+      }
+    }
+  })
+  return Object.fromEntries(mp.entries());
 }
 
 export const buildSingleProgressSetKeyValues = async (jd = 0, yearsAgo = 2, years = 11, perYear = 2) => {

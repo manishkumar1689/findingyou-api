@@ -89,7 +89,7 @@ import { simplifyChart } from './lib/member-charts';
 import { getAshtakavargaBodyGrid } from './lib/settings/ashtakavarga-values';
 import { GeoPos } from './interfaces/geo-pos';
 import { ProgressItemDTO } from './dto/progress-item.dto';
-import { buildSingleProgressSetKeyValues, calcProgressAspectsFromJds, progressItemsToDataSet } from './lib/settings/progression';
+import { buildSingleProgressSetKeyValues, calcProgressAspectDataFromProgressItems, calcProgressAspectsFromJds, calcProgressSummary, progressItemsToDataSet } from './lib/settings/progression';
 import { currentJulianDay } from './lib/julian-date';
 import { filterCorePreference } from '../lib/mappers';
 import { mapLikeabilityRelations, UserFlagSet } from '../lib/notifications';
@@ -1724,12 +1724,15 @@ export class AstrologicService {
       kutaSet,
       'ashta',
     ) : {};
+    const pd = calcProgressAspectDataFromProgressItems(chart.matchProgressItems(), refChart.matchProgressItems());
+    const p2Summary = pd.num > 0 ? calcProgressSummary(pd.items) : {};
     return {
       ...user,
       hasChart,
       chart: chartData,
       preferences,
-      kutaRow,
+      kutas: kutaRow,
+      p2: p2Summary,
       likeability: filteredLikes,
     };
   }
