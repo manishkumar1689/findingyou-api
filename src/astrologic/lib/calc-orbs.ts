@@ -1,10 +1,13 @@
 import { mapLngRange } from '../../lib/query-builders';
+import { extractSnippetTextByLang } from '../../lib/converters';
+import { TimeItem } from '../../lib/interfaces';
 import { calcAyanamsha, calcLngsJd, relativeAngle } from './core';
 import { KeyLng, ProgressResult } from './interfaces';
 import { julToDateParts } from './julian-date';
 import { subtractLng360 } from './math-funcs';
 import { Chart } from './models/chart';
 import { buildCurrentProgressPositions } from './settings/progression';
+import { Snippet } from '../../snippet/interfaces/snippet.interface';
 
 export interface AspectRow {
   key: string;
@@ -37,12 +40,29 @@ export interface AspectSet {
 export interface AspectResult {
   k1?: string;
   k2?: string;
-  lng1: number;
-  lng2: number;
+  lng1: number | TimeItem;
+  lng2: number | TimeItem;
   aspectDiff: number;
   diff: number;
   aspected?: boolean;
   neg?: boolean;
+}
+
+export interface AspectRecord {
+  category?: string;
+  relation?: string;
+  k1: string;
+  k2: string;
+  value: number;
+  lngs?: number[];
+  key: string;
+  diff: number;
+  start: number;
+  end: number;
+  days: number;
+  precision?: string;
+  text?: string;
+  title?: string;
 }
 
 export interface AspectResultSet {
@@ -748,3 +768,62 @@ export const buildCurrentTrendsData = async (
   }
   return rsMap;
 };
+
+const matchShortAspectName = (key = "") => {
+  switch (key) {
+    case 'conjunction':
+      return 'conjunct';
+    default:
+      return key;
+  }
+}
+
+export const mergeCurrentTrendsWithinSnippets = (m: any = null, snippets: Snippet[] = []): AspectRecord => {
+  const { k1, k2, value, key, diff, lngs, snippetKey, relation, start, end, days } = m;
+  const precision = matchDatePrecisionByDuration(days);
+  let firstCat = '';
+  let fullKeys: string[] = [];
+  if (snippetKey instanceof Array && snippetKey.length > 0) {
+    firstCat = snippetKey[0];
+    const category = ['current_trends', snippetKey[0]].join('_');
+    fullKeys = [[category, snippetKey[1]].join('__')];
+    if (m.snippetKey.length > 2) {
+      fullKeys.push([category, snippetKey[2]].join('__'));
+    }
+  }
+  const sn = snippets.find(s => fullKeys.includes(s.key));
+  let text = '';
+  let title = '';
+  if (sn instanceof Object) {
+    const snText = extractSnippetTextByLang(sn, 'en');
+    const parts = snText.split("\n");
+    const relType = m.relation.split('_').pop();
+    const shortAspectName = matchShortAspectName(m.key);
+    if (parts.length > 1) {
+      const first = parts.shift();
+      title = first.replace('#aspect', shortAspectName).replace('#relation', relType);
+      text = parts.join('\n');
+    } else {
+      const action = m.category === 'progressed' ? 'Progressed' : 'Transiting';
+      
+      title = `${action} ${m.k1} ${shortAspectName} ${m.relType} ${m.k2}`
+      text = snText;
+    }
+  }
+  return {
+    category: firstCat,
+    relation,
+    k1,
+    k2,
+    value,
+    lngs,
+    key,
+    diff,
+    start,
+    end,
+    days,
+    precision,
+    text,
+    title,
+  };
+}

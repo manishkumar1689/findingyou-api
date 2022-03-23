@@ -13,3 +13,9 @@ export interface KeyValueNum {
   num?: number;
   value: number;
 }
+
+export interface TimeItem {
+  un?: number;
+  jd: number;
+  dt: string;
+}

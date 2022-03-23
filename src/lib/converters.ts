@@ -1,4 +1,5 @@
 import { convert } from 'html-to-text';
+import { Snippet } from '../snippet/interfaces/snippet.interface';
 import { KeyNumValue } from './interfaces';
 import { isNumeric, notEmptyString } from './validators';
 
@@ -269,3 +270,25 @@ export const htmlToPlainText = (html = ''): string => {
     return '';
   }
 };
+
+
+export const extractSnippetTextByLang = (storedSnippet: Snippet, lang = 'en') => {
+  let text = '';
+    if (storedSnippet.values instanceof Array) {
+      const langRoot = lang.split('-').shift();
+      let langIndex = storedSnippet.values.findIndex(tr => tr.lang === lang);
+      if (langIndex < 0 && langRoot !== lang) {
+        langIndex = storedSnippet.values.findIndex(tr => tr.lang === lang);
+        if (langIndex < 0 && langRoot !== 'en') {
+          langIndex = storedSnippet.values.findIndex(tr => tr.lang === 'en');
+        }
+      }
+      if (langIndex >= 0) {
+        const version = storedSnippet.values[langIndex];
+        if (version instanceof Object) {
+          text = version.text;
+        }
+      }
+    }
+    return text;
+}

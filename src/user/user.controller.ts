@@ -112,7 +112,7 @@ import { PaymentDTO } from './dto/payment.dto';
 import { toWords } from '../astrologic/lib/helpers';
 import permissionValues from './settings/permissions';
 import {
-  buildCurrentTrendsData, matchDatePrecisionByDuration,
+  buildCurrentTrendsData, matchDatePrecisionByDuration, mergeCurrentTrendsWithinSnippets,
 } from '../astrologic/lib/calc-orbs';
 import { LogoutDTO } from './dto/logout.dto';
 import { ResetDTO } from './dto/reset.dto';
@@ -1616,48 +1616,7 @@ export class UserController {
             keys,
             'current_trends',
           );
-          const fullMatches = matches.map(m => {
-            const { k1, k2, value, key, diff, lngs, snippetKey, relation, start, end, days } = m;
-            const precision = matchDatePrecisionByDuration(days);
-            const category = ['current_trends', snippetKey[0]].join('_');
-            const fullKeys = [[category, snippetKey[1]].join('__')];
-            if (m.snippetKey.length > 2) {
-              fullKeys.push([category, snippetKey[2]].join('__'));
-            }
-            const sn = snippets.find(s => fullKeys.includes(s.key));
-            let text = '';
-            let title = '';
-            if (sn instanceof Object) {
-              const snText = this.snippetService.extractSnippetText(sn, 'en');
-              const parts = snText.split("\n");
-              const relType = m.relation.split('_').pop();
-              if (parts.length > 1) {
-                const first = parts.shift();
-                title = first.replace('#aspect', m.key).replace('#relation', relType);
-                text = parts.join('\n');
-              } else {
-                const action = m.category === 'progressed' ? 'Progressed' : 'Transiting';
-                title = `${action} ${m.k1} ${m.key} ${m.relType} ${m.k2}`
-                text = snText;
-              }
-            }
-            return {
-              category: snippetKey[0],
-              relation,
-              k1,
-              k2,
-              value,
-              lngs,
-              key,
-              diff,
-              start,
-              end,
-              days,
-              precision,
-              text,
-              title,
-            };
-          });
+          const fullMatches = matches.map(m => mergeCurrentTrendsWithinSnippets(m, snippets) );
           if (fullMatches.length > 0) {
             fullMatches.sort((a, b) => a.days - b.days )
             ctData.set('aspectMatches', fullMatches);

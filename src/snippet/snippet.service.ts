@@ -1,4 +1,4 @@
-import { Body, HttpService, Injectable } from '@nestjs/common';
+import { HttpService, Injectable } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Snippet } from './interfaces/snippet.interface';
@@ -10,7 +10,7 @@ import { v2 } from '@google-cloud/translate';
 import { googleTranslate } from '../.config';
 import { notEmptyString } from '../lib/validators';
 import { capitalize } from '../astrologic/lib/helpers';
-import { text } from 'express';
+import { extractSnippetTextByLang } from '../lib/converters';
 const { Translate } = v2;
 
 @Injectable()
@@ -243,32 +243,11 @@ export class SnippetService {
     }
   }
 
-  extractSnippetText(storedSnippet: Snippet, lang = 'en') {
-    let text = '';
-    if (storedSnippet.values instanceof Array) {
-      const langRoot = lang.split('-').shift();
-      let langIndex = storedSnippet.values.findIndex(tr => tr.lang === lang);
-      if (langIndex < 0 && langRoot !== lang) {
-        langIndex = storedSnippet.values.findIndex(tr => tr.lang === lang);
-        if (langIndex < 0 && langRoot !== 'en') {
-          langIndex = storedSnippet.values.findIndex(tr => tr.lang === 'en');
-        }
-      }
-      if (langIndex >= 0) {
-        const version = storedSnippet.values[langIndex];
-        if (version instanceof Object) {
-          text = version.text;
-        }
-      }
-    }
-    return text;
-  }
-
   async getSnippetText(key = '', lang = '') {
     let text = '';
     const storedSnippet = await this.getByKey(key);
     if (storedSnippet instanceof Model) {
-      text = this.extractSnippetText(storedSnippet, lang);
+      text = extractSnippetTextByLang(storedSnippet, lang);
     }
     return text;
   }
