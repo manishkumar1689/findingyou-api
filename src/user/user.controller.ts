@@ -103,6 +103,7 @@ import {
   mergePsychometricFeedback,
   summariseJungianAnswers,
   big5FacetedScaleOffset,
+  compareJungianPolarities,
 } from '../setting/lib/mappers';
 import { PublicUserDTO } from './dto/public-user.dto';
 import { User } from './interfaces/user.interface';
@@ -886,12 +887,14 @@ export class UserController {
           )
         : userFlags;
     const kutaSet = await this.settingService.getKutaSettings();
-          
+    const jungianRef = await this.userService.getSurveyDomainScores(userId, 'jungian');
     for (const user of users) {
       if (hasRefChart) {
         const extraData = await this.astrologicService.expandUserWithChartData(user, flags, refChart, kutaSet, fullChart, ayanamshaKey, simpleMode);
+        const jungian = await this.userService.getSurveyDomainScores(user._id, 'jungian');
+        const personality = compareJungianPolarities(jungianRef, jungian);
         if (extraData.hasChart) {
-          items.push(extraData);
+          items.push({...extraData, personality });
         }
       }
     }
@@ -1600,7 +1603,7 @@ export class UserController {
 
     let rsMap: Map<string, any> = new Map();
     rsMap.set('jd', jd);
-    rsMap.set('unix', Math.round(julToDateParts(jd).unixTime) );
+    rsMap.set('unix', julToDateParts(jd).unixTimeInt);
     rsMap.set('dtUtc', dtUtc);
 
     const ayanamsaKey = paramKeys.includes('aya') && notEmptyString(params.aya, 5) && params.aya !== 'tropical' ? params.aya : 'true_citra';

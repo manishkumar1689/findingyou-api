@@ -17,6 +17,7 @@ import {
   facetedJungianCategories,
   facetedJungianFormulae,
 } from '../settings/faceted-big5';
+import { KeyNumValue } from '../../lib/interfaces';
 
 /*
   Adding/subtracting this number converts from a -2 to 2 range to 1 to 5
@@ -550,3 +551,25 @@ export const filterMapSurveyByType = (
     .filter(pr => pr.type === sType)
     .map(pref => normalizeFacetedAnswer(pref, facetedQuestions));
 };
+
+
+export const compareJungianPolarities = (jungianRef: KeyNumValue[] = [], jungian: KeyNumValue[] = []) => {
+  const rows = jungianRef.map(row => {
+    const { key, value } = row;
+    const other = jungian.find(r2 => r2.key === key);
+    const matched = other instanceof Object;
+    const otherVal = matched ? other.value : 0;
+    return { 
+      key,
+      value: value - otherVal, 
+      matched
+    }
+  }).filter(row => row.matched);
+  const total = rows.map(row => 100 - (Math.abs(row.value) / 2) ).reduce((a, b) => a + b, 0) / rows.length;
+  const entries = rows.map(row => {
+    const { key, value } = row;
+    return [ key, value ]
+  });
+  entries.push(['total', total]);
+  return Object.fromEntries(entries);
+}

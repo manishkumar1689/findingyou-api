@@ -2390,6 +2390,39 @@ export class UserService {
     return await this.answerSetModel.findOne({ user: userID, type });
   }
 
+  async getSurveyAnswers(userID = '', type = '', base = 1, scale = 5, asPerc = false) {
+    const data = await this.getAnswerSet(userID, type);
+    const offset = base < 0? 0 : base === 0 ? scale / 2 - 0.5 : scale / 2 + 0.5;
+    let answers: any[] = [];
+    const multiplier = asPerc ? base < 0 ? 100 / (scale / 2 - 0.5) : 100 / (scale - 1) : 1;
+    if (data instanceof Model) {
+      const obj = data.toObject();
+      if (obj.answers instanceof Array) {
+        answers = obj.answers.map(row => {
+          const value = (row.value + offset) * multiplier;
+          return {...row, value }
+        });
+      }
+    }
+    return answers;
+  }
+
+  async getSurveyDomainScores(userID = '', type = ''): Promise<KeyNumValue[]> {
+    const answers = await this.getSurveyAnswers(userID, type, -1, 5, true);
+    const mp: Map<string, any> = new Map();
+    answers.forEach(row => {
+      const item = mp.has(row.domain)? mp.get(row.domain) : { num: 0, total: 0 };
+      item.total += row.value;
+      item.num += 1;
+      mp.set(row.domain, item);
+    });
+    const entries = [...mp.entries()].map(([key, item]) => {
+      const value = item.total / item.num;
+      return { key, value };
+    });
+    return entries;
+  }
+
   async getPublicUser(ref = '', refType = 'identifier') {
     const filter: Map<string, any> = new Map();
     let matchEmail = false;
