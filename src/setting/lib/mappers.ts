@@ -552,6 +552,10 @@ export const filterMapSurveyByType = (
     .map(pref => normalizeFacetedAnswer(pref, facetedQuestions));
 };
 
+const polarityDifferencesToScore = (rows: KeyNumValue[] = []): number => {
+  return rows.map(row => 100 - Math.abs(row.value) ).reduce((a, b) => a + b, 0) / rows.length;
+}
+
 
 export const compareJungianPolarities = (jungianRef: KeyNumValue[] = [], jungian: KeyNumValue[] = []) => {
   const rows = jungianRef.map(row => {
@@ -565,11 +569,11 @@ export const compareJungianPolarities = (jungianRef: KeyNumValue[] = [], jungian
       matched
     }
   }).filter(row => row.matched);
-  const total = rows.map(row => 100 - (Math.abs(row.value) / 2) ).reduce((a, b) => a + b, 0) / rows.length;
+  const score = polarityDifferencesToScore(rows);
   const entries = rows.map(row => {
     const { key, value } = row;
     return [ key, value ]
   });
-  entries.push(['total', total]);
+  entries.push(['score', score]);
   return Object.fromEntries(entries);
 }
