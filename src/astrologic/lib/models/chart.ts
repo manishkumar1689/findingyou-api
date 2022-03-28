@@ -891,6 +891,16 @@ export class Chart {
     return graha;
   }
 
+  grahasByKeys(keys: string[] = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa', 'ke', 'ra', 'as']): Graha[] {
+    return keys.map(k => {
+      const g = this.graha(k);
+      if (this.ayanamshaItem) {
+        g.setAyanamshaItem(this.ayanamshaItem);
+      }
+      return g;
+    });
+  }
+
   matchBodyAsGraha(key = '') {
     const gr = this.bodies.find(b => b.key === key);
     if (gr instanceof Object) {

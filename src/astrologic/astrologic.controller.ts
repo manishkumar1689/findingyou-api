@@ -183,6 +183,7 @@ import {
 import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
 import { julToDateParts } from './lib/julian-date';
+import { traverseAllNak28Cells } from './lib/calc-sbc';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -851,6 +852,40 @@ export class AstrologicController {
       }
     }
     return res.status(HttpStatus.OK).json(data);
+  }
+
+
+  @Get('sbc-vedhas/:chartRef/:loc')
+  async getSbcVedhas(@Res() res, @Param('chartRef') chartRef, @Param('loc') loc) {
+    let chartID = chartRef;
+    if (chartRef.includes('@') && chartRef.includes('.')) {
+      chartID = await this.astrologicService.getChartIDByEmail(chartRef);
+    }
+    const dtUtc = currentISODate();
+    const topList = 'true_citra';
+    const transitCData = await this.fetchCompactChart(
+      loc,
+      dtUtc,
+      'top',
+      topList,
+      false,
+      false,
+    );
+    const result: Map<string, any> = new Map();
+    if (transitCData instanceof Object) {
+      const transit = new Chart(transitCData);
+      transit.setAyanamshaItemByKey('true_citra');
+      result.set('transit', transit.grahasByKeys().map(gr => gr.toKeyLng()));
+      const bData = await this.astrologicService.getChart(chartID);
+      if (bData instanceof Model) {
+        const birth = new Chart(bData.toObject());
+        birth.setAyanamshaItemByKey('true_citra');
+        result.set('birth', birth.grahasByKeys().map(gr => gr.toKeyLng()));
+        const sbc = traverseAllNak28Cells(transit, birth);
+        result.set('sbc', sbc);
+      }
+    }
+    return res.json(Object.fromEntries( result.entries() ));
   }
 
   @Get('next-p2/:chartID/:showISO?/:grahas?')

@@ -7,6 +7,8 @@ goal: purushartha
 yoni: kuta__yoni_
 */
 
+import { nakshatra28, nakshatra28ToDegrees } from "../helpers";
+
 const nakshatraValues = [
   {
     key: 'n27_01',
@@ -253,6 +255,37 @@ const nakshatraValues = [
   },
 ];
 
+export const pada28Letters = [
+  ['चु','चे','चो','ल'],
+  ['लि','लु','ले','लो'],
+  ['अ','इ','उ','ए'],
+  ['ओ','व','वि','वु'],
+  ['वे','वो','क','कि'],
+  ['कु','घ','ङ','छ'],
+  ['के','को','ह','हि'],
+  ['हु','ह','हो','ड'],
+  ['डि','डु','डे','डो'],
+  ['म','मि','मु','मे'],
+  ['मो','ट','टि','टु'],
+  ['टे','टो','प','पि'],
+  ['पु','ष','ण','ठ'],
+  ['पे','पो','र','रि'],
+  ['रु','रे','रो','त'],
+  ['ति','तु','ते','तो'],
+  ['न','नि','नु','ने'],
+  ['नो','य','यि','यु'],
+  ['ये','यो','भ','भि'],
+  ['भु','ध','फ','ढ'],
+  ['भे','भो','ज','जि'],
+  ['ग','गि','गु','गे'],
+  ['जु','जे','जो','ख'],
+  ['खि','खु','खे','खो'],
+  ['गो','स','सि','सु'],
+  ['से','सो','द','दि'],
+  ['दु','थ','झ','ञ'],
+  ['दे','दो','च','चि']
+];
+
 const kotaCakraGroups = [
   { key: 'nw', flow: 1, nums: [1, 2, 3] },
   { key: 'n', flow: -1, nums: [4, 5, 6, 7] },
@@ -367,6 +400,34 @@ const matchCandraTypeKey = (type = "") => {
 
 export const matchCandraType = (type = "") => {
 	return matchCandraGroup(matchCandraTypeKey(type));
+}
+
+export interface Nak28PadaSet {
+  lng: number;
+  start: number;
+  end: number;
+  num: number;
+  pada: number;
+  letter: string;
+}
+
+export const matchNak28PadaSet = (lng = 0): Nak28PadaSet => {
+  const nakNum = nakshatra28(lng);
+  const [start, end] = nakshatra28ToDegrees(nakNum);
+  const len = end > start ? end - start : 0;
+
+  const prog = len > 0 ? (lng - start) / len : 0;
+  const padaIndex = Math.floor(prog * 4);
+  const nakIndex = ((nakNum - 1) + 28) % 28;
+  const letter = pada28Letters[nakIndex][padaIndex];
+  return { 
+    lng,
+    start,
+    end,
+    num: nakNum,
+    pada: padaIndex + 1,
+    letter,
+  }
 }
 
 export default nakshatraValues;

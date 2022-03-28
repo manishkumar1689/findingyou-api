@@ -27,7 +27,7 @@ import {
   withinNakshatra27,
   nakshatra28Progress,
 } from '../helpers';
-import { AyanamshaItem, DefaultAyanamshaItem } from '../interfaces';
+import { AyanamshaItem, DefaultAyanamshaItem, KeyLng } from '../interfaces';
 import { mapRelationships } from '../map-relationships';
 
 interface VariantGroup {
@@ -350,6 +350,13 @@ Calculate pachanga values for a body
 
   setAyanamshaItem(ayanamshaItem: AyanamshaItem) {
     this.ayanamshaItem = ayanamshaItem;
+  }
+
+  toKeyLng(): KeyLng {
+    return {
+      key: this.key,
+      lng: this.longitude
+    }
   }
 
   setVarga(num = 1) {
