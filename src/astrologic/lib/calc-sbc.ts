@@ -1,5 +1,6 @@
 import { nakshatra28ToDegrees } from "./helpers";
 import { Chart } from "./models/chart";
+import { Graha } from "./models/graha-set";
 import { matchNak28PadaSet } from "./settings/nakshatra-values";
 import { sbcGrid } from "./settings/sbc-values";
 
@@ -85,13 +86,21 @@ export const traverseAllNak28Cells = (transit: Chart, birth: Chart, ayanamshaKey
   const keys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa', 'ke', 'ra', 'as'];
   const transitGrahas = transit.grahasByKeys(keys);
   const natalGrahas = birth.grahasByKeys(keys);
+  const mapToPadaItem = (g: Graha) => {
+    const pItem = grahaToNakPada(g.longitude, g.key);
+    const { key, lng, pada, letter } = pItem;
+    return { key, lng, pada, letter };
+  }
   return [...new Array(28)].map((_,i) => {
     const num = i + 1;
+    const [start, end] = nakshatra28ToDegrees(num);
     const vedhas = matchTraversedNak28Cells(num);
-    const transit = transitGrahas.filter(g => g.nakshatra28 === num).map(g => grahaToNakPada(g.longitude, g.key));
-    const natal = natalGrahas.filter(g => g.nakshatra28 === num).map(g => grahaToNakPada(g.longitude, g.key));
+    const transit = transitGrahas.filter(g => g.nakshatra28 === num).map(mapToPadaItem);
+    const natal = natalGrahas.filter(g => g.nakshatra28 === num).map(mapToPadaItem);
     return {
       num,
+      start,
+      end,
       vedhas,
       transit,
       natal
