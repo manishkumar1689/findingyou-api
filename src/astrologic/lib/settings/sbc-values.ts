@@ -99,3 +99,7 @@ export const sbcGrid = [
     { type: 'vo', value: 'i' }
   ]
 ];
+
+
+export const sbcDefaultBenefics = ['mo', 've', 'ju', 'me'];
+export const sbcDefaultMalefics = ['su', 'ma', 'sa', 'ra', 'ke'];

@@ -44,7 +44,7 @@ const tithiValues = [
 export const calcTithi = (sunLng = 0, moonLng = 0) => {
   const sunMoonAngle = relativeAngle(sunLng, moonLng);
   const tithiVal = sunMoonAngle / (360 / 30);
-  const sn = (moonLng + 360 - sunLng) % 360;
+  //const sn = (moonLng + 360 - sunLng) % 360;
   const tithiPercent = (tithiVal % 1) * 100;
   const tithiNum = Math.floor(tithiVal) + 1;
   const tithiRow = tithiValues.find(t => t.num === tithiNum);
