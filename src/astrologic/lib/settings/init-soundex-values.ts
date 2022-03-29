@@ -33,13 +33,13 @@ const soundMap = [
   { type: 'vo', value: 'i', ipa: ['i'] }
 ];
 
-const initLetterMatchesbyLang = [
+export const initLetterMatchesbyLang = [
   {
     key: 'en',
     overrides: [
       {
         key: 'j',
-        value: 'j'
+        value: 'ja'
       },
       {
         key: 'w',
@@ -50,8 +50,32 @@ const initLetterMatchesbyLang = [
         value: 'kha'
       },
       {
-        key: 'er',
-        value: 'e'
+        key: 'c',
+        value: 'kha'
+      },
+      {
+        key: 'ch',
+        value: 'ca'
+      },
+      {
+        key: 'ce',
+        value: 'sa'
+      },
+      {
+        key: 'ci',
+        value: 'sa'
+      },
+      {
+        key: 'ge',
+        value: 'ja'
+      },
+      {
+        key: 'gi',
+        value: 'ja'
+      },
+      {
+        key: 'gertrude',
+        value: 'ga'
       },
       {
         key: 'ear',
@@ -68,6 +92,18 @@ const initLetterMatchesbyLang = [
       {
         key: 'oo',
         value: 'ū'
+      },
+      {
+        key: 'au',
+        value: 'o'
+      },
+      {
+        key: 'aw',
+        value: 'o'
+      },
+      {
+        key: 'ee',
+        value: 'ī'
       },
       {
         key: 'u[bcdfghklmnprstvwxz][aeiou]',
@@ -297,6 +333,43 @@ const initLetterMatchesbyLang = [
         key: 'ce',
         value: 'ca'
       },
+    ]
+  },
+  {
+    key: 'pl',
+    overrides: [
+      {
+        key: 'j',
+        value: 'y'
+      },
+      {
+        key: 'w',
+        value: 'va'
+      },
+      {
+        key: 'k',
+        value: 'ka'
+      },
+      {
+        key: 'dź',
+        value: 'j'
+      },
+      {
+        key: 'ź',
+        value: 'j'
+      },
+      {
+        key: 'z',
+        value: 's'
+      },
+      {
+        key: 'Ł',
+        value: 'va'
+      },
+      {
+        key: 'cz',
+        value: 'ca'
+      }
     ]
   },
 ];

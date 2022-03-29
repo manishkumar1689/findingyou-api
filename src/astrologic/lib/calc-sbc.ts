@@ -76,7 +76,13 @@ const matchTraversedNak28Cells = (nakNum = 1) => {
       }
     }
     groups.set(['diagonal', diag.dir].join('_'), cells);
-  })
+  });
+  const isCorner = ([0,8].includes(xy.y) && [1,7].includes(xy.x)) || ([0,8].includes(xy.x) && [1,7].includes(xy.y));
+  if (isCorner) {
+    const x = xy.x === 1 ? 0 : xy.x < 4? 0 : 8;
+    const y = xy.y === 1 ? 0 : xy.y < 4? 0 : 8;
+    groups.set('corner_1_4', [sbcGrid[x][y]]);
+  }
   return Object.fromEntries(groups);
 }
 
