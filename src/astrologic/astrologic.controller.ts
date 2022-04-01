@@ -894,7 +894,7 @@ export class AstrologicController {
     return res.json(Object.fromEntries( result.entries() ));
   }
 
-  @Get('test-vedhas/:nak/:pada?')
+/*   @Get('test-vedhas/:nak/:pada?')
   async testSbcVedhas(@Res() res, @Param('nak') nak, @Param('pada') pada) {
     const nakNum = isNumeric(nak)? smartCastInt(nak) : 0;
     const padaNum = isNumeric(pada)? smartCastInt(pada) : 0;
@@ -908,7 +908,7 @@ export class AstrologicController {
       }
     }
     return res.json(Object.fromEntries( result.entries() ));
-  }
+  } */
 
   @Get('next-p2/:chartID/:showISO?/:grahas?')
   async renderNextProgressionPositionsForChart(
