@@ -87,13 +87,13 @@ export const matchTraversedNak28Cells = (nakNum = 1, padaNum = 0) => {
     if (xy.column === 1) {
       diagDirs.push({ x: 1,y: 1, dir: 'ne', cw: false },{ x: 1, y: -1, dir: 'se', cw: true });
     } else {
-      diagDirs.push({ x: -1,y: 1, dir: 'nw', cw: false },{ x: -1, y: -1, dir: 'sw', cw: true });
+      diagDirs.push({ x: -1,y: 1, dir: 'nw', cw: true },{ x: -1, y: -1, dir: 'sw', cw: false });
     }
   } else if (hasVertical) {
     if (xy.row === 1) {
       diagDirs.push({ x: 1, y: 1, dir: 'se', cw: true  },{ x: -1, y: 1, dir: 'sw', cw: false});
     } else {
-      diagDirs.push({ x: 1, y: -1, dir: 'ne', cw: true },{ x: -1, y: -1, dir: 'nw', cw: false });
+      diagDirs.push({ x: 1, y: -1, dir: 'ne', cw: false },{ x: -1, y: -1, dir: 'nw', cw: true });
     }
   }
   diagDirs.forEach(diag => {
