@@ -98,7 +98,11 @@ export const sbcGrid = [
     { type: 'nk', value: 17 },
     { type: 'vo', value: 'i' }
   ]
-];
+].map((cells, ri) => {
+  return cells.map((cell, ci) => {
+    return { ...cell, column: ci + 1, row: ri + 1 }
+  })
+}).reduce((a,b) => a.concat(b), []);
 
 
 export const sbcDefaultBenefics = ['mo', 've', 'ju', 'me'];

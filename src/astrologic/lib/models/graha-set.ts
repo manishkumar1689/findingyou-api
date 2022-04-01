@@ -154,6 +154,12 @@ export class Graha extends BaseObject {
     return Math.floor(this.longitude / 30);
   }
 
+  get motion() {
+    const grahaRow = grahaValues.find(gv => gv.key === this.key);
+    const refSpeed = grahaRow instanceof Object && Object.keys(grahaRow).includes("fastSpd")? grahaRow.fastSpd : -1;
+    return this.lngSpeed >= 0 ? refSpeed > 0 && this.lngSpeed > refSpeed ? 'fast' : 'normal' : 'retro';
+  }
+
   get signNum() {
     return this.signIndex + 1;
   }

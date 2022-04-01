@@ -110,6 +110,7 @@ const grahaValues = [
     debilitated: 12,
     yearLength: 87.9691,
     charaKarakaMode: 'forward',
+    fastSpd: 1.412777777777778,
   },
   {
     num: 3,
@@ -136,6 +137,7 @@ const grahaValues = [
     debilitated: 6,
     yearLength: 224.701,
     charaKarakaMode: 'forward',
+    fastSpd: 1.228611111111111,
   },
   {
     num: 4,
@@ -162,6 +164,7 @@ const grahaValues = [
     debilitated: 4,
     yearLength: 686.971,
     charaKarakaMode: 'forward',
+    fastSpd: 0.650277777777778,
   },
   {
     num: 5,
@@ -188,6 +191,7 @@ const grahaValues = [
     debilitated: 10,
     yearLength: 4332.5029764,
     charaKarakaMode: 'forward',
+    fastSpd: 0.212222222222222,
   },
   {
     num: 6,
@@ -214,6 +218,7 @@ const grahaValues = [
     debilitated: 1,
     yearLength: 10758.97600962,
     charaKarakaMode: 'forward',
+    fastSpd: 0.098333333333333,
   },
   {
     num: 101,

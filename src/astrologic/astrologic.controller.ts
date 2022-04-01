@@ -140,6 +140,7 @@ import {
 import { CreateSettingDTO } from '../setting/dto/create-setting.dto';
 import typeTags from './lib/settings/relationship-types';
 import { KeyName } from './lib/interfaces';
+import { KeyNumValue } from '../lib/interfaces';
 import { TagReassignDTO } from './dto/tag-reassign.dto';
 import { TagDTO } from './dto/tag.dto';
 import { RuleSetDTO } from '../setting/dto/rule-set.dto';
@@ -183,7 +184,7 @@ import {
 import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
 import { julToDateParts } from './lib/julian-date';
-import { traverseAllNak28Cells } from './lib/calc-sbc';
+import { buildSbcScoreGrid, matchTraversedNak28Cells, traverseAllNak28Cells } from './lib/calc-sbc';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -855,13 +856,13 @@ export class AstrologicController {
   }
 
 
-  @Get('sbc-vedhas/:chartRef/:loc')
-  async getSbcVedhas(@Res() res, @Param('chartRef') chartRef, @Param('loc') loc) {
+  @Get('sbc-vedhas/:chartRef/:loc/:dt?')
+  async getSbcVedhas(@Res() res, @Param('chartRef') chartRef, @Param('loc') loc, @Param('dt') dt) {
     let chartID = chartRef;
     if (chartRef.includes('@') && chartRef.includes('.')) {
       chartID = await this.astrologicService.getChartIDByEmail(chartRef);
     }
-    const dtUtc = currentISODate();
+    const { dtUtc, jd } = matchJdAndDatetime(dt);
     const topList = 'true_citra';
     const transitCData = await this.fetchCompactChart(
       loc,
@@ -872,17 +873,38 @@ export class AstrologicController {
       false,
     );
     const result: Map<string, any> = new Map();
+    result.set('grid', []);
     if (transitCData instanceof Object) {
       const transit = new Chart(transitCData);
       transit.setAyanamshaItemByKey('true_citra');
       result.set('transit', transit.grahasByKeys().map(gr => gr.toKeyLng()));
-      const bData = await this.astrologicService.getChart(chartID);
-      if (bData instanceof Model) {
-        const birth = new Chart(bData.toObject());
-        birth.setAyanamshaItemByKey('true_citra');
-        result.set('birth', birth.grahasByKeys().map(gr => gr.toKeyLng()));
-        const sbc = traverseAllNak28Cells(transit, birth);
-        result.set('sbc', sbc);
+      if (isValidObjectId(chartID)) {
+        const bData = await this.astrologicService.getChart(chartID);
+        if (bData instanceof Model) {
+          const birth = new Chart(bData.toObject());
+          birth.setAyanamshaItemByKey('true_citra');
+          const sbc = traverseAllNak28Cells(transit, birth);
+          result.set('sbc', sbc);
+          const grid = buildSbcScoreGrid(sbc);
+          result.set('natal', birth.grahasByKeys().map(gr => gr.toKeyLng()));
+          result.set('grid', grid);
+        }
+      }
+    }
+    return res.json(Object.fromEntries( result.entries() ));
+  }
+
+  @Get('test-vedhas/:nak/:pada?')
+  async testSbcVedhas(@Res() res, @Param('nak') nak, @Param('pada') pada) {
+    const nakNum = isNumeric(nak)? smartCastInt(nak) : 0;
+    const padaNum = isNumeric(pada)? smartCastInt(pada) : 0;
+    const result: Map<string, any> = new Map();
+    result.set('valid', false);
+    if (nakNum > 0) {
+      const vedhas = matchTraversedNak28Cells(nakNum, padaNum);
+      result.set('vedhas', vedhas);
+      if (vedhas.length > 0) {
+        result.set('valid', true);
       }
     }
     return res.json(Object.fromEntries( result.entries() ));
