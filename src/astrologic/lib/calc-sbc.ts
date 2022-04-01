@@ -159,7 +159,7 @@ export const allowedVedhas = (key = '', motion = '') => {
 }
 
 export const isInAllowedVedhas = (key = '', motion = '', group = ''): boolean => {
-  return allowedVedhas(key, motion).some(vn => group.startsWith(vn) || group.endsWith(vn));
+  return allowedVedhas(key, motion).some(vn => group.startsWith(vn + '_') || group.endsWith('_' + vn));
 }
 
 
@@ -192,7 +192,7 @@ export const traverseAllNak28Cells = (c1: Chart, c2: Chart, ayanamshaKey = 'true
     const transit = transitGrahas.filter(g => g.nakshatra28 === num).map(g => {
       const pi = mapToPadaItem(g, c1);
       const score = sbcGrahaIsBenefic(c1, g.key)? 1 : -1;
-      return { ...pi, score, motion: g.motion }
+      return { ...pi, score, motion: g.motion, nakNum: num }
     });
     const natal = natalGrahas.filter(g => g.nakshatra28 === num).map(g => mapToPadaItem(g, c2));
     return {
@@ -216,14 +216,14 @@ export const buildSbcScoreGrid = (sbc: SbcNakItem[] = []) => {
     const row = y + 1;
     grid.set([row, col].join('_'), []);
   });
-  sbc.forEach(cell => {
-    if (cell.transit instanceof Array && cell.transit.length > 0) {
-      cell.transit.forEach(pi => {
+  sbc.forEach(nkRow => {
+    if (nkRow.transit instanceof Array && nkRow.transit.length > 0) {
+      nkRow.transit.forEach(pi => {
         if (Object.keys(pi).includes('score')) {
-          cell.vedhas.forEach(vd => {
+          nkRow.vedhas.forEach(vd => {
             const scItem = grid.get([vd.row, vd.column].join('_'));
             if (scItem instanceof Array) {
-              if (isInAllowedVedhas(pi.key, pi.motion, vd.group)) {
+              if (isInAllowedVedhas(pi.key, pi.motion, vd.group) || pi.nakNum === nkRow.num) {
                 if (scItem.findIndex(kv => kv.key === pi.key) < 0) {
                   const motion = motionSensitiveGrahas.includes(pi.key)? pi.motion : '-';
                   scItem.push({key: pi.key, value: pi.score, ref: vd.group, motion});
