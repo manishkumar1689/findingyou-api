@@ -147,11 +147,11 @@ export const allowedVedhas = (key = '', motion = '') => {
   if (motionSensitiveGrahas.includes(key)) {
     switch (motion) {
       case 'retro':
-        return ['anticlockwise'];
+        return ['anticlockwise', 'corner'];
       case 'fast':
-        return ['clockwise'];  
+        return ['clockwise', 'corner'];  
       default: // normal
-        return ['up','down','right', 'left'];  
+        return ['up','down','right', 'left', 'corner'];
     }
   } else {
     return ['up','down','right', 'left','anticlockwise', 'clockwise', 'corner']; 

@@ -12,7 +12,7 @@ const soundMap = [
   { type: 'co', value: 'ma', ipa: ['m'] },
   { type: 'co', value: 'ca', ipa: ['tʃ', 'ʃ'] },
   { type: 'vo', value: 'o', ipa: ['o', 'ɔ'] },
-  { type: 'vo', value: 'au', ipa: ['au'] },
+  { type: 'vo', value: 'au', ipa: ['au', 'aw'] },
   { type: 'co', value: 'ta', ipa: ['t', 'tʰ', 'θ'] },
   { type: 'co', value: 'da', ipa: ['d', 'dʰ'] },
   { type: 'co', value: 'pa', ipa: ['p', 'pʰ'] },
@@ -115,7 +115,7 @@ export const initLetterMatchesbyLang = [
       },
       {
         key: 'sh',
-        value: 's'
+        value: 'ś'
       },
     ]
   },
