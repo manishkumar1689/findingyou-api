@@ -888,6 +888,11 @@ export class AstrologicController {
           const grid = buildSbcScoreGrid(sbc);
           result.set('natal', birth.grahasByKeys().map(gr => gr.toKeyLng()));
           result.set('grid', grid);
+          result.set('natalWd', birth.indianTime.weekDayNum);
+          result.set('natalMoonSign', birth.moon.sign);
+          result.set('natalMoonNak28', birth.moon.nakshatra28);
+          result.set('natalAscSign', birth.ascendantGraha.sign);
+          result.set('natalAscSign', birth.tithi.num);
         }
       }
     }

@@ -1,3 +1,7 @@
+/*
+ wd: Indian weekday numbers Sun = 1, Sat = 7
+*/
+
 export const sbcGrid = [
   [
     { type: 'vo', value: 'a' },
@@ -37,7 +41,7 @@ export const sbcGrid = [
     { type: 'co', value: 'ca' },
     { type: 'ra', value: 1 },
     { type: 'vo', value: 'o' },
-    { type: 'ti', value: { nums: [1, 6, 11], wd: ['su','ma'] } },
+    { type: 'ti', value: { nums: [1, 6, 11], wd: [1,3] } },
     { type: 'vo', value: 'au' },
     { type: 'ra', value: 5 },
     { type: 'co', value: 'ta' },
@@ -47,9 +51,9 @@ export const sbcGrid = [
     { type: 'nk', value: 27 },
     { type: 'co', value: 'da' },
     { type: 'ra', value: 12 },
-    { type: 'ti', value: {  nums: [4,9,14], wd: ['ve'] } },
-    { type: 'ti', value: {  nums: [5, 10, 15], wd: ['sa'] } },
-    { type: 'ti', value: {  nums: [2, 7, 12], wd: ['mo','me'] } },
+    { type: 'ti', value: {  nums: [4,9,14], wd: [6] } },
+    { type: 'ti', value: {  nums: [5, 10, 15], wd: [7] } },
+    { type: 'ti', value: {  nums: [2, 7, 12], wd: [2, 4] } },
     { type: 'ra', value: 8 },
     { type: 'co', value: 'pa' },
     { type: 'nk', value: 13 }
@@ -59,7 +63,7 @@ export const sbcGrid = [
     { type: 'co', value: 'sa' },
     { type: 'ra', value: 11 },
     { type: 'vo', value: 'ah' },
-    { type: 'ti', value: {  nums: [3, 8, 13], wd: ['ju'] } },
+    { type: 'ti', value: {  nums: [3, 8, 13], wd: [5] } },
     { type: 'co', value: 'am' },
     { type: 'ra', value: 7 },
     { type: 'co', value: 'ra' },
