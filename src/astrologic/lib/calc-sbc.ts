@@ -1,10 +1,10 @@
-import { KeyNumValue } from "src/lib/interfaces";
 import { calcDist360, nakshatra28ToDegrees } from "./helpers";
 import { Chart } from "./models/chart";
 import { Graha } from "./models/graha-set";
 import { matchNak28PadaSet } from "./settings/nakshatra-values";
 import { sbcDefaultBenefics, sbcDefaultMalefics, sbcGrid } from "./settings/sbc-values";
 import { calcTithi } from "./settings/tithi-values";
+import { KeyNumValue } from "../../lib/interfaces";
 
 export interface KeyNumValueRef {
   key: string;
