@@ -1,4 +1,5 @@
-import { nakshatra28ToDegrees } from "./helpers";
+import { KeyNumValue } from "src/lib/interfaces";
+import { calcDist360, nakshatra28ToDegrees } from "./helpers";
 import { Chart } from "./models/chart";
 import { Graha } from "./models/graha-set";
 import { matchNak28PadaSet } from "./settings/nakshatra-values";
@@ -110,7 +111,7 @@ export const matchTraversedNak28Cells = (nakNum = 1, padaNum = 0) => {
       ro += diag.y;
       cl += diag.x;
     }
-    const cwKey = diag.cw? 'clockwise' : 'anticlockwise';
+    const cwKey = diag.cw? 'ahead' : 'behind';
     groups.set(['diagonal', cwKey].join('_'), cells);
   });
   if (padaNum > 0 && [1,4].includes(padaNum)) {
@@ -147,22 +148,20 @@ export const allowedVedhas = (key = '', motion = '') => {
   if (motionSensitiveGrahas.includes(key)) {
     switch (motion) {
       case 'retro':
-        return ['anticlockwise', 'corner'];
+        return ['behind', 'corner']; // anticlockwise + corner
       case 'fast':
-        return ['clockwise', 'corner'];  
+        return ['ahead', 'corner'];  // clockwise + corner
       default: // normal
         return ['up','down','right', 'left', 'corner'];
     }
   } else {
-    return ['up','down','right', 'left','anticlockwise', 'clockwise', 'corner']; 
+    return ['up','down','right', 'left','behind', 'ahead', 'corner']; 
   }
 }
 
 export const isInAllowedVedhas = (key = '', motion = '', group = ''): boolean => {
-  return allowedVedhas(key, motion).some(vn => group.startsWith(vn + '_') || group.endsWith('_' + vn));
+  return allowedVedhas(key, motion).some(vn => group.startsWith(vn) || group.endsWith(vn));
 }
-
-
 
 interface SbcNakItem {
   num: number;
@@ -206,7 +205,6 @@ export const traverseAllNak28Cells = (c1: Chart, c2: Chart, ayanamshaKey = 'true
   });
 }
 
-
 export const buildSbcScoreGrid = (sbc: SbcNakItem[] = []) => {
   const grid: Map<string, KeyNumValueRef[]> = new Map();
   [...new Array(81)].map((_, i) => {
@@ -249,3 +247,121 @@ export const buildSbcScoreGrid = (sbc: SbcNakItem[] = []) => {
   });
   return Object.fromEntries(entries);
 }
+
+/*
+  Exaltation strength used in SBC
+*/
+export const calcUccaBala = (chart: Chart, key = ''): number => {
+  // (GrahaExaltationDegree - GrahaDegree) / 3 = Score (Virupas)
+  const graha = chart.graha(key);
+  
+  const distance = calcDist360(graha.exaltedDegree, graha.longitude);
+  return distance / 3;
+}
+
+export const calcUccaBalaValues = (chart: Chart): KeyNumValue[] => {
+  const keys = ['su', 'mo', 'me', 've', 'ma', 'ju', 'sa', 'ke', 'ra'];
+  return keys.map(key => {
+    const value = calcUccaBala(chart, key);
+    return {
+      key,
+      value
+    }
+  })
+}
+
+const calcFractionalDistanceFromFullMoon = (chart: Chart): number => {
+  const angle = chart.sunMoonAngle;
+  return angle <= 180 ? angle / 180 : (360 - angle) / 180;
+}
+
+/*
+Sun	Always has full strength	60
+Rahu / Ketu	Always have NO strength	0
+Me-to-Sa (Combust)	When combust no strength	0
+Me-to-Sa (Not Combust in own sign)	free from Combustion if in own sign 	60
+Me-to-Sa (Not Combust)	free from Combustion NOT own sign 	30
+Moon (S15 = Full Moon)	full score	60
+Moon (from S15 to K0)	linear interpolation from Full to New Moon	60 to 0
+Moon (K0 = New Moon)	no score	0
+Moon (from K0 to S15)	linear interpolation from New to full Moon	0 to 60
+  Rising combustion strength
+*/
+export const calcUdayaBala = (chart: Chart, key = ''): number => {
+  // (GrahaExaltationDegree - GrahaDegree) / 3 = Score (Virupas)
+  switch (key) {
+    case 'su':
+    case 'ra':
+    case 'ke':
+      return 0;
+    case 'me':
+    case 've':
+    case 'ma':
+    case 'ju':
+    case 'sa':
+      return chart.isCombusted(key)? 0 : chart.graha(key).isOwnSign? 60 : 30;
+    case 'mo':
+      return calcFractionalDistanceFromFullMoon(chart) * 60;
+    default:
+      return 0;
+  }
+}
+
+export const calcUdayaBalaValues = (chart: Chart, key = ''): KeyNumValue[] => {
+  const keys = ['su', 'mo', 'me', 've', 'ma', 'ju', 'sa', 'ke', 'ra'];
+  return keys.map(key => {
+    const value = calcUdayaBala(chart, key);
+    return {
+      key,
+      value
+    }
+  })
+}
+
+export const ksetraBalaScoreGrid = {
+  isExalted: 60,
+  isMulaTrikon:	53,
+  ownSign:45,
+  bestFriend:	38,
+  friend:	30,
+  neutral:	23,
+  enemy: 15,
+  archEnemy: 7,
+  isDebilitated:	0
+}
+
+const calcSingleKsetraBala = (
+  chart: Chart,
+  key = ''
+) => {
+  const gr = chart.graha(key);
+  let score = 0;
+  const relationship = chart.calcRelationship(key).compound;
+  const scoreKeys = Object.keys(ksetraBalaScoreGrid);
+  if (scoreKeys.includes(relationship)) {
+    score += ksetraBalaScoreGrid[relationship];
+  }
+  if (gr.isExalted) {
+    score += ksetraBalaScoreGrid.isExalted;
+  }
+  if (gr.ownSign) {
+    score += ksetraBalaScoreGrid.ownSign;
+  }
+  if (gr.isDebilitated) {
+    score += ksetraBalaScoreGrid.isDebilitated;
+  }
+  return score;
+};
+
+export const calcKsetraBala = (
+  chart: Chart,
+): KeyNumValue[] => {
+  const keys = ['su', 'mo', 'me', 've', 'ma', 'ju', 'sa', 'ke', 'ra'];
+  return keys.map(key => {
+    const value = calcSingleKsetraBala(chart, key);
+    return {
+      key,
+      value
+    }
+  });
+};

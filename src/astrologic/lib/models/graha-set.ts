@@ -80,9 +80,7 @@ export class Graha extends BaseObject {
   relationship = new Relationship();
   mulaTrikon: -1;
   mulaTrikonDegrees: [];
-  exalted = 0;
   exaltedDegree = 0;
-  debilitated = 0;
   ownSign = [];
   charaKarakaMode = 'standard';
   charaKaraka = 0;
@@ -332,17 +330,29 @@ Calculate pachanga values for a body
     );
   }
 
+  get exalted() {
+    return Math.floor(this.exaltedDegree / 30) + 1;
+  }
+
+  get debilitatedDegree() {
+    return (this.exaltedDegree + 180) % 360;
+  }
+
+  get debilitated() {
+    return Math.floor(this.debilitatedDegree / 30) + 1;
+  }
+
   get isExalted(): boolean {
     return (
       this.sign === this.exalted &&
-      inRange(this.withinSign, [0, this.exaltedDegree + 1])
+      inRange(this.withinSign, [0, (this.exaltedDegree % 30) + 1])
     );
   }
 
   get isDebilitated(): boolean {
     return (
       this.sign === this.debilitated &&
-      inRange(this.withinSign, [0, this.exaltedDegree + 1])
+      inRange(this.withinSign, [0, (this.exaltedDegree % 30) + 1])
     );
   }
 

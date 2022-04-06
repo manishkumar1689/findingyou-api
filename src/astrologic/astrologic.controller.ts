@@ -58,6 +58,7 @@ import {
   calcDeclination,
   buildExtendedTransitions,
   calcBaseLngSetJd,
+  calcGrahaPos,
 } from './lib/core';
 import {
   calcAltitudeSE,
@@ -899,6 +900,24 @@ export class AstrologicController {
     return res.json(Object.fromEntries( result.entries() ));
   }
 
+  @Get('retro-scores/:chartRef')
+  async getRetroScores(@Res() res, @Param('chartRef') chartRef ) {
+    let chartID = chartRef;
+    const data = {valid: false, result: null }
+    if (chartRef.includes('@') && chartRef.includes('.')) {
+      chartID = await this.astrologicService.getChartIDByEmail(chartRef);
+    }
+    if (isValidObjectId(chartID)) {
+      const cData = await this.astrologicService.getChart(chartID);
+      if (cData instanceof Model) {
+        const chart = new Chart(cData.toObject());
+        data.result = await this.astrologicService.matchRetroValues(chart);
+        data.valid = data.result.length > 4;
+      }
+    }
+    return res.json(data);
+  }
+
 /*   @Get('test-vedhas/:nak/:pada?')
   async testSbcVedhas(@Res() res, @Param('nak') nak, @Param('pada') pada) {
     const nakNum = isNumeric(nak)? smartCastInt(nak) : 0;
@@ -1275,7 +1294,11 @@ export class AstrologicController {
       false,
       false,
     );
+
     const chart = simplify ? simplifyAstroChart(data, true, true) : data;
+    if (chart instanceof Object) {
+      chart.numValues = await this.astrologicService.addChartWithRetroValues(chart);
+    }
     return res.json(chart);
   }
 
@@ -4056,6 +4079,26 @@ export class AstrologicController {
     } else {
       return res.status(HttpStatus.NOT_ACCEPTABLE).json({ valid: false });
     }
+  }
+
+  @Get('speed-progress/:key/:dt?')
+  async retrogradePorgress(
+    @Res() res,
+    @Param('key') key,
+    @Param('dt') dt,
+  ) {
+    const mp: Map<string, any> = new Map();
+    const { dtUtc, jd } = matchJdAndDatetime(dt);
+    mp.set('jd', jd)
+    mp.set('dtUtc', dtUtc)
+    if (jd > 0 && notEmptyString(key, 1)) {
+      const num = matchPlanetNum(key);
+      const gData = await calcGrahaPos(jd, num);
+      mp.set('data', gData);
+      const progress = await this.astrologicService.speedProgress(key, gData.longitudeSpeed, jd)
+      mp.set('progress', progress);
+    }
+    res.send(Object.fromEntries(mp.entries()));
   }
 
   @Get('retrograde/:dt/:planet')

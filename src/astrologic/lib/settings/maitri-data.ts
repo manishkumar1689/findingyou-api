@@ -31,8 +31,8 @@ DIGNITIES:
 
     dict prefixes:
     dignity
-
 */
+
 const maitriData = {
   natural: [
     {
@@ -77,8 +77,8 @@ const maitriData = {
       neutral: ['ju'],
       enemies: ['su', 'mo', 'ma'],
     },
-    { graha: 'ra', friends: [], neutral: [], enemies: [] },
-    { graha: 'ke', friends: [], neutral: [], enemies: [] },
+    { graha: 'ra', friends: ['ve','sa','ke','me'], neutral: ['ju'], enemies: ['su', 'mo', 'ma'] },
+    { graha: 'ke', friends: ['ma', 'ju', 've'], neutral: ['me', 'ra', 'sa'], enemies: ['su', 'mo'] },
   ],
   temporary: {
     friend: [2, 3, 4, 10, 11, 12],

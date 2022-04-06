@@ -8,6 +8,7 @@ import {
 import { KeyNumValue } from '../../../lib/interfaces';
 import {
   subtractLng360,
+  calcDist360,
   calcVargaSet,
   calcSign,
   subtractSign,
@@ -69,7 +70,7 @@ import {
   matchBmGrahaKeys,
 } from './protocol-models';
 import { calcInclusiveSignPositions } from '../math-funcs';
-import { naturalBenefics, naturalMalefics } from '../settings/graha-values';
+import { naturalBenefics, naturalMalefics, combustionOrbs } from '../settings/graha-values';
 import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
 import { Kuta } from '../kuta';
 import { matchKotaPala } from '../settings/kota-values';
@@ -79,6 +80,8 @@ import { keyValuesToSimpleObject } from '../../../lib/converters';
 import { currentJulianDay } from '../julian-date';
 import { extractCorePlaceNames } from '../mappers';
 import { GeoPos } from '../../interfaces/geo-pos';
+import { mapRelationships } from '../map-relationships';
+import { matchLord } from '../settings/maitri-data';
 
 export interface Subject {
   name: string;
@@ -514,6 +517,18 @@ export class Chart {
         applied: false,
       };
     }
+  }
+
+  calcRelationship(key = '') {
+    const gr = this.graha(key)
+    const lord = matchLord(gr);
+    console.log(gr.natural)
+    return mapRelationships(
+      gr.sign,
+      this.graha(lord).sign,
+      gr.isOwnSign,
+      gr.natural
+    );
   }
 
   matchProgressItem(refJd = 0, tolerance = 45): ProgressResult {
@@ -964,6 +979,20 @@ export class Chart {
     const absVal = Math.abs(diff);
     const dist = absVal > 180 ? 360 - absVal : absVal;
     return dist / 3;
+  }
+
+  isCombusted(key = '') {
+    const relKeys = Object.keys(combustionOrbs);
+    let valid = false;
+    if (relKeys.includes(key)) {
+      const orbRow = combustionOrbs[key];
+      const graha = this.graha(key);
+      const isRetro = graha.lngSpeed < 0;
+      const distance = calcDist360(this.sun.longitude, graha.longitude);
+      const orb = isRetro? orbRow.retro : orbRow.direct;
+      valid = distance <= orb;
+    }
+    return valid;
   }
 
   get sunRise() {

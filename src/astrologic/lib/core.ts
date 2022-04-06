@@ -392,7 +392,6 @@ const processBodyResult = (result: any, body: any) => {
     'charaKarakaMode',
     'exaltedDegree',
     'mulaTrikonDegrees',
-    'exalted',
     'jyNum',
     'icon',
     'bhuta',
