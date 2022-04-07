@@ -94,7 +94,7 @@ import { filterCorePreference } from '../lib/mappers';
 import { mapLikeabilityRelations, UserFlagSet } from '../lib/notifications';
 import { User } from '../user/interfaces/user.interface';
 import { KeyNumValue } from '../lib/interfaces';
-import { calcKsetraBala, calcNavamshaBala, calcUccaBalaValues } from './lib/calc-sbc';
+import { calcKsetraBala, calcNavamshaBala, calcUccaBalaValues, calcUdayaBalaValues, calcVakraBala } from './lib/calc-sbc';
 const { ObjectId } = Types;
 
 @Injectable()
@@ -2319,15 +2319,17 @@ export class AstrologicService {
     return values;
   }
 
-  async addChartWithRetroValues(cData = null) {
+  async calcExtraScoresForChart(cData = null, vakraScale = 60) {
     let numValues = [];
     if (cData instanceof Object && Object.keys(cData).includes("numValues") && cData.numValues instanceof Array) {
+      numValues = cData.numValues;
+      
       const chart = cData instanceof ChartClass ? cData : new ChartClass(cData);
       const scores  = await this.matchRetroValues(chart);
-      numValues = cData.numValues;
-      scores.forEach(row => {
+      const vkValues = calcVakraBala(scores, vakraScale);
+      vkValues.forEach(row => {
         numValues.push({
-          key: ['retro', row.key].join('_'),
+          key: ['vakrabala', row.key].join('_'),
           value: row.value
         })
       });
@@ -2340,7 +2342,7 @@ export class AstrologicService {
           })
         });
       }
-      const udVlaues = calcUccaBalaValues(chart);
+      const udVlaues = calcUdayaBalaValues(chart);
       if (udVlaues.length > 0) {
         udVlaues.forEach(row => {
           numValues.push({

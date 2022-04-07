@@ -1277,9 +1277,11 @@ export class AstrologicController {
     @Param('loc') loc,
     @Param('dt') dt,
     @Param('mode') mode,
+    @Query() query,
   ) {
     const dtUtc = validISODateString(dt) ? dt : currentISODate();
     const simplify = mode !== 'all';
+    const queryKeys = query instanceof Object ? Object.keys(query) : [];
     const ayanamshaKey = notEmptyString(mode, 5)
       ? mode
       : simplify
@@ -1297,7 +1299,8 @@ export class AstrologicController {
 
     const chart = simplify ? simplifyAstroChart(data, true, true) : data;
     if (chart instanceof Object) {
-      chart.numValues = await this.astrologicService.calcExtraScoresForChart(data);
+      const vakraScale = queryKeys.includes('vakra') ? smartCastInt(query.vakra, 60) : 60;
+      chart.numValues = await this.astrologicService.calcExtraScoresForChart(data, vakraScale);
     }
     return res.json(chart);
   }

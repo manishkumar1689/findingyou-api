@@ -258,10 +258,11 @@ export const calcUccaBala = (chart: Chart, key = ''): number => {
   const isBenefic = sbcGrahaIsBenefic(chart, key);
   const distance = calcDist360(graha.exaltedDegree, graha.longitude); // max 180
   const score = distance / 3; // 0 to 60
-  return isBenefic ? score : 60 - score;
+  return isBenefic ? 60 - score : score;
 }
 
 export const calcUccaBalaValues = (chart: Chart): KeyNumValue[] => {
+  chart.setVarga(1);
   return allSBCGrahaKeys.map(key => {
     const value = calcUccaBala(chart, key);
     return {
@@ -292,6 +293,7 @@ export const calcUdayaBala = (chart: Chart, key = ''): number => {
   // (GrahaExaltationDegree - GrahaDegree) / 3 = Score (Virupas)
   switch (key) {
     case 'su':
+      return 60;
     case 'ra':
     case 'ke':
       return 0;
@@ -309,6 +311,7 @@ export const calcUdayaBala = (chart: Chart, key = ''): number => {
 }
 
 export const calcUdayaBalaValues = (chart: Chart): KeyNumValue[] => {
+  chart.setVarga(1);
   return allSBCGrahaKeys.map(key => {
     const value = calcUdayaBala(chart, key);
     return {
@@ -321,13 +324,13 @@ export const calcUdayaBalaValues = (chart: Chart): KeyNumValue[] => {
 export const ksetraBalaScoreGrid = {
   isExalted: 60,
   isMulaTrikon:	53,
-  ownSign:45,
+  isDebilitated:	0,
+  isOwnSign: 45,
   bestFriend:	38,
   friend:	30,
   neutral:	23,
   enemy: 15,
-  archEnemy: 7,
-  isDebilitated:	0
+  archEnemy: 7
 }
 
 const calcSingleKsetraBala = (
@@ -339,17 +342,16 @@ const calcSingleKsetraBala = (
   let score = 0;
   const relationship = chart.calcRelationship(key).compound;
   const scoreKeys = Object.keys(ksetraBalaScoreGrid);
-  if (scoreKeys.includes(relationship)) {
-    score += ksetraBalaScoreGrid[relationship];
-  }
   if (gr.isExalted) {
-    score += ksetraBalaScoreGrid.isExalted;
-  }
-  if (gr.ownSign) {
-    score += ksetraBalaScoreGrid.ownSign;
-  }
-  if (gr.isDebilitated) {
-    score += ksetraBalaScoreGrid.isDebilitated;
+    score = ksetraBalaScoreGrid.isExalted;
+  } else if (gr.isMulaTrikon) {
+    score = ksetraBalaScoreGrid.isMulaTrikon;
+  } else if (gr.isOwnSign) {
+    score = ksetraBalaScoreGrid.isOwnSign;
+  } else if (gr.isDebilitated) {
+    score = ksetraBalaScoreGrid.isDebilitated;
+  } else if (scoreKeys.includes(relationship)) {
+    score = ksetraBalaScoreGrid[relationship];
   }
   return score;
 };
@@ -357,6 +359,7 @@ const calcSingleKsetraBala = (
 export const calcKsetraBala = (
   chart: Chart,
 ): KeyNumValue[] => {
+  chart.setVarga(1);
   return allSBCGrahaKeys.map(key => {
     const value = calcSingleKsetraBala(chart, key);
     return {
@@ -378,3 +381,27 @@ export const calcNavamshaBala = (
     }
   });
 };
+
+const calcVakraBalaScore = (scores: KeyNumValue[] = [], key = '', scale = 60) => {
+  const row = scores.find(sc => sc.key === key);
+  const matchedScore = row instanceof Object ? row.value : -1;
+  return matchedScore < 0? 0 : scale + (matchedScore * scale);
+}
+
+export const calcVakraBala = (scores: KeyNumValue[] = [], scale = 60): KeyNumValue[] => {
+  return allSBCGrahaKeys.map(key => {
+    switch (key) {
+      case 'su':
+      case 'mo':
+        return { key, value: 0 };
+      case 'ra':
+      case 'ke':
+        return { key, value: 60 };
+      default:
+        return { 
+          key,
+          value: calcVakraBalaScore(scores, key, scale)
+        }
+    }
+  })
+}
