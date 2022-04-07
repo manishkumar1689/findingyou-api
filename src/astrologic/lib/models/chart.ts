@@ -522,7 +522,6 @@ export class Chart {
   calcRelationship(key = '') {
     const gr = this.graha(key)
     const lord = matchLord(gr);
-    console.log(gr.natural)
     return mapRelationships(
       gr.sign,
       this.graha(lord).sign,

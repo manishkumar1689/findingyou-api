@@ -94,7 +94,7 @@ import { filterCorePreference } from '../lib/mappers';
 import { mapLikeabilityRelations, UserFlagSet } from '../lib/notifications';
 import { User } from '../user/interfaces/user.interface';
 import { KeyNumValue } from '../lib/interfaces';
-import { calcKsetraBala, calcUccaBalaValues } from './lib/calc-sbc';
+import { calcKsetraBala, calcNavamshaBala, calcUccaBalaValues } from './lib/calc-sbc';
 const { ObjectId } = Types;
 
 @Injectable()
@@ -2331,15 +2331,6 @@ export class AstrologicService {
           value: row.value
         })
       });
-      const kbValues = calcKsetraBala(chart);
-      if (kbValues.length > 0) {
-        kbValues.forEach(row => {
-          numValues.push({
-            key: ['ksetrabala', row.key].join('_'),
-            value: row.value
-          })
-        });
-      }
       const ubVlaues = calcUccaBalaValues(chart);
       if (ubVlaues.length > 0) {
         ubVlaues.forEach(row => {
@@ -2354,6 +2345,25 @@ export class AstrologicService {
         udVlaues.forEach(row => {
           numValues.push({
             key: ['udayabala', row.key].join('_'),
+            value: row.value
+          })
+        });
+      }
+
+      const kbValues = calcKsetraBala(chart);
+      if (kbValues.length > 0) {
+        kbValues.forEach(row => {
+          numValues.push({
+            key: ['ksetrabala', row.key].join('_'),
+            value: row.value
+          })
+        });
+      }
+      const nvValues = calcNavamshaBala(chart);
+      if (nvValues.length > 0) {
+        nvValues.forEach(row => {
+          numValues.push({
+            key: ['navamshabala', row.key].join('_'),
             value: row.value
           })
         });

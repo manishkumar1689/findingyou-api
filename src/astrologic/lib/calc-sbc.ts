@@ -13,6 +13,8 @@ export interface KeyNumValueRef {
   motion?: string;
 }
 
+const allSBCGrahaKeys = ['su', 'mo', 'me', 've', 'ma', 'ju', 'sa', 'ke', 'ra'];
+
 export class XYCell {
   x = 0;
   y = 0;
@@ -175,9 +177,8 @@ interface SbcNakItem {
 export const traverseAllNak28Cells = (c1: Chart, c2: Chart, ayanamshaKey = 'true_citra'): SbcNakItem[] => {
   c1.setAyanamshaItemByKey(ayanamshaKey);
   c2.setAyanamshaItemByKey(ayanamshaKey);
-  const keys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa', 'ke', 'ra'];
-  const transitGrahas = c1.grahasByKeys(keys);
-  const natalGrahas = c2.grahasByKeys(keys);
+  const transitGrahas = c1.grahasByKeys(allSBCGrahaKeys);
+  const natalGrahas = c2.grahasByKeys(allSBCGrahaKeys);
   const mapToPadaItem = (g: Graha, chart: Chart) => {
     const pItem = grahaToNakPada(g.longitude, g.key);
     const { key, lng, pada, letter } = pItem;
@@ -254,14 +255,14 @@ export const buildSbcScoreGrid = (sbc: SbcNakItem[] = []) => {
 export const calcUccaBala = (chart: Chart, key = ''): number => {
   // (GrahaExaltationDegree - GrahaDegree) / 3 = Score (Virupas)
   const graha = chart.graha(key);
-  
-  const distance = calcDist360(graha.exaltedDegree, graha.longitude);
-  return distance / 3;
+  const isBenefic = sbcGrahaIsBenefic(chart, key);
+  const distance = calcDist360(graha.exaltedDegree, graha.longitude); // max 180
+  const score = distance / 3; // 0 to 60
+  return isBenefic ? score : 60 - score;
 }
 
 export const calcUccaBalaValues = (chart: Chart): KeyNumValue[] => {
-  const keys = ['su', 'mo', 'me', 've', 'ma', 'ju', 'sa', 'ke', 'ra'];
-  return keys.map(key => {
+  return allSBCGrahaKeys.map(key => {
     const value = calcUccaBala(chart, key);
     return {
       key,
@@ -307,9 +308,8 @@ export const calcUdayaBala = (chart: Chart, key = ''): number => {
   }
 }
 
-export const calcUdayaBalaValues = (chart: Chart, key = ''): KeyNumValue[] => {
-  const keys = ['su', 'mo', 'me', 've', 'ma', 'ju', 'sa', 'ke', 'ra'];
-  return keys.map(key => {
+export const calcUdayaBalaValues = (chart: Chart): KeyNumValue[] => {
+  return allSBCGrahaKeys.map(key => {
     const value = calcUdayaBala(chart, key);
     return {
       key,
@@ -335,6 +335,7 @@ const calcSingleKsetraBala = (
   key = ''
 ) => {
   const gr = chart.graha(key);
+  
   let score = 0;
   const relationship = chart.calcRelationship(key).compound;
   const scoreKeys = Object.keys(ksetraBalaScoreGrid);
@@ -356,8 +357,20 @@ const calcSingleKsetraBala = (
 export const calcKsetraBala = (
   chart: Chart,
 ): KeyNumValue[] => {
-  const keys = ['su', 'mo', 'me', 've', 'ma', 'ju', 'sa', 'ke', 'ra'];
-  return keys.map(key => {
+  return allSBCGrahaKeys.map(key => {
+    const value = calcSingleKsetraBala(chart, key);
+    return {
+      key,
+      value
+    }
+  });
+};
+
+export const calcNavamshaBala = (
+  chart: Chart,
+): KeyNumValue[] => {
+  chart.setVarga(9);
+  return allSBCGrahaKeys.map(key => {
     const value = calcSingleKsetraBala(chart, key);
     return {
       key,
