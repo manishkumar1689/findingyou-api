@@ -1297,7 +1297,7 @@ export class AstrologicController {
 
     const chart = simplify ? simplifyAstroChart(data, true, true) : data;
     if (chart instanceof Object) {
-      chart.numValues = await this.astrologicService.addChartWithRetroValues(chart);
+      chart.numValues = await this.astrologicService.calcExtraScoresForChart(data);
     }
     return res.json(chart);
   }
