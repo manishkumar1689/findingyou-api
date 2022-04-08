@@ -185,7 +185,7 @@ import {
 import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
 import { julToDateParts } from './lib/julian-date';
-import { buildSbcScoreGrid, matchTraversedNak28Cells, traverseAllNak28Cells } from './lib/calc-sbc';
+import { buildSbcScoreGrid, traverseAllNak28Cells } from './lib/calc-sbc';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -1296,7 +1296,6 @@ export class AstrologicController {
       false,
       false,
     );
-
     const chart = simplify ? simplifyAstroChart(data, true, true) : data;
     if (chart instanceof Object) {
       const vakraScale = queryKeys.includes('vakra') ? smartCastInt(query.vakra, 60) : 60;
