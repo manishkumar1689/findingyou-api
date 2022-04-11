@@ -5,7 +5,7 @@ import {
   getSunMoonSpecialValues,
 } from '../core';
 import { julToISODate } from '../date-funcs';
-import { KeyNum, KeyValueNum } from '../../../lib/interfaces';
+import { KeyNum, KeyNumValue, KeyValueNum } from '../../../lib/interfaces';
 import { Chart } from '../models/chart';
 import { toIndianTimeJd, TransitionData } from '../transitions';
 import {
@@ -1506,7 +1506,7 @@ export class PPRule {
 
 }
 
-export const mapPPCondition = (condRef = null, rs: PredictiveRuleSet) => {
+export const mapPPCondition = (condRef = null, rs: PredictiveRuleSet, siblings = []) => {
   return new PPRule(rs, condRef, true);
 };
 
@@ -1614,6 +1614,11 @@ export class TransitionOrb {
   }
 }
 
+export interface KeyTransitionOrb {
+  key: string;
+  mRange: TransitionOrb;
+}
+
 export interface PPMatchRange {
   start: number;
   end: number;
@@ -1655,6 +1660,32 @@ export const matchTransitionRange = (
   const peak = matchTransitionPeak(rk, relTr);
   return new TransitionOrb(peak, orbMin);
 };
+
+const checkPPTransitionSubcondition = (condRef = null, subYamas = [], transitions = []):  KeyTransitionOrb[] => {
+  const trOrbs: KeyTransitionOrb[] = [];
+  if (condRef instanceof Object) {
+    const { context, action } = condRef;
+    const trKey = toTransitKey(context);
+    if (context.length === 2) {
+      const actSub = subYamas.find(sy => sy.key === action);
+      if (actSub instanceof Object) {
+        actSub.rulers.forEach(gk => {
+          const tr = transitions.find(tr => tr.key === gk);
+          if (tr instanceof Object) {
+            if (Object.keys(tr).includes(trKey)) {
+              const refJd = tr[trKey].jd;
+              if (refJd >= actSub.start && refJd <= actSub.end) {
+                const mRange = matchTransitionRange(trKey, tr);
+                trOrbs.push({key: gk, mRange});
+              }
+            }
+          }
+        })
+      }
+    }
+  }
+  return trOrbs;
+}
 
 export const calculatePanchaPakshiData = async (
   chart: Chart,
@@ -1828,7 +1859,6 @@ export const calculatePanchaPakshiData = async (
               s.key === r.action && s.rulers.some(gk => grahaKeys.includes(gk)),
           );
         }
-
         /* const matched = matchedRanges.length > 0 || pp2.valid || subs.length > 0; */
         const matched = matchedRanges.length > 0 || subs.length > 0;
         if (matched) {
@@ -1857,7 +1887,6 @@ export const calculatePanchaPakshiData = async (
       data.set('hasSubMatches', hasSubs);
       data.set('rules', rules);
       let segmentScore = 0;
-      
       const periods = allYamasWithSubs.map((subs, subIndex) => {
         let yamaScore = 0;
         const segmentIndex = Math.floor(subIndex / 5) + 4;
@@ -1895,10 +1924,21 @@ export const calculatePanchaPakshiData = async (
               if (r.onlyAtStart && si === 0) {
                 yamaScore = r.score;
                 const endIndex = si + 4 < numSubs ? si + 4 : numSubs - 1;
-                r.addMatch(sub.start, subs[endIndex].end, 'yama', r.score)
+                if (r.siblings.length > 0) {
+                  const subMatches = checkPPTransitionSubcondition(r.siblings[0], subs, transitions);
+                  if (subMatches.length > 0) {
+                     subMatches.forEach(({ mRange}) => {
+                        r.addMatch(mRange.start, mRange.end, 'orb', r.score)
+                     })
+                  }
+                } else {
+                  r.addMatch(sub.start, subs[endIndex].end, 'yama', r.score)
+                }
+                
               } else if (!r.onlyAtStart) {
                 subScore += r.score;
                 r.addMatch(sub.start, sub.end, 'subyama', r.score)
+                
               }
             }
           }

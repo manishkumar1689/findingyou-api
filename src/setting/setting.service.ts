@@ -969,7 +969,14 @@ export class SettingService {
         return rs.conditionSet.conditionRefs.length > 0;
       })
       .map(rs => {
-        const cond = rs.conditionSet.conditionRefs[0];
+        const conds = rs.conditionSet.conditionRefs;
+        const ppIndex = conds.findIndex(c => c.fromMode.startsWith('pa'));
+        if (ppIndex > 0) {
+          const c1 = conds.splice(ppIndex, 1);
+          conds.unshift(c1);
+          rs.conditionSet.conditionRefs = conds;
+        }
+        const cond = conds[0];
         return mapPPCondition(cond, rs);
       });
     return simpleRules;
