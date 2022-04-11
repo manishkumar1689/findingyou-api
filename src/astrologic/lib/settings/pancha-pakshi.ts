@@ -5,7 +5,7 @@ import {
   getSunMoonSpecialValues,
 } from '../core';
 import { julToISODate } from '../date-funcs';
-import { KeyNum, KeyNumValue, KeyValueNum } from '../../../lib/interfaces';
+import { KeyNum, KeyValueNum } from '../../../lib/interfaces';
 import { Chart } from '../models/chart';
 import { toIndianTimeJd, TransitionData } from '../transitions';
 import {
