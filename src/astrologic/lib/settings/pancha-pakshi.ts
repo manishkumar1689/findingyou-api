@@ -1363,6 +1363,8 @@ class BirdGrahaSet {
   ruling: DayNightBirdGraha;
   dying: BirdGraha;
   waxing = false;
+  dashaLord = '';
+  dasha2Lord = '';
 
   constructor(ppData: Map<string, any> = new Map()) {
     const bird = ppData.has('bird')
@@ -1408,6 +1410,21 @@ class BirdGrahaSet {
       bird: dying,
       grahas: dyingGraha,
     };
+    if (ppData.has('dashaLord')) {
+      this.dashaLord = ppData.get('dashaLord');
+    }
+    if (ppData.has('dasha2Lord')) {
+      this.dasha2Lord = ppData.get('dasha2Lord');
+    }
+  }
+
+  setDashas(one = '', two = '') {
+    if (notEmptyString(one)) {
+      this.dashaLord = one;
+    }
+    if (notEmptyString(two)) {
+      this.dasha2Lord = two;
+    }
   }
 
   matchGrahas(type = '', isDayTime = false): string[] {
@@ -1502,10 +1519,14 @@ export class PPRule {
     }
   }
 
-  addMatch(start =0, end = 0, type = 'subyama', score = 10) {
+  get isTransit() {
+    return this.from.includes('transit') || this.from.startsWith('birth');
+  }
+
+  addMatch(start = 0, end = 0, type = 'subyama', score = 10) {
     if (end > start) {
       const newMatch = { start, end, type, score };
-      if (this.matches.length > 0) {
+      /* if (this.matches.length > 0) {
         const mIndex = this.matches.findIndex(m => start >= m.start && end <= end);
         if (mIndex < 0) {
           this.matches.push(newMatch)
@@ -1514,21 +1535,65 @@ export class PPRule {
         }
       } else {
         this.matches.push(newMatch)
-      }
+      } */
+      this.matches.push(newMatch)
     }
   }
 
   matchPeriodType(rule: PPRule): string {
-
+    if (!rule.isTransit) {
+      switch (rule.key) {
+        case 'day_night_ruling_bird':
+        case 'day_night_dying_bird':
+          return 'segment';
+        case 'yama_action':
+          return 'yama';
+        case 'subyama_bird':
+        case 'subyama_action':
+          return 'subyama';
+      }
+    } else {
+      if (['as', 'ds', 'ic', 'mc', 'dik_bala_transition'].includes(
+        rule.context,
+      )) {
+        return 'orb';
+      } else {
+        return 'segment';
+      }
+    }
   }
 
   get bestMatchType() {
-    
+    const rows = this.conditions().map(this.matchPeriodType).map(key => {
+      return {
+        key,
+        index: periodTypes.indexOf(key)
+      }
+    }).filter(row => row.index >= 0); 
+    rows.sort((a, b) => b.index - a.index);
+    return rows.length > 0 ? rows[0].key : '';
   }
-  
+
+  get bestMatchIndex() {
+    const refIndex = periodTypes.indexOf(this.bestMatchType);
+    return refIndex >= 0 ? refIndex : 100000;
+  }
+
+  betterMatchType(type = '') {
+    const refIndex = periodTypes.indexOf(type);
+    return refIndex >= 0 && refIndex > this.bestMatchIndex;
+  }
 
   get validMatches() {
-    return this.matches.filter(m => m.type === this.bestMatchType);
+    return this.allMatches.filter(m => m.type === this.bestMatchType || this.betterMatchType(m.type));
+  }
+
+  get isMatched() {
+    return this.validMatches.length > 0;
+  }
+
+  get allMatches() {
+    return this.conditions().map(sr => sr.matches).reduce((a,b) => a.concat(b), []);
   }
 
   numConditions() {
@@ -1539,6 +1604,41 @@ export class PPRule {
     return index < 1? this : index <= this.siblings.length ? this.siblings[(index-1)] : null;
   }
 
+  conditions(): PPRule[] {
+    return [this, ...this.siblings];
+  }
+
+  transitConditions(): PPRule[] {
+    return this.conditions().filter(sr => sr.isTransit);
+  }
+
+  ppConditions(): PPRule[] {
+    return this.conditions().filter(sr => !sr.isTransit);
+  }
+
+}
+
+const simplifyRule = (rule:PPRule) => {
+  const conditions = rule.conditions().map(sr => {
+    const {from, to, key, context,action } = sr;
+    return {
+      from,
+      to,
+      key,
+      context,
+      action,
+    }
+  });
+  const points = rule.isMatched ? rule.score : 0;
+  return {
+    conditions,
+    score: rule.score,
+    points,
+    matched: rule.isMatched,
+    matches: rule.validMatches,
+    period: rule.bestMatchType,
+    m: rule.matches
+  }
 }
 
 export const mapPPCondition = (condRef = null, rs: PredictiveRuleSet) => {
@@ -1722,11 +1822,117 @@ const checkPPTransitionSubcondition = (condRef = null, subYamas = [], transition
   return trOrbs;
 }
 
+const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransitions: TransitionData[], transitions: TransitionData[], birdGrahaSet: BirdGrahaSet) => {
+  const isTr = ['as', 'ds', 'ic', 'mc', 'dik_bala_transition'].includes(
+    r.context,
+  );
+  const trRef = isTr ? r.key.replace(/_point$/, '') : '';
+  const matchedRanges: TransitionOrb[] = [];
+  const relTransItems =
+    r.from === 'birth' ? birthTransitions : transitions;
+  let subs = [];
+  let grahaKeys = [];
+  if (r.key.endsWith('_graha')) {
+    const trKey = toTransitKey(r.context);
+    if (r.key.includes('ing_') && r.key.startsWith('yama')) {
+      const actKey = r.key.split('_')[1];
+      allSubs
+        .filter(s => s.key === actKey)
+        .filter(s => {
+          const relRows = relTransItems.filter(rt =>
+            s.rulers.includes(rt.key),
+          );
+          relRows.forEach(rr => {
+            if (Object.keys(rr).includes(trKey)) {
+              if (rr[trKey].jd >= s.start && rr[trKey].jd < s.end) {
+                const mRange = matchTransitionRange(trKey, rr);
+                matchedRanges.push(mRange);
+                r.addMatch(mRange.start, mRange.end, 'orb', r.score);
+              }
+            }
+          });
+        });
+    } else if (r.key.startsWith('birth_bird_')) {
+      grahaKeys = birdGrahaSet.matchGrahas('birth', true);
+    } else if (r.key.includes('ruling_bird_')) {
+      grahaKeys = birdGrahaSet.matchGrahas('ruling', true);
+    } else if (r.key.includes('dying_bird_')) {
+      grahaKeys = birdGrahaSet.matchGrahas('dying', true);
+    }
+  }
+  if (isTr) {
+    const relTrs = relTransItems.filter(tr => {
+      const rKey = tr.key.toLowerCase();
+      return rKey === trRef || grahaKeys.includes(rKey);
+    });
+    if (relTrs.length > 0) {
+      for (const relTr of relTrs) {
+        const rk = toTransitKey(r.action);
+        if (rk.length < 5 && Object.keys(relTr).includes(rk)) {
+          matchedRanges.push(matchTransitionRange(rk, relTr));
+        } else if (rk.startsWith('dik')) {
+          const dikBalaTrans = matchDikBalaTransition(rk);
+          if (
+            notEmptyString(dikBalaTrans) &&
+            Object.keys(relTr).includes(dikBalaTrans)
+          ) {
+            matchedRanges.push(matchTransitionRange(dikBalaTrans, relTr));
+          }
+        }
+      }
+    }
+  }
+  const isDahsha = r.context.startsWith('dasha_');
+  const isDasha2 = !isDahsha && r.context.startsWith('antardasha_');
+  if (isDahsha || isDasha2) {
+    const refDashaLord = isDasha2 ? birdGrahaSet.dasha2Lord : birdGrahaSet.dashaLord;
+    subs = filterDashaLordByObjectType(
+      refDashaLord,
+      allSubs,
+      birdGrahaSet,
+      r.key,
+    );
+  }
+  const isLord = r.context.startsWith('lord');
+  let filterByGrahasAndAction = isLord;
+  if (isLord) {
+    grahaKeys = mapLords(chart, r.context);
+  } else if (r.context === 'yoga_karaka') {
+    grahaKeys = [chart.yogaKaraka];
+    filterByGrahasAndAction = true;
+  } else if (r.context.endsWith('yogi_graha')) {
+    const objKey = r.context.includes('avayogi') ? 'avayogi' : 'yogi';
+    const gk = chart.matchObject(objKey);
+    if (gk) {
+      grahaKeys = [gk];
+      filterByGrahasAndAction = true;
+    }
+  }
+  if (filterByGrahasAndAction) {
+    subs = allSubs.filter(
+      s =>
+        s.key === r.action && s.rulers.some(gk => grahaKeys.includes(gk)),
+    );
+  }
+  /* const matched = matchedRanges.length > 0 || pp2.valid || subs.length > 0; */
+  const matched = matchedRanges.length > 0 || subs.length > 0;
+
+  return {
+    rule: r,
+    isTr,
+    isLord,
+    matchedRanges,
+    matched,
+    subs,
+    trRef,
+  };
+}
+
 export const calculatePanchaPakshiData = async (
   chart: Chart,
   jd = 0,
   geo: GeoLoc,
-  rules: any[],
+  rules: PPRule[],
   showTransitions = false,
   fetchNightAndDay = true,
 ): Promise<Map<string, any>> => {
@@ -1765,8 +1971,9 @@ export const calculatePanchaPakshiData = async (
 
     data.set('transitions', transitions);
     data.set('birthTransitions', birthTransitions);
-    const transitRules = rules.filter(r => r.from.startsWith('pa') === false);
-    const ppRules = rules.filter(r => r.from.startsWith('pa'));
+    //const transitRules = rules.filter(r => r.from.includes('transit'));
+    const transitRules = rules.map(r => r.conditions()).reduce((a, b) => a.concat(b), []).filter(r => r.from.includes('transit'));
+    //const ppRules = rules.filter(r => r.from.startsWith('pa'));
     //data.set('rules', rules);
     const ym1 = data.get('yamas');
     const ym2 = data.get('yamas2');
@@ -1794,123 +2001,21 @@ export const calculatePanchaPakshiData = async (
       const hasDasha2Matches = transitRules.some(r =>
         r.context.startsWith('antardasha_'),
       );
-      const dashaLord = hasDashaMatches
-        ? matchCurrentDashaLord(chart, jd, 1).key
-        : '';
-      const dasha2Lord = hasDasha2Matches
-        ? matchCurrentDashaLord(chart, jd, 2).key
-        : '';
       const birdGrahaSet = mapBirdSet(data);
+
+      if (hasDashaMatches) {
+        birdGrahaSet.dashaLord = matchCurrentDashaLord(chart, jd, 1).key
+      }
+      if (hasDasha2Matches) {
+        birdGrahaSet.dasha2Lord = matchCurrentDashaLord(chart, jd, 2).key;
+      }
       data.set('valid', true);
-      for (const r of transitRules) {
-        const isTr = ['as', 'ds', 'ic', 'mc', 'dik_bala_transition'].includes(
-          r.action,
-        );
-        const trRef = isTr ? r.key.replace(/_point$/, '') : '';
-        const matchedRanges: TransitionOrb[] = [];
-        const relTransItems =
-          r.from === 'birth' ? birthTransitions : transitions;
-        let subs = [];
-        let grahaKeys = [];
-        if (r.key.endsWith('_graha')) {
-          const trKey = toTransitKey(r.context);
-          if (r.key.includes('ing_') && r.key.startsWith('yama')) {
-            const actKey = r.key.split('_')[1];
-            allSubs
-              .filter(s => s.key === actKey)
-              .filter(s => {
-                const relRows = relTransItems.filter(rt =>
-                  s.rulers.includes(rt.key),
-                );
-                relRows.forEach(rr => {
-                  if (Object.keys(rr).includes(trKey)) {
-                    if (rr[trKey].jd >= s.start && rr[trKey].jd < s.end) {
-                      const mRange = matchTransitionRange(trKey, rr);
-                      matchedRanges.push(mRange);
-                      r.addMatch(mRange.start, mRange.end, 'orb', r.score);
-                    }
-                  }
-                });
-              });
-          } else if (r.key.startsWith('birth_bird_')) {
-            grahaKeys = birdGrahaSet.matchGrahas('birth', true);
-          } else if (r.key.includes('ruling_bird_')) {
-            grahaKeys = birdGrahaSet.matchGrahas('ruling', true);
-          } else if (r.key.includes('dying_bird_')) {
-            grahaKeys = birdGrahaSet.matchGrahas('dying', true);
+      for (const r of rules) {
+        for (const subR of r.transitConditions()) {
+          const result = processPPTransition(subR, chart, allSubs, birthTransitions, transitions, birdGrahaSet);
+          if (result.matched) {
+            rData.push(result);
           }
-        }
-        if (isTr) {
-          const relTrs = relTransItems.filter(tr => {
-            const rKey = tr.key.toLowerCase();
-            return rKey === trRef || grahaKeys.includes(rKey);
-          });
-          if (relTrs.length > 0) {
-            for (const relTr of relTrs) {
-              const rk = toTransitKey(r.action);
-              if (rk.length < 5 && Object.keys(relTr).includes(rk)) {
-                matchedRanges.push(matchTransitionRange(rk, relTr));
-              } else if (rk.startsWith('dik')) {
-                const dikBalaTrans = matchDikBalaTransition(rk);
-                if (
-                  notEmptyString(dikBalaTrans) &&
-                  Object.keys(relTr).includes(dikBalaTrans)
-                ) {
-                  matchedRanges.push(matchTransitionRange(dikBalaTrans, relTr));
-                }
-              }
-            }
-          }
-        }
-        const isDahsha = r.context.startsWith('dasha_');
-        const isDasha2 = !isDahsha && r.context.startsWith('antardasha_');
-        if (isDahsha || isDasha2) {
-          const refDashaLord = isDasha2 ? dasha2Lord : dashaLord;
-          subs = filterDashaLordByObjectType(
-            refDashaLord,
-            allSubs,
-            birdGrahaSet,
-            r.key,
-          );
-        }
-        const isLord = r.context.startsWith('lord');
-        let filterByGrahasAndAction = isLord;
-        if (isLord) {
-          grahaKeys = mapLords(chart, r.context);
-        } else if (r.context === 'yoga_karaka') {
-          grahaKeys = [chart.yogaKaraka];
-          filterByGrahasAndAction = true;
-        } else if (r.context.endsWith('yogi_graha')) {
-          const objKey = r.context.includes('avayogi') ? 'avayogi' : 'yogi';
-          const gk = chart.matchObject(objKey);
-          if (gk) {
-            grahaKeys = [gk];
-            filterByGrahasAndAction = true;
-          }
-        }
-        if (filterByGrahasAndAction) {
-          subs = allSubs.filter(
-            s =>
-              s.key === r.action && s.rulers.some(gk => grahaKeys.includes(gk)),
-          );
-        }
-        /* const matched = matchedRanges.length > 0 || pp2.valid || subs.length > 0; */
-        const matched = matchedRanges.length > 0 || subs.length > 0;
-        if (matched) {
-          /* if (subs.length < 1) {
-            if (pp2.yama instanceof Object && pp2.yama.subs instanceof Array) {
-              subs = pp2.yama.subs;
-            }
-          } */
-          rData.push({
-            rule: r,
-            isTr,
-            isLord,
-            matchedRanges,
-            matched,
-            subs,
-            trRef,
-          });
         }
       }
       //data.set('rules', rData);
@@ -1920,7 +2025,6 @@ export const calculatePanchaPakshiData = async (
         : [];
       data.set('numSubMatches', matchedRules.length);
       data.set('hasSubMatches', hasSubs);
-      data.set('rules', rules);
       let segmentScore = 0;
       const periods = allYamasWithSubs.map((subs, subIndex) => {
         let yamaScore = 0;
@@ -1932,53 +2036,44 @@ export const calculatePanchaPakshiData = async (
         const numSubs = subs.length;
         return subs.map((sub, si) => {
           let subScore = 0;
-          for (const r of ppRules) {
-            const isSegment = r.key.includes('day_night');
-            const friendRel = r.context.includes('friend');
-            const isBirdRel = friendRel || r.context.includes('enemy');
-            if (isBirdRel) {
-              const matchLetter = friendRel ? 'F' : 'E';
-              if (isSegment) {
-                if (startSegment) {
-                  const isDay = (segmentIndex < 5 && dayFirst) || (segmentIndex >= 5 && !dayFirst);
-                  const subActKey = r.context.includes('ruling') ? 'ruling' : 'dying';
-                  const relLetter = matchBirdRelationsKeys(birdGrahaSet.birth.bird, birdGrahaSet.matchBird(subActKey, isDay), birdGrahaSet.waxing);
+          for (const rSet of rules) {
+            for (const r of rSet.ppConditions()) {
+              const isSegment = r.key.includes('day_night');
+              const friendRel = r.context.includes('friend');
+              const isBirdRel = friendRel || r.context.includes('enemy');
+              if (isBirdRel) {
+                const matchLetter = friendRel ? 'F' : 'E';
+                if (isSegment) {
+                  if (startSegment) {
+                    const isDay = (segmentIndex < 5 && dayFirst) || (segmentIndex >= 5 && !dayFirst);
+                    const subActKey = r.context.includes('ruling') ? 'ruling' : 'dying';
+                    const relLetter = matchBirdRelationsKeys(birdGrahaSet.birth.bird, birdGrahaSet.matchBird(subActKey, isDay), birdGrahaSet.waxing);
+                    if (relLetter === matchLetter) {
+                      segmentScore += r.score;
+                      r.addMatch(sub.start, allYamasWithSubs[segmentIndex][4].end, 'segment', r.score);
+                    }
+                  }
+                } else {
+                  const relLetter = matchBirdRelationsKeys(birdGrahaSet.birth.bird, sub.bird, birdGrahaSet.waxing);
                   if (relLetter === matchLetter) {
-                    segmentScore += r.score;
-                    r.addMatch(sub.start, allYamasWithSubs[segmentIndex][4].end, 'segment', r.score);
+                    subScore += r.score;
+                    r.addMatch(sub.start, sub.end, 'subyama', r.score);
                   }
                 }
-              } else {
-                const relLetter = matchBirdRelationsKeys(birdGrahaSet.birth.bird, sub.bird, birdGrahaSet.waxing);
-                if (relLetter === matchLetter) {
+              } else if (r.action === sub.key) {
+                if (r.onlyAtStart && si === 0) {
+                  yamaScore = r.score;
+                  const endIndex = si + 4 < numSubs ? si + 4 : numSubs - 1;
+                  r.addMatch(sub.start, subs[endIndex].end, 'yama', r.score);
+                  
+                } else if (!r.onlyAtStart) {
                   subScore += r.score;
                   r.addMatch(sub.start, sub.end, 'subyama', r.score);
                 }
               }
-            } else if (r.action === sub.key) {
-              if (r.onlyAtStart && si === 0) {
-                yamaScore = r.score;
-                const endIndex = si + 4 < numSubs ? si + 4 : numSubs - 1;
-                if (r.siblings.length > 0) {
-                  const subMatches = checkPPTransitionSubcondition(r.siblings[0], subs, transitions);
-                  if (subMatches.length > 0) {
-                     subMatches.forEach(({ mRange}) => {
-                        r.addMatch(mRange.start, mRange.end, 'orb', r.score)
-                     })
-                  }
-                } else {
-                  r.addMatch(sub.start, subs[endIndex].end, 'yama', r.score)
-                }
-                
-              } else if (!r.onlyAtStart) {
-                subScore += r.score;
-                r.addMatch(sub.start, sub.end, 'subyama', r.score)
-                
-              }
             }
           }
           let subRuleScore = 0;
-
           if (hasSubs) {
             const matchedSubRules = matchedRules
               .map(mr => {
@@ -2048,6 +2143,8 @@ export const calculatePanchaPakshiData = async (
           });
           scores.push(minuteScore);
         }
+
+        data.set('rules', rules.map(simplifyRule));
         data.set('minutes', scores);
       }
     }
