@@ -969,7 +969,9 @@ export class SettingService {
         return rs.conditionSet.conditionRefs.length > 0;
       })
       .map(rs => {
-        const conds = rs.conditionSet.conditionRefs;
+        // filter only top level conditions, not conditionSets
+        const conds = rs.conditionSet.conditionRefs.filter(c => c instanceof Object && Object.keys(c).includes('fromMode'));
+        // get index of first condition PanchaPakshi condtion and prepend it if is not first 
         const ppIndex = conds.findIndex(c => c.fromMode.startsWith('pa'));
         if (ppIndex > 0) {
           const c1 = conds.splice(ppIndex, 1);
