@@ -1441,6 +1441,8 @@ const mapBirdSet = (ppData: Map<string, any> = new Map()): BirdGrahaSet => {
   return new BirdGrahaSet(ppData);
 };
 
+export const periodTypes = ['segment', 'yama', 'subyama', 'orb'];
+
 export class PPRule {
   from = '';
   to = '';
@@ -1451,7 +1453,7 @@ export class PPRule {
   always = false;
   score = 0;
   max = 10;
-  siblings = [];
+  siblings: PPRule[] = [];
   matches: PPMatchRange[] = [];
   operator = '';
   isMaster = false;
@@ -1491,7 +1493,7 @@ export class PPRule {
         if (rs.conditionSet.conditionRefs.length > 1) {
           this.siblings =
             rs.conditionSet.conditionRefs.length > 1
-              ? rs.conditionSet.conditionRefs
+              ? rs.conditionSet.conditionRefs.filter(c => c instanceof Object && Object.keys(c).includes('fromMode'))
                   .slice(1)
                   .map(c => new PPRule(rs, c, false))
               : [];
@@ -1501,12 +1503,45 @@ export class PPRule {
   }
 
   addMatch(start =0, end = 0, type = 'subyama', score = 10) {
-    this.matches.push({ start, end, type, score })
+    if (end > start) {
+      const newMatch = { start, end, type, score };
+      if (this.matches.length > 0) {
+        const mIndex = this.matches.findIndex(m => start >= m.start && end <= end);
+        if (mIndex < 0) {
+          this.matches.push(newMatch)
+        } else {
+          this.matches[mIndex] = newMatch;
+        }
+      } else {
+        this.matches.push(newMatch)
+      }
+    }
+  }
+
+  matchPeriodType(rule: PPRule): string {
+
+  }
+
+  get bestMatchType() {
+    
+  }
+  
+
+  get validMatches() {
+    return this.matches.filter(m => m.type === this.bestMatchType);
+  }
+
+  numConditions() {
+    return this.siblings.length + 1;
+  }
+
+  condition(index = 0): PPRule | void {
+    return index < 1? this : index <= this.siblings.length ? this.siblings[(index-1)] : null;
   }
 
 }
 
-export const mapPPCondition = (condRef = null, rs: PredictiveRuleSet, siblings = []) => {
+export const mapPPCondition = (condRef = null, rs: PredictiveRuleSet) => {
   return new PPRule(rs, condRef, true);
 };
 
