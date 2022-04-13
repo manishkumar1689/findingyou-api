@@ -1905,7 +1905,7 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
   }{
   if (isTr) {
     const relTrs = relTransItems.filter(tr => {
-      const rKey = tr.key.toLowerCase();
+      const rKey = tr.key.toLowerCase().replace('2', '');
       return rKey === trRef.toLowerCase() || grahaKeys.includes(rKey);
     });
     if (relTrs.length > 0) 

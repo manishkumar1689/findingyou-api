@@ -790,6 +790,16 @@ export const buildCurrentAndBirthExtendedTransitions = async (
       const ic = transitions.find(item => item.type === 'ic');
       return { key, rise, set, mc, ic };
     });
+  if (offset === -0.5) {
+    const extra = await buildCurrentAndBirthExtendedTransitions(chart,
+      geo,
+      jd,
+      0.49);
+    extra.transitions.forEach(tr => {
+      const key = tr.key + '2';
+      transitions.push({...tr, key});
+    })
+  }
   return { transitions, birthTransitions };
 };
 
