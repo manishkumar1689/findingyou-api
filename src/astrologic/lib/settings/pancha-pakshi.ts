@@ -18,6 +18,7 @@ import { GeoLoc } from '../models/geo-loc';
 import { matchCurrentDashaLord } from '../models/dasha-set';
 import { PredictiveRuleSet } from '../../../setting/interfaces/predictive-rule-set.interface';
 import { julToDateParts } from '../julian-date';
+import { capitalize } from '../helpers';
 
 const birdMap = { 1: 'vulture', 2: 'owl', 3: 'crow', 4: 'cock', 5: 'peacock' };
 
@@ -1853,17 +1854,27 @@ const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[]) => {
   return score;
 }
 
+const translateTransitionKey = (key = '', isTr = false) => {
+  const baseKey = isTr ? key.replace(/_point$/, '') : '';
+  switch (baseKey) {
+    case 'fortune':
+    case 'spirit':
+      return ['lot', capitalize(baseKey)].join('Of') ;
+    default:
+      return baseKey;
+  }
+}
+
 const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransitions: TransitionData[], transitions: TransitionData[], birdGrahaSet: BirdGrahaSet) => {
   const isTr = ['as', 'ds', 'ic', 'mc', 'dik_bala_transition'].includes(
     r.context,
   );
-  const trRef = isTr ? r.key.replace(/_point$/, '') : '';
+  const trRef = translateTransitionKey(r.key, isTr)
   const matchedRanges: TransitionOrb[] = [];
   const relTransItems =
     r.from === 'birth' ? birthTransitions : transitions;
   let subs = [];
   let grahaKeys = [];
-  let numRangeMatches = 0;
   if (r.key.endsWith('_graha')) {
     const trKey = toTransitKey(r.context);
     if (r.key.includes('ing_') && r.key.startsWith('yama')) {
@@ -1879,7 +1890,6 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
               if (rr[trKey].jd >= s.start && rr[trKey].jd < s.end) {
                 const mRange = matchTransitionRange(trKey, rr);
                 matchedRanges.push(mRange);
-                numRangeMatches++;
                 r.addMatch(mRange.start, mRange.end, 'orb', r.score);
               }
             }
@@ -1892,13 +1902,13 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
     } else if (r.key.includes('dying_bird_')) {
       grahaKeys = birdGrahaSet.matchGrahas('dying', true);
     }
-  }
+  }{
   if (isTr) {
     const relTrs = relTransItems.filter(tr => {
       const rKey = tr.key.toLowerCase();
-      return rKey === trRef || grahaKeys.includes(rKey);
+      return rKey === trRef.toLowerCase() || grahaKeys.includes(rKey);
     });
-    if (relTrs.length > 0) {
+    if (relTrs.length > 0) 
       for (const relTr of relTrs) {
         const rk = toTransitKey(r.action);
         let mr = null;
@@ -1915,7 +1925,7 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
         }
         if (mr instanceof Object) {
           matchedRanges.push(mr);
-          r.addMatch(mr.start, mr.end,'end', r.score);
+          r.addMatch(mr.start, mr.end,'orb', r.score);
         }
       }
     }
