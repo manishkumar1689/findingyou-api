@@ -16,6 +16,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SettingService } from './setting.service';
 import { CreateSettingDTO } from './dto/create-setting.dto';
+import { IdBoolDTO } from './dto/id-bool.dto';
 import { notEmptyString } from '../lib/validators';
 import { extractDocId } from '../lib/entities';
 import { UserService } from '../user/user.service';
@@ -387,6 +388,20 @@ export class SettingController {
       isAdmin,
     );
     return res.status(HttpStatus.CREATED).send(data);
+  }
+
+
+
+  @Post('predictive-rules-status')
+  async savePredictiveRuleStatus(@Res() res, @Body() items: IdBoolDTO[]) {
+    const result: Map<string, any> = new Map([['valid', false]]);
+
+    if (items.length > 0) {
+      const ids = await this.settingService.savePredictiveRulesActive(items);
+      result.set('ids', ids);
+      result.set('valid', ids.length > 0);
+    }
+    return res.json(Object.fromEntries(result))
   }
 
   // Fetch a particular setting using ID

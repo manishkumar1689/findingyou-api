@@ -47,6 +47,8 @@ import { coreIndianGrahaKeys } from './graha-set';
 import { mapRelationships } from '../map-relationships';
 import { matchKotaCakraSection } from '../settings/nakshatra-values';
 import {
+  calculatePanchaPakshiData,
+  mapPPRule,
   matchBirdKeyRulers,
   panchaPakshiDayNightSet,
 } from '../settings/pancha-pakshi';
@@ -61,6 +63,7 @@ import {
 import { buildGrahaPositionsFromChart } from '../point-transitions';
 import { calcBaseChart } from '../core';
 import { GeoLoc } from './geo-loc';
+import { PredictiveRuleSet } from '../../../setting/interfaces/predictive-rule-set.interface';
 
 interface StartEndLord {
   start: number;
@@ -2821,7 +2824,7 @@ export const matchPanchaPakshiPoint = async (
   };
 };
 
-export const matchPanchaPakshiOptions = async (
+/* export const matchPanchaPakshiOptions = async (
   cond: Condition,
   chart: Chart,
   geo: GeoPos,
@@ -2834,4 +2837,28 @@ export const matchPanchaPakshiOptions = async (
   } else {
     return await matchPanchaPakshiPoint(cond, chart, geo);
   }
+};
+ */
+export const matchPanchaPakshiOptions = async (
+  rule: PredictiveRuleSet,
+  chart: Chart,
+  geo: GeoPos,
+) => {
+  const items = [];
+  const ppRule = mapPPRule(rule);
+  const jd = currentJulianDay();
+  const data = await calculatePanchaPakshiData(chart, jd, new GeoLoc(geo), [ppRule], true, true, false);
+  
+  if (data.has('rules') && data.get('rules').length > 0) {
+    const rule = data.get('rules')[0];
+    if (rule instanceof Object) {
+      const {matches} = rule;
+      if (matches instanceof Array) {
+        for (const m of matches) {
+          items.push(m);
+        }
+      }
+    }
+  }
+  return items;
 };

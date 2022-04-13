@@ -130,6 +130,7 @@ import {
   compatibilityResultSetHasScores,
   Condition,
   matchOrbFromGrid,
+  matchPanchaPakshiOptions,
   PredictiveRule,
   Protocol,
 } from './lib/models/protocol-models';
@@ -2221,7 +2222,7 @@ export class AstrologicController {
     @Res() res,
     @Param('ruleID') ruleID,
     @Param('chartID') chartID,
-    @Param('loc') loc,
+    @Param('loc') loc
   ) {
     const ruleData = await this.settingService.getRuleSet(ruleID);
     const result = { valid: false, matches: false, items: [] };
@@ -2251,21 +2252,30 @@ export class AstrologicController {
       cr => !cr.isSet,
     );
     const outerItems = [];
-    for (const cond of outerConditions) {
-      if (cond instanceof Condition) {
-        const newOuterItem = await processPredictiveRuleSet(
-          cond,
-          rule.type,
-          chart,
-          geo,
-          settings,
-        );
-        outerItems.push(newOuterItem);
+    const isPP = rule.type === 'panchapakshi';
+    if (isPP) {
+      const items = await matchPanchaPakshiOptions(ruleData, chart, geo);
+      for (const item of items) {
+        outerItems.push(item);
+      }
+    } else {
+      for (const cond of outerConditions) {
+        if (cond instanceof Condition) {
+          const newOuterItem = await processPredictiveRuleSet(
+            cond,
+            rule.type,
+            chart,
+            geo,
+            settings
+          );
+          outerItems.push(newOuterItem);
+        }
       }
     }
+    
     const valid = chart.grahas.length > 6;
     const numOuterValid = outerItems.filter(oi => oi.valid).length;
-    const matches = andMode
+    const matches = isPP? outerItems.length > 0 : andMode
       ? numOuterValid === outerItems.length
       : numOuterValid > 0;
     return { valid, matches, items: outerItems };

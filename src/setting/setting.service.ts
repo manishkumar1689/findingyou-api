@@ -17,6 +17,7 @@ import {
 } from '../lib/entities';
 import { defaultPairedTagOptionSets } from '../astrologic/lib/settings/vocab-values';
 import { RuleSetDTO } from './dto/rule-set.dto';
+import { IdBoolDTO }from './dto/id-bool.dto';
 import { PredictiveRuleSet } from './interfaces/predictive-rule-set.interface';
 import { PredictiveRuleSetDTO } from './dto/predictive-rule-set.dto';
 import getDefaultPreferences, {
@@ -48,6 +49,7 @@ import { mapLikeability } from '../lib/notifications';
 import { filterCorePreference } from '../lib/mappers';
 import {
   mapPPCondition,
+  mapPPRule,
   PPRule,
 } from '../astrologic/lib/settings/pancha-pakshi';
 
@@ -907,6 +909,19 @@ export class SettingService {
     return result;
   }
 
+  async savePredictiveRulesActive(items: IdBoolDTO []) {
+    const rows: any[] = [];
+    if (items.length > 0) {
+      for (const row of items) {
+        const updated = await this.predictiveRuleSetModel.findByIdAndUpdate(row.id, { active: row.value });
+        if (updated._id.toString() === row.id) {
+          rows.push(row);
+        }
+      }
+    }
+    return rows;
+  }
+
   async deletePredictiveRuleSet(id = '', userID = '', isAdmin = false) {
     const result: any = { valid: false, deleted: false, item: null };
     if (notEmptyString(id, 16)) {
@@ -968,19 +983,7 @@ export class SettingService {
       .filter(rs => {
         return rs.conditionSet.conditionRefs.length > 0;
       })
-      .map(rs => {
-        // filter only top level conditions, not conditionSets
-        const conds = rs.conditionSet.conditionRefs.filter(c => c instanceof Object && Object.keys(c).includes('fromMode'));
-        // get index of first condition PanchaPakshi condtion and prepend it if is not first 
-        const ppIndex = conds.findIndex(c => c.fromMode.startsWith('pa'));
-        if (ppIndex > 0) {
-          const c1 = conds.splice(ppIndex, 1);
-          conds.unshift(c1);
-          rs.conditionSet.conditionRefs = conds;
-        }
-        const cond = conds[0];
-        return mapPPCondition(cond, rs);
-      });
+      .map(mapPPRule);
     return simpleRules;
   }
 

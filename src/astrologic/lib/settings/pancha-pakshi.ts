@@ -1979,6 +1979,7 @@ export const calculatePanchaPakshiData = async (
   rules: PPRule[],
   showTransitions = false,
   fetchNightAndDay = true,
+  showMinutes = true
 ): Promise<Map<string, any>> => {
   let data: Map<string, any> = new Map(
     Object.entries({
@@ -2167,30 +2168,33 @@ export const calculatePanchaPakshiData = async (
         const scores = [];
         const dayLength = endJd - startJd;
         const maxMins = Math.ceil(dayLength * minsDay);
-        for (let i = 0; i < maxMins; i++) {
-          const currJd = startJd + minJd * i;
-          /* const refSub = subPeriods.find(
-            sp => currJd >= sp.start && currJd <= sp.end,
-          );
-          let minuteScore = 0;
-          if (refSub instanceof Object) {
-            minuteScore += refSub.score;
-          }
-          matchedRules.forEach(mr => {
-            if (mr.matchedRanges.length > 0) {
-              for (const mRange of mr.matchedRanges) {
-                if (mRange.inRange(currJd)) {
-                  minuteScore += mRange.calcScore(currJd, mr.rule.score);
+        if (showMinutes) {
+          for (let i = 0; i < maxMins; i++) {
+            const currJd = startJd + minJd * i;
+            /* const refSub = subPeriods.find(
+              sp => currJd >= sp.start && currJd <= sp.end,
+            );
+            let minuteScore = 0;
+            if (refSub instanceof Object) {
+              minuteScore += refSub.score;
+            }
+            matchedRules.forEach(mr => {
+              if (mr.matchedRanges.length > 0) {
+                for (const mRange of mr.matchedRanges) {
+                  if (mRange.inRange(currJd)) {
+                    minuteScore += mRange.calcScore(currJd, mr.rule.score);
+                  }
                 }
               }
-            }
-          }); */
-          const minuteScore = matchPPRulesToMinutes(currJd, rules);
-          scores.push(minuteScore);
+            }); */
+            const minuteScore = matchPPRulesToMinutes(currJd, rules);
+            scores.push(minuteScore);
+          }
         }
-
         data.set('rules', rules.map(simplifyRule));
-        data.set('minutes', scores);
+        if (showMinutes) {
+          data.set('minutes', scores);
+        }
       }
     }
   }
@@ -2257,4 +2261,18 @@ export const calcLuckyTimes = async (chart: Chart, jd = 0, geo: GeoLoc, rules: a
     data.set('valid', false);
   }
   return data;
+}
+
+export const mapPPRule = (rs: PredictiveRuleSet) => {
+  // filter only top level conditions, not conditionSets
+  const conds = rs.conditionSet.conditionRefs.filter(c => c instanceof Object && Object.keys(c).includes('fromMode'));
+  // get index of first condition PanchaPakshi condtion and prepend it if is not first 
+  const ppIndex = conds.findIndex(c => c.fromMode.startsWith('pa'));
+  if (ppIndex > 0) {
+    const c1 = conds.splice(ppIndex, 1);
+    conds.unshift(c1);
+    rs.conditionSet.conditionRefs = conds;
+  }
+  const cond = conds[0];
+  return mapPPCondition(cond, rs);
 }

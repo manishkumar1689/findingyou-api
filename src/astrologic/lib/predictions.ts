@@ -5,8 +5,6 @@ import {
   Condition,
   matchKalanalaChandra,
   matchKotaChakra,
-  matchPanchaPakshi,
-  matchPanchaPakshiOptions,
   matchShulaChakra,
   processByBirthSign,
   processTransitDashaRuleSet,
@@ -43,7 +41,7 @@ export const processPredictiveRuleSet = async (
   ruleType = '',
   chart: Chart,
   geo: GeoPos,
-  settings: ProtocolSettings,
+  settings: ProtocolSettings
 ) => {
   const result: any = { valid: false, start: null, end: null, score: 0 };
   switch (ruleType) {
@@ -56,8 +54,6 @@ export const processPredictiveRuleSet = async (
     case 'kalanala':
     case 'chandra_kalanala':
       return matchKalanalaChandra(cond, chart, geo);
-    case 'panchapakshi':
-      return await matchPanchaPakshiOptions(cond, chart, geo);
     default:
       return result;
   }
