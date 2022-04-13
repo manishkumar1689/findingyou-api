@@ -1536,7 +1536,10 @@ export class PPRule {
       } else {
         this.matches.push(newMatch)
       } */
-      this.matches.push(newMatch)
+      const hasSmeMatches = this.matches.some(m => start === m.start && m.end === end);
+      if (!hasSmeMatches) {
+        this.matches.push(newMatch);
+      }
     }
   }
 
