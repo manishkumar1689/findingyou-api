@@ -1796,7 +1796,7 @@ export const matchTransitionRange = (
   return new TransitionOrb(peak, orbMin);
 };
 
-const checkPPTransitionSubcondition = (condRef = null, subYamas = [], transitions = []):  KeyTransitionOrb[] => {
+/* const checkPPTransitionSubcondition = (condRef = null, subYamas = [], transitions = []):  KeyTransitionOrb[] => {
   const trOrbs: KeyTransitionOrb[] = [];
   if (condRef instanceof Object) {
     const { context, action } = condRef;
@@ -1820,6 +1820,34 @@ const checkPPTransitionSubcondition = (condRef = null, subYamas = [], transition
     }
   }
   return trOrbs;
+} */
+
+const calcValueWithinOrb = (minJd = 0, start = 0, end = 0) => {
+  const len = end - start;
+  const half = len / 2;
+  const peak = end - half;
+  const dist = Math.abs(peak - minJd) / half;
+  const prog = 1 - dist;
+  return prog;
+}
+
+const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[]) => {
+  let score = 0;
+  for (const rule of rules) { 
+    if (rule.isMatched) {
+      rule.validMatches.forEach(match => {
+        if (minJd >= match.start && minJd <= match.end) {
+          if (match.type === 'orb') {
+            const fraction = calcValueWithinOrb(minJd, match.start, match.end);
+            score += (rule.score * fraction);
+          } else {
+            score += rule.score;
+          }
+        }
+      })
+    }
+  }
+  return score;
 }
 
 const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransitions: TransitionData[], transitions: TransitionData[], birdGrahaSet: BirdGrahaSet) => {
@@ -1832,6 +1860,7 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
     r.from === 'birth' ? birthTransitions : transitions;
   let subs = [];
   let grahaKeys = [];
+  let numRangeMatches = 0;
   if (r.key.endsWith('_graha')) {
     const trKey = toTransitKey(r.context);
     if (r.key.includes('ing_') && r.key.startsWith('yama')) {
@@ -1847,6 +1876,7 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
               if (rr[trKey].jd >= s.start && rr[trKey].jd < s.end) {
                 const mRange = matchTransitionRange(trKey, rr);
                 matchedRanges.push(mRange);
+                numRangeMatches++;
                 r.addMatch(mRange.start, mRange.end, 'orb', r.score);
               }
             }
@@ -1868,16 +1898,21 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
     if (relTrs.length > 0) {
       for (const relTr of relTrs) {
         const rk = toTransitKey(r.action);
+        let mr = null;
         if (rk.length < 5 && Object.keys(relTr).includes(rk)) {
-          matchedRanges.push(matchTransitionRange(rk, relTr));
+          mr = matchTransitionRange(rk, relTr);
         } else if (rk.startsWith('dik')) {
           const dikBalaTrans = matchDikBalaTransition(rk);
           if (
             notEmptyString(dikBalaTrans) &&
             Object.keys(relTr).includes(dikBalaTrans)
           ) {
-            matchedRanges.push(matchTransitionRange(dikBalaTrans, relTr));
+            mr = matchTransitionRange(dikBalaTrans, relTr)
           }
+        }
+        if (mr instanceof Object) {
+          matchedRanges.push(mr);
+          r.addMatch(mr.start, mr.end,'end', r.score);
         }
       }
     }
@@ -1892,6 +1927,9 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
       birdGrahaSet,
       r.key,
     );
+    subs.forEach(sub => {
+      r.addMatch(sub.start, sub.end, 'subyama', r.score);
+    })
   }
   const isLord = r.context.startsWith('lord');
   let filterByGrahasAndAction = isLord;
@@ -1913,6 +1951,9 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
       s =>
         s.key === r.action && s.rulers.some(gk => grahaKeys.includes(gk)),
     );
+    subs.forEach(sub => {
+      r.addMatch(sub.start, sub.end, 'subyama', r.score);
+    })
   }
   /* const matched = matchedRanges.length > 0 || pp2.valid || subs.length > 0; */
   const matched = matchedRanges.length > 0 || subs.length > 0;
@@ -2125,7 +2166,7 @@ export const calculatePanchaPakshiData = async (
         const maxMins = Math.ceil(dayLength * minsDay);
         for (let i = 0; i < maxMins; i++) {
           const currJd = startJd + minJd * i;
-          const refSub = subPeriods.find(
+          /* const refSub = subPeriods.find(
             sp => currJd >= sp.start && currJd <= sp.end,
           );
           let minuteScore = 0;
@@ -2140,7 +2181,8 @@ export const calculatePanchaPakshiData = async (
                 }
               }
             }
-          });
+          }); */
+          const minuteScore = matchPPRulesToMinutes(currJd, rules);
           scores.push(minuteScore);
         }
 
