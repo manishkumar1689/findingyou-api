@@ -1837,6 +1837,7 @@ const calcValueWithinOrb = (minJd = 0, start = 0, end = 0) => {
 
 const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[]) => {
   let score = 0;
+  let maxPP = 0;
   for (const rule of rules) { 
     if (rule.isMatched) {
       rule.validMatches.forEach(match => {
@@ -1846,12 +1847,13 @@ const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[]) => {
             score += (rule.score * fraction);
           } else {
             score += rule.score;
+            maxPP += rule.score;
           }
         }
       })
     }
   }
-  return score;
+  return { minuteScore: score, maxPP };
 }
 
 const translateTransitionKey = (key = '', isTr = false) => {
@@ -2175,7 +2177,8 @@ export const calculatePanchaPakshiData = async (
         data.set('endJd', endJd);
         const minsDay = 24 * 60;
         const minJd = 1 / minsDay;
-        const scores = [];
+        const scores: number[] = [];
+        let maxPPValue = 0;
         const dayLength = endJd - startJd;
         const maxMins = Math.ceil(dayLength * minsDay);
         if (showMinutes) {
@@ -2197,13 +2200,19 @@ export const calculatePanchaPakshiData = async (
                 }
               }
             }); */
-            const minuteScore = matchPPRulesToMinutes(currJd, rules);
+            const { minuteScore, maxPP } = matchPPRulesToMinutes(currJd, rules);
             scores.push(minuteScore);
+            if (maxPP > maxPPValue) {
+              maxPPValue = maxPP;
+            }
           }
         }
         data.set('rules', rules.map(simplifyRule));
         if (showMinutes) {
           data.set('minutes', scores);
+          data.set('maxPP', maxPPValue);
+          data.set('maxScore', Math.max(...scores));
+          data.set('cutOff', maxPPValue + 10);
         }
       }
     }
