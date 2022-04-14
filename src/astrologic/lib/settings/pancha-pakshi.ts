@@ -1826,16 +1826,16 @@ export const matchTransitionRange = (
   return trOrbs;
 } */
 
-const calcValueWithinOrb = (minJd = 0, start = 0, end = 0) => {
+const calcValueWithinOrb = (minJd = 0, start = 0, end = 0): { fraction: number; peak: number } => {
   const len = end - start;
   const half = len / 2;
   const peak = end - half;
   const dist = Math.abs(peak - minJd) / half;
-  const prog = 1 - dist;
-  return prog;
+  const fraction = 1 - dist;
+  return { fraction, peak };
 }
 
-const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[]) => {
+const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1) => {
   let score = 0;
   let maxPP = 0;
   for (const rule of rules) { 
@@ -1843,8 +1843,11 @@ const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[]) => {
       rule.validMatches.forEach(match => {
         if (minJd >= match.start && minJd <= match.end) {
           if (match.type === 'orb') {
-            const fraction = calcValueWithinOrb(minJd, match.start, match.end);
-            score += (rule.score * fraction);
+            
+            const { fraction, peak } = calcValueWithinOrb(minJd, match.start, match.end);
+            if (peak <= endSubJd) {
+              score += (rule.score * fraction);
+            }
           } else {
             score += rule.score;
             maxPP += rule.score;
@@ -2200,7 +2203,9 @@ export const calculatePanchaPakshiData = async (
                 }
               }
             }); */
-            const { minuteScore, maxPP } = matchPPRulesToMinutes(currJd, rules);
+            const currSub = allSubs.find(s => currJd >= s.start && currJd <= s.end)
+            const endSubJd = currSub instanceof Object ? currSub.end : -1;
+            const { minuteScore, maxPP } = matchPPRulesToMinutes(currJd, rules, endSubJd);
             scores.push(minuteScore);
             if (maxPP > maxPPValue) {
               maxPPValue = maxPP;
