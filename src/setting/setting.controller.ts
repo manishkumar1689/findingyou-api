@@ -347,6 +347,15 @@ export class SettingController {
     return res.send(result);
   }
 
+  @Get('kota-chakra')
+  async getKotaCakra(@Res() res) {
+    const result = await this.settingService.getKotaChakraScoreData();
+    const isObj = result instanceof Object;
+    const valid = isObj && Object.keys(result).includes('scores') && result.scores instanceof Array;
+    const obj = isObj ? result : {};
+    return res.send({...obj, valid});
+  }
+
   @Post('predictive/save')
   async savePredictiveRule(
     @Res() res,

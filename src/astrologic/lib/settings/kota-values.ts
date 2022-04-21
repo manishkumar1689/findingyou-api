@@ -44,6 +44,13 @@ export const matchKotaPala = (deg: number): string => {
 	const [nakIndex, padaIndex] = padNakIndices(deg);
 	return nakIndex < kotaPaalaValues.length && padaIndex < 4? kotaPaalaValues[nakIndex][padaIndex] : "";
 }
+
+export interface KotaScoreResult {
+  score: number;
+  offset: number;
+  type: string;
+}
+
 export class KotaCakraScoreItem {
 
   direct = 0;
@@ -70,7 +77,7 @@ export class KotaCakraScoreItem {
     }
   }
 
-  getValue(retro = false) {
+  getValue(retro = false): number {
     return retro? this.retro : this.direct;
   }
 
@@ -96,25 +103,29 @@ export class KotaCakraScore {
       Object.entries(inData).forEach(([k, v]) => {
         switch (k) {
           case "mal":
-            this.malefic = new KotaCakraScoreItem(v); ;
+          case "malefic":
+            this.malefic = new KotaCakraScoreItem(v);
             break;
           case "ben":
-            this.benefic = new KotaCakraScoreItem(v); ;
+          case "benefic":
+            this.benefic = new KotaCakraScoreItem(v);
             break;
           case "svami":
-            this.svami = new KotaCakraScoreItem(v); ;
+            this.svami = new KotaCakraScoreItem(v);
             break;
           case "pala":
-            this.pala = new KotaCakraScoreItem(v); ;
+            this.pala = new KotaCakraScoreItem(v);
             break;
           case "node":
-            this.node = new KotaCakraScoreItem(v); ;
+            this.node = new KotaCakraScoreItem(v);
             break;
         }
       })
     }
   }
 }
+
+export const kotaGrahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa', 'ra', 'ke'];
 
 export class KotaCakraScoreSet {
 
@@ -202,9 +213,11 @@ export class KotaCakraScoreSet {
     return this.svamiPalaOffset(key, false);
   }
 
-  calc(key = '', distance = 0, retro = false, svami = '', pala = ''): number {
+  calc(key = '', distance = 0, retro = false, svami = '', pala = ''): KotaScoreResult {
     const scoreRow = this.scores.find(sc => sc.distance === distance);
-    let score = 0;
+    let offset = 0;
+    let base = 0;
+    let type = '';
     if (scoreRow instanceof KotaCakraScore) {
       const isNode = ['ra', 'ke'].includes(key);
       const isPala = key === pala;
@@ -213,44 +226,70 @@ export class KotaCakraScoreSet {
       const isMalefic = isNotSpecial && this.malefics.includes(key);
       const isBenefic = isNotSpecial && this.benefics.includes(key);
       if (isNode) {
-        score = scoreRow.node.getValue(retro);
+        base = scoreRow.node.getValue(retro);
+        type = "node";
       } else if (isPala) {
-        score = scoreRow.pala.getValue(retro) + this.palaOffset(key);
+        base = scoreRow.pala.getValue(retro);
+        offset = this.palaOffset(key);
+        type = 'pala';
       } else if (isSvami) {
-        score = scoreRow.svami.getValue(retro) + this.svamiOffset(key);
+        base = scoreRow.svami.getValue(retro);
+      offset = this.svamiOffset(key)
+        type = 'svami';
       } else if (isBenefic) {
-        score = scoreRow.benefic.getValue(retro);
+        type = 'benefic';
+        base = scoreRow.benefic.getValue(retro);
       }  else if (isMalefic) {
-        score = scoreRow.malefic.getValue(retro);
+        type = 'malefic';
+        base = scoreRow.malefic.getValue(retro);
       }
     }
-    return score;
+    const score = base + offset;
+    return { score, offset, type };
+  }
+
+  calcValue(key = '', distance = 0, retro = false, svami = '', pala = ''): number {
+    return this.calc(key, distance, retro, svami, pala).score;
+  }
+
+}
+
+const mapKotChakraScore = (key = '', transit: Chart, scoreSet: KotaCakraScoreSet, moonNakshatra = 0, separateSP = false, svami = '', pala = '') => {
+  const currGr = transit.graha(key);
+  const transitNak = Math.round(currGr.nakshatra28);
+  const distance = calcInclusiveDistance(transitNak, moonNakshatra, 28);
+  const retro = currGr.lngSpeed < 0;
+  const svamiRef = separateSP ? '' : svami;
+  const palaRef = separateSP ? '' : pala;
+  
+  const { score, offset, type} = scoreSet.calc(key, distance, retro, svamiRef, palaRef);
+  return {
+    key,
+    transitNak,
+    distance,
+    retro,
+    score,
+    offset,
+    type
   }
 }
 
-export const calcKotaChakraScores = (birth: Chart, transit: Chart, ruleData = null) => {
+export const calcKotaChakraScores = (birth: Chart, transit: Chart, ruleData = null, separateSP = false) => {
   birth.setAyanamshaItemByKey('true_citra');
   transit.setAyanamshaItemByKey('true_citra');
   const scoreSet = new KotaCakraScoreSet(ruleData);
   const pala = birth.kotaPala;
   const svami = birth.kotaSvami;
-  const grahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa', 'ra', 'ke'];
 
-  const moonNakshatra = birth.moon.nakshatra27Num;
-  const scores = grahaKeys.map(key => {
-    const currGr = transit.graha(key);
-    const pos2 = currGr.nakshatra27Num;
-    const diff = calcInclusiveDistance(pos2, moonNakshatra, 27);
-    const retro = currGr.lngSpeed < 0;
-    return {
-      key,
-      transitNak: pos2,
-      diff,
-      retro,
-      score: scoreSet.calc(key, diff, retro, svami, pala)
-    }
-  });
-  return {scores, moonNakshatra, svami, pala, scoreSet };
+  const moonNakshatra = Math.round(birth.moon.nakshatra28);
+  let specialScores: any[] = [];
+  if (separateSP) {
+    specialScores = [svami, pala].map(key => mapKotChakraScore(key, transit, scoreSet, moonNakshatra, false, svami, pala));
+  }
+  const coreScores = kotaGrahaKeys.map(key => mapKotChakraScore(key, transit, scoreSet, moonNakshatra, separateSP, svami, pala));
+  const scores = [...specialScores, ...coreScores];
+  const total = scores.map(sc => sc.score).reduce((a, b) => a + b, 0);
+  return {scores, total, moonNakshatra, svami, pala, scoreSet };
 }
 
 export default kotaPaalaValues;
