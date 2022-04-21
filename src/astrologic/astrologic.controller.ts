@@ -109,6 +109,7 @@ import {
   medianLatlng,
   subtractLng360,
   approxTransitTimes,
+  calcInclusiveDistance,
 } from './lib/math-funcs';
 import { PairedChartDTO } from './dto/paired-chart.dto';
 import {
@@ -186,6 +187,7 @@ import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
 import { julToDateParts } from './lib/julian-date';
 import { buildSbcScoreGrid, traverseAllNak28Cells } from './lib/calc-sbc';
+import { calcKotaChakraScores, KotaCakraScoreSet } from './lib/settings/kota-values';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -875,6 +877,7 @@ export class AstrologicController {
     );
     const result: Map<string, any> = new Map();
     result.set('grid', []);
+    result.set('jd', jd);
     if (transitCData instanceof Object) {
       const transit = new Chart(transitCData);
       transit.setAyanamshaItemByKey('true_citra');
@@ -894,6 +897,49 @@ export class AstrologicController {
           result.set('natalMoonNak28', birth.moon.nakshatra28);
           result.set('natalAscSign', birth.ascendantGraha.sign);
           result.set('natalAscSign', birth.tithi.num);
+        }
+      }
+    }
+    return res.json(Object.fromEntries( result.entries() ));
+  }
+
+  @Get('kota-chakra/:chartRef/:loc/:dt?')
+  async getKotaChakra(@Res() res, @Param('chartRef') chartRef, @Param('loc') loc, @Param('dt') dt) {
+    let chartID = chartRef;
+    if (chartRef.includes('@') && chartRef.includes('.')) {
+      chartID = await this.astrologicService.getChartIDByEmail(chartRef);
+    }
+    const { dtUtc, jd } = matchJdAndDatetime(dt);
+    const topList = 'true_citra';
+    const transitCData = await this.fetchCompactChart(
+      loc,
+      dtUtc,
+      'top',
+      topList,
+      false,
+      false,
+    );
+    const result: Map<string, any> = new Map();
+    result.set('grid', []);
+    result.set('jd', jd);
+    if (transitCData instanceof Object) {
+      const transit = new Chart(transitCData);
+      transit.setAyanamshaItemByKey('true_citra');
+      result.set('transit', transit.grahasByKeys().map(gr => gr.toKeyLng()));
+      const ruleData = await this.settingService.getKotaChakraScoreData();
+      
+      
+      //result.set('rules', ruleData);
+      if (isValidObjectId(chartID)) {
+        const bData = await this.astrologicService.getChart(chartID);
+        if (bData instanceof Model) {
+          const birth = new Chart(bData.toObject());
+          const {scores, moonNakshatra, svami, pala, scoreSet } = calcKotaChakraScores(birth, transit, ruleData);
+          result.set('svami', svami);
+          result.set('pala', pala);
+          result.set('scores', scores);
+          result.set('moonNakshatra', moonNakshatra);
+          result.set('scoreSet', scoreSet);
         }
       }
     }

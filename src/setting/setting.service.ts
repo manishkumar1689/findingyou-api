@@ -987,6 +987,14 @@ export class SettingService {
     return simpleRules;
   }
 
+  async getKotaChakraScoreData(): Promise<any> {
+    const data = await this.getByKey('kota_cakra_scores');
+    const { value } = data;
+    const keys = value instanceof Object ? Object.keys(value) : [];
+    const hasScores = keys.includes('scores') && value.scores instanceof Array && value.scores.length > 1;
+    return hasScores? value : {};
+  }
+
   async deleteProtocol(id = '') {
     const item = await this.protocolModel.findById(id);
     if (!notEmptyString(id, 8)) {
