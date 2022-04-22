@@ -256,8 +256,8 @@ export class KotaCakraScoreSet {
 
 const mapKotChakraScore = (key = '', transit: Chart, scoreSet: KotaCakraScoreSet, moonNakshatra = 0, separateSP = false, svami = '', pala = '') => {
   const currGr = transit.graha(key);
-  const transitNak = Math.round(currGr.nakshatra28);
-  const distance = calcInclusiveDistance(transitNak, moonNakshatra, 28);
+  const nakshatra = Math.round(currGr.nakshatra28);
+  const distance = calcInclusiveDistance(nakshatra, moonNakshatra, 28);
   const retro = currGr.lngSpeed < 0;
   const svamiRef = separateSP ? '' : svami;
   const palaRef = separateSP ? '' : pala;
@@ -265,7 +265,7 @@ const mapKotChakraScore = (key = '', transit: Chart, scoreSet: KotaCakraScoreSet
   const { score, offset, type} = scoreSet.calc(key, distance, retro, svamiRef, palaRef);
   return {
     key,
-    transitNak,
+    nakshatra,
     distance,
     retro,
     score,

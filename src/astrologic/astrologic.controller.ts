@@ -950,6 +950,55 @@ export class AstrologicController {
     return res.json(Object.fromEntries( result.entries() ));
   }
 
+  @Get('kota-chakra-compare/:c1/:c2?')
+  async compareKotaChakra(@Res() res, @Param('c1') c1, @Param('c2') c2, @Query() query) {
+    let chartID1 = c1;
+    if (c1.includes('@') && c1.includes('.')) {
+      chartID1 = await this.astrologicService.getChartIDByEmail(c1);
+    }
+    let chartID2 = c2;
+    if (c2.includes('@') && c2.includes('.')) {
+      chartID2 = await this.astrologicService.getChartIDByEmail(c2);
+    }
+    const params = query instanceof Object? query : {};
+    const paramKeys = Object.keys(params);
+    const separateSP = paramKeys.includes('separate')? smartCastInt(params.separate, 0) > 0 : false;
+    const result: Map<string, any> = new Map();
+    const cData1 = isValidObjectId(chartID1) ? await this.astrologicService.getChart(chartID1) : null;
+    const cData2 = isValidObjectId(chartID2) ? await this.astrologicService.getChart(chartID2) : null;
+    if (cData1 instanceof Model && cData2 instanceof Model) {
+      const chart1 = new Chart(cData1.toObject());
+      chart1.setAyanamshaItemByKey('true_citra');
+      const chart2 = new Chart(cData2.toObject());
+      chart2.setAyanamshaItemByKey('true_citra');
+      const ruleData = await this.settingService.getKotaChakraScoreData();
+
+      result.set('c1Jd', chart1.jd);
+      result.set('c1Utc', chart1.datetime);
+      result.set('c1Location', chart1.geo);
+      result.set('c2Jd', chart2.jd);
+      result.set('c2Utc', chart2.datetime);
+      result.set('c2Location', chart2.geo);
+      const s1Data = calcKotaChakraScores(chart1, chart2, ruleData, separateSP);
+      result.set('s1', {
+        moonNakshatra: s1Data.moonNakshatra,
+        svami: s1Data.svami,
+        pala: s1Data.pala,
+        total: s1Data.total,
+        scores: s1Data.scores
+      });
+      const s2Data = calcKotaChakraScores(chart2, chart1, ruleData, separateSP);
+      result.set('s2', {
+        moonNakshatra: s2Data.moonNakshatra,
+        svami: s2Data.svami,
+        pala: s2Data.pala,
+        total: s2Data.total,
+        scores: s2Data.scores
+      });
+    }
+    return res.json(Object.fromEntries( result.entries() ));
+  }
+
   @Get('retro-scores/:chartRef')
   async getRetroScores(@Res() res, @Param('chartRef') chartRef ) {
     let chartID = chartRef;
