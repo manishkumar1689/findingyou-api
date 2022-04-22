@@ -933,6 +933,9 @@ export class AstrologicController {
         const bData = await this.astrologicService.getChart(chartID);
         if (bData instanceof Model) {
           const birth = new Chart(bData.toObject());
+          result.set('birthJd', birth.jd);
+          result.set('birthUtc', birth.datetime);
+          result.set('birthLocation', birth.geo);
           const {scores, total, moonNakshatra, svami, pala, scoreSet } = calcKotaChakraScores(birth, transit, ruleData, separateSP);
           result.set('svami', svami);
           result.set('pala', pala);

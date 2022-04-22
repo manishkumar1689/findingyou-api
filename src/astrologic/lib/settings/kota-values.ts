@@ -244,7 +244,7 @@ export class KotaCakraScoreSet {
         base = scoreRow.malefic.getValue(retro);
       }
     }
-    const score = base + offset;
+    const score = Math.round((base + offset) * 100) / 100;
     return { score, offset, type };
   }
 
@@ -288,7 +288,8 @@ export const calcKotaChakraScores = (birth: Chart, transit: Chart, ruleData = nu
   }
   const coreScores = kotaGrahaKeys.map(key => mapKotChakraScore(key, transit, scoreSet, moonNakshatra, separateSP, svami, pala));
   const scores = [...specialScores, ...coreScores];
-  const total = scores.map(sc => sc.score).reduce((a, b) => a + b, 0);
+  const rawTotal = scores.map(sc => sc.score).reduce((a, b) => a + b, 0);
+  const total = Math.round(rawTotal * 100) / 100;
   return {scores, total, moonNakshatra, svami, pala, scoreSet };
 }
 
