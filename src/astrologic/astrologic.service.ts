@@ -95,6 +95,7 @@ import { mapLikeabilityRelations, UserFlagSet } from '../lib/notifications';
 import { User } from '../user/interfaces/user.interface';
 import { KeyNumValue } from '../lib/interfaces';
 import { calcKsetraBala, calcNavamshaBala, calcUccaBalaValues, calcUdayaBalaValues, calcVakraBala } from './lib/calc-sbc';
+import { calcKotaChakraScoreData, KotaCakraScoreSet } from './lib/settings/kota-values';
 const { ObjectId } = Types;
 
 @Injectable()
@@ -1714,7 +1715,7 @@ export class AstrologicService {
       .exec();
   }
 
-  async expandUserWithChartData(user: User, flags: UserFlagSet, refChart: ChartClass, kutaSet: any = null, fullChart = false, ayanamshaKey = 'true_citra', simpleMode = 'basic') {
+  async expandUserWithChartData(user: User, flags: UserFlagSet, refChart: ChartClass, kutaSet: any = null, kcScoreSet: KotaCakraScoreSet, fullChart = false, ayanamshaKey = 'true_citra', simpleMode = 'basic') {
     const chartObj = await this.getUserBirthChart(user._id);
     const hasChart = chartObj instanceof Object;
     const chartSource = hasChart ? chartObj.toObject() : {};
@@ -1737,6 +1738,8 @@ export class AstrologicService {
     ) : {};
     const pd = calcProgressAspectDataFromProgressItems(chart.matchProgressItems(), refChart.matchProgressItems());
     const p2Summary = pd.num > 0 ? calcProgressSummary(pd.items) : {};
+    const kcS1 = calcKotaChakraScoreData(chart, refChart, kcScoreSet, true);
+    const kcS2 = calcKotaChakraScoreData(refChart, chart, kcScoreSet, true);
     return {
       ...user,
       hasChart,
@@ -1744,6 +1747,10 @@ export class AstrologicService {
       preferences,
       kutas: kutaRow,
       p2: p2Summary,
+      kc: { 
+        a: kcS1.total,
+        b: kcS2.total,
+      },
       likeability: filteredLikes,
     };
   }

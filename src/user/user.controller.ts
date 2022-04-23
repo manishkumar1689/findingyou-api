@@ -887,10 +887,11 @@ export class UserController {
           )
         : userFlags;
     const kutaSet = await this.settingService.getKutaSettings();
+    const kcScoreSet = await this.settingService.getKotaChakraScoreSet();
     const jungianRef = await this.userService.getSurveyDomainScores(userId, 'jungian');
     for (const user of users) {
       if (hasRefChart) {
-        const extraData = await this.astrologicService.expandUserWithChartData(user, flags, refChart, kutaSet, fullChart, ayanamshaKey, simpleMode);
+        const extraData = await this.astrologicService.expandUserWithChartData(user, flags, refChart, kutaSet, kcScoreSet, fullChart, ayanamshaKey, simpleMode);
         const jungian = await this.userService.getSurveyDomainScores(user._id, 'jungian');
         const personality = compareJungianPolarities(jungianRef, jungian);
         if (extraData.hasChart) {

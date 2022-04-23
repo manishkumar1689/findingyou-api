@@ -186,7 +186,7 @@ import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
 import { julToDateParts } from './lib/julian-date';
 import { buildSbcScoreGrid, traverseAllNak28Cells } from './lib/calc-sbc';
-import { calcKotaChakraScores } from './lib/settings/kota-values';
+import { calcKotaChakraScoreData, calcKotaChakraScoreSet, KotaCakraScoreSet } from './lib/settings/kota-values';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -936,7 +936,7 @@ export class AstrologicController {
           result.set('birthJd', birth.jd);
           result.set('birthUtc', birth.datetime);
           result.set('birthLocation', birth.geo);
-          const {scores, total, moonNakshatra, svami, pala, scoreSet } = calcKotaChakraScores(birth, transit, ruleData, separateSP);
+          const {scores, total, moonNakshatra, svami, pala, scoreSet } = calcKotaChakraScoreSet(birth, transit, ruleData, separateSP);
           result.set('svami', svami);
           result.set('pala', pala);
           result.set('total', total);
@@ -971,15 +971,14 @@ export class AstrologicController {
       chart1.setAyanamshaItemByKey('true_citra');
       const chart2 = new Chart(cData2.toObject());
       chart2.setAyanamshaItemByKey('true_citra');
-      const ruleData = await this.settingService.getKotaChakraScoreData();
-
+      const scoreSet = await this.settingService.getKotaChakraScoreSet();
       result.set('c1Jd', chart1.jd);
       result.set('c1Utc', chart1.datetime);
       result.set('c1Location', chart1.geo);
       result.set('c2Jd', chart2.jd);
       result.set('c2Utc', chart2.datetime);
       result.set('c2Location', chart2.geo);
-      const s1Data = calcKotaChakraScores(chart1, chart2, ruleData, separateSP);
+      const s1Data = calcKotaChakraScoreData(chart1, chart2, scoreSet, separateSP);
       result.set('s1', {
         moonNakshatra: s1Data.moonNakshatra,
         svami: s1Data.svami,
@@ -987,7 +986,7 @@ export class AstrologicController {
         total: s1Data.total,
         scores: s1Data.scores
       });
-      const s2Data = calcKotaChakraScores(chart2, chart1, ruleData, separateSP);
+      const s2Data = calcKotaChakraScoreData(chart2, chart1, scoreSet, separateSP);
       result.set('s2', {
         moonNakshatra: s2Data.moonNakshatra,
         svami: s2Data.svami,

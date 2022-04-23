@@ -48,10 +48,10 @@ import eventTypeValues from '../astrologic/lib/settings/event-type-values';
 import { mapLikeability } from '../lib/notifications';
 import { filterCorePreference } from '../lib/mappers';
 import {
-  mapPPCondition,
   mapPPRule,
   PPRule,
 } from '../astrologic/lib/settings/pancha-pakshi';
+import { KotaCakraScoreSet } from '../astrologic/lib/settings/kota-values';
 
 @Injectable()
 export class SettingService {
@@ -988,11 +988,34 @@ export class SettingService {
   }
 
   async getKotaChakraScoreData(): Promise<any> {
-    const data = await this.getByKey('kota_cakra_scores');
-    const { value } = data;
-    const keys = value instanceof Object ? Object.keys(value) : [];
-    const hasScores = keys.includes('scores') && value.scores instanceof Array && value.scores.length > 1;
-    return hasScores? value : {};
+    const key = 'kota_cakra_scores';
+    const stored = await this.redisGet(key);
+    const isValidResult = (value: any = null) => {
+      const keys = value instanceof Object ? Object.keys(value) : [];
+      return keys.includes('scores') && value.scores instanceof Array && value.scores.length > 1;
+    }
+    let result: any = null;
+    let hasScores = false;
+    if (stored instanceof Object) {
+      hasScores = isValidResult(stored);
+      if (hasScores) {
+        result = stored;
+      }
+    } else {
+      const data = await this.getByKey(key);
+      const { value } = data;
+      hasScores = isValidResult(value);
+      if (hasScores) {
+        result = value;
+        this.redisSet(key, value);
+      } 
+    }
+    return hasScores? result : {};
+  }
+
+  async getKotaChakraScoreSet(): Promise<KotaCakraScoreSet> {
+    const ruleData = await this.getKotaChakraScoreData();
+    return new KotaCakraScoreSet(ruleData);
   }
 
   async deleteProtocol(id = '') {

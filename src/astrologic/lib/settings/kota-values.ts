@@ -274,10 +274,9 @@ const mapKotChakraScore = (key = '', transit: Chart, scoreSet: KotaCakraScoreSet
   }
 }
 
-export const calcKotaChakraScores = (birth: Chart, transit: Chart, ruleData = null, separateSP = false) => {
+export const calcKotaChakraScoreData = (birth: Chart, transit: Chart, scoreSet: KotaCakraScoreSet, separateSP = false) => {
   birth.setAyanamshaItemByKey('true_citra');
   transit.setAyanamshaItemByKey('true_citra');
-  const scoreSet = new KotaCakraScoreSet(ruleData);
   const pala = birth.kotaPala;
   const svami = birth.kotaSvami;
 
@@ -290,7 +289,15 @@ export const calcKotaChakraScores = (birth: Chart, transit: Chart, ruleData = nu
   const scores = [...specialScores, ...coreScores];
   const rawTotal = scores.map(sc => sc.score).reduce((a, b) => a + b, 0);
   const total = Math.round(rawTotal * 100) / 100;
-  return {scores, total, moonNakshatra, svami, pala, scoreSet };
+  return {scores, total, moonNakshatra, svami, pala };
+}
+
+
+
+export const calcKotaChakraScoreSet = (birth: Chart, transit: Chart, ruleData = null, separateSP = false) => {
+  const scoreSet = new KotaCakraScoreSet(ruleData);
+  const data = calcKotaChakraScoreData(birth, transit, scoreSet, separateSP);
+  return { ...data, scoreSet };
 }
 
 export default kotaPaalaValues;
