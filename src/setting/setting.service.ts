@@ -1018,9 +1018,9 @@ export class SettingService {
     return new KotaCakraScoreSet(ruleData);
   }
 
-  async sbcOffset(): Promise<any> {
+  async sbcOffset(skipCache = false): Promise<number> {
     const key = 'sbc_score';
-    const stored = await this.redisGet(key);
+    const stored = skipCache? null : await this.redisGet(key);
     let isStored = false;
     let offset = 0;
     if (stored instanceof Object) {

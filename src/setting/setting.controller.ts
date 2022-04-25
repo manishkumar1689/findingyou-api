@@ -40,6 +40,7 @@ import { deleteSwissEpheFile } from '../astrologic/lib/files';
 import { ipWhitelistFileData } from '../auth/auth.utils';
 import { StringsDTO } from './dto/strings.dto';
 import { PredictiveRuleSetDTO } from './dto/predictive-rule-set.dto';
+import { smartCastInt } from 'src/lib/converters';
 
 @Controller('setting')
 export class SettingController {
@@ -354,6 +355,14 @@ export class SettingController {
     const valid = isObj && Object.keys(result).includes('scores') && result.scores instanceof Array;
     const obj = isObj ? result : {};
     return res.send({...obj, valid});
+  }
+
+  @Get('sbc-criteria/:skip?')
+  async getSBCCriteria(@Res() res, @Param('skip') skip) {
+    const skipCache = smartCastInt(skip, 0) > 0;
+    const offset = await this.settingService.sbcOffset(skipCache);
+    const result = { valid: offset !== 0, offset };
+    return res.send(result);
   }
 
   @Post('predictive/save')
