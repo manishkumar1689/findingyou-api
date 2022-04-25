@@ -410,3 +410,15 @@ export const julRangeToAge = (startJd: number, endJd: number, tzOffset = 0) => {
   const yearDiff = firstDate.diff(secondDate, 'year', true);
   return yearDiff;
 };
+
+export const dtStringToNearest15Minutes = (dtStr = '') => {
+  if (validISODateString(dtStr)) {
+    const parts = dtStr.split(/[T ]/);
+    const timePart = parts[1].split('.').shift();
+    const timeParts = timePart.split(':');
+    const mins = Math.round(parseInt(timeParts[1], 10) / 15) * 15;
+    return [parts[0], [timeParts[0], zero2Pad(mins), '00'].join('-')].join('T');
+  } else {
+    return dtStr;
+  }
+}

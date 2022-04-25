@@ -127,6 +127,7 @@ import { Kuta } from '../astrologic/lib/kuta';
 import { julToDateParts } from '../astrologic/lib/julian-date';
 import { calcLuckyTimes } from '../astrologic/lib/settings/pancha-pakshi';
 import { locStringToGeo } from '../astrologic/lib/converters';
+import { calcKotaChakraScoreData } from '../astrologic/lib/settings/kota-values';
 
 @Controller('user')
 export class UserController {
@@ -1609,6 +1610,7 @@ export class UserController {
 
     const ayanamsaKey = paramKeys.includes('aya') && notEmptyString(params.aya, 5) && params.aya !== 'tropical' ? params.aya : 'true_citra';
     const tropicalMode = paramKeys.includes('tropical') ? smartCastInt(params.tropical,0) > 0 : false;
+    
     if (isValidObjectId(cid)) {
       const chartData = await this.astrologicService.getChart(cid);
 
@@ -1637,10 +1639,17 @@ export class UserController {
           const ppData = await calcLuckyTimes(chart, jd, geo, rules, dateMode, false);
           ctData.set('luckyTimes', Object.fromEntries(ppData.entries()));
         }
+        const kcScoreSet = await this.settingService.getKotaChakraScoreSet();
+        const geoLoc = geo instanceof Object ? geo : chart.geo;
+        const transitChart = await this.astrologicService.getCurrentChartObj(dtUtc, geoLoc);
+        const kc = calcKotaChakraScoreData(chart, transitChart,kcScoreSet, true);
+
+        rsMap.set('kotaCakra', kc.total);
+        //rsMap.set('transitGrahas', transitChart);
         rsMap = new Map([...rsMap, ...ctData]);
       }
     }
-    const allowedKeys = ['jd', 'dtUtc', 'unix', 'ayanamshas','lngMode', 'aspectMatches'];
+    const allowedKeys = ['jd', 'dtUtc', 'unix', 'ayanamshas','lngMode', 'aspectMatches', 'kotaCakra'];
     if (['charts','all'].includes(showMode)) {
       allowedKeys.push('current', 'progress','birth');
     }

@@ -31,6 +31,7 @@ import {
   applyTzOffsetToDateString,
   calcJulDate,
   calcJulDateFromParts,
+  dtStringToNearest15Minutes,
   julToISODateObj,
   zero2Pad,
 } from './lib/date-funcs';
@@ -1102,6 +1103,31 @@ export class AstrologicService {
       .then(c => (chart = c))
       .catch(console.log);
     return chart;
+  }
+
+  async getCurrentChartObj(dtUtc = '', geo: GeoPos, tzOffset = -1, ayanamsaKey = 'true_citra'): Promise<ChartClass> {
+    const approxLat = Math.round(geo.lat / 15) * 15;
+    const approxLng = Math.round(geo.lng / 15) * 15;
+    const geoOffset = tzOffset !== -1 ? tzOffset : approxLng * 240; // solar timezone offset to nearest hour in secs
+    const approxTimeDt = dtStringToNearest15Minutes(dtUtc);
+    const key = ['curr-base-astro-chart', approxTimeDt, approxLat, approxLng].join('-');
+    const stored = await this.redisGet(key);
+    let tData = null;
+    if (stored instanceof Object) {
+      tData = stored;
+    } else {
+      tData = await calcCompactChartData(
+        dtUtc,
+        geo,
+        ayanamsaKey,
+        [],
+        geoOffset,
+        false,
+        false,
+      );
+      this.redisSet(key, tData);
+    }
+    return new ChartClass(tData);
   }
 
   async getChartIDByUserRef(refKey: string, type = 'id'): Promise<string> {
