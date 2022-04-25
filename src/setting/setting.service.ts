@@ -988,8 +988,9 @@ export class SettingService {
   }
 
   async getKotaChakraScoreData(): Promise<any> {
-    const key = 'kc_scoreset';
-    const stored = await this.redisGet(key);
+    const key = 'kota_cakra_scores';
+    const cKey = [key, 1].join('_');
+    const stored = await this.redisGet(cKey);
     const isValidResult = (value: any = null) => {
       const keys = value instanceof Object ? Object.keys(value) : [];
       return keys.includes('scores') && value.scores instanceof Array && value.scores.length > 1;
@@ -1001,13 +1002,14 @@ export class SettingService {
       if (hasScores) {
         result = stored;
       }
-    } else {
+    }
+    if (!hasScores) {
       const data = await this.getByKey(key);
       const { value } = data;
       hasScores = isValidResult(value);
       if (hasScores) {
         result = value;
-        this.redisSet(key, value);
+        this.redisSet(cKey, value);
       } 
     }
     return hasScores? result : {};
