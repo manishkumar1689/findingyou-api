@@ -32,7 +32,7 @@ import {
   ProtocolSettings,
   translateActionToGerund,
 } from '../astrologic/lib/models/protocol-models';
-import { smartCastInt } from '../lib/converters';
+import { smartCastFloat, smartCastInt } from '../lib/converters';
 import permissionValues, {
   limitPermissions,
 } from '../user/settings/permissions';
@@ -988,7 +988,7 @@ export class SettingService {
   }
 
   async getKotaChakraScoreData(): Promise<any> {
-    const key = 'kota_cakra_scores';
+    const key = 'kc_scoreset';
     const stored = await this.redisGet(key);
     const isValidResult = (value: any = null) => {
       const keys = value instanceof Object ? Object.keys(value) : [];
@@ -1016,6 +1016,28 @@ export class SettingService {
   async getKotaChakraScoreSet(): Promise<KotaCakraScoreSet> {
     const ruleData = await this.getKotaChakraScoreData();
     return new KotaCakraScoreSet(ruleData);
+  }
+
+  async sbcOffset(): Promise<any> {
+    const key = 'sbc_score';
+    const stored = await this.redisGet(key);
+    let isStored = false;
+    let offset = 0;
+    if (stored instanceof Object) {
+      if (Object.keys(stored).includes("offset")) {
+        offset = smartCastFloat(stored.offset, 0);
+        isStored = true;
+      }
+    }
+    if (!isStored) {
+      const data = await this.getByKey(key);
+      const { value } = data;
+      if (Object.keys(value).includes("offset")) {
+        offset = smartCastFloat(value.offset, 0);
+        this.redisSet(key, value.offset);
+      }
+    }
+    return offset;
   }
 
   async deleteProtocol(id = '') {

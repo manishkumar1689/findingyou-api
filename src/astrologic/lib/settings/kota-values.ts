@@ -139,6 +139,8 @@ export class KotaCakraScoreSet {
 
   benefics: string[] = [];
 
+  offset = 0;
+
   constructor(inData = null) {
     if (inData instanceof Object) {
       
@@ -156,9 +158,16 @@ export class KotaCakraScoreSet {
           case 'graha':
             this.setMalBen(v);
             break;
+          case 'offset':
+            this.setOffset(v);
+            break;
         }
       })
     }
+  }
+
+  setOffset(v = null) {
+    this.offset = smartCastFloat(v, 0);
   }
 
   setScores(scores = null) {
@@ -288,7 +297,7 @@ export const calcKotaChakraScoreData = (birth: Chart, transit: Chart, scoreSet: 
   const coreScores = kotaGrahaKeys.map(key => mapKotChakraScore(key, transit, scoreSet, moonNakshatra, separateSP, svami, pala));
   const scores = [...specialScores, ...coreScores];
   const rawTotal = scores.map(sc => sc.score).reduce((a, b) => a + b, 0);
-  const total = Math.round(rawTotal * 100) / 100;
+  const total = Math.round(rawTotal * 100) / 100 + scoreSet.offset;
   return {scores, total, moonNakshatra, svami, pala };
 }
 
