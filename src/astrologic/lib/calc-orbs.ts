@@ -95,12 +95,42 @@ export const orbMatrix: Array<Array<number>> = [
 ];
 
 export const grahaOrbGroups: Array<Array<string>> = [
-  ['su', 'mo'],
+  ['su', 'mo', 'as'],
   ['me', 've', 'ma'],
   ['ju', 'sa'],
   ['ur', 'ne', 'pl'],
   ['ra', 'ke'],
 ];
+
+export const synastryOrbMap = {
+  su: 10,
+  mo: 10,
+  as: 10,
+  me: 8,
+  ve: 8,
+  ma: 8
+};
+
+export const matchSynastryOrb = (k1: string, k2: string, orbMap = null): number => {
+  const refOrbMap = orbMap instanceof Object ? orbMap : synastryOrbMap;
+  const keys = Object.keys(refOrbMap);
+  const o1 = keys.includes(k1)? refOrbMap[k1] : 0;
+  const o2 = keys.includes(k2)? refOrbMap[k2] : 0;
+  return o1 > o2 ? o1 : o2;
+}
+
+export const matchSynastryOrbRange = (k1: string, k2: string, deg = 0, orbMap = null) => {
+  const orb = matchSynastryOrb(k1, k2, orbMap);
+  const ranges = [[subtractLng360(deg, orb), (deg+orb) % 360 ]];
+  if (orb > 0 && orb < 180) {
+    const deg2 = 360 - orb;
+    ranges.push([subtractLng360(deg2, orb), (deg2+orb) % 360 ])
+  }
+  return {
+    ranges,
+    orb,
+  }
+}
 
 export const aspectGroups: Array<Array<string>> = [
   ['conjunction', 'opposition', 'trine', 'square'],
@@ -138,6 +168,11 @@ export const aspects: Array<AspectRow> = [
   { key: 'semisextile', deg: 30.0, weight: 5 },
   { key: 'conjunction', deg: 0.0, weight: 0 },
 ];
+
+export const matchAspectRowByDeg = (deg = 0) => {
+  const row = aspects.find(row => Math.floor(row.deg) === Math.floor(deg));
+  return row instanceof Object ? row : {key: "", deg: -1, weight: -1 };
+}
 
 export const coreAspects = [
   { key: 'conjunction', angles: [0] },

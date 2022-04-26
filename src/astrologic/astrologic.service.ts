@@ -63,6 +63,7 @@ import {
 } from './lib/settings/vocab-values';
 import {
   calcAllAspects,
+  calcAspectMatches,
   calcAyanamsha,
   calcCompactChartData,
   calcCoreGrahaPositions,
@@ -1741,7 +1742,7 @@ export class AstrologicService {
       .exec();
   }
 
-  async expandUserWithChartData(user: User, flags: UserFlagSet, refChart: ChartClass, kutaSet: any = null, kcScoreSet: KotaCakraScoreSet, fullChart = false, ayanamshaKey = 'true_citra', simpleMode = 'basic') {
+  async expandUserWithChartData(user: User, flags: UserFlagSet, refChart: ChartClass, kutaSet: any = null, kcScoreSet: KotaCakraScoreSet, orbMap = null, fullChart = false, ayanamshaKey = 'true_citra', simpleMode = 'basic') {
     const chartObj = await this.getUserBirthChart(user._id);
     const hasChart = chartObj instanceof Object;
     const chartSource = hasChart ? chartObj.toObject() : {};
@@ -1766,12 +1767,16 @@ export class AstrologicService {
     const p2Summary = pd.num > 0 ? calcProgressSummary(pd.items) : {};
     const kcS1 = calcKotaChakraScoreData(chart, refChart, kcScoreSet, true);
     const kcS2 = calcKotaChakraScoreData(refChart, chart, kcScoreSet, true);
+    const baseAspectKeys = ['as','su','mo','me','ve','ma'];
+    const ascAspectKeys = [...baseAspectKeys, 'ju','sa', 'ur', 'pl'];
+    const aspects = calcAspectMatches(refChart, chart, baseAspectKeys, ascAspectKeys, orbMap);
     return {
       ...user,
       hasChart,
       chart: chartData,
       preferences,
       kutas: kutaRow,
+      aspects,
       p2: p2Summary,
       kc: { 
         a: kcS1.total,

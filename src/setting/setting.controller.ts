@@ -40,7 +40,7 @@ import { deleteSwissEpheFile } from '../astrologic/lib/files';
 import { ipWhitelistFileData } from '../auth/auth.utils';
 import { StringsDTO } from './dto/strings.dto';
 import { PredictiveRuleSetDTO } from './dto/predictive-rule-set.dto';
-import { smartCastInt } from 'src/lib/converters';
+import { smartCastInt } from '../lib/converters';
 
 @Controller('setting')
 export class SettingController {
@@ -351,7 +351,6 @@ export class SettingController {
   @Get('kota-chakra')
   async getKotaCakra(@Res() res) {
     const result = await this.settingService.getKotaChakraScoreData();
-    console.log(result);
     const isObj = result instanceof Object;
     const valid = isObj && Object.keys(result).includes('scores') && result.scores instanceof Array;
     const obj = isObj ? result : {};
@@ -440,6 +439,16 @@ export class SettingController {
       }
     }
     return res.status(statusCode).json(data);
+  }
+
+  @Get('reset-custom-cache/:userID')
+  async resetCustomCache(@Res() res, @Param('userID') userID) {
+    const isAdmin = await this.userService.isAdminUser(userID);
+    let valid = false;
+    if (isAdmin) { 
+      valid = await this.settingService.resetCustomSettingsCache();
+    }
+    return res.json({valid});
   }
 
   // Fetch a particular setting using ID

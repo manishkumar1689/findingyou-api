@@ -56,6 +56,7 @@ import {
   notEmptyString,
   validISODateString,
   inRange,
+  inRange360,
 } from '../../lib/validators';
 import { hashMapToObject } from '../../lib/entities';
 import { KeyValue } from '../interfaces/key-value';
@@ -68,13 +69,15 @@ import {
   NumValueSet,
   ITime,
 } from './models/chart';
-import { capitalize } from './helpers';
+import { calcDist360, capitalize } from './helpers';
 import houseTypeData from './settings/house-type-data';
 import { sampleBaseObjects } from './custom-transits';
 import { GeoLoc } from './models/geo-loc';
 import { calcTransposedGrahaTransitions } from './point-transitions';
 import { KeyLng } from './interfaces';
-import { keyValuesToSimpleObject } from '../../lib/converters';
+import { keyValuesToSimpleObject, zeroPad } from '../../lib/converters';
+import { matchAspectRange } from './models/protocol-models';
+import { calcAspect, calcOrb, matchAspectRowByDeg, matchSynastryOrbRange } from './calc-orbs';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 
@@ -1932,11 +1935,14 @@ export const calcVargas = async (datetime, geo, system = 'W') => {
   return { jd: houseData.jd, datetime, geo, vargas };
 };
 
-export const calcAllAspects = (c1: Chart, c2: Chart) => {
+export const defaultAspectGrahaKeys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa', 'as', 'ds'];
+
+export const calcAllAspects = (c1: Chart, c2: Chart, grahaKeys1: string[] = [], grahaKeys2: string[] = []) => {
   const aspects = [];
-  const keys = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa', 'as', 'ds'];
-  keys.forEach(k1 => {
-    keys.forEach(k2 => {
+  const keys1 = grahaKeys1.length > 0 ? grahaKeys1 : defaultAspectGrahaKeys;
+  const keys2 = grahaKeys2.length > 0 ? grahaKeys2 : defaultAspectGrahaKeys;
+  keys1.forEach(k1 => {
+    keys2.forEach(k2 => {
       const gr1 = c1.graha(k1);
       const gr2 = c2.graha(k2);
       const angle = relativeAngle(gr1.longitude, gr2.longitude);
@@ -1949,6 +1955,40 @@ export const calcAllAspects = (c1: Chart, c2: Chart) => {
   });
   return aspects;
 };
+
+export const calcAspectMatches = (c1: Chart, c2: Chart, grahaKeys1: string[] = [], grahaKeys2: string[] = [], orbMap = null, aspectDegs:number[] = [0, 90, 120, 180], ascAspectDegs = [0, 30, 60, 90, 120, 150, 180]) => {
+  const aspects = calcAllAspects(c1, c2, grahaKeys1, grahaKeys2);
+  return aspects.map(asp => {
+    const aDegs = asp.k1 === 'as' && asp.k2 === 'as' ? ascAspectDegs : aspectDegs;
+    return aDegs.map(deg => {
+      const row = matchAspectRowByDeg(deg);
+      const orbRow = matchSynastryOrbRange(asp.k1, asp.k2, deg, orbMap);
+      const ranges = orbRow.ranges.map(range => {
+        const [first, second] = range;
+        const midDeg = first < second? (first + second)  / 2 : ((first - 360) + second) / 2;
+        return {
+          valid: inRange360(asp.value, range),
+          distance: calcDist360(midDeg, asp.value),
+          range
+        }
+      }).filter(r => r.valid);
+      return {
+        ranges,
+        type: row.key,
+        key: [asp.k1, zeroPad(deg, 3), asp.k2].join('_'),
+        orb: orbRow.orb,
+        deg,
+        ...asp
+      }
+    }).filter(r => r.ranges.length > 0).map(r => {
+      const { distance } = r.ranges[0];
+      const { key, type, deg, k1, k2, orb, value } = r;
+      return {
+        key, type, deg, k1, k2, orb, value, distance
+      }
+    });
+  }).reduce((a, b) => a.concat(b), []);
+}
 
 const matchCaughadia = ({ jd, weekDay, dayStart, dayLength, isDaytime }) => {
   const caughadiaDayRow = caughadiaData.days.find(row => row.day === weekDay);

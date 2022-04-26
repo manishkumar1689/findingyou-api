@@ -987,10 +987,10 @@ export class SettingService {
     return simpleRules;
   }
 
-  async getKotaChakraScoreData(): Promise<any> {
+  async getKotaChakraScoreData(skipCache = false): Promise<any> {
     const key = 'kota_cakra_scores';
     const cKey = [key, 1].join('_');
-    const stored = await this.redisGet(cKey);
+    const stored = skipCache? await this.redisGet(cKey) : null;
     const isValidResult = (value: any = null) => {
       const keys = value instanceof Object ? Object.keys(value) : [];
       return keys.includes('scores') && value.scores instanceof Array && value.scores.length > 1;
@@ -1040,6 +1040,35 @@ export class SettingService {
       }
     }
     return offset;
+  }
+
+  async synastryOrbs(skipCache = false): Promise<number> {
+    const key = 'synastry_orbs';
+    const stored = skipCache? null : await this.redisGet(key);
+    let isStored = false;
+    let orbMap = null;
+    const isValid = (obj: any = null) => obj instanceof Object && Object.keys(obj).length > 1;
+    if (stored instanceof Object) {
+      if (isValid(stored)) {
+        orbMap = stored;
+        isStored = true;
+      }
+    }
+    if (!isStored) {
+      const data = await this.getByKey(key);
+      const { value } = data;
+      if (isValid(value)) {
+        orbMap = value;
+        this.redisSet(key, value);
+      }
+    }
+    return orbMap;
+  }
+
+  async resetCustomSettingsCache(): Promise<boolean> {
+    this.synastryOrbs(true);
+    this.getKotaChakraScoreData(true);
+    return true;
   }
 
   async deleteProtocol(id = '') {
