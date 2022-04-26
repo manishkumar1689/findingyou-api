@@ -98,6 +98,7 @@ import { User } from '../user/interfaces/user.interface';
 import { KeyNumValue } from '../lib/interfaces';
 import { calcKsetraBala, calcNavamshaBala, calcUccaBalaValues, calcUdayaBalaValues, calcVakraBala } from './lib/calc-sbc';
 import { calcKotaChakraScoreData, KotaCakraScoreSet } from './lib/settings/kota-values';
+import { addSnippetKeyToSynastryAspectMatches } from './lib/synastry-aspect-mapper';
 const { ObjectId } = Types;
 
 @Injectable()
@@ -1765,11 +1766,12 @@ export class AstrologicService {
     ) : {};
     const pd = calcProgressAspectDataFromProgressItems(chart.matchProgressItems(), refChart.matchProgressItems());
     const p2Summary = pd.num > 0 ? calcProgressSummary(pd.items) : {};
-    const kcS1 = calcKotaChakraScoreData(chart, refChart, kcScoreSet, true);
-    const kcS2 = calcKotaChakraScoreData(refChart, chart, kcScoreSet, true);
+    const kcS1 = calcKotaChakraScoreData(refChart, chart, kcScoreSet, true);
+    const kcS2 = calcKotaChakraScoreData(chart, refChart, kcScoreSet, true);
     const baseAspectKeys = ['as','su','mo','me','ve','ma'];
     const ascAspectKeys = [...baseAspectKeys, 'ju','sa', 'ur', 'pl'];
-    const aspects = calcAspectMatches(refChart, chart, baseAspectKeys, ascAspectKeys, orbMap);
+    const aspectMatches = calcAspectMatches(refChart, chart, baseAspectKeys, ascAspectKeys, orbMap);
+    const aspects = addSnippetKeyToSynastryAspectMatches(aspectMatches, refChart.shortName, chart.shortName);
     return {
       ...user,
       hasChart,

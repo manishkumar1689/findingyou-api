@@ -104,3 +104,16 @@ export interface ProgressResult {
   valid: boolean;
   applied: boolean;
 }
+
+export interface SynastryAspectMatch {
+  deg: number;
+  k1: string;
+  k2: string;
+  orb?: number,
+  value?: number;
+  distance?: number;
+  key?: string;
+  first?: number;
+  ak1?: string;
+  ak2?: string;
+}

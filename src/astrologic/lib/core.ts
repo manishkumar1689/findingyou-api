@@ -74,7 +74,7 @@ import houseTypeData from './settings/house-type-data';
 import { sampleBaseObjects } from './custom-transits';
 import { GeoLoc } from './models/geo-loc';
 import { calcTransposedGrahaTransitions } from './point-transitions';
-import { KeyLng } from './interfaces';
+import { KeyLng, SynastryAspectMatch } from './interfaces';
 import { keyValuesToSimpleObject, zeroPad } from '../../lib/converters';
 import { matchAspectRange } from './models/protocol-models';
 import { calcAspect, calcOrb, matchAspectRowByDeg, matchSynastryOrbRange } from './calc-orbs';
@@ -1956,12 +1956,12 @@ export const calcAllAspects = (c1: Chart, c2: Chart, grahaKeys1: string[] = [], 
   return aspects;
 };
 
-export const calcAspectMatches = (c1: Chart, c2: Chart, grahaKeys1: string[] = [], grahaKeys2: string[] = [], orbMap = null, aspectDegs:number[] = [0, 90, 120, 180], ascAspectDegs = [0, 30, 60, 90, 120, 150, 180]) => {
+export const calcAspectMatches = (c1: Chart, c2: Chart, grahaKeys1: string[] = [], grahaKeys2: string[] = [], orbMap = null, aspectDegs:number[] = [0, 90, 120, 180], ascAspectDegs = [0, 30, 60, 90, 120, 150, 180]): SynastryAspectMatch[] => {
   const aspects = calcAllAspects(c1, c2, grahaKeys1, grahaKeys2);
   return aspects.map(asp => {
     const aDegs = asp.k1 === 'as' && asp.k2 === 'as' ? ascAspectDegs : aspectDegs;
     return aDegs.map(deg => {
-      const row = matchAspectRowByDeg(deg);
+      // const row = matchAspectRowByDeg(deg);
       const orbRow = matchSynastryOrbRange(asp.k1, asp.k2, deg, orbMap);
       const ranges = orbRow.ranges.map(range => {
         const [first, second] = range;
@@ -1974,17 +1974,15 @@ export const calcAspectMatches = (c1: Chart, c2: Chart, grahaKeys1: string[] = [
       }).filter(r => r.valid);
       return {
         ranges,
-        type: row.key,
-        key: [asp.k1, zeroPad(deg, 3), asp.k2].join('_'),
         orb: orbRow.orb,
         deg,
         ...asp
       }
     }).filter(r => r.ranges.length > 0).map(r => {
       const { distance } = r.ranges[0];
-      const { key, type, deg, k1, k2, orb, value } = r;
+      const { deg, k1, k2, orb, value } = r;
       return {
-        key, type, deg, k1, k2, orb, value, distance
+        deg, k1, k2, orb, value, distance
       }
     });
   }).reduce((a, b) => a.concat(b), []);
