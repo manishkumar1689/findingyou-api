@@ -1643,6 +1643,7 @@ export class UserController {
         const kcScoreSet = await this.settingService.getKotaChakraScoreSet();
         const geoLoc = geo instanceof Object ? geo : chart.geo;
         const transitChart = await this.astrologicService.getCurrentChartObj(dtUtc, geoLoc);
+        transitChart.setAyanamshaItemByKey('true_citra');
         const kc = calcKotaChakraScoreData(chart, transitChart,kcScoreSet, true);
         rsMap.set('transitLngs', transitChart.bodies.map(gr => {
           const {key, longitude } = gr;
