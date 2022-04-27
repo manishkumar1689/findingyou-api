@@ -1112,7 +1112,7 @@ export class AstrologicService {
     const approxLng = Math.round(geo.lng / 15) * 15;
     const geoOffset = tzOffset !== -1 ? tzOffset : approxLng * 240; // solar timezone offset to nearest hour in secs
     const approxTimeDt = dtStringToNearest15Minutes(dtUtc);
-    const key = ['curr-base-astro-chart', approxTimeDt, approxLat, approxLng].join('-');
+    const key = ['curr-bc', approxTimeDt, approxLat, approxLng].join('-');
     const stored = await this.redisGet(key);
     let tData = null;
     if (stored instanceof Object) {
@@ -1121,8 +1121,8 @@ export class AstrologicService {
       tData = await calcCompactChartData(
         dtUtc,
         geo,
-        ayanamsaKey,
-        [],
+        'all',
+        [ayanamsaKey],
         geoOffset,
         false,
         false,
