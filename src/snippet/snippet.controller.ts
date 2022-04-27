@@ -173,6 +173,64 @@ export class SnippetController {
   }
 
   // Retrieve snippets list
+  @Get('by-category/:category')
+  async byCategory(
+    @Res() res,
+    @Param('category') category,
+    @Query() query,
+  ) {
+    const paramKeys = query instanceof Object ? Object.keys(query) : [];
+    const langCode = paramKeys.includes('lang')? query.lang : 'all';
+    const simple = paramKeys.includes('simple')? smartCastInt(query.simple, 0) > 0 : false;
+    const baseLangCode = langCode.split('-').shift();
+    const publishedMode = paramKeys.includes('published')? smartCastInt(query.published, 0) > 0 : false;
+    const activeMode = paramKeys.includes('active')? smartCastInt(query.active, 0) > 0 : false;
+    const approvedMode = paramKeys.includes('approved')? smartCastInt(query.approved, 0) > 0 : false;
+    const snippets = await this.snippetService.list(publishedMode, false, category);
+    const filtered = snippets.map(record => {
+      const snippet = record.toObject();
+      const values = snippet.values
+        .filter(val => {
+          let valid = true;
+          if (langCode !== 'all') {
+            const baseLang = val.lang.split('-').shift();
+            valid =
+              val.lang === langCode ||
+              baseLang === baseLangCode ||
+              defaultLangCodes(baseLang).includes(baseLang);
+          }
+          if (activeMode && valid) {
+            valid = val.active;
+          }
+          if (approvedMode && valid) {
+            valid = val.approved;
+          }
+          return valid;
+        })
+        .map(val => {
+          if (publishedMode) {
+            const { lang, text } = val;
+            return {
+              lang,
+              text,
+            };
+          } else {
+            return val;
+          }
+        });
+      return { ...snippet, values };
+    });
+    const items = simple? filtered.map(row => {
+      const {key, published, values } = row;
+      return { key, text: values[0].text, published };
+    }) : filtered;
+    return res.status(HttpStatus.OK).json({
+      valid: filtered.length > 0,
+      items,
+    });
+  }
+
+  // Retrieve snippets list
   @Get('categories')
   async categories(@Res() res) {
     const categories = await this.snippetService.categories();

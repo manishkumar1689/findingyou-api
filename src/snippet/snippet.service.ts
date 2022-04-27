@@ -22,10 +22,17 @@ export class SnippetService {
     private http: HttpService,
   ) {}
   // fetch all Snippets
-  async list(publishedOnly = true, modFields = false): Promise<Snippet[]> {
-    const filter = publishedOnly
-      ? { values: { $exists: true, $ne: [] }, published: true }
-      : {};
+  async list(publishedOnly = true, modFields = false, category = ''): Promise<Snippet[]> {
+    const filterMap: Map<string, any> = new Map();
+    if (publishedOnly) {
+      filterMap.set('values', { $exists: true, $ne: [] });
+      filterMap.set('published', true );
+    }
+    if (notEmptyString(category, 2)) {
+      const catRgx = new RegExp('^' + category.replace(/_+$/, '') + '__');
+      filterMap.set('key', catRgx );
+    }
+    const filter = Object.fromEntries(filterMap.entries());
     const fields =
       publishedOnly && !modFields
         ? {

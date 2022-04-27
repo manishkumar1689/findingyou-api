@@ -1644,13 +1644,16 @@ export class UserController {
         const geoLoc = geo instanceof Object ? geo : chart.geo;
         const transitChart = await this.astrologicService.getCurrentChartObj(dtUtc, geoLoc);
         const kc = calcKotaChakraScoreData(chart, transitChart,kcScoreSet, true);
-
+        rsMap.set('transitLngs', transitChart.bodies.map(gr => {
+          const {key, longitude } = gr;
+          return {key, longitude };
+        }))
         rsMap.set('kotaCakra', kc.total);
         //rsMap.set('transitGrahas', transitChart);
         rsMap = new Map([...rsMap, ...ctData]);
       }
     }
-    const allowedKeys = ['jd', 'dtUtc', 'unix', 'ayanamshas','lngMode', 'aspectMatches', 'kotaCakra'];
+    const allowedKeys = ['jd', 'dtUtc', 'unix', 'ayanamshas','lngMode', 'aspectMatches', 'kotaCakra', 'transitLngs'];
     if (['charts','all'].includes(showMode)) {
       allowedKeys.push('current', 'progress','birth');
     }
