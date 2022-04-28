@@ -323,14 +323,15 @@ export class SnippetService {
     const maxEn = mods.length > 0 ? Math.max(...enMods) : 0;
     const hasLocale = localeMods.length > 0;
     const maxLocale = hasLocale ? Math.max(...localeMods) : 0;
-    
     const secsAgo = (modTs: number) => Math.ceil((ts - modTs) / 1000);
-    const modifiedAt =  maxGeneral > 1000 ? new Date(maxGeneral).toISOString().split('.').shift() : '';
+    const maxContext = hasLocale ? maxLocale : maxGeneral;
+    const modifiedAt =  maxGeneral > 1000 ? new Date(maxContext).toISOString().split('.').shift() : '';
     return {
       general: secsAgo(maxGeneral),
       modifiedAt,
       en: secsAgo(maxEn),
       locale: hasLocale? secsAgo(maxLocale) : 0,
+      hasLocale,
       lang,
     };
   }

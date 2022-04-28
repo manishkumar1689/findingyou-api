@@ -293,7 +293,7 @@ export class SettingController {
     const snippetData = exists? await this.snippetService.lastModified(lang, key) : null;
     const hasSnippets = snippetData instanceof Object && validISODateString(snippetData.modifiedAt);
     const translationModifiedAt = hasSnippets? snippetData.modifiedAt : '';
-    const translationSecondsAgo = hasSnippets ? snippetData.general : 0;
+    const translationSecondsAgo = hasSnippets ? snippetData.hasLocale? snippetData.locale : snippetData.general : 0;
     const secondsAgo = exists? Math.floor(ts - modTs) : 0;
     const modifiedAt = exists? mod.toISOString().split('.').shift() : '';
     return res.json({
