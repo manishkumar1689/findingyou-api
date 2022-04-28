@@ -1121,7 +1121,7 @@ export class AstrologicService {
       tData = await calcCompactChartData(
         dtUtc,
         geo,
-        'all',
+        'top',
         [ayanamsaKey],
         geoOffset,
         false,

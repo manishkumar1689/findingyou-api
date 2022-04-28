@@ -293,8 +293,8 @@ export class SnippetService {
     return { title, body };
   }
 
-  async lastModified(lang = 'en') {
-    const snippets = await this.list(true, true);
+  async lastModified(lang = 'en', category = '') {
+    const snippets = await this.list(true, true, category);
     const mods: number[] = [];
     const langMods: Map<string, number[]> = new Map();
     snippets.forEach(snippet => {
@@ -319,12 +319,14 @@ export class SnippetService {
       }
     }
     const ts = new Date().getTime();
-    const maxGeneral = Math.max(...mods);
-    const maxEn = Math.max(...enMods);
+    const maxGeneral = mods.length > 0 ? Math.max(...mods) : 0;
+    const maxEn = mods.length > 0 ? Math.max(...enMods) : 0;
     const maxLocale = localeMods.length > 0 ? Math.max(...localeMods) : 0;
     const secsAgo = (modTs: number) => Math.ceil((ts - modTs) / 1000);
+    const modifiedAt =  maxGeneral > 1000 ? new Date(maxGeneral).toISOString().split('.').shift() : '';
     return {
       general: secsAgo(maxGeneral),
+      modifiedAt,
       en: secsAgo(maxEn),
       locale: secsAgo(maxLocale),
       lang,

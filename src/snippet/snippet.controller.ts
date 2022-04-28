@@ -241,9 +241,9 @@ export class SnippetController {
   }
 
   // Retrieve snippets list
-  @Get('last-modified/:langCode?')
-  async lastModified(@Res() res, @Param('langCode') langCode) {
-    const result = await this.snippetService.lastModified(langCode);
+  @Get('last-modified/:langCode?/:category?')
+  async lastModified(@Res() res, @Param('langCode') langCode, @Param('category') category) {
+    const result = await this.snippetService.lastModified(langCode, category);
     return res.status(HttpStatus.OK).json(result);
   }
 

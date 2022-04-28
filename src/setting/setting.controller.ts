@@ -15,11 +15,12 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SettingService } from './setting.service';
+import { UserService } from '../user/user.service';
+import { SnippetService } from '../snippet/snippet.service';
 import { CreateSettingDTO } from './dto/create-setting.dto';
 import { IdBoolDTO } from './dto/id-bool.dto';
-import { notEmptyString } from '../lib/validators';
+import { notEmptyString, validISODateString } from '../lib/validators';
 import { extractDocId } from '../lib/entities';
-import { UserService } from '../user/user.service';
 import { exportCollection, listFiles } from '../lib/operations';
 import {
   checkFileExists,
@@ -41,12 +42,14 @@ import { ipWhitelistFileData } from '../auth/auth.utils';
 import { StringsDTO } from './dto/strings.dto';
 import { PredictiveRuleSetDTO } from './dto/predictive-rule-set.dto';
 import { smartCastInt } from '../lib/converters';
+import { Model } from 'mongoose';
 
 @Controller('setting')
 export class SettingController {
   constructor(
     private settingService: SettingService,
     private userService: UserService,
+    private snippetService: SnippetService,
   ) {}
 
   // add a setting
@@ -277,6 +280,30 @@ export class SettingController {
     const skipCache = refresh === 'refresh';
     const flags = await this.settingService.getFlags(skipCache);
     return res.json(flags);
+  }
+
+  @Get('last-modified/:key/:lang?')
+  async getLastModified(@Res() res, @Param('key') key, @Param('lang') lang = 'en') {
+    const setting = await this.settingService.getByKey(key);
+    const exists = setting instanceof Object && Object.keys(setting).includes('value') && setting.value !== null;
+    const mod = exists ? setting.modifiedAt : null;
+    
+    const ts = new Date().getTime() / 1000;
+    const modTs = mod instanceof Date ? mod.getTime() / 1000 : 0;
+    const snippetData = exists? await this.snippetService.lastModified(lang, key) : null;
+    const hasSnippets = snippetData instanceof Object && validISODateString(snippetData.modifiedAt);
+    const translationModifiedAt = hasSnippets? snippetData.modifiedAt : '';
+    const translationSecondsAgo = hasSnippets ? snippetData.general : 0;
+    const secondsAgo = exists? Math.floor(ts - modTs) : 0;
+    const modifiedAt = exists? mod.toISOString().split('.').shift() : '';
+    return res.json({
+      exists,
+      modifiedAt,
+      secondsAgo,
+      hasTranslations: hasSnippets,
+      translationModifiedAt,
+      translationSecondsAgo,
+    });
   }
 
   // Return the data from a particular setting identified by key
