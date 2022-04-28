@@ -296,7 +296,8 @@ export class SettingController {
     const translationSecondsAgo = hasSnippets ? snippetData.hasLocale? snippetData.locale : snippetData.general : 0;
     const secondsAgo = exists? Math.floor(ts - modTs) : 0;
     const modifiedAt = exists? mod.toISOString().split('.').shift() : '';
-    return res.json({
+    const status = exists? HttpStatus.OK : HttpStatus.NOT_FOUND;
+    return res.status(status).json({
       exists,
       modifiedAt,
       secondsAgo,

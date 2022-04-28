@@ -244,7 +244,8 @@ export class SnippetController {
   @Get('last-modified/:langCode?/:category?')
   async lastModified(@Res() res, @Param('langCode') langCode, @Param('category') category) {
     const result = await this.snippetService.lastModified(langCode, category);
-    return res.status(HttpStatus.OK).json(result);
+    const status = result.general > 0? HttpStatus.OK : HttpStatus.NOT_FOUND;
+    return res.status(status).json(result);
   }
 
   // Fetch a particular snippet using ID

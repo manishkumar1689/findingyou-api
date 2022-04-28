@@ -319,7 +319,8 @@ export class SnippetService {
       }
     }
     const ts = new Date().getTime();
-    const maxGeneral = mods.length > 0 ? Math.max(...mods) : 0;
+    const exists = mods.length > 0;
+    const maxGeneral = exists ? Math.max(...mods) : 0;
     const maxEn = mods.length > 0 ? Math.max(...enMods) : 0;
     const hasLocale = localeMods.length > 0;
     const maxLocale = hasLocale ? Math.max(...localeMods) : 0;
@@ -327,9 +328,10 @@ export class SnippetService {
     const maxContext = hasLocale ? maxLocale : maxGeneral;
     const modifiedAt =  maxGeneral > 1000 ? new Date(maxContext).toISOString().split('.').shift() : '';
     return {
-      general: secsAgo(maxGeneral),
+      exists,
+      general: exists ? secsAgo(maxGeneral) : 0,
       modifiedAt,
-      en: secsAgo(maxEn),
+      en: exists ? secsAgo(maxEn) : 0,
       locale: hasLocale? secsAgo(maxLocale) : 0,
       hasLocale,
       lang,
