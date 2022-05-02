@@ -13,6 +13,14 @@ export interface KeyNumValueRef {
   motion?: string;
 }
 
+export interface TithiDayCellMatch {
+  matched: boolean;
+  column: number;
+  row: number;
+  weekDayNum?: number;
+  tithi?: number;
+}
+
 const allSBCGrahaKeys = ['su', 'mo', 'me', 've', 'ma', 'ju', 'sa', 'ke', 'ra'];
 
 export class XYCell {
@@ -69,6 +77,29 @@ const grahaToNakPada = (lng = 0, key = '') => {
     lng,
     ...item
   }
+}
+
+
+
+export const tithiNumMatchesWeekDayNum = (chart: Chart): TithiDayCellMatch => {
+  const weekDayNum = chart.weekDayNum;
+  const tithi = chart.tithi.num;
+  const result: TithiDayCellMatch = { matched: false, column: 0, row: 0, weekDayNum, tithi };
+  const tiCellIndex = sbcGrid.findIndex(c => c.type === 'ti' && c.value instanceof Object && c.value.nums instanceof Array && c.value.nums.includes(tithi));
+  if (tiCellIndex >= 0) {
+    const tiCell = sbcGrid[tiCellIndex];
+    if (tiCell instanceof Object && tiCell.value instanceof Object) {
+      const { wd } = tiCell.value;
+      if (wd instanceof Array) {
+        result.matched = wd.includes(weekDayNum);
+        if (result.matched) {
+          result.column = tiCell.column;
+          result.row = tiCell.row;
+        }
+      }
+    }
+  }
+  return result;
 }
 
 export const matchTraversedNak28Cells = (nakNum = 1, padaNum = 0) => {

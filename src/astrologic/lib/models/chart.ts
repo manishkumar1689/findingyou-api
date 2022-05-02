@@ -589,6 +589,10 @@ export class Chart {
     }
   }
 
+  get weekDayNum() {
+    return this.indianTime.weekDayNum;
+  }
+
   // adjusted ascendant
   get lagna() {
     return subtractLng360(this.ascendant, this.ayanamshaOffset);

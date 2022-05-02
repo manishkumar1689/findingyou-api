@@ -2373,18 +2373,18 @@ export class AstrologicService {
           value: row.value
         })
       });
-      const ubVlaues = calcUccaBalaValues(chart);
-      if (ubVlaues.length > 0) {
-        ubVlaues.forEach(row => {
+      const ubValues = calcUccaBalaValues(chart);
+      if (ubValues.length > 0) {
+        ubValues.forEach(row => {
           numValues.push({
             key: ['uccabala', row.key].join('_'),
             value: row.value
           })
         });
       }
-      const udVlaues = calcUdayaBalaValues(chart);
-      if (udVlaues.length > 0) {
-        udVlaues.forEach(row => {
+      const udValues = calcUdayaBalaValues(chart);
+      if (udValues.length > 0) {
+        udValues.forEach(row => {
           numValues.push({
             key: ['udayabala', row.key].join('_'),
             value: row.value

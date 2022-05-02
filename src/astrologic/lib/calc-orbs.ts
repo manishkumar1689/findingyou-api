@@ -60,6 +60,8 @@ export interface AspectRecord {
   start: number;
   end: number;
   days: number;
+  prog?: number;
+  peak?: number;
   precision?: string;
   text?: string;
   title?: string;
@@ -788,15 +790,17 @@ export const buildCurrentTrendsData = async (
     let start: any = simpleDateMode? -1 : {};
     let end: any = simpleDateMode? -1 : {};
     let days = 0;
+    let prog = 0;
     if (matchRanges.has(rk)) {
       const mrs = matchRanges.get(rk);
       if (mrs.length > 1) {
         start = mrs[1].range[0];
         end = mrs[1].range[1];
+        prog = mrs[1].prog;
         days = simpleDateMode ? (end - start) / (24 * 60 * 60) : end.jd - start.jd;
       }
     }
-    return {...m, start, end, days };
+    return {...m, start, end, prog, days };
   }));
   if (buildMatchRange) {
     rsMap.set('ranges', Object.fromEntries(matchRanges.entries()));
@@ -829,6 +833,7 @@ export const mergeCurrentTrendsWithinSnippets = (m: any = null, snippets: Snippe
   const sn = snippets.find(s => fullKeys.includes(s.key));
   let text = '';
   let title = '';
+  const peak = Math.round(start + ((end - start) * 0.5));
   if (sn instanceof Object) {
     const snText = extractSnippetTextByLang(sn, 'en');
     const parts = snText.split("\n");
@@ -857,6 +862,7 @@ export const mergeCurrentTrendsWithinSnippets = (m: any = null, snippets: Snippe
     start,
     end,
     days,
+    peak,
     precision,
     text,
     title,
