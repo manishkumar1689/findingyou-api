@@ -278,10 +278,10 @@ export const extractSnippetTextByLang = (storedSnippet: Snippet, lang = 'en') =>
       const langRoot = lang.split('-').shift();
       let langIndex = storedSnippet.values.findIndex(tr => tr.lang === lang);
       if (langIndex < 0 && langRoot !== lang) {
-        langIndex = storedSnippet.values.findIndex(tr => tr.lang === lang);
-        if (langIndex < 0 && langRoot !== 'en') {
-          langIndex = storedSnippet.values.findIndex(tr => tr.lang === 'en');
-        }
+        langIndex = storedSnippet.values.findIndex(tr => tr.lang === langRoot);
+      }
+      if (langIndex < 0 && langRoot !== 'en') {
+        langIndex = storedSnippet.values.findIndex(tr => tr.lang === 'en');
       }
       if (langIndex >= 0) {
         const version = storedSnippet.values[langIndex];

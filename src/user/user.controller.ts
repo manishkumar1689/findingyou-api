@@ -114,7 +114,7 @@ import { PaymentDTO } from './dto/payment.dto';
 import { toWords } from '../astrologic/lib/helpers';
 import permissionValues from './settings/permissions';
 import {
-  buildCurrentTrendsData, mergeCurrentTrendsWithinSnippets,
+  buildCurrentTrendsData, mergeCurrentTrendsWithSnippets,
 } from '../astrologic/lib/calc-orbs';
 import { LogoutDTO } from './dto/logout.dto';
 import { ResetDTO } from './dto/reset.dto';
@@ -1603,7 +1603,8 @@ export class UserController {
     const showLuckyTimes = hasGeo? paramKeys.includes('lucky')? smartCastInt(params.lucky, 0) > 0 : false : false;
     const mayShowBirthChart = paramKeys.includes('bc')? smartCastInt(params.bc, 0) > 0 : false;
     const dateMode = paramKeys.includes('date') ? params.date : 'simple';
-
+    const langRef = paramKeys.includes('lang') && notEmptyString(params.lang,1)? params.lang : 'en';
+    const lang = /[a-z][a-z][a-z]?(-[A-Z][A-Z])?/.test(langRef) ? langRef : 'en';
     let rsMap: Map<string, any> = new Map();
     rsMap.set('jd', jd);
     rsMap.set('unix', julToDateParts(jd).unixTimeInt);
@@ -1636,7 +1637,7 @@ export class UserController {
             keys,
             'current_trends',
           );
-          const fullMatches = matches.map(m => mergeCurrentTrendsWithinSnippets(m, snippets) );
+          const fullMatches = matches.map(m => mergeCurrentTrendsWithSnippets(m, snippets, lang) );
           if (fullMatches.length > 0) {
             fullMatches.sort((a, b) => a.days - b.days )
             ctData.set('aspectMatches', fullMatches);

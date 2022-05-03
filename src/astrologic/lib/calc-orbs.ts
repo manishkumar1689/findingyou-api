@@ -817,7 +817,7 @@ const matchShortAspectName = (key = "") => {
   }
 }
 
-export const mergeCurrentTrendsWithinSnippets = (m: any = null, snippets: Snippet[] = []): AspectRecord => {
+export const mergeCurrentTrendsWithSnippets = (m: any = null, snippets: Snippet[] = [], lang = 'en'): AspectRecord => {
   const { k1, k2, value, key, diff, lngs, snippetKey, relation, start, end, days } = m;
   const precision = matchDatePrecisionByDuration(days);
   let firstCat = '';
@@ -835,7 +835,7 @@ export const mergeCurrentTrendsWithinSnippets = (m: any = null, snippets: Snippe
   let title = '';
   const peak = Math.round(start + ((end - start) * 0.5));
   if (sn instanceof Object) {
-    const snText = extractSnippetTextByLang(sn, 'en');
+    const snText = extractSnippetTextByLang(sn, lang);
     const parts = snText.split("\n");
     const relType = m.relation.split('_').pop();
     const shortAspectName = matchShortAspectName(m.key);
