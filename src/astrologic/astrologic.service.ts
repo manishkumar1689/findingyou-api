@@ -1146,7 +1146,10 @@ export class AstrologicService {
         filter.set('user', refKey);
         break;
     }
+
+    filter.set('isDefaultBirthChart', true);
     const criteria = Object.fromEntries(filter);
+    
     let rows: any[] = [];
     if (useAggregation) {
       const lookupSteps = buildChartLookupPath('u');
@@ -1159,11 +1162,11 @@ export class AstrologicService {
           $project: {
             _id: '$_id',
           },
-        },
+        }
       ];
       rows = await this.chartModel.aggregate(steps);
     } else {
-      rows = await this.chartModel.find({user: refKey}).select('_id');
+      rows = await this.chartModel.find(criteria).select('_id');
     }
     if (rows.length > 0) {
       return rows[0]._id.toString();
