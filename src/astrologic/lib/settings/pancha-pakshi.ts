@@ -2237,14 +2237,14 @@ export const calcLuckyTimes = async (chart: Chart, jd = 0, geo: GeoLoc, rules: a
     true,
   );
   if (ppData.get('valid') === true) {
-    const keys = ['max', 'minutes'];
+    const keys = ['max', 'cutOff', 'minutes'];
     if (showRules) {
       keys.push('rules');
     }
     const simpleDateMode = dateMode !== 'all';
     if (ppData.has('startJd') && ppData.has('endJd')) {
       const startJd = ppData.get('startJd');
-      const startJdp = julToDateParts(startJd)
+      const startJdp = julToDateParts(startJd);
       const endJd = ppData.get('endJd');
       const endJdp = julToDateParts(endJd);
       const startUn = startJdp.unixTimeInt;
