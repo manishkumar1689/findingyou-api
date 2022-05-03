@@ -283,6 +283,23 @@ export class UserController {
     });
   }
 
+  @Get('ip')
+  getIp(@Res() res, @Req() req) {
+    let ip = 'x.x.x.x';
+    let valid = false;
+    let userAgent = '';
+    if (req instanceof Object && req.headers instanceof Object) {
+      const { headers } = req;
+      const headerKeys = Object.keys(headers);
+      ip = headerKeys.includes('x-real-ip')
+        ? headers['x-real-ip'].toString()
+        : '0.0.0.0';
+      valid = true;
+      userAgent = headerKeys.includes('user-agent') ? headers['user-agent'] : '';
+    }
+    return res.json({valid, ip, userAgent})
+  }
+
   @Put('logout/:userID')
   async logOut(
     @Res() res,
