@@ -135,7 +135,6 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra', mode
     delete chart.progressItems;
     delete chart.upagrahas;
     delete chart.sphutas;
-    delete chart.numValues;
     delete chart.stringValues;
     delete chart.objects;
     delete chart.rashis;
@@ -143,10 +142,10 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra', mode
   } else {
     chart.sphutas = matchAyanamshaDataSet(chart, 'sphutas', ayanamshaNum);
     chart.objects = matchAyanamshaDataSet(chart, 'objects', ayanamshaNum);
-    chart.numValues = chart.numValues.map(removeIds);
     chart.stringValues = chart.stringValues.map(removeIds);
     chart.rashis = matchAyanamshaDataSet(chart, 'rashis', ayanamshaNum);
   }
+  chart.numValues = chart.numValues.map(removeIds);
   return chart;
 };
 

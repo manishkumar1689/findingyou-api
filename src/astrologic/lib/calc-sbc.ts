@@ -13,12 +13,38 @@ export interface KeyNumValueRef {
   motion?: string;
 }
 
-export interface TithiDayCellMatch {
-  matched: boolean;
-  column: number;
-  row: number;
-  weekDayNum?: number;
-  tithi?: number;
+export class TithiDayCellMatch {
+  matched = false;
+  column = 0;
+  row = 0;
+  weekDayNum = 0;
+  tithi = 0;
+  
+  constructor(inData:any = null) {
+    if (inData instanceof Object) {
+      Object.entries(inData).forEach(([k, v]) => {
+        switch (k) {
+          case 'matched':
+            if (typeof v === 'boolean') {
+              this[k] = v;
+            }
+            break;
+          case 'row':
+          case 'column':
+          case 'tithi':
+          case 'weekDayNum':
+            if (typeof v === 'number') {
+              this[k] = v;
+            }
+            break;
+        }
+      })
+    }
+  }
+
+  matchesCell(cell: any) {
+    return this.matched && cell instanceof Object && this.row === cell.row && this.column === cell.column;
+  }
 }
 
 const allSBCGrahaKeys = ['su', 'mo', 'me', 've', 'ma', 'ju', 'sa', 'ke', 'ra'];
@@ -84,7 +110,7 @@ const grahaToNakPada = (lng = 0, key = '') => {
 export const tithiNumMatchesWeekDayNum = (chart: Chart): TithiDayCellMatch => {
   const weekDayNum = chart.weekDayNum;
   const tithi = chart.tithi.num;
-  const result: TithiDayCellMatch = { matched: false, column: 0, row: 0, weekDayNum, tithi };
+  const result = new TithiDayCellMatch({tithi, weekDayNum});
   const tiCellIndex = sbcGrid.findIndex(c => c.type === 'ti' && c.value instanceof Object && c.value.nums instanceof Array && c.value.nums.includes(tithi));
   if (tiCellIndex >= 0) {
     const tiCell = sbcGrid[tiCellIndex];
@@ -237,7 +263,7 @@ export const traverseAllNak28Cells = (c1: Chart, c2: Chart, ayanamshaKey = 'true
   });
 }
 
-export const buildSbcScoreGrid = (sbc: SbcNakItem[] = []) => {
+export const buildSbcScoreGrid = (sbc: SbcNakItem[] = [], tithiMatchCell: TithiDayCellMatch = new TithiDayCellMatch(null)) => {
   const grid: Map<string, KeyNumValueRef[]> = new Map();
   [...new Array(81)].map((_, i) => {
     const x =  i % 9;
@@ -250,13 +276,15 @@ export const buildSbcScoreGrid = (sbc: SbcNakItem[] = []) => {
     if (nkRow.transit instanceof Array && nkRow.transit.length > 0) {
       nkRow.transit.forEach(pi => {
         if (Object.keys(pi).includes('score')) {
+          const multiplier = tithiMatchCell.matchesCell(pi)? 2 : 1;
           nkRow.vedhas.forEach(vd => {
             const scItem = grid.get([vd.row, vd.column].join('_'));
             if (scItem instanceof Array) {
               if (isInAllowedVedhas(pi.key, pi.motion, vd.group) || pi.nakNum === nkRow.num) {
                 if (scItem.findIndex(kv => kv.key === pi.key) < 0) {
                   const motion = motionSensitiveGrahas.includes(pi.key)? pi.motion : '-';
-                  scItem.push({key: pi.key, value: pi.score, ref: vd.group, motion});
+                  const scoreVal = pi.score * multiplier;
+                  scItem.push({key: pi.key, value: scoreVal, ref: vd.group, motion});
                 }
               }
             }

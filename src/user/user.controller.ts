@@ -1601,7 +1601,7 @@ export class UserController {
     const hasGeo = paramKeys.includes('loc')? validLocationParameter(params.loc) : false;
     const geo = hasGeo ? locStringToGeo(params.loc) : null;
     const showLuckyTimes = hasGeo? paramKeys.includes('lucky')? smartCastInt(params.lucky, 0) > 0 : false : false;
-    
+    const mayShowBirthChart = paramKeys.includes('bc')? smartCastInt(params.bc, 0) > 0 : false;
     const dateMode = paramKeys.includes('date') ? params.date : 'simple';
 
     let rsMap: Map<string, any> = new Map();
@@ -1616,10 +1616,17 @@ export class UserController {
       const chartData = await this.astrologicService.getChart(cid);
 
       if (chartData instanceof Model) {
-        const chart = new Chart(chartData.toObject());
+        const cDataObj = chartData.toObject();
+        const chart = new Chart(cDataObj);
         const ctData = await buildCurrentTrendsData(jd, chart, showMode, ayanamsaKey, tropicalMode, true, dateMode);
         const matches = ctData.get('matches');
-        
+        if (mayShowBirthChart) {
+          const varaNum = chart.vara.num;
+          cDataObj.numValues.push({ key: 'vara', value: varaNum });
+          const moonNak = chart.moon.nakshatra27;
+          cDataObj.numValues.push({ key: 'moonNak', value: moonNak });
+          rsMap.set('birthChart', simplifyChart(cDataObj, 'true_citra', 'simple'));
+        }
         if (matches instanceof Array) {
           const keys = matches.map(m => {
             const [cat, sub] = m.snippetKey;
@@ -1654,7 +1661,7 @@ export class UserController {
         rsMap = new Map([...rsMap, ...ctData]);
       }
     }
-    const allowedKeys = ['jd', 'dtUtc', 'unix', 'ayanamshas','lngMode', 'aspectMatches', 'kotaCakra', 'transitLngs'];
+    const allowedKeys = ['jd', 'dtUtc', 'unix', 'ayanamshas','lngMode', 'aspectMatches', 'kotaCakra', 'transitLngs', 'birthChart'];
     if (['charts','all'].includes(showMode)) {
       allowedKeys.push('current', 'progress','birth');
     }
