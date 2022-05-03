@@ -109,7 +109,7 @@ import { PublicUserDTO } from './dto/public-user.dto';
 import { User } from './interfaces/user.interface';
 import { mergeProgressSets } from '../astrologic/lib/settings/progression';
 import { IdSetDTO } from './dto/id-set.dto';
-import { basicSetToFullChart, Chart } from '../astrologic/lib/models/chart';
+import { basicSetToFullChart, Chart, extractPanchangaData } from '../astrologic/lib/models/chart';
 import { PaymentDTO } from './dto/payment.dto';
 import { toWords } from '../astrologic/lib/helpers';
 import permissionValues from './settings/permissions';
@@ -1618,7 +1618,8 @@ export class UserController {
     const hasGeo = paramKeys.includes('loc')? validLocationParameter(params.loc) : false;
     const geo = hasGeo ? locStringToGeo(params.loc) : null;
     const showLuckyTimes = hasGeo? paramKeys.includes('lucky')? smartCastInt(params.lucky, 0) > 0 : false : false;
-    const mayShowBirthChart = paramKeys.includes('bc')? smartCastInt(params.bc, 0) > 0 : false;
+    const showBirthChart = paramKeys.includes('bc')? smartCastInt(params.bc, 0) > 0 : false;
+    const showPanchanga = paramKeys.includes('pc')? smartCastInt(params.pc, 0) > 0 : showBirthChart;
     const dateMode = paramKeys.includes('date') ? params.date : 'simple';
     const langRef = paramKeys.includes('lang') && notEmptyString(params.lang,1)? params.lang : 'en';
     const lang = /[a-z][a-z][a-z]?(-[A-Z][A-Z])?/.test(langRef) ? langRef : 'en';
@@ -1638,12 +1639,16 @@ export class UserController {
         const chart = new Chart(cDataObj);
         const ctData = await buildCurrentTrendsData(jd, chart, showMode, ayanamsaKey, tropicalMode, true, dateMode);
         const matches = ctData.get('matches');
-        if (mayShowBirthChart) {
+        if (showBirthChart) {
           const varaNum = chart.vara.num;
           cDataObj.numValues.push({ key: 'vara', value: varaNum });
           const moonNak = chart.moon.nakshatra27;
           cDataObj.numValues.push({ key: 'moonNak', value: moonNak });
           rsMap.set('birthChart', simplifyChart(cDataObj, 'true_citra', 'simple'));
+        }
+        if (showPanchanga) {
+          const pd = extractPanchangaData(chart);
+          rsMap.set('panchanga', Object.fromEntries(pd.entries()));
         }
         if (matches instanceof Array) {
           const keys = matches.map(m => {
@@ -1679,7 +1684,7 @@ export class UserController {
         rsMap = new Map([...rsMap, ...ctData]);
       }
     }
-    const allowedKeys = ['jd', 'dtUtc', 'unix', 'ayanamshas','lngMode', 'aspectMatches', 'kotaCakra', 'transitLngs', 'birthChart'];
+    const allowedKeys = ['jd', 'dtUtc', 'unix', 'ayanamshas','lngMode', 'aspectMatches', 'kotaCakra', 'transitLngs', 'birthChart', 'panchanga'];
     if (['charts','all'].includes(showMode)) {
       allowedKeys.push('current', 'progress','birth');
     }

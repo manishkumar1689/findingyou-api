@@ -82,6 +82,7 @@ import { extractCorePlaceNames } from '../mappers';
 import { GeoPos } from '../../interfaces/geo-pos';
 import { mapRelationships } from '../map-relationships';
 import { matchLord } from '../settings/maitri-data';
+import { matchPanchangaTerm } from '../settings/panchanga-values';
 
 export interface Subject {
   name: string;
@@ -2461,3 +2462,56 @@ export const generateBasicChart = async (
     ayanamshaKey,
   );
 };
+
+
+
+export const extractPanchangaData = (chart: Chart): Map<string, any> => {
+  const pd: Map<string, any> = new Map();
+  const vara = chart.vara;
+  const term1 = matchPanchangaTerm('vara', vara.num);
+  pd.set('vara', {
+    num: vara.num,
+    ruler: vara.ruler,
+    ...term1
+  })
+  /*   karana: chart.karana,
+    tithi: chart.tithi,
+    yoga: chart.yoga,
+    nakshatra: chart.nakshatra */
+  const karana = chart.karana;
+  const term2 = matchPanchangaTerm('karana', karana.num);
+  pd.set('karana', {
+    num: karana.num,
+    ruler: karana.ruler,
+    percent: karana.percent,
+    ...term2
+  });
+
+  const tithi = chart.tithi;
+  const term3 = matchPanchangaTerm('tithi', tithi.num);
+  pd.set('tithi', {
+    num: tithi.num,
+    ruler: tithi.lord,
+    percent: tithi.percent,
+    ...term3
+  });
+  const yoga = chart.yoga;
+  const term4 = matchPanchangaTerm('yoga', yoga.num);
+  pd.set('yoga', {
+    num: yoga.num,
+    ruler: yoga.ruler,
+    percent: tithi.percent,
+    ...term4
+  })
+
+  const nakshatra = chart.moon.nakshatra;
+  const term5 = matchPanchangaTerm('nakshatra', nakshatra.num);
+  pd.set('nakshatra', {
+    num: nakshatra.num,
+    ruler: nakshatra.ruler,
+    percent: nakshatra.percent,
+    ...term5
+  })
+
+  return pd;
+}
