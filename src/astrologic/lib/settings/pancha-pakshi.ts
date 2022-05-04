@@ -1840,8 +1840,10 @@ const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1) => {
   let maxPP = 0;
   for (const rule of rules) { 
     if (rule.isMatched) {
-      rule.validMatches.forEach(match => {
-        if (minJd >= match.start && minJd <= match.end) {
+      // a rule may only match one in a given minute even if valid match spans may overlap
+      let isMatched = false;
+      for (const match of rule.validMatches) {
+        if (!isMatched && minJd >= match.start && minJd <= match.end) {
           if (match.type === 'orb') {
             
             const { fraction, peak } = calcValueWithinOrb(minJd, match.start, match.end);
@@ -1852,8 +1854,10 @@ const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1) => {
             score += rule.score;
             maxPP += rule.score;
           }
+          isMatched = true;
+          break;
         }
-      })
+      }
     }
   }
   return { minuteScore: score, maxPP };
