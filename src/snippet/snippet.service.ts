@@ -141,7 +141,7 @@ export class SnippetService {
               { new: false },
             );
           } else {
-            const newSnippet = await new this.snippetModel({
+            const newSnippet = new this.snippetModel({
               key,
               values,
               format: 'text',
@@ -239,14 +239,14 @@ export class SnippetService {
         { new: true },
       );
     } else {
-      const newSnippet = await new this.snippetModel({
+      const newSnippet = new this.snippetModel({
         ...payload,
         createdAt: dt,
       });
       if (notEmptyString(overrideKey, 5) && overrideKey !== payload.key) {
         this.snippetModel.deleteOne({ key: overrideKey }).exec();
       }
-      return newSnippet.save();
+      return await newSnippet.save();
     }
   }
 

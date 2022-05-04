@@ -10,9 +10,12 @@ import { ProtocolDTO } from './dto/protocol.dto';
 import { mergeRoddenValues } from '../astrologic/lib/settings/rodden-scale-values';
 import { KeyName } from '../astrologic/lib/interfaces';
 import {
+  clearRedisByKey,
   extractDocId,
   extractFromRedisClient,
   extractFromRedisMap,
+  flushRedis,
+  listRedisKeys,
   storeInRedis,
 } from '../lib/entities';
 import { defaultPairedTagOptionSets } from '../astrologic/lib/settings/vocab-values';
@@ -74,10 +77,26 @@ export class SettingService {
     return await extractFromRedisClient(client, key);
   }
 
-  async redisSet(key: string, value): Promise<boolean> {
+  async redisSet(key: string, value: any = null, expire = 0): Promise<boolean> {
     const client = await this.redisClient();
-    return await storeInRedis(client, key, value);
+    return await storeInRedis(client, key, value, expire);
   }
+
+  async flushCache(): Promise<boolean> {
+    const client = await this.redisClient();
+    return await flushRedis(client);
+  }
+
+  async clearCacheByKey(key = ''): Promise<boolean> {
+    const client = await this.redisClient();
+    return await clearRedisByKey(client, key);
+  }
+
+  async getRedisKeys(key = '') {
+    const client = await this.redisClient();
+    return await listRedisKeys(client, key);
+  }
+
   // fetch all Settings
   async getAllSetting(): Promise<Setting[]> {
     const Settings = await this.settingModel
@@ -114,7 +133,7 @@ export class SettingService {
   }
 
   // Get a single Setting
-  async getSetting(settingID): Promise<Setting> {
+  async getSetting(settingID = ''): Promise<Setting> {
     const setting = await this.settingModel.findById(settingID).exec();
     return setting;
   }
@@ -898,6 +917,9 @@ export class SettingService {
 
   async savePredictiveRuleSet(ruleSetDTO: PredictiveRuleSetDTO, id = '') {
     let result: any = null;
+    if (ruleSetDTO.type === 'panchapakshi') {
+      this.clearCacheByKey('pp_active_rules');
+    }
     if (notEmptyString(id, 8)) {
       const updated = { ...ruleSetDTO, modifiedAt: new Date() };
       await this.predictiveRuleSetModel.findByIdAndUpdate(id, updated);
@@ -978,13 +1000,21 @@ export class SettingService {
   }
 
   async getPPRules(): Promise<PPRule[]> {
-    const rules = await this.getRuleSetsByType('panchapakshi');
-    const simpleRules = rules
-      .filter(rs => {
-        return rs.conditionSet.conditionRefs.length > 0;
-      })
-      .map(mapPPRule);
-    return simpleRules;
+    const key = 'pp_active_rules';
+    const stored = await this.redisGet(key);
+    let rules: any[] = [];
+    if (stored instanceof Array && stored.length > 0) {
+      rules = stored;
+    } else {
+      const items = await this.getRuleSetsByType('panchapakshi');
+      if (items instanceof Array && items.length > 0) {
+        rules = items.filter(rs => {
+          return rs.conditionSet.conditionRefs.length > 0;
+        });
+        this.redisSet(key, rules, 24 * 60 * 60);
+      }
+    }
+    return rules.map(mapPPRule);
   }
 
   async getKotaChakraScoreData(skipCache = false): Promise<any> {

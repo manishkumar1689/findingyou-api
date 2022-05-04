@@ -1,5 +1,4 @@
 import * as Redis from 'ioredis';
-import { Model } from 'mongoose';
 
 export const updateSubEntity = (source, data: any) => {
   if (data instanceof Object && source instanceof Object) {
@@ -206,11 +205,55 @@ export const extractFromRedisClient = async (
   return result;
 };
 
-export const storeInRedis = async (client: Redis.Redis, key: string, value) => {
+export const storeInRedis = async (client: Redis.Redis, key: string, value, expire = -1) => {
   let result = false;
   if (client instanceof Object) {
-    client.set(key, JSON.stringify(value));
+    const secs = expire > 5 ? expire :  60 * 60 * 24 * 365;
+    client.set(key, JSON.stringify(value), 'EX', secs);
     result = true;
+  }
+  return result;
+};
+
+export const flushRedis = async (client: Redis.Redis) => {
+  let result = false;
+  if (client instanceof Object) {
+    client.flushall();
+    result = true;
+  }
+  return result;
+};
+
+
+
+export const listRedisKeys = async (client: Redis.Redis, key = '') => {
+  let keys: string[] = [];
+  if (client instanceof Object) {
+    const matchedKeys = await client.keys(key + '*');
+    if (matchedKeys instanceof Array) {
+      keys = matchedKeys;
+    }
+  }
+  return keys;
+};
+
+
+export const clearRedisByKey = async (client: Redis.Redis, key = '') => {
+  let result = false;
+  if (client instanceof Object) {
+    if (key.includes('*') && key.length > 5) {
+      const keys = await listRedisKeys(client, key);
+      if (keys.length > 0) {
+        for (const delKey of keys) {
+          client.del(delKey);
+        }
+        result = true;
+      }
+    } else {
+      client.del(key);
+      result = true;
+    }
+    
   }
   return result;
 };

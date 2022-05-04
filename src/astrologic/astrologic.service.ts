@@ -120,9 +120,9 @@ export class AstrologicService {
     return await extractFromRedisClient(client, key);
   }
 
-  async redisSet(key: string, value): Promise<boolean> {
+  async redisSet(key: string, value, expire = -1): Promise<boolean> {
     const client = await this.redisClient();
-    return await storeInRedis(client, key, value);
+    return await storeInRedis(client, key, value, expire);
   }
 
   async createChart(data: CreateChartDTO) {
@@ -1127,7 +1127,7 @@ export class AstrologicService {
         false,
         false,
       );
-      this.redisSet(key, tData);
+      this.redisSet(key, tData, 30 * 60);
     }
     return new ChartClass(tData);
   }

@@ -307,6 +307,30 @@ export class SettingController {
     });
   }
 
+  // Flush all caches
+  @Get('flush-all/:userID')
+  async flushAllCaches(@Res() res, @Param('userID') userID) {
+    const result = { valid: false };
+    const isAdmin = await this.userService.isAdminUser(userID);
+    if (isAdmin) {
+      this.settingService.flushCache();
+      result.valid = true;
+    }
+    return res.status(HttpStatus.OK).json(result);
+  }
+
+  // Flush all caches
+  @Get('clear-by-key/:userID/:key')
+  async clearByKey(@Res() res, @Param('userID') userID, @Param('key') key) {
+    const result = { valid: false };
+    const isAdmin = await this.userService.isAdminUser(userID);
+    if (isAdmin) {
+      this.settingService.clearCacheByKey(key);
+      result.valid = true;
+    }
+    return res.status(HttpStatus.OK).json(result);
+  }
+
   // Return the data from a particular setting identified by key
   // as downloadable JSON file
   @Get('get-file/:directory/:name')
