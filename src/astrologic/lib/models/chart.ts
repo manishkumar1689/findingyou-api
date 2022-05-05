@@ -2466,6 +2466,7 @@ export const generateBasicChart = async (
 
 
 export const extractPanchangaData = (chart: Chart): Map<string, any> => {
+  chart.setAyanamshaItemByKey('true_citra');
   const pd: Map<string, any> = new Map();
   const vara = chart.vara;
   const term1 = matchPanchangaTerm('vara', vara.num);

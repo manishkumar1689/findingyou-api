@@ -215,23 +215,14 @@ export const storeInRedis = async (client: Redis.Redis, key: string, value, expi
   return result;
 };
 
-export const flushRedis = async (client: Redis.Redis) => {
-  let result = false;
-  if (client instanceof Object) {
-    client.flushall();
-    result = true;
-  }
-  return result;
-};
-
-
-
-export const listRedisKeys = async (client: Redis.Redis, key = '') => {
+export const listRedisKeys = async (client: Redis.Redis, key = '', max = -1) => {
   let keys: string[] = [];
   if (client instanceof Object) {
     const matchedKeys = await client.keys(key + '*');
     if (matchedKeys instanceof Array) {
-      keys = matchedKeys;
+      const size = matchedKeys.length;
+      const filterMax = max > 5;
+      keys = filterMax && size > max ? matchedKeys.slice(0, max) : matchedKeys;
     }
   }
   return keys;

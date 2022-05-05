@@ -292,13 +292,19 @@ export class SettingController {
   }
 
   // Flush all caches
-  @Get('flush-all/:userID')
-  async flushAllCaches(@Res() res, @Param('userID') userID) {
-    const result = { valid: false };
+  @Get('redis-keys/:userID/:pattern')
+  async flushAllCaches(@Res() res, @Param('userID') userID, @Param('pattern') pattern) {
+    const result = { valid: false, keys: [], num: 0 };
     const isAdmin = await this.userService.isAdminUser(userID);
     if (isAdmin) {
-      this.settingService.flushCache();
-      result.valid = true;
+      if (notEmptyString(pattern, 2)) {
+        const keys = await this.settingService.getRedisKeys(pattern, 1000);
+        if (keys.length > 0) {
+          result.num = keys.length;
+          result.keys = keys;
+          result.valid = true;
+        }
+      }
     }
     return res.status(HttpStatus.OK).json(result);
   }

@@ -2695,7 +2695,7 @@ export class AstrologicService {
     startJd = 0,
     endJd = 0,
   ): Promise<SignTimelineSet[]> {
-    const key = ['bav_timeline', startJd, endJd].join('_');
+    const key = ['bav_timeline', startJd.toFixed(2), endJd.toFixed(2)].join('_');
     const storedResults = await this.redisGet(key);
     const hasStored =
       storedResults instanceof Array && storedResults.length > 5;
@@ -2709,8 +2709,8 @@ export class AstrologicService {
       'bav_asc_timeline',
       geo.lat.toFixed(3),
       geo.lng.toFixed(3),
-      startJd,
-      endJd,
+      startJd.toFixed(2),
+      endJd.toFixed(2),
     ].join('_');
     const storedAscResult = await this.redisGet(ascKey);
     const hasAscStored = storedAscResult instanceof Object;

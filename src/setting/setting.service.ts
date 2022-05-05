@@ -14,7 +14,6 @@ import {
   extractDocId,
   extractFromRedisClient,
   extractFromRedisMap,
-  flushRedis,
   listRedisKeys,
   storeInRedis,
 } from '../lib/entities';
@@ -82,19 +81,14 @@ export class SettingService {
     return await storeInRedis(client, key, value, expire);
   }
 
-  async flushCache(): Promise<boolean> {
-    const client = await this.redisClient();
-    return await flushRedis(client);
-  }
-
   async clearCacheByKey(key = ''): Promise<boolean> {
     const client = await this.redisClient();
     return await clearRedisByKey(client, key);
   }
 
-  async getRedisKeys(key = '') {
+  async getRedisKeys(key = '', max = -1) {
     const client = await this.redisClient();
-    return await listRedisKeys(client, key);
+    return await listRedisKeys(client, key, max);
   }
 
   // fetch all Settings
