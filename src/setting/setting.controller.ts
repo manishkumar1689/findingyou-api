@@ -19,7 +19,8 @@ import { UserService } from '../user/user.service';
 import { SnippetService } from '../snippet/snippet.service';
 import { CreateSettingDTO } from './dto/create-setting.dto';
 import { IdBoolDTO } from './dto/id-bool.dto';
-import { notEmptyString, validISODateString } from '../lib/validators';
+import { ScoreDTO } from './dto/score.dto';
+import { isNumeric, notEmptyString, validISODateString } from '../lib/validators';
 import { extractDocId } from '../lib/entities';
 import { exportCollection, listFiles } from '../lib/operations';
 import {
@@ -87,28 +88,11 @@ export class SettingController {
   ) {
     let setting: any = {};
     let message = 'Invalid key or user ID';
-    if (notEmptyString(userID, 9)) {
-      const matchedSetting = await this.settingService.getByKey(key);
-      const exists =
-        matchedSetting instanceof Object &&
-        Object.keys(matchedSetting).includes('key');
-      if (exists) {
-        setting = await this.settingService.updateSetting(
-          extractDocId(matchedSetting),
-          createSettingDTO,
-        );
-        if (setting) {
-          message = 'Setting has been updated successfully';
-        }
-      } else {
-        const settingDTO = {
-          ...createSettingDTO,
-          key,
-        };
-        setting = await this.settingService.addSetting(settingDTO);
-        if (setting) {
-          message = 'Setting has been created successfully';
-        }
+    if (this.userService.isAdminUser(userID)) {
+      const result = await this.settingService.updateSettingByKey(key, createSettingDTO);
+      if (notEmptyString(result.message)) {
+        message = result.message;
+        setting = result.setting;
       }
     }
     return res.status(HttpStatus.OK).json({
@@ -442,7 +426,41 @@ export class SettingController {
   @Get('predictive/list/:userID?')
   async listPredictiveRules(@Res() res, @Param('userID') userID) {
     const data = await this.settingService.getRuleSets(userID);
-    return res.status(HttpStatus.CREATED).send(data);
+    return res.status(HttpStatus.OK).send(data);
+  }
+
+  @Get('pp-cutoff?')
+  async getPPCutoff(@Res() res) {
+    const data = await this.settingService.getByKey('pp_cutoff');
+    const result = { valid: false, value: 0 };
+    if (data instanceof Object && isNumeric(data.value)) {
+      result.value = smartCastInt(data.value);
+      result.valid = result.value > 0;
+    }
+    return res.status(HttpStatus.OK).send(result);
+  }
+
+  @Post('save-pp-cutoff?')
+  async savePPCutoff(@Res() res, @Body() payload: ScoreDTO ) {
+    const key = 'pp_cutoff';
+    let message = '';
+    let setting = null;
+    let valid = false;
+    if (payload.key === key) {
+      const { value } = payload;
+      const settingDTO = { 
+        key,
+        value,
+        type: 'integer'
+      } as CreateSettingDTO;
+      const result = await this.settingService.updateSettingByKey(key, settingDTO, true);
+      if (notEmptyString(result.message)) {
+        message = result.message;
+        setting = result.setting;
+        valid = true;
+      }
+    }
+    return res.status(HttpStatus.OK).send({ setting, message, valid });
   }
 
   @Delete('predictive/delete/:userID/:itemID')

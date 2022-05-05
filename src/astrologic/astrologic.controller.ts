@@ -437,6 +437,7 @@ export class AstrologicController {
         const rules = processRules
           ? await this.settingService.getPPRules()
           : [];
+        const customCutoff = await this.settingService.getPPCutoff();  
         data = await calculatePanchaPakshiData(
           chart,
           jd,
@@ -444,6 +445,8 @@ export class AstrologicController {
           rules,
           showTransitions,
           fetchNightAndDay,
+          true,
+          customCutoff
         );
         if (data.get('valid') === true) {
           status = HttpStatus.OK;
@@ -496,7 +499,8 @@ export class AstrologicController {
           const chartObj = hasChart ? chartData.toObject() : {};
           const chart = new Chart(chartObj);
           const rules = await this.settingService.getPPRules();
-          const ppData = await calcLuckyTimes(chart, jd, geo, rules, dateMode);
+          const customCutoff = await this.settingService.getPPCutoff();
+          const ppData = await calcLuckyTimes(chart, jd, geo, rules, customCutoff, dateMode);
           ppData.forEach((v, k) => {
             data.set(k, v);
           });

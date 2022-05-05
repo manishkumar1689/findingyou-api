@@ -1998,7 +1998,8 @@ export const calculatePanchaPakshiData = async (
   rules: PPRule[],
   showTransitions = false,
   fetchNightAndDay = true,
-  showMinutes = true
+  showMinutes = true,
+  customCutoff = 0
 ): Promise<Map<string, any>> => {
   let data: Map<string, any> = new Map(
     Object.entries({
@@ -2021,7 +2022,7 @@ export const calculatePanchaPakshiData = async (
     jd,
     geo,
     chart,
-    fetchNightAndDay,
+    fetchNightAndDay
   );
   if (ppData.get('valid')) {
     data = new Map([...data, ...ppData]);
@@ -2221,7 +2222,8 @@ export const calculatePanchaPakshiData = async (
           data.set('minutes', scores);
           data.set('maxPP', maxPPValue);
           data.set('maxScore', Math.max(...scores));
-          data.set('cutOff', maxPPValue + 10);
+          const cutOff = customCutoff > 0? customCutoff : maxPPValue + 10;
+          data.set('cutOff', cutOff);
         }
       }
     }
@@ -2230,7 +2232,7 @@ export const calculatePanchaPakshiData = async (
 };
 
 
-export const calcLuckyTimes = async (chart: Chart, jd = 0, geo: GeoLoc, rules: any[] = [], dateMode = 'simple', showRules = true) => {
+export const calcLuckyTimes = async (chart: Chart, jd = 0, geo: GeoLoc, rules: any[] = [], customCutoff = 0, dateMode = 'simple', showRules = true) => {
   const data: Map<string, any> = new Map();
   const ppData = await calculatePanchaPakshiData(
     chart,
@@ -2239,6 +2241,8 @@ export const calcLuckyTimes = async (chart: Chart, jd = 0, geo: GeoLoc, rules: a
     rules,
     true,
     true,
+    true,
+    customCutoff
   );
   if (ppData.get('valid') === true) {
     const keys = ['max', 'cutOff', 'minutes'];

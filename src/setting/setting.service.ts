@@ -596,6 +596,18 @@ export class SettingService {
     };
   }
 
+  async getPPCutoff() {
+    const key = 'pp_cutoff';
+    let value = await this.redisGet(key)
+    if (!isNumeric(value) || value < 1) {
+      const result = await this.getByKey(key);
+      if (result instanceof Object && isNumeric(result.value)) {
+        value = result.value;
+      }
+    }
+    return smartCastInt(value, 0);
+  }
+
   async getKutas(skipCache = false): Promise<Map<string, any>> {
     const cKey = 'kuta_variants';
     const stored = skipCache ? null : await this.redisGet(cKey);
@@ -694,6 +706,37 @@ export class SettingService {
       { new: true },
     );
     return updatedSetting;
+  }
+
+  async updateSettingByKey(key = '', createSettingDTO: CreateSettingDTO, resetCache = false) {
+    let setting = null;
+    let message = '';
+    const matchedSetting = await this.getByKey(key);
+    const exists =
+      matchedSetting instanceof Object &&
+      Object.keys(matchedSetting).includes('key');
+    if (exists) {
+      setting = await this.updateSetting(
+        extractDocId(matchedSetting),
+        createSettingDTO,
+      );
+      if (setting) {
+        message = 'Setting has been updated successfully';
+      }
+    } else {
+      const settingDTO = {
+        ...createSettingDTO,
+        key,
+      };
+      setting = await this.addSetting(settingDTO);
+      if (setting) {
+        message = 'Setting has been created successfully';
+      }
+    }
+    if (resetCache && setting instanceof Object) {
+      this.redisSet(key, createSettingDTO.value);
+    }
+    return { message, setting };
   }
 
   async getFlags(skipCache = false) {

@@ -1667,7 +1667,8 @@ export class UserController {
         }
         if (showLuckyTimes) {
           const rules = await this.settingService.getPPRules();
-          const ppData = await calcLuckyTimes(chart, jd, geo, rules, dateMode, false);
+          const customCutoff = await this.settingService.getPPCutoff();
+          const ppData = await calcLuckyTimes(chart, jd, geo, rules, customCutoff, dateMode, false);
           ctData.set('luckyTimes', Object.fromEntries(ppData.entries()));
         }
         const kcScoreSet = await this.settingService.getKotaChakraScoreSet();
