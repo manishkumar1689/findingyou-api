@@ -1944,13 +1944,15 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
     } else if (r.key.includes('dying_bird_')) {
       grahaKeys = birdGrahaSet.matchGrahas('dying', true);
     }
-  }{
+  } else if (r.key.length === 2) {
+    grahaKeys = [r.key];
+  }
   if (isTr) {
     const relTrs = relTransItems.filter(tr => {
       const rKey = tr.key.toLowerCase().replace('2', '');
       return rKey === trRef.toLowerCase() || grahaKeys.includes(rKey);
     });
-    if (relTrs.length > 0) 
+    if (relTrs.length > 0) {
       for (const relTr of relTrs) {
         const rk = toTransitKey(r.action);
         let mr = null;
@@ -1972,6 +1974,7 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
       }
     }
   }
+
   const isDahsha = r.context.startsWith('dasha_');
   const isDasha2 = !isDahsha && r.context.startsWith('antardasha_');
   if (isDahsha || isDasha2) {
