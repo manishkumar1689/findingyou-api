@@ -968,9 +968,12 @@ export class SettingService {
     return result;
   }
 
-  async savePredictiveRulesActive(items: IdBoolDTO []) {
+  async savePredictiveRulesActive(items: IdBoolDTO [], clearPPActiveRulesCache = false) {
     const rows: any[] = [];
     if (items.length > 0) {
+      if (clearPPActiveRulesCache) {
+        this.clearCacheByKey('pp_active_rules');
+      }
       for (const row of items) {
         const updated = await this.predictiveRuleSetModel.findByIdAndUpdate(row.id, { active: row.value });
         if (updated._id.toString() === row.id) {

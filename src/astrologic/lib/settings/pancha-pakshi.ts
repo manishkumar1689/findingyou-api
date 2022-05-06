@@ -22,6 +22,39 @@ import { capitalize } from '../helpers';
 
 const birdMap = { 1: 'vulture', 2: 'owl', 3: 'crow', 4: 'cock', 5: 'peacock' };
 
+export class PeakTime {
+  startTs = 0;
+  start = 0;
+  end = 0;
+
+  constructor(startTs = 0, startMinIndex = 0, endMinIndex = 0) {
+    this.startTs = startTs;
+    this.start = startTs + (startMinIndex * 60);
+    if (endMinIndex > startMinIndex) {
+      this.setEnd(endMinIndex)
+    }
+  }
+
+  setEnd(endMinIndex = 0) {
+    if (endMinIndex > 0) {
+      this.end = this.startTs + (endMinIndex * 60);
+    }
+  }
+
+  get peak(): number {
+    return this.start + (this.end - this.start) / 2;
+  }
+
+  toObject() {
+    return {
+      start: this.start,
+      peak: this.peak,
+      end: this.end
+     }
+  }
+
+}
+
 const birdAttributes = [
   {
     waxing: { color: 'white', directions: ['E'] },
@@ -2183,13 +2216,20 @@ export const calculatePanchaPakshiData = async (
         );
         data.set('startJd', startJd);
         data.set('endJd', endJd);
+        const startJdp = julToDateParts(startJd);
+        const startTs = startJdp.unixTimeInt;
         const minsDay = 24 * 60;
         const minJd = 1 / minsDay;
         const scores: number[] = [];
         let maxPPValue = 0;
         const dayLength = endJd - startJd;
         const maxMins = Math.ceil(dayLength * minsDay);
+        const times: PeakTime[] = [];
         if (showMinutes) {
+          const cutOff = customCutoff > 0? customCutoff : maxPPValue + 10;
+          data.set('cutOff', cutOff);
+          let isLucky = false;
+          let peakTimeIndex = -1;
           for (let i = 0; i < maxMins; i++) {
             const currJd = startJd + minJd * i;
             /* const refSub = subPeriods.find(
@@ -2215,6 +2255,30 @@ export const calculatePanchaPakshiData = async (
             if (maxPP > maxPPValue) {
               maxPPValue = maxPP;
             }
+
+            if (minuteScore >= cutOff) {
+              if (!isLucky) {
+                const pk = new PeakTime(startTs, i);
+                peakTimeIndex = times.length;
+                times.push(pk);
+              }
+              isLucky = true;
+            } else {
+              if (isLucky && peakTimeIndex >= 0) {
+                if (peakTimeIndex < times.length) {
+                  const pk = times[peakTimeIndex];
+                  pk.setEnd(i - 1);
+                }
+              }
+              isLucky = false;
+            }
+          }
+          if (times.length > 0) {
+            const lastTime = times.pop();
+            if (lastTime.end <= lastTime.start) {
+              lastTime.setEnd(scores.length - 1);
+            }
+            times.push(lastTime);
           }
         }
         data.set('rules', rules.map(simplifyRule));
@@ -2222,8 +2286,7 @@ export const calculatePanchaPakshiData = async (
           data.set('minutes', scores);
           data.set('maxPP', maxPPValue);
           data.set('maxScore', Math.max(...scores));
-          const cutOff = customCutoff > 0? customCutoff : maxPPValue + 10;
-          data.set('cutOff', cutOff);
+          data.set('times', times.map(time => time.toObject()));
         }
       }
     }
@@ -2245,7 +2308,7 @@ export const calcLuckyTimes = async (chart: Chart, jd = 0, geo: GeoLoc, rules: a
     customCutoff
   );
   if (ppData.get('valid') === true) {
-    const keys = ['max', 'cutOff', 'minutes'];
+    const keys = ['max', 'cutOff', 'minutes', 'times'];
     if (showRules) {
       keys.push('rules');
     }

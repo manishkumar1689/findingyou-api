@@ -491,7 +491,7 @@ export class SettingController {
     const result: Map<string, any> = new Map([['valid', false]]);
 
     if (items.length > 0) {
-      const ids = await this.settingService.savePredictiveRulesActive(items);
+      const ids = await this.settingService.savePredictiveRulesActive(items, true);
       result.set('ids', ids);
       result.set('valid', ids.length > 0);
     }
