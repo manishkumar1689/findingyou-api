@@ -31,6 +31,7 @@ import {
   locStringToGeo,
 } from './lib/converters';
 import {
+  addExtraPanchangeNumValues,
   applyAscendantToSimpleChart,
   simplifyAstroChart,
   simplifyChart,
@@ -1538,13 +1539,8 @@ export class AstrologicController {
     const { valid, shortTz } = data;
     const chart = valid ? simplifyChart(data.chart, ayaKey, simpleMode) : {};
     // only add calculated moonNak and vara if valid object returned and ayaKey is true_citra
-    if (valid && Object.keys(chart).includes('numValues') && chart.numValues instanceof Array && ayaKey === 'true_citra') {
-      const chartClass = new Chart(data.chart);
-      chartClass.setAyanamshaItemByKey(ayaKey);
-      const varaNum = chartClass.vara.num;
-      chart.numValues.push({ key: 'vara', value: varaNum });
-      const moonNak = chartClass.moon.nakshatra27;
-      chart.numValues.push({ key: 'moonNak', value: moonNak });
+    if (valid && ayaKey === 'true_citra') {
+      addExtraPanchangeNumValues(data.chart, ayaKey);
     }
     return res.status(HttpStatus.OK).json({ valid, shortTz, chart });
   }

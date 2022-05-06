@@ -310,7 +310,7 @@ export class SettingController {
   }
 
   // clear redis cached item by key pattern
-  @Get('clear-by-key/:userID/:key')
+  @Delete('clear-by-key/:userID/:key')
   async clearByKey(@Res() res, @Param('userID') userID, @Param('key') key) {
     const result = { valid: false };
     const isAdmin = await this.userService.isAdminUser(userID);

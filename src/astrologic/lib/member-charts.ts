@@ -4,7 +4,7 @@ import { GeoPos } from '../interfaces/geo-pos';
 import { KeyValue } from '../interfaces/key-value';
 import { calcOffsetAscendant } from './calc-ascendant';
 import { subtractLng360 } from './helpers';
-import { HouseSystem } from './models/chart';
+import { Chart, HouseSystem } from './models/chart';
 import { Condition } from './models/protocol-models';
 import { matchAyanamshaNum } from './settings/ayanamsha-values';
 
@@ -148,6 +148,17 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra', mode
   chart.numValues = chart.numValues.map(removeIds);
   return chart;
 };
+
+export const addExtraPanchangeNumValues = (chartData = null, ayaKey = 'true_citra') => {
+  if (chartData instanceof Object && Object.keys(chartData).includes('numValues') && chartData.numValues instanceof Array) {
+    const chart = new Chart(chartData);
+    chart.setAyanamshaItemByKey(ayaKey);
+    const varaNum = chart.vara.num;
+    chartData.numValues.push({ key: 'vara', value: varaNum });
+    const moonNak = chart.moon.nakshatra27;
+    chartData.numValues.push({ key: 'moonNak', value: moonNak });
+  }
+}
 
 export const simplifyAstroChart = (data: any = null, applyAyanamsha = true, adjustAscendant = true) => {
   if (data instanceof Object) {

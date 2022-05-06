@@ -78,7 +78,7 @@ import {
 import { PreferenceDTO } from './dto/preference.dto';
 import { SampleDataDTO } from './dto/sample-data.dto';
 import { SampleRecordDTO } from './dto/sample-record.dto';
-import { simplifyChart } from '../astrologic/lib/member-charts';
+import { addExtraPanchangeNumValues, simplifyChart } from '../astrologic/lib/member-charts';
 import { MediaItemDTO } from './dto/media-item.dto';
 import {
   filterLikeabilityContext,
@@ -1438,7 +1438,10 @@ export class UserController {
         userData.set('flags', flags);
         const chart = await this.astrologicService.getUserBirthChart(userID);
         if (chart instanceof Object) {
-          const chartObj = isMemberLogin ? simplifyChart(chart) : chart;
+          const chartObj = isMemberLogin ? simplifyChart(chart, 'true_citra', 'basic') : chart;
+          if (isMemberLogin) {
+            addExtraPanchangeNumValues(chartObj, 'true_citra');
+          }
           userData.set('chart', chartObj);
         }
       }
