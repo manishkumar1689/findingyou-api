@@ -630,7 +630,7 @@ export interface SimpleTerm {
   short?: string;
 }
 
-export const matchPanchangaTerm = (key, num = 0): SimpleTerm => {
+export const matchPanchangaTerm = (key = '', num = 0): SimpleTerm => {
   const strNum = zeroPad(num, 2);
   const key1 = [key, strNum].join('__');
   let rowIndex = panchangaTerms.findIndex(row => row.key === key1);

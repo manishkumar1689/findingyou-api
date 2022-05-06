@@ -1619,7 +1619,7 @@ export class UserController {
     const geo = hasGeo ? locStringToGeo(params.loc) : null;
     const showLuckyTimes = hasGeo? paramKeys.includes('lucky')? smartCastInt(params.lucky, 0) > 0 : false : false;
     const showBirthChart = paramKeys.includes('bc')? smartCastInt(params.bc, 0) > 0 : false;
-    const showPanchanga = paramKeys.includes('pc')? smartCastInt(params.pc, 0) > 0 : showBirthChart;
+    const showPanchanga = paramKeys.includes('pc')? smartCastInt(params.pc, 0) > 0 : false;
     const dateMode = paramKeys.includes('date') ? params.date : 'simple';
     const langRef = paramKeys.includes('lang') && notEmptyString(params.lang,1)? params.lang : 'en';
     const lang = /[a-z][a-z][a-z]?(-[A-Z][A-Z])?/.test(langRef) ? langRef : 'en';

@@ -309,12 +309,12 @@ export class SettingController {
     return res.status(HttpStatus.OK).json(result);
   }
 
-  // Flush all caches
+  // clear redis cached item by key pattern
   @Get('clear-by-key/:userID/:key')
   async clearByKey(@Res() res, @Param('userID') userID, @Param('key') key) {
     const result = { valid: false };
     const isAdmin = await this.userService.isAdminUser(userID);
-    if (isAdmin) {
+    if (isAdmin && notEmptyString(key, 2)) {
       this.settingService.clearCacheByKey(key);
       result.valid = true;
     }
