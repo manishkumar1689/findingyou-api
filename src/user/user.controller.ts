@@ -1637,6 +1637,7 @@ export class UserController {
       if (chartData instanceof Model) {
         const cDataObj = chartData.toObject();
         const chart = new Chart(cDataObj);
+        chart.setAyanamshaItemByKey(ayanamsaKey);
         const ctData = await buildCurrentTrendsData(jd, chart, showMode, ayanamsaKey, tropicalMode, true, dateMode);
         const matches = ctData.get('matches');
         if (showBirthChart) {
@@ -1644,7 +1645,7 @@ export class UserController {
           cDataObj.numValues.push({ key: 'vara', value: varaNum });
           const moonNak = chart.moon.nakshatra27;
           cDataObj.numValues.push({ key: 'moonNak', value: moonNak });
-          rsMap.set('birthChart', simplifyChart(cDataObj, 'true_citra', 'simple'));
+          rsMap.set('birthChart', simplifyChart(cDataObj, ayanamsaKey, 'simple'));
         }
         if (showPanchanga) {
           const pd = extractPanchangaData(chart);
