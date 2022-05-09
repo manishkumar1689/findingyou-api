@@ -556,6 +556,16 @@ const polarityDifferencesToScore = (rows: KeyNumValue[] = []): number => {
   return rows.map(row => 100 - Math.abs(row.value) ).reduce((a, b) => a + b, 0) / rows.length;
 }
 
+const toSimplePolarityValues = (jungian: KeyNumValue[] = []) => {
+  const mp: Map<string, number> = new Map();
+  jungian.forEach(({key, value}) => {
+    const isNeg = value < 0;
+    const letter = isNeg ? key.substring(0, 1) : key.substring(1, 2)
+    const numVal = Math.abs(value);
+    mp.set(letter, numVal);
+  });
+  return Object.fromEntries(mp.entries());
+}
 
 export const compareJungianPolarities = (jungianRef: KeyNumValue[] = [], jungian: KeyNumValue[] = []) => {
   const rows = jungianRef.map(row => {
@@ -570,10 +580,11 @@ export const compareJungianPolarities = (jungianRef: KeyNumValue[] = [], jungian
     }
   }).filter(row => row.matched);
   const score = polarityDifferencesToScore(rows);
-  const entries = rows.map(row => {
+  const entries: any[] = rows.map(row => {
     const { key, value } = row;
     return [ key, value ]
   });
   entries.push(['score', score]);
+  entries.push(['values', toSimplePolarityValues(jungian)]);
   return Object.fromEntries(entries);
 }
