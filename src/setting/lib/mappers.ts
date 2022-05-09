@@ -556,7 +556,7 @@ const polarityDifferencesToScore = (rows: KeyNumValue[] = []): number => {
   return rows.map(row => 100 - Math.abs(row.value) ).reduce((a, b) => a + b, 0) / rows.length;
 }
 
-const toSimplePolarityValues = (jungian: KeyNumValue[] = []) => {
+export const toSimplePolarityValues = (jungian: KeyNumValue[] = []) => {
   const mp: Map<string, number> = new Map();
   jungian.forEach(({key, value}) => {
     const isNeg = value < 0;

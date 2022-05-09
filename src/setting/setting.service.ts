@@ -308,7 +308,7 @@ export class SettingService {
           : {};
       }
       return {
-        preferences: preferenceItems,
+        preferences,
         facetedAnswers,
         facetedAnalysis,
         jungianAnswers,

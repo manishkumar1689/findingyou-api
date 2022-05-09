@@ -149,15 +149,19 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra', mode
   return chart;
 };
 
-export const addExtraPanchangeNumValues = (chartData = null, ayaKey = 'true_citra') => {
+export const addExtraPanchangeNumValuesFromClass = (chartData = null, chart: Chart, ayaKey = 'true_citra') => {
   if (chartData instanceof Object && Object.keys(chartData).includes('numValues') && chartData.numValues instanceof Array) {
-    const chart = new Chart(chartData);
     chart.setAyanamshaItemByKey(ayaKey);
     const varaNum = chart.vara.num;
     chartData.numValues.push({ key: 'vara', value: varaNum });
     const moonNak = chart.moon.nakshatra27;
     chartData.numValues.push({ key: 'moonNak', value: moonNak });
   }
+}
+
+export const addExtraPanchangeNumValues = (chartData = null, ayaKey = 'true_citra') => {
+  const chart = new Chart(chartData);
+  return addExtraPanchangeNumValuesFromClass(chartData, chart, ayaKey);
 }
 
 export const simplifyAstroChart = (data: any = null, applyAyanamsha = true, adjustAscendant = true) => {

@@ -86,7 +86,7 @@ import { minRemainingPaired } from '../.config';
 import { calcTropicalAscendantDt } from './lib/calc-ascendant';
 import { GeoLoc } from './lib/models/geo-loc';
 import { LngLat } from './lib/interfaces';
-import { simplifyChart } from './lib/member-charts';
+import { addExtraPanchangeNumValuesFromClass, simplifyChart } from './lib/member-charts';
 import { getAshtakavargaBodyGrid } from './lib/settings/ashtakavarga-values';
 import { GeoPos } from './interfaces/geo-pos';
 import { ProgressItemDTO } from './dto/progress-item.dto';
@@ -1767,6 +1767,7 @@ export class AstrologicService {
       kutaSet,
       'ashta',
     ) : {};
+    addExtraPanchangeNumValuesFromClass(chartData, chart, 'true_citra');
     const pd = calcProgressAspectDataFromProgressItems(chart.matchProgressItems(), refChart.matchProgressItems());
     const p2Summary = pd.num > 0 ? calcProgressSummary(pd.items) : {};
     const kcS1 = calcKotaChakraScoreData(refChart, chart, kcScoreSet, true);

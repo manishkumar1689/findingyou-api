@@ -93,7 +93,7 @@ export const removeObjectId = (item = null) => {
   return obj;
 };
 
-export const extractObjectAndMerge = (
+export const extractObjectAndMergeRaw = (
   obj: any,
   data: Map<string, any>,
   exclude: string[],
@@ -111,7 +111,17 @@ export const extractObjectAndMerge = (
       }
     });
   }
-  return data;
+  return { dataMap: data, matchedObj };
+};
+
+export const extractObjectAndMerge = (
+  obj: any,
+  data: Map<string, any>,
+  exclude: string[],
+  removeInnerIds = false,
+) => {
+  const { dataMap } = extractObjectAndMergeRaw(obj, data, exclude, removeInnerIds);
+  return dataMap;
 };
 
 export const extractSimplified = (obj: any, exclude: string[]) => {

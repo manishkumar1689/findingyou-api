@@ -50,6 +50,7 @@ import {
   extractFromRedisClient,
   extractFromRedisMap,
   objectToMap,
+  extractObjectAndMergeRaw,
 } from '../lib/entities';
 import roleValues, { filterLikeabilityKey } from './settings/roles';
 import paymentValues from './settings/payments-options';
@@ -104,6 +105,7 @@ import {
   summariseJungianAnswers,
   big5FacetedScaleOffset,
   compareJungianPolarities,
+  toSimplePolarityValues,
 } from '../setting/lib/mappers';
 import { PublicUserDTO } from './dto/public-user.dto';
 import { User } from './interfaces/user.interface';
@@ -1412,7 +1414,7 @@ export class UserController {
         userData.set('msg', 'Invalid password');
       }
       if (valid) {
-        extractObjectAndMerge(
+        const { matchedObj } = extractObjectAndMergeRaw(
           user,
           userData,
           ['password', 'status', 'token'],
@@ -1443,6 +1445,25 @@ export class UserController {
             addExtraPanchangeNumValues(chartObj, 'true_citra');
           }
           userData.set('chart', chartObj);
+        }
+        if (matchedObj.preferences instanceof Array) {
+          const { items, answers } = await this.userService.getSurveyDomainScoresAndAnswers(userID, 'jungian');
+          if (answers instanceof Array) {
+            const analysis = toSimplePolarityValues(items);
+            const langPref = matchedObj.preferences.find(pr => pr.key = 'lang');
+            const lang = langPref instanceof Object ? langPref.value : 'en';
+            const matchedLang = notEmptyString(lang, 1) && /[a-z][a-z][a-z]?(-[A-Z][A-Z])/.test(lang) ? lang : 'en';
+            const merged = await this.mergeSurveyFeedback(analysis, 'jungian', matchedLang, true);
+            userData.set('surveys', {
+              jungian: {
+                title: merged.title,
+                text: merged.text,
+                analysis,
+                categories: merged.categories,
+                answers,
+              }
+            });
+          }
         }
       }
     }
@@ -2094,28 +2115,42 @@ export class UserController {
         : analyseAnswers(type, result.answers)
       : {};
     if (isJungian) {
-      result.letters = Object.keys(result.analysis)
-        .join('')
-        .toLowerCase();
-      const spectra = ['IE', 'SN', 'FT', 'JP'];
+      const merged = await this.mergeSurveyFeedback(result.analysis, 'jungian', matchedLang, cached);
+      result.title = merged.title;
+      result.text = merged.text;
+      result.letters = merged.letters;
+      result.categories = merged.categories;
+      result.valid = result.answers.length > 0;
+    }
+    return res.json(result);
+  }
+
+  async mergeSurveyFeedback(analysis: any = null, matchedType = 'jungian', matchedLang = 'en', cached = true) {
+    const ucLetters = Object.keys(analysis)
+        .map(lt => lt.toUpperCase());
+    const spectra = ['IE', 'SN', 'FT', 'JP'];
+    const letters = spectra.map(pair => {
+      const letter = ucLetters.find(lt => lt === pair.substring(0,1) || lt === pair.substring(1,2));
+      return typeof letter === 'string'? letter : '';
+    }).join('').toLowerCase();
       const feedbackItems = await this.getFacetedFeedbackItems(
         matchedType,
         cached,
       );
       const snKeys = [
-        ['_', 'name', result.letters].join('_'),
-        ['_', 'type', result.letters].join('_'),
+        ['_', 'name', letters].join('_'),
+        ['_', 'type', letters].join('_'),
       ];
-      result.title = '';
-      result.text = '';
+      let title = '';
+      let text = '';
       snKeys.forEach(sk => {
         if (sk.includes('_name_')) {
-          result.title = extractSnippet(feedbackItems, sk, matchedLang);
+          title = extractSnippet(feedbackItems, sk, matchedLang);
         } else {
-          result.text = extractSnippet(feedbackItems, sk, matchedLang);
+          text = extractSnippet(feedbackItems, sk, matchedLang);
         }
       });
-      const categoryEntries = Object.entries(result.analysis).map(
+      const categoryEntries = Object.entries(analysis).map(
         ([key, value], si) => {
           const polarity = spectra[si];
           const segment = value <= 20 ? 'ave' : 'high';
@@ -2126,10 +2161,12 @@ export class UserController {
           return [polarity, text];
         },
       );
-      result.categories = Object.fromEntries(categoryEntries);
-      result.valid = result.answers.length > 0;
-    }
-    return res.json(result);
+    return { 
+      title,
+      text,
+      letters,
+      categories: Object.fromEntries(categoryEntries),
+    };
   }
 
   async getFacetedFeedbackItems(
