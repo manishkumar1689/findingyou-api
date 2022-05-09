@@ -291,9 +291,9 @@ export class SettingController {
     });
   }
 
-  // Flush all caches
+  // List all cache keys matching the specified pattern. Admin user ID required
   @Get('redis-keys/:userID/:pattern')
-  async flushAllCaches(@Res() res, @Param('userID') userID, @Param('pattern') pattern) {
+  async listCackeysByPattern(@Res() res, @Param('userID') userID, @Param('pattern') pattern) {
     const result = { valid: false, keys: [], num: 0 };
     const isAdmin = await this.userService.isAdminUser(userID);
     if (isAdmin) {
@@ -307,6 +307,39 @@ export class SettingController {
       }
     }
     return res.status(HttpStatus.OK).json(result);
+  }
+
+  // List all empty cache keys. Admin user ID required
+  @Get('redis-keys-empty/:userID/:remove?')
+  async listEmptyCacheKeys(@Res() res, @Param('userID') userID, @Param('remove') remove) {
+    const result = { valid: false, keys: [], num: 0 };
+    const isAdmin = await this.userService.isAdminUser(userID);
+    if (isAdmin) {
+      const removeAll = smartCastInt(remove, 0) > 0;
+      const keys = await this.settingService.getEmptyRedisKeys(removeAll);
+      if (keys.length > 0) {
+        result.num = keys.length;
+        result.keys = keys;
+        result.valid = true;
+      }
+    }
+    return res.status(HttpStatus.OK).json(result);
+  }
+
+  // Flush all caches
+  @Get('redis-info/:key')
+  async getRedisInfo(@Res() res, @Param('key') key) {
+    const result = { valid: false, data: null, size: 0 };
+    const cleanedKey = key.replace(/--/g,'/')
+    const data = await this.settingService.redisGet(cleanedKey);
+    let status = HttpStatus.NOT_FOUND;
+    if (data !== null) {
+      result.data = data;
+      result.valid = true;
+      result.size = JSON.stringify(data).length;
+      status = HttpStatus.OK;
+    }
+    return res.status(status).json(result);
   }
 
   // clear redis cached item by key pattern

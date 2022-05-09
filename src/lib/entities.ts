@@ -199,7 +199,15 @@ export const extractFromRedisClient = async (
   if (client instanceof Object) {
     const strVal = await client.get(key);
     if (strVal) {
-      result = JSON.parse(strVal);
+      if (typeof strVal === 'string' && strVal !== '[object Object]') {
+        try { 
+          result = JSON.parse(strVal);
+        } catch (e) {
+          result = {};
+        }
+      } else {
+        result = strVal;
+      }
     }
   }
   return result;
@@ -247,4 +255,22 @@ export const clearRedisByKey = async (client: Redis.Redis, key = '') => {
     
   }
   return result;
+};
+export const listEmptyRedisKeys = async (client: Redis.Redis, deleteAll = false) => {
+  const keys: string[] = [];
+  if (client instanceof Object) {
+    const matchedKeys = await client.keys('*');
+    if (matchedKeys instanceof Array) {
+      for (const key of matchedKeys) {
+        const kVal = await extractFromRedisClient(client, key);
+        if (kVal === null || kVal === undefined) {
+          keys.push(key);
+          if (deleteAll) {
+            clearRedisByKey(client, key);
+          }
+        }
+      }
+    }
+  }
+  return keys;
 };
