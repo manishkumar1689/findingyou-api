@@ -1447,7 +1447,7 @@ export class UserController {
           userData.set('chart', chartObj);
         }
         if (matchedObj.preferences instanceof Array) {
-          const { items, answers } = await this.userService.getSurveyDomainScoresAndAnswers(userID, 'jungian');
+          const { items, answers } = await this.userService.getSurveyDomainScoresAndAnswers(userID, 'jungian', true);
           if (answers instanceof Array) {
             const analysis = toSimplePolarityValues(items);
             const langPref = matchedObj.preferences.find(pr => pr.key = 'lang');

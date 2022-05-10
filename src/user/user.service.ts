@@ -2407,7 +2407,7 @@ export class UserService {
     return answers;
   }
 
-  async getSurveyDomainScoresAndAnswers(userID = '', type = ''): Promise<{items: KeyNumValue[], answers: any[]}> {
+  async getSurveyDomainScoresAndAnswers(userID = '', type = '', filterAnswers = false): Promise<{items: KeyNumValue[], answers: any[]}> {
     const answers = await this.getSurveyAnswers(userID, type, -1, 5, true);
     const mp: Map<string, any> = new Map();
     answers.forEach(row => {
@@ -2420,7 +2420,17 @@ export class UserService {
       const value = item.total / item.num;
       return { key, value };
     });
-    return { items, answers };
+    const simpleAnswers = filterAnswers ? answers.map(ans => {
+      const { key, value, domain, subdomain } = ans;
+      const score = Math.round(value / (100 / 2)) + 3;
+      return {
+        key,
+        score,
+        domain,
+        facet: subdomain
+      }
+    }) : answers;
+    return { items, answers: simpleAnswers };
   }
 
   async getSurveyDomainScores(userID = '', type = ''): Promise<KeyNumValue[]> {
