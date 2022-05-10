@@ -1458,6 +1458,7 @@ export class UserController {
               jungian: {
                 title: merged.title,
                 text: merged.text,
+                letters: merged.letters,
                 analysis,
                 categories: merged.categories,
                 answers,
@@ -2151,16 +2152,21 @@ export class UserController {
         }
       });
       const categoryEntries = Object.entries(analysis).map(
-        ([key, value], si) => {
-          const polarity = spectra[si];
+        ([key, value]) => {
+          let polarity = spectra.find(pair => pair.includes(key.toUpperCase()));
           const segment = value <= 20 ? 'ave' : 'high';
-          const snKey = ['_', 'sub', polarity, key, segment]
+          let text = '';
+          if (notEmptyString(polarity)) {
+            const snKey = ['_', 'sub', polarity, key, segment]
             .join('_')
             .toLowerCase();
-          const text = extractSnippet(feedbackItems, snKey, matchedLang);
+            text = extractSnippet(feedbackItems, snKey, matchedLang);
+          } else {
+            polarity = '__';
+          }
           return [polarity, text];
         },
-      );
+      ).filter(entry => entry[0] !== '__');
     return { 
       title,
       text,
