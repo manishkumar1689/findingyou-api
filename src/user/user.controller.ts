@@ -106,6 +106,7 @@ import {
   big5FacetedScaleOffset,
   compareJungianPolarities,
   toSimplePolarityValues,
+  extractSurveyScoresByType,
 } from '../setting/lib/mappers';
 import { PublicUserDTO } from './dto/public-user.dto';
 import { User } from './interfaces/user.interface';
@@ -124,6 +125,8 @@ import { EmailParamsDTO } from './dto/email-params.dto';
 import {
   extractSnippet,
   filterByLang,
+  matchLangFromPreferences,
+  matchValidLang,
 } from '../lib/mappers';
 import { Kuta } from '../astrologic/lib/kuta';
 import { julToDateParts } from '../astrologic/lib/julian-date';
@@ -908,12 +911,12 @@ export class UserController {
         : userFlags;
     const kutaSet = await this.settingService.getKutaSettings();
     const kcScoreSet = await this.settingService.getKotaChakraScoreSet();
-    const jungianRef = await this.userService.getSurveyDomainScores(userId, 'jungian');
+    const jungianRef = extractSurveyScoresByType(userInfo);
     const orbMap = await this.settingService.synastryOrbs();
     for (const user of users) {
       if (hasRefChart) {
         const extraData = await this.astrologicService.expandUserWithChartData(user, flags, refChart, kutaSet, kcScoreSet, orbMap, fullChart, ayanamshaKey, simpleMode);
-        const jungian = await this.userService.getSurveyDomainScores(user._id, 'jungian');
+        const jungian = extractSurveyScoresByType(user);
         const personality = compareJungianPolarities(jungianRef, jungian);
         if (extraData.hasChart) {
           items.push({...extraData, personality });
@@ -1447,12 +1450,10 @@ export class UserController {
           userData.set('chart', chartObj);
         }
         if (matchedObj.preferences instanceof Array) {
-          const { items, answers } = await this.userService.getSurveyDomainScoresAndAnswers(userID, 'jungian', true);
+          const { answers } = await this.userService.getSurveyDomainScoresAndAnswers(userID, 'jungian', true);
           if (answers instanceof Array) {
-            const analysis = toSimplePolarityValues(items);
-            const langPref = matchedObj.preferences.find(pr => pr.key = 'lang');
-            const lang = langPref instanceof Object ? langPref.value : 'en';
-            const matchedLang = notEmptyString(lang, 1) && /[a-z][a-z][a-z]?(-[A-Z][A-Z])/.test(lang) ? lang : 'en';
+            const analysis = summariseJungianAnswers(answers)
+            const matchedLang = matchLangFromPreferences(matchedObj.preferences);
             const merged = await this.mergeSurveyFeedback(analysis, 'jungian', matchedLang, true);
             userData.set('surveys', {
               jungian: {
@@ -1647,7 +1648,7 @@ export class UserController {
     const showPanchanga = paramKeys.includes('pc')? smartCastInt(params.pc, 0) > 0 : false;
     const dateMode = paramKeys.includes('date') ? params.date : 'simple';
     const langRef = paramKeys.includes('lang') && notEmptyString(params.lang,1)? params.lang : 'en';
-    const lang = /[a-z][a-z][a-z]?(-[A-Z][A-Z])?/.test(langRef) ? langRef : 'en';
+    const lang = matchValidLang(langRef, 'en');
     let rsMap: Map<string, any> = new Map();
     rsMap.set('jd', jd);
     rsMap.set('unix', julToDateParts(jd).unixTimeInt);

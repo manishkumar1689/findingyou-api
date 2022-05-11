@@ -1870,7 +1870,7 @@ const calcValueWithinOrb = (minJd = 0, start = 0, end = 0): { fraction: number; 
 
 const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1) => {
   let score = 0;
-  let maxPP = 0;
+  let ppScore = 0;
   for (const rule of rules) { 
     if (rule.isMatched) {
       // a rule may only match one in a given minute even if valid match spans may overlap
@@ -1880,12 +1880,12 @@ const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1) => {
           if (match.type === 'orb') {
             
             const { fraction, peak } = calcValueWithinOrb(minJd, match.start, match.end);
-            if (peak <= endSubJd) {
+            if (peak <= endSubJd && endSubJd > 0) {
               score += (rule.score * fraction);
             }
           } else {
             score += rule.score;
-            maxPP += rule.score;
+            ppScore += rule.score;
           }
           isMatched = true;
           break;
@@ -1893,7 +1893,7 @@ const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1) => {
       }
     }
   }
-  return { minuteScore: score, maxPP };
+  return { minuteScore: score, ppScore };
 }
 
 const translateTransitionKey = (key = '', isTr = false) => {
@@ -2139,6 +2139,7 @@ export const calculatePanchaPakshiData = async (
           let subScore = 0;
           for (const rSet of rules) {
             for (const r of rSet.ppConditions()) {
+              
               const isSegment = r.key.includes('day_night');
               const friendRel = r.context.includes('friend');
               const isBirdRel = friendRel || r.context.includes('enemy');
@@ -2233,6 +2234,7 @@ export const calculatePanchaPakshiData = async (
           data.set('cutOff', cutOff);
           let isLucky = false;
           let peakTimeIndex = -1;
+          let prevPP = -1;
           for (let i = 0; i < maxMins; i++) {
             const currJd = startJd + minJd * i;
             /* const refSub = subPeriods.find(
@@ -2253,10 +2255,10 @@ export const calculatePanchaPakshiData = async (
             }); */
             const currSub = allSubs.find(s => currJd >= s.start && currJd <= s.end)
             const endSubJd = currSub instanceof Object ? currSub.end : -1;
-            const { minuteScore, maxPP } = matchPPRulesToMinutes(currJd, rules, endSubJd);
+            const { minuteScore, ppScore } = matchPPRulesToMinutes(currJd, rules, endSubJd);
             scores.push(minuteScore);
-            if (maxPP > maxPPValue) {
-              maxPPValue = maxPP;
+            if (ppScore > maxPPValue) {
+              maxPPValue = ppScore;
             }
 
             if (minuteScore >= cutOff) {
@@ -2275,6 +2277,7 @@ export const calculatePanchaPakshiData = async (
               }
               isLucky = false;
             }
+            prevPP = ppScore;
           }
           if (times.length > 0) {
             const lastTime = times.pop();

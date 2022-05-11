@@ -53,6 +53,7 @@ import { defaultPushNotifications } from '../lib/notifications';
 import { AnswerDTO } from './dto/answer.dto';
 import { AnswerSet } from './interfaces/answer-set.interface';
 import { KeyNumValue } from '../lib/interfaces';
+import { removeIds } from '../lib/mappers';
 
 const userEditPaths = [
   'fullName',
@@ -121,7 +122,7 @@ export class UserService {
             profiles: [],
             dob: null,
           };
-    const { _id, nickName, dob, geo, roles, profiles, preferences } = obj;
+    const { _id, nickName, dob, geo, roles, profiles, preferences, surveys } = obj;
     let profileImg = '';
     if (profiles instanceof Array && profiles.length > 0) {
       const { mediaItems } = profiles[0];
@@ -182,6 +183,7 @@ export class UserService {
       geo instanceof Object
         ? { lat: geo.lat, lng: geo.lng }
         : { lat: 0, lng: 0 };
+    const surveyItems = surveys instanceof Array && surveys.length > 0 ? surveys.map(removeIds) : [];
     return {
       _id,
       nickName,
@@ -197,6 +199,7 @@ export class UserService {
       maxDistance,
       lang,
       isPaidMember,
+      surveys: surveyItems
     };
   }
 
@@ -223,7 +226,7 @@ export class UserService {
     const fieldList =
       fields.length > 0
         ? fields.join(' ')
-        : '_id active nickName dob geo roles profiles preferences';
+        : '_id active nickName dob geo roles profiles preferences surveys';
     const items = await this.userModel
       .find({
         _id: uid,
@@ -2357,10 +2360,10 @@ export class UserService {
     };
     const current = await this.getAnswerSet(userID, type);
     if (current instanceof Object) {
-      await this.answerSetModel.updateOne({ userID, type }, baseSet);
+      await this.answerSetModel.findByIdAndUpdate(current._id, baseSet);
     } else {
       const newSet = new this.answerSetModel(answerSet);
-      const s = await newSet.save();
+      await newSet.save();
     }
     const analysisRows = jungianAnswersToResults(adjustedAnswers);
     const currUser = await this.getBasicById(userID, ['surveys']);

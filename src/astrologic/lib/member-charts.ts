@@ -1,3 +1,4 @@
+import { removeIds } from '../../lib/mappers';
 import { smartCastFloat } from '../../lib/converters';
 import { extractObject } from '../../lib/entities';
 import { GeoPos } from '../interfaces/geo-pos';
@@ -21,13 +22,6 @@ export const isChartObject = (chart = null) => {
   }
   return valid;
 }
-
-const removeIds = item => {
-  if (item instanceof Object) {
-    delete item._id;
-  }
-  return item;
-};
 
 export const simplifyUpagraha = (up: KeyValue, ayaOffset = 0) => {
   const {key, value } = up;

@@ -553,7 +553,7 @@ export const filterMapSurveyByType = (
 };
 
 const polarityDifferencesToScore = (rows: KeyNumValue[] = []): number => {
-  return rows.map(row => 100 - Math.abs(row.value) ).reduce((a, b) => a + b, 0) / rows.length;
+  return rows.length > 0 ? rows.map(row => 100 - Math.abs(row.value) ).reduce((a, b) => a + b, 0) / rows.length : -1;
 }
 
 export const toSimplePolarityValues = (jungian: KeyNumValue[] = []) => {
@@ -588,3 +588,22 @@ export const compareJungianPolarities = (jungianRef: KeyNumValue[] = [], jungian
   entries.push(['values', toSimplePolarityValues(jungian)]);
   return Object.fromEntries(entries);
 }
+
+export const extractSurveyScoresByType = (user: any = null, type = 'jungian'): KeyNumValue[] => {
+  if (user instanceof Object && Object.keys(user).includes('surveys') && user.surveys instanceof Array) {
+    const scoreSet = user.surveys.find(row => row.type === type);
+    if (scoreSet instanceof Object) {
+      if (scoreSet.values instanceof Array) {
+        return scoreSet.values.map(row => {
+          const {domain, value } = row;
+          return { 
+            key: domain,
+            value
+          }
+        });
+      }
+    }
+  }
+  return [];
+}
+

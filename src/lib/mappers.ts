@@ -1,4 +1,5 @@
 import { Snippet } from '../snippet/interfaces/snippet.interface';
+import { notEmptyString } from './validators';
 
 export interface LangText {
   text: string;
@@ -40,3 +41,24 @@ export const extractSnippet = (
 export const filterCorePreference = (pr: any) =>
   pr instanceof Object &&
   ['faceted', 'jungian', 'simple_astro_pair'].includes(pr.type) === false;
+
+export const matchFromPreferenceByKey = (preferences: any[] = [], targetKey = 'lang', defVal: any = null): any => {
+  const pref = preferences.find(pr => pr instanceof Object && Object.keys(pr).includes('key') && pr.key === targetKey);
+  return pref instanceof Object && Object.keys(pref).includes('value')? pref.value : defVal;
+}
+
+export const matchValidLang = (lang: string, defVal = 'en'): string => {
+  return notEmptyString(lang, 1) && /[a-z][a-z][a-z]?(-[A-Z][A-Z])/.test(lang) ? lang : defVal;
+}
+
+export const matchLangFromPreferences = (preferences: any[] = [], defVal = 'en'): string => {
+  const lang = matchFromPreferenceByKey(preferences, 'lang', defVal);
+  return matchValidLang(lang, defVal);
+}
+
+export const removeIds = (item: any = null) => {
+  if (item instanceof Object) {
+    delete item._id;
+  }
+  return item;
+};
