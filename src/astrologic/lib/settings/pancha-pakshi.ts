@@ -1611,9 +1611,18 @@ export class PPRule {
     return rows.length > 0 ? rows[0].key : '';
   }
 
+  get hasSegmentSubCondition() {
+    return this.bestMatchType === 'segment' && this.conditions().length > 1;
+  }
+
   get bestMatchIndex() {
     const refIndex = periodTypes.indexOf(this.bestMatchType);
     return refIndex >= 0 ? refIndex : 100000;
+  }
+
+  validateAtMinJd(minJd = 0) {
+    const num = this.validMatches.filter(mt => mt.start <= minJd && mt.end >= minJd).length;
+    return this.hasSegmentSubCondition? num > 1 : num > 0;
   }
 
   betterMatchType(type = '') {
@@ -1884,15 +1893,17 @@ const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1) => {
               score += (rule.score * fraction);
             }
           } else {
-            score += rule.score;
-            ppScore += rule.score;
+            if (rule.validateAtMinJd(minJd)) {
+              score += rule.score;
+              ppScore += rule.score;
+            }
           }
           isMatched = true;
           break;
         }
       }
     }
-  }
+  } {}
   return { minuteScore: score, ppScore };
 }
 
@@ -2147,12 +2158,14 @@ export const calculatePanchaPakshiData = async (
                 const matchLetter = friendRel ? 'F' : 'E';
                 if (isSegment) {
                   if (startSegment) {
-                    const isDay = (segmentIndex < 5 && dayFirst) || (segmentIndex >= 5 && !dayFirst);
-                    const subActKey = r.context.includes('ruling') ? 'ruling' : 'dying';
-                    const relLetter = matchBirdRelationsKeys(birdGrahaSet.birth.bird, birdGrahaSet.matchBird(subActKey, isDay), birdGrahaSet.waxing);
-                    if (relLetter === matchLetter) {
-                      segmentScore += r.score;
-                      r.addMatch(sub.start, allYamasWithSubs[segmentIndex][4].end, 'segment', r.score);
+                    if (si === 0) {
+                      const isDay = (segmentIndex < 5 && dayFirst) || (segmentIndex >= 5 && !dayFirst);
+                      const subActKey = r.context.includes('ruling') ? 'ruling' : 'dying';
+                      const relLetter = matchBirdRelationsKeys(birdGrahaSet.birth.bird, birdGrahaSet.matchBird(subActKey, isDay), birdGrahaSet.waxing);
+                      if (relLetter === matchLetter) {
+                        segmentScore += r.score;
+                        r.addMatch(sub.start, allYamasWithSubs[segmentIndex][4].end, 'segment', r.score);
+                      }
                     }
                   }
                 } else {
