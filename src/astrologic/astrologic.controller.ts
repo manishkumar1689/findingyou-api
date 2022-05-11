@@ -438,7 +438,7 @@ export class AstrologicController {
         const rules = processRules
           ? await this.settingService.getPPRules()
           : [];
-        const customCutoff = await this.settingService.getPPCutoff();  
+        const customCutoff = await this.settingService.getPPCutoff(); 
         data = await calculatePanchaPakshiData(
           chart,
           jd,
