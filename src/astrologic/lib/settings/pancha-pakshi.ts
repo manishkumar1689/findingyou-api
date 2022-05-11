@@ -1611,8 +1611,8 @@ export class PPRule {
     return rows.length > 0 ? rows[0].key : '';
   }
 
-  get hasSegmentSubCondition() {
-    return this.bestMatchType === 'segment' && this.conditions().length > 1;
+  get hasSubCondition() {
+    return this.conditions().length > 1;
   }
 
   get bestMatchIndex() {
@@ -1620,9 +1620,13 @@ export class PPRule {
     return refIndex >= 0 ? refIndex : 100000;
   }
 
+  validMatchesAtMinJd(minJd = 0) {
+    return this.allMatches.filter(mt => mt.start <= minJd && mt.end >= minJd);
+  }
+
   validateAtMinJd(minJd = 0) {
-    const num = this.validMatches.filter(mt => mt.start <= minJd && mt.end >= minJd).length;
-    return this.hasSegmentSubCondition? num > 1 : num > 0;
+    const num = this.validMatchesAtMinJd(minJd).length;
+    return this.hasSubCondition? num > 1 : num > 0;
   }
 
   betterMatchType(type = '') {
@@ -1897,13 +1901,16 @@ const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1) => {
               score += rule.score;
               ppScore += rule.score;
             }
+            if (rule.conditions().length > 1 &&  rule.bestMatchType === 'subyama') {
+              console.log(rule.validMatchesAtMinJd(minJd))
+            }
           }
           isMatched = true;
           break;
         }
       }
     }
-  } {}
+  }
   return { minuteScore: score, ppScore };
 }
 
