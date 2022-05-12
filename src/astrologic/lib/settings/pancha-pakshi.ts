@@ -2190,8 +2190,10 @@ export const calculatePanchaPakshiData = async (
                   if (startSegment) {
                     if (si === 0) {
                       const isDay = (segmentIndex < 5 && dayFirst) || (segmentIndex >= 5 && !dayFirst);
-                      const subActKey = r.context.includes('ruling') ? 'ruling' : 'dying';
+                      const subActKey = r.key.includes('ruling') ? 'ruling' : 'dying';
+                      //console.log(subActKey, r.name);
                       const relLetter = matchBirdRelationsKeys(birdGrahaSet.birth.bird, birdGrahaSet.matchBird(subActKey, isDay), birdGrahaSet.waxing);
+                      
                       if (relLetter === matchLetter) {
                         segmentScore += r.score;
                         r.addMatch(sub.start, allYamasWithSubs[segmentIndex][4].end, 'segment', r.score);
