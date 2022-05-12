@@ -55,6 +55,14 @@ export class PeakTime {
 
 }
 
+interface MinuteMatch {
+  min: number;
+  yama: number;
+  sub: number;
+  rules: string[];
+  score: number;
+}
+
 const birdAttributes = [
   {
     waxing: { color: 'white', directions: ['E'] },
@@ -1169,6 +1177,7 @@ export const calcSubPeriods = (
   const activityKeys = subPeriods.map(period => {
     return period.key;
   });
+  
   return subPeriods.map((period, index) => {
     const startSubJd = prevJd;
     const endSubJd = prevJd + lengthJd * period.value;
@@ -1636,8 +1645,19 @@ export class PPRule {
     return refIndex >= 0 && refIndex > this.bestMatchIndex;
   }
 
-  get validMatches() {
+  /* get validMatches() {
     return this.allMatches.filter(m => m.type === this.bestMatchType || this.betterMatchType(m.type));
+  } */
+
+  get validMatches() {
+    const bestMatches = this.allMatches.filter(m => m.type === this.bestMatchType || this.betterMatchType(m.type));
+    const hasYamaCond = this.hasSubCondition && this.bestMatchType === 'subyama'? this.allMatches.some(m => m.type === 'yama') : false;
+    if (hasYamaCond) {
+      const yamaMatches = this.allMatches.filter(bm => bm.type === 'yama');
+      return bestMatches.filter(bm => yamaMatches.some(ym => bm.start >= ym.start && bm.end <= ym.end));
+    } else {
+      return bestMatches;
+    }
   }
 
   get isMatched() {
@@ -1684,6 +1704,7 @@ const simplifyRule = (rule:PPRule) => {
   const points = rule.isMatched ? rule.score : 0;
   return {
     conditions,
+    name: rule.name,
     score: rule.score,
     points,
     matched: rule.isMatched,
@@ -2115,7 +2136,6 @@ export const calculatePanchaPakshiData = async (
           const isDayTime = dayFirst ? i < 25 : i >= 25;
           return { ...s, isDayTime };
         });
-
       const rData = [];
       const hasDashaMatches = transitRules.some(r =>
         r.context.startsWith('dasha_'),
@@ -2252,6 +2272,7 @@ export const calculatePanchaPakshiData = async (
         let maxPPValue = 0;
         const dayLength = endJd - startJd;
         const maxMins = Math.ceil(dayLength * minsDay);
+        const minuteMatches: MinuteMatch[] = [];
         const times: PeakTime[] = [];
         if (showMinutes) {
           const cutOff = customCutoff > 0? customCutoff : maxPPValue + 10;
@@ -2288,6 +2309,18 @@ export const calculatePanchaPakshiData = async (
             })
             if (ppScore > maxPPValue) {
               maxPPValue = ppScore;
+            }
+
+            if (debug) {
+               const subIndex = allSubs.findIndex(s => currJd >= s.start && currJd <= s.end);
+               const yama = Math.floor(subIndex / 5) + 1;
+              minuteMatches.push({
+                min: (i+1),
+                yama,
+                sub: (subIndex % 5) + 1,
+                rules: names,
+                score: minuteScore
+              });
             }
 
             if (minuteScore >= cutOff) {
@@ -2327,7 +2360,8 @@ export const calculatePanchaPakshiData = async (
         }
         if (debug) {
           data.set('matchRuleNames', matchedRulesNames)
-          data.set('notMatchedRuleNames', notMatchedRuleNames)
+          data.set('notMatchedRuleNames', notMatchedRuleNames);
+          data.set('minuteMatches', minuteMatches);
         }
       }
     }
