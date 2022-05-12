@@ -1498,6 +1498,7 @@ export class PPRule {
   from = '';
   to = '';
   key = '';
+  name = '';
   context = '';
   action = '';
   onlyAtStart = false;
@@ -1511,6 +1512,7 @@ export class PPRule {
 
   constructor(rs: PredictiveRuleSet, condRef = null, isMaster = true) {
     const cond = new Condition(condRef);
+    this.name = rs.name;
     let scRow = rs.scores.find(sc => sc.key === 'generic');
     if (!scRow && rs.scores.length > 0) {
       scRow = rs.scores[0];
@@ -1884,6 +1886,7 @@ const calcValueWithinOrb = (minJd = 0, start = 0, end = 0): { fraction: number; 
 const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1) => {
   let score = 0;
   let ppScore = 0;
+  const names: string[] = [];
   for (const rule of rules) { 
     if (rule.isMatched) {
       // a rule may only match one in a given minute even if valid match spans may overlap
@@ -1895,14 +1898,13 @@ const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1) => {
             const { fraction, peak } = calcValueWithinOrb(minJd, match.start, match.end);
             if (peak <= endSubJd && endSubJd > 0) {
               score += (rule.score * fraction);
+              names.push(rule.name);
             }
           } else {
             if (rule.validateAtMinJd(minJd)) {
               score += rule.score;
               ppScore += rule.score;
-            }
-            if (rule.conditions().length > 1 &&  rule.bestMatchType === 'subyama') {
-              console.log(rule.validMatchesAtMinJd(minJd))
+              names.push(rule.name);
             }
           }
           isMatched = true;
@@ -1911,7 +1913,7 @@ const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1) => {
       }
     }
   }
-  return { minuteScore: score, ppScore };
+  return { minuteScore: score, ppScore, names };
 }
 
 const translateTransitionKey = (key = '', isTr = false) => {
@@ -2053,7 +2055,8 @@ export const calculatePanchaPakshiData = async (
   showTransitions = false,
   fetchNightAndDay = true,
   showMinutes = true,
-  customCutoff = 0
+  customCutoff = 0,
+  debug = false
 ): Promise<Map<string, any>> => {
   let data: Map<string, any> = new Map(
     Object.entries({
@@ -2147,7 +2150,7 @@ export const calculatePanchaPakshiData = async (
       let segmentScore = 0;
       const periods = allYamasWithSubs.map((subs, subIndex) => {
         let yamaScore = 0;
-        const segmentIndex = Math.floor(subIndex / 5) + 4;
+        const segmentIndex = (Math.floor(subIndex / 5) * 5) + 4;
         const startSegment = subIndex % 5 === 0;
         if (startSegment) {
           segmentScore = 0;
@@ -2229,6 +2232,7 @@ export const calculatePanchaPakshiData = async (
             score,
           };
         });
+      const matchedRulesNames: string[] = [];
       if (subPeriods.length === 50) {
         const startJd = subPeriods[0].start;
         const endJd = subPeriods[49].end;
@@ -2275,8 +2279,13 @@ export const calculatePanchaPakshiData = async (
             }); */
             const currSub = allSubs.find(s => currJd >= s.start && currJd <= s.end)
             const endSubJd = currSub instanceof Object ? currSub.end : -1;
-            const { minuteScore, ppScore } = matchPPRulesToMinutes(currJd, rules, endSubJd);
+            const { minuteScore, ppScore, names } = matchPPRulesToMinutes(currJd, rules, endSubJd);
             scores.push(minuteScore);
+            names.forEach(nm => {
+              if (matchedRulesNames.indexOf(nm) < 0) {
+                matchedRulesNames.push(nm);
+              }
+            })
             if (ppScore > maxPPValue) {
               maxPPValue = ppScore;
             }
@@ -2307,12 +2316,18 @@ export const calculatePanchaPakshiData = async (
             times.push(lastTime);
           }
         }
+        const notMatchedRuleNames = rules.map(r => r.name).filter(nm => matchedRulesNames.indexOf(nm) < 0);
+        
         data.set('rules', rules.map(simplifyRule));
         if (showMinutes) {
           data.set('minutes', scores);
           data.set('maxPP', maxPPValue);
           data.set('maxScore', Math.max(...scores));
           data.set('times', times.map(time => time.toObject()));
+        }
+        if (debug) {
+          data.set('matchRuleNames', matchedRulesNames)
+          data.set('notMatchedRuleNames', notMatchedRuleNames)
         }
       }
     }

@@ -418,9 +418,10 @@ export class AstrologicController {
         message: '',
       }),
     );
-    const fetchNightAndDay = ['dual', 'trans', 'rules'].includes(mode);
-    const showTransitions = ['trans', 'rules'].includes(mode);
-    const processRules = mode === 'rules';
+    const fetchNightAndDay = ['dual', 'trans', 'rules', 'debug'].includes(mode);
+    const showTransitions = ['trans', 'rules', 'debug'].includes(mode);
+    const processRules = ['rules', 'debug'].includes(mode);
+    const debugMode = mode === 'debug';
     let chartID = chartRef;
     if (chartRef.includes('@') && chartRef.includes('.')) {
       chartID = await this.astrologicService.getChartIDByEmail(chartRef);
@@ -447,7 +448,8 @@ export class AstrologicController {
           showTransitions,
           fetchNightAndDay,
           true,
-          customCutoff
+          customCutoff,
+          debugMode
         );
         if (data.get('valid') === true) {
           status = HttpStatus.OK;
