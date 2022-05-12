@@ -2183,18 +2183,26 @@ export const calculatePanchaPakshiData = async (
               
               const isSegment = r.key.includes('day_night');
               const friendRel = r.context.includes('friend');
-              const isBirdRel = friendRel || r.context.includes('enemy');
+              const enemyRel = r.context.includes('enemy');
+              const bbRel = r.context.includes('action_is_birth_bird');
+              const feRel = friendRel || enemyRel;
+              const isBirdRel = feRel || bbRel;
               if (isBirdRel) {
                 const matchLetter = friendRel ? 'F' : 'E';
                 if (isSegment) {
                   if (startSegment) {
                     if (si === 0) {
-                      const isDay = (segmentIndex < 5 && dayFirst) || (segmentIndex >= 5 && !dayFirst);
+                      let relMatched = false;
                       const subActKey = r.key.includes('ruling') ? 'ruling' : 'dying';
-                      //console.log(subActKey, r.name);
-                      const relLetter = matchBirdRelationsKeys(birdGrahaSet.birth.bird, birdGrahaSet.matchBird(subActKey, isDay), birdGrahaSet.waxing);
-                      
-                      if (relLetter === matchLetter) {
+                      const isDay = (segmentIndex < 5 && dayFirst) || (segmentIndex >= 5 && !dayFirst);
+                      if (feRel) {
+                        const relLetter = matchBirdRelationsKeys(birdGrahaSet.birth.bird, birdGrahaSet.matchBird(subActKey, isDay), birdGrahaSet.waxing);
+                        relMatched = relLetter === matchLetter;
+                      } else if (bbRel) {
+                        const relBird = birdGrahaSet.matchBird(subActKey, isDay);
+                        relMatched = relBird === birdGrahaSet.birth.bird;
+                      }
+                      if (relMatched) {
                         segmentScore += r.score;
                         r.addMatch(sub.start, allYamasWithSubs[segmentIndex][4].end, 'segment', r.score);
                       }
