@@ -962,6 +962,7 @@ export class SettingService {
     let result: any = null;
     if (ruleSetDTO.type === 'panchapakshi') {
       this.clearCacheByKey('pp_active_rules');
+      this.clearCacheByKey('pp_cutoff');
     }
     if (notEmptyString(id, 8)) {
       const updated = { ...ruleSetDTO, modifiedAt: new Date() };
