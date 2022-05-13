@@ -389,7 +389,9 @@ export class AstrologicController {
       const geo = locStringToGeo(loc);
       const showSamples = show === 'samples';
       const { dtUtc, jd } = matchJdAndDatetime(dt);
-      const data = await sampleBaseObjects(jd, geo, showSamples);
+      // not taking into account birth ascendant for LOF/LoS in non-birth charts
+      const refChart = new Chart(null);
+      const data = await sampleBaseObjects(jd, geo, refChart, showSamples);
       return res.status(HttpStatus.OK).json({ dtUtc, ...data });
     } else {
       const result = {

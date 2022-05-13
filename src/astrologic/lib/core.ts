@@ -75,9 +75,8 @@ import { sampleBaseObjects } from './custom-transits';
 import { GeoLoc } from './models/geo-loc';
 import { calcTransposedGrahaTransitions } from './point-transitions';
 import { KeyLng, SynastryAspectMatch } from './interfaces';
-import { keyValuesToSimpleObject, zeroPad } from '../../lib/converters';
-import { matchAspectRange } from './models/protocol-models';
-import { calcAspect, calcOrb, matchAspectRowByDeg, matchSynastryOrbRange } from './calc-orbs';
+import { keyValuesToSimpleObject  } from '../../lib/converters';
+import { matchSynastryOrbRange } from './calc-orbs';
 
 swisseph.swe_set_ephe_path(ephemerisPath);
 
@@ -702,6 +701,7 @@ export const buildExtendedTransitions = async (
   jd = 0,
   modeRef = 'basic',
   adjustMode = '',
+  birthChart: Chart = new Chart()
 ) => {
   const adjustRiseBy12 = adjustMode !== 'spot';
   const coreData = await calcAllTransitionsFromJd(jd, geo, 0, adjustRiseBy12);
@@ -732,7 +732,7 @@ export const buildExtendedTransitions = async (
     return { key, ...Object.fromEntries(values) };
   };
 
-  const extraTransitionData = await sampleBaseObjects(jd, geo);
+  const extraTransitionData = await sampleBaseObjects(jd, geo, birthChart);
   if (extraTransitionData instanceof Object) {
     Object.entries(extraTransitionData.transits).forEach(entry => {
       const [k, tr] = entry;
@@ -750,7 +750,8 @@ export const buildCurrentAndBirthExtendedTransitions = async (
   jd = 0,
   offset = -0.5,
 ) => {
-  const result = await buildExtendedTransitions(geo, jd + offset, 'extended');
+  const result = await buildExtendedTransitions(geo, jd + offset, 'extended', '', chart);
+ 
   const { transitions } = result;
   const gps = chart.bodies.map(({ lng, lat, lngSpeed, key }) => {
     return { lng, lat, lngSpeed, key };

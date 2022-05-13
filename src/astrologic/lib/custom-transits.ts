@@ -4,8 +4,14 @@ import { calcGrahaPos, fetchHouseDataJd } from './core';
 import { calcAltitudeSE} from './point-transitions';
 import { julToISODate } from './date-funcs';
 import { calcDeclinationFromLngLatEcl } from './math-funcs';
+import { Chart } from './models/chart';
 
 export const specialTransitKeys = ["lotOfFortune", "lotOfSpirit", "brghuBindu", "yogi", "avaYogi"];
+
+export interface RaLng {
+  ra: number;
+  lng: number;
+}
 
 const extractRaFromResultMap = (resultMap: Map<string, any> = new Map()) => {
   const sunRa = resultMap.has('su')? resultMap.get('su').rectAscension : 0;
@@ -20,6 +26,34 @@ const extractRaFromResultMap = (resultMap: Map<string, any> = new Map()) => {
   return { ecliptic, ascRa, sunRa, moonRa, rahuRa, ascLng, sunLng, moonLng, rahuLng };
 }
 
+export const calcAscendantDetails = async (jd = 0, geo: GeoPos): Promise<{ mc: number; ascDeclination: number; mcRectAscension: number; ascRectAscension: number; ascAltitude: number; ecliptic: number; ascendant: number }> => {
+  const houseData = await fetchHouseDataJd(jd, geo);
+    const {
+      mc,
+      ascDeclination,
+      ascRectAscension,
+      mcRectAscension
+    } = houseData;
+  const { ecliptic, ascendant } = houseData;
+  const ascAltitude = await calcAltitudeSE(jd, geo, ascendant, 0, true);
+  return { mc, ascDeclination, mcRectAscension, ascRectAscension, ascAltitude, ecliptic, ascendant };
+}
+
+export const calcAscendantRaLng = async (chart: Chart): Promise<RaLng> => {
+  if (chart.jd > 0 && chart.grahas.length > 0 && chart.indianTime instanceof Object) {
+    const birthAscData = await calcAscendantDetails(chart.jd, chart.geo);
+    return {
+      ra: birthAscData.ascRectAscension,
+      lng: birthAscData.ascendant
+    }
+  } else {
+    return { 
+      ra: -1,
+      lng: -1
+    }
+  }
+}
+
 export const fetchTransitSampleResultSet = async (jd = 0, geo: GeoPos, includeKeys = ['as', 'su', 'mo', 'ra']): Promise<Map<string, any>> => {
   const grahaSet = {
     su: swisseph.SE_SUN,
@@ -27,25 +61,14 @@ export const fetchTransitSampleResultSet = async (jd = 0, geo: GeoPos, includeKe
     ra: swisseph.SE_MEAN_NODE
   };
   const resultMap: Map<string, any> = new Map();
-  let ascendant = 0;
-  let ecliptic = 0;
   if (includeKeys.includes('as')) {
-    const houseData = await fetchHouseDataJd(jd, geo);
-    const {
-      mc,
-      ascDeclination,
-      ascRectAscension,
-      mcRectAscension
-    } = houseData;
-    ecliptic = houseData.ecliptic;
-    ascendant = houseData.ascendant;
-
+    const { mc, ascDeclination, mcRectAscension, ascRectAscension, ascAltitude, ecliptic, ascendant } = await calcAscendantDetails(jd, geo);
     resultMap.set('as', {
       longitude: ascendant,
       latitude: 0,
       declination: ascDeclination,
       rectAscension: ascRectAscension,
-      altitude: await calcAltitudeSE(jd, geo, ascendant, 0, true),
+      altitude: ascAltitude,
     });
     resultMap.set('ec', {
       longitude: ecliptic,
@@ -71,18 +94,35 @@ export const fetchTransitSampleResultSet = async (jd = 0, geo: GeoPos, includeKe
   return resultMap;
 }
 
-const calcBaseObjectsAltitude = async (key = "", jd = 0, geo: GeoPos, resultMap: Map<string,any> = new Map()) => {
+const matchRefObjectKeyByDaySegment = (key = '', isDayTime = true): string => {
+  const lotKey1 = 'lotOfFortune';
+  const lotKey2 = 'lotOfSpirit';
+  switch (key) {
+    case lotKey1:
+      return isDayTime ? lotKey1 : lotKey2;
+    case lotKey2:
+      return isDayTime ? lotKey2 : lotKey1;
+    default:
+      return key;
+  }
+}
+
+const calcBaseObjectsAltitude = async (key = "", jd = 0, geo: GeoPos, resultMap: Map<string,any> = new Map(), birthAscRaLng: RaLng = { ra: -1, lng: -1 }, bornInDayTime = true) => {
   const { ascRa, moonRa, sunRa, rahuRa, ecliptic, ascLng, sunLng, moonLng, rahuLng} = extractRaFromResultMap(resultMap);
   let ra = 0;
+  const hasBirthAsc = birthAscRaLng.lng >= 0;
+  const refAscRa = hasBirthAsc? birthAscRaLng.ra : ascRa;
+  const refAscLng = hasBirthAsc? birthAscRaLng.lng : ascLng;
+  const refKey = matchRefObjectKeyByDaySegment(key, bornInDayTime);
   let longitude = 0;
-    switch (key) {
+    switch (refKey) {
       case "lotOfFortune":
-        ra = (ascRa + (moonRa - sunRa) + 360) % 360;
-        longitude = (ascLng + (moonLng - sunLng) + 360) % 360;
+        ra = (refAscRa + (moonRa - sunRa) + 360) % 360;
+        longitude = (refAscLng + (moonLng - sunLng) + 360) % 360;
         break;
       case "lotOfSpirit":
-        ra = (ascRa + sunRa - moonRa + 360) % 360;
-        longitude = (ascLng + sunLng - moonLng + 360) % 360;
+        ra = (refAscRa + sunRa - moonRa + 360) % 360;
+        longitude = (refAscLng + sunLng - moonLng + 360) % 360;
         break;
       case "brghuBindu":
         ra = ((moonRa + rahuRa) / 2) % 360;
@@ -105,10 +145,10 @@ const calcBaseObjectsAltitude = async (key = "", jd = 0, geo: GeoPos, resultMap:
 /*
 * Fetch sample transitions of abstract objects
 */
-export const calcBaseObjects = async(jd = 0, geo: GeoPos) => {
+export const calcBaseObjects = async(jd = 0, geo: GeoPos, birthAsc: RaLng = {ra: -1, lng: -1}, bornInDayTime = true) => {
   const resultMap = await fetchTransitSampleResultSet(jd, geo);
   for (const key of specialTransitKeys) {
-    const {longitude, latitude, altitude } = await calcBaseObjectsAltitude(key, jd, geo, resultMap );
+    const {longitude, latitude, altitude } = await calcBaseObjectsAltitude(key, jd, geo, resultMap, birthAsc, bornInDayTime );
     resultMap.set(key, { longitude, latitude, altitude } );
   }
   return Object.fromEntries(resultMap.entries());
@@ -213,33 +253,35 @@ class SampleTrackerGroup {
   }
 }
 
-const matchKeysForSampleTransit = (key = "") => {
+const matchKeysForSampleTransit = (key = "", includeAscendant = true) => {
   switch (key) {
     case 'lotOfFortune':
     case 'lotOfSpirit':
     case 'yogi':
     case 'avaYogi':
     case 'avayogi':
-      return ['as', 'su', 'mo'];
+      return includeAscendant? ['as', 'su', 'mo'] : ['su', 'mo'];
     case 'brghuBindu':
     case 'brighuBindu':
     case 'brighubindu':
       return ['su', 'mo', 'ra'];
     default:
-      return ['as', 'su', 'mo', 'ra'];
+      return includeAscendant? ['as', 'su', 'mo', 'ra'] : ['su', 'mo', 'ra'];
   }
 }
 
-const innerTransitLimit = async (key = "", geo: GeoPos, startJd = 0, endJd = 0, minMode = false) => {
+const innerTransitLimit = async (key = "", geo: GeoPos, startJd = 0, endJd = 0, minMode = false, birthAsc: RaLng = { ra: -1, lng: -1}, bornInDayTime = true) => {
   const sampleNum = 48;
   const sampleSpanNum = sampleNum * 2;
   const jdStep = (endJd - startJd) / sampleNum;
   const rows = [];
+  const hasBirthAsc = birthAsc.lng >= 0;
+  const includeAscendant = !hasBirthAsc;
   for (let i = 0; i <= sampleSpanNum; i++) {
     const currJd = startJd + (i * jdStep);
-    const gKeys = matchKeysForSampleTransit(key);
+    const gKeys = matchKeysForSampleTransit(key, includeAscendant);
     const resultMap = await fetchTransitSampleResultSet(currJd, geo, gKeys);
-    const { altitude } = await calcBaseObjectsAltitude(key, currJd, geo, resultMap );
+    const { altitude } = await calcBaseObjectsAltitude(key, currJd, geo, resultMap, birthAsc, bornInDayTime );
     rows.push({ altitude, matchedJd: currJd});
   }
   const vals = rows.map(row => row.altitude);
@@ -250,7 +292,7 @@ const innerTransitLimit = async (key = "", geo: GeoPos, startJd = 0, endJd = 0, 
   return limitIndex >= 0 ? rows[limitIndex] : rows[midIndex];
 }
 
-export const sampleBaseObjects = async (jd = 0, geo: GeoPos, showSamples = false) => {
+export const sampleBaseObjects = async (jd = 0, geo: GeoPos, birthChart: Chart = new Chart(), showSamples = false) => {
   const refJd = jd + 0.5;
   const startJd = Math.floor(refJd) - 0.5;
   const numUnits = 144;
@@ -275,10 +317,12 @@ export const sampleBaseObjects = async (jd = 0, geo: GeoPos, showSamples = false
   specialTransitKeys.forEach(key => {
     prevLngs.set(key, 0);
   });
+  const hasBirthChart = birthChart instanceof Chart && birthChart.jd > 0;
+  const birthAsc = await calcAscendantRaLng(birthChart);
+  const isDayTime = hasBirthChart ? birthChart.indianTime.isDayTime : true;
   for (let i = startSampleIndex; i < endSampleNum; i++) {
     currJd = startJd + (i * unit);
-    const sample = await calcBaseObjects(currJd, geo);
-    
+    const sample = await calcBaseObjects(currJd, geo, birthAsc, isDayTime);
     specialTransitKeys.forEach(key => {
       const curr = transitMap.get(key);
       const prevAlt = prevAlts.get(key);
@@ -299,7 +343,7 @@ export const sampleBaseObjects = async (jd = 0, geo: GeoPos, showSamples = false
       const minMode = sk === 'ic';
       const startJd = minMode ? transitItem.ic.prevJd : transitItem.mc.prevJd;
       const endJd = minMode ? transitItem.ic.jd: transitItem.mc.jd;
-      const { matchedJd, altitude } = await innerTransitLimit(key, geo, startJd, endJd, minMode);
+      const { matchedJd, altitude } = await innerTransitLimit(key, geo, startJd, endJd, minMode, birthAsc, birthChart.indianTime.isDayTime);
       transitItem[sk].jd = matchedJd;
       transitItem[sk].val = altitude;
     }

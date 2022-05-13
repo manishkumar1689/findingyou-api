@@ -655,14 +655,36 @@ export class Chart {
       : false;
   }
 
-  get loFDay() {
+  // If values are not from a birth chart, the sidereal natal ascendant must be specified
+  relativeLoFDay(isBirth = true, birthLagna = 0) {
+    const relLagna = isBirth ? this.lagna : birthLagna;
     return (
-      (this.lagna + (this.moon.longitude - this.sun.longitude) + 360) % 360
+      (relLagna + (this.moon.longitude - this.sun.longitude) + 360) % 360
     );
   }
 
+  // If values are not from a birth chart, the sidereal natal ascendant must be specified
+  relativeLoFNight(isBirth = true, birthLagna = 0) {
+    const relLagna = isBirth ? this.lagna : birthLagna;
+    return (relLagna + this.sun.longitude - this.moon.longitude + 360) % 360;
+  }
+
+  get loFDay() {
+    return this.relativeLoFDay();
+  }
+
   get loFNight() {
-    return (this.lagna + this.sun.longitude - this.moon.longitude + 360) % 360;
+    return this.relativeLoFNight();
+  }
+
+  // required for current lot of fortune relative to someone's birth ascendant and time of birth (night or day)
+  relativeLotFortune(birthLagna = 0, isDayTime = true) {
+    return isDayTime ? this.relativeLoFDay(false, birthLagna) : this.relativeLoFNight(false, birthLagna);
+  }
+
+  // This follows the reverse logic of Lot of fortune
+  relativeLotSpirit(birthLagna = 0, isDayTime = true) {
+    return this.relativeLotFortune(birthLagna, !isDayTime);
   }
 
   get lotOfFortune() {
