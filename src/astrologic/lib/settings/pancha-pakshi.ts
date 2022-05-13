@@ -1992,7 +1992,6 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
       const rKey = tr.key.toLowerCase().replace('2', '');
       return rKey === trRef.toLowerCase() || grahaKeys.includes(rKey);
     });
-
     if (relTrs.length > 0) {
       for (const relTr of relTrs) {
         const rk = toTransitKey(r.action);
@@ -2015,7 +2014,6 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
       }
     }
   }
-
   const isDahsha = r.context.startsWith('dasha_');
   const isDasha2 = !isDahsha && r.context.startsWith('antardasha_');
   if (isDahsha || isDasha2) {
@@ -2118,7 +2116,7 @@ export const calculatePanchaPakshiData = async (
     //const transitRules = rules.filter(r => r.from.includes('transit'));
     const transitRules = rules.map(r => r.conditions()).reduce((a, b) => a.concat(b), []).filter(r => r.from.includes('transit'));
     //const ppRules = rules.filter(r => r.from.startsWith('pa'));
-    //data.set('rules', rules);
+    //data.set('rules', rules); 
     const ym1 = data.get('yamas');
     const ym2 = data.get('yamas2');
     const hasYamas =
