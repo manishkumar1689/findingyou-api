@@ -1915,9 +1915,8 @@ const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1) => {
       for (const match of rule.validMatches) {
         if (!isMatched && minJd >= match.start && minJd <= match.end) {
           if (match.type === 'orb') {
-            
             const { fraction, peak } = calcValueWithinOrb(minJd, match.start, match.end);
-            if (peak <= endSubJd && endSubJd > 0) {
+            if (endSubJd < 0 || (peak <= endSubJd && endSubJd > 0)) {
               score += (rule.score * fraction);
               names.push(rule.name);
             }
@@ -1993,6 +1992,7 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
       const rKey = tr.key.toLowerCase().replace('2', '');
       return rKey === trRef.toLowerCase() || grahaKeys.includes(rKey);
     });
+
     if (relTrs.length > 0) {
       for (const relTr of relTrs) {
         const rk = toTransitKey(r.action);
@@ -2096,6 +2096,7 @@ export const calculatePanchaPakshiData = async (
       yamas: [],
     }),
   );
+  const applySubYamaTransitCutoff = false;
   const ppData = await panchaPakshiDayNightSet(
     jd,
     geo,
@@ -2309,7 +2310,7 @@ export const calculatePanchaPakshiData = async (
               }
             }); */
             const currSub = allSubs.find(s => currJd >= s.start && currJd <= s.end)
-            const endSubJd = currSub instanceof Object ? currSub.end : -1;
+            const endSubJd = applySubYamaTransitCutoff ? currSub instanceof Object ? currSub.end : -1 : -1;
             const { minuteScore, ppScore, names } = matchPPRulesToMinutes(currJd, rules, endSubJd);
             scores.push(minuteScore);
             names.forEach(nm => {
