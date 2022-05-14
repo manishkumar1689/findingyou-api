@@ -2159,7 +2159,7 @@ export const calculatePanchaPakshiData = async (
             rData.push(result);
             if (debug) {
               const starts = result.matchedRanges.map(mr => julToISODate(mr.start));
-              const inRange = result.matchedRanges[0].start > ppData.get('startJd') && result.matchedRanges[0].start <= ppData.get('endJd');
+              const inRange = result.matchedRanges.some(mrn => mrn.end > ppData.get('rise') && mrn.start <= ppData.get('nextRise'));
               matchedTransitions.push({
                 name: r.name,
                 starts,
