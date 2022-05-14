@@ -2105,7 +2105,7 @@ export const calculatePanchaPakshiData = async (
     data = new Map([...data, ...ppData]);
     data.set('message', 'valid data set');
   }
-  const matchedTransitions: { name: string; starts: string[] }[] = [];
+  const matchedTransitions: { name: string; starts: string[], inRange: boolean; }[] = [];
   if (showTransitions) {
     const {
       transitions,
@@ -2159,9 +2159,11 @@ export const calculatePanchaPakshiData = async (
             rData.push(result);
             if (debug) {
               const starts = result.matchedRanges.map(mr => julToISODate(mr.start));
+              const inRange = result.matchedRanges[0].start > ppData.get('startJd') && result.matchedRanges[0].start <= ppData.get('endJd');
               matchedTransitions.push({
                 name: r.name,
-                starts
+                starts,
+                inRange
               })
             }
           }
