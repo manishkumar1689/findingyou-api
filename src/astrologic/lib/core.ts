@@ -780,7 +780,7 @@ export const buildCurrentAndBirthExtendedTransitions = async (
       }
     }
   }
-  const ds = await calcTransposedGrahaTransitions(jd, geo, gps);
+  const ds = await calcTransposedGrahaTransitions(jd + offset, geo, gps);
   const birthTransitions: TransitionData[] = ds
     .filter(
       gSet =>
