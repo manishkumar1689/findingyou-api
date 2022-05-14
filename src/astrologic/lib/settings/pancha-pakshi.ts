@@ -2054,7 +2054,7 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
   }
   /* const matched = matchedRanges.length > 0 || pp2.valid || subs.length > 0; */
   const matched = matchedRanges.length > 0 || subs.length > 0;
-
+  
   return {
     rule: r,
     isTr,
@@ -2105,6 +2105,7 @@ export const calculatePanchaPakshiData = async (
     data = new Map([...data, ...ppData]);
     data.set('message', 'valid data set');
   }
+  const matchedTransitions: { name: string; starts: string[] }[] = [];
   if (showTransitions) {
     const {
       transitions,
@@ -2156,6 +2157,13 @@ export const calculatePanchaPakshiData = async (
           const result = processPPTransition(subR, chart, allSubs, birthTransitions, transitions, birdGrahaSet);
           if (result.matched) {
             rData.push(result);
+            if (debug) {
+              const starts = result.matchedRanges.map(mr => julToISODate(mr.start));
+              matchedTransitions.push({
+                name: r.name,
+                starts
+              })
+            }
           }
         }
       }
@@ -2371,6 +2379,7 @@ export const calculatePanchaPakshiData = async (
           data.set('matchRuleNames', matchedRulesNames)
           data.set('notMatchedRuleNames', notMatchedRuleNames);
           data.set('minuteMatches', minuteMatches);
+          data.set('matchedTransitions', matchedTransitions);
         }
       }
     }
