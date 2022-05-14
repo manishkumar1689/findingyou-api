@@ -803,6 +803,10 @@ export const buildCurrentAndBirthExtendedTransitions = async (
       const key = tr.key + '2';
       transitions.push({...tr, key});
     })
+    extra.birthTransitions.forEach(tr => {
+      const key = tr.key + '2';
+      birthTransitions.push({...tr, key});
+    })
   }
   return { transitions, birthTransitions };
 };

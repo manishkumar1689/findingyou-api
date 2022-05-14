@@ -2152,6 +2152,8 @@ export const calculatePanchaPakshiData = async (
         birdGrahaSet.dasha2Lord = matchCurrentDashaLord(chart, jd, 2).key;
       }
       data.set('valid', true);
+      const riseJd = ppData.get('rise');
+      const nextRiseJd = ppData.get('nextRise');
       for (const r of rules) {
         for (const subR of r.transitConditions()) {
           const result = processPPTransition(subR, chart, allSubs, birthTransitions, transitions, birdGrahaSet);
@@ -2159,7 +2161,7 @@ export const calculatePanchaPakshiData = async (
             rData.push(result);
             if (debug) {
               const starts = result.matchedRanges.map(mr => julToISODate(mr.start));
-              const inRange = result.matchedRanges.some(mrn => mrn.end > ppData.get('rise') && mrn.start <= ppData.get('nextRise'));
+              const inRange = result.matchedRanges.some(mrn => mrn.end > riseJd && mrn.start <= nextRiseJd);
               matchedTransitions.push({
                 name: r.name,
                 starts,
