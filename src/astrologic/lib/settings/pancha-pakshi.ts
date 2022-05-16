@@ -13,7 +13,7 @@ import {
   Condition,
 } from '../models/protocol-models';
 import { matchDikBalaTransition } from './graha-values';
-import { inRange, isNumeric, notEmptyString } from '../../../lib/validators';
+import { isNumeric, notEmptyString } from '../../../lib/validators';
 import { GeoLoc } from '../models/geo-loc';
 import { matchCurrentDashaLord } from '../models/dasha-set';
 import { PredictiveRuleSet } from '../../../setting/interfaces/predictive-rule-set.interface';
@@ -26,6 +26,7 @@ export class PeakTime {
   startTs = 0;
   start = 0;
   end = 0;
+  max = -1;
 
   constructor(startTs = 0, startMinIndex = 0, endMinIndex = 0) {
     this.startTs = startTs;
@@ -41,6 +42,10 @@ export class PeakTime {
     }
   }
 
+  setMax(max = 0) {
+    this.max = Math.ceil(max);
+  }
+
   get peak(): number {
     return this.start + (this.end - this.start) / 2;
   }
@@ -49,10 +54,10 @@ export class PeakTime {
     return {
       start: this.start,
       peak: this.peak,
-      end: this.end
+      end: this.end,
+      max: this.max
      }
   }
-
 }
 
 interface MinuteMatch {
@@ -2122,6 +2127,7 @@ export const calculatePanchaPakshiData = async (
     data.set('message', 'valid data set');
   }
   const matchedTransitions: { name: string; starts: string[], inRange: boolean; }[] = [];
+  
   if (showTransitions) {
     const {
       transitions,
@@ -2365,6 +2371,9 @@ export const calculatePanchaPakshiData = async (
                 const pk = new PeakTime(startTs, i);
                 peakTimeIndex = times.length;
                 times.push(pk);
+                if (minuteScore > pk.max) {
+                  pk.setMax(minuteScore);
+                }
               }
               isLucky = true;
             } else {
