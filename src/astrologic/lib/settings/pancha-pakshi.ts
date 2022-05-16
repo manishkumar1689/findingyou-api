@@ -13,7 +13,7 @@ import {
   Condition,
 } from '../models/protocol-models';
 import { matchDikBalaTransition } from './graha-values';
-import { isNumeric, notEmptyString } from '../../../lib/validators';
+import { inRange, isNumeric, notEmptyString } from '../../../lib/validators';
 import { GeoLoc } from '../models/geo-loc';
 import { matchCurrentDashaLord } from '../models/dasha-set';
 import { PredictiveRuleSet } from '../../../setting/interfaces/predictive-rule-set.interface';
@@ -1957,6 +1957,10 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
     r.from === 'birth' ? birthTransitions : transitions;
   let subs = [];
   let grahaKeys = [];
+  const startJd = allSubs[0].start;
+  const endJd = allSubs.length > 49 ? allSubs[49].end : 0;
+  /* const midJd = allSubs.length > 49 ? allSubs[24].end : 0;
+  let matchDayOnly = false; */
   if (r.key.endsWith('_graha')) {
     const trKey = toTransitKey(r.context);
     if (r.key.includes('ing_') && r.key.startsWith('yama')) {
@@ -1984,6 +1988,7 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
     } else if (r.key.includes('dying_bird_')) {
       grahaKeys = birdGrahaSet.matchGrahas('dying', true);
     }
+    //matchDayOnly = r.key.includes('day_');
   } else if (r.key.length === 2) {
     grahaKeys = [r.key];
   }
@@ -2007,9 +2012,12 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
             mr = matchTransitionRange(dikBalaTrans, relTr)
           }
         }
-        if (mr instanceof Object) {
-          matchedRanges.push(mr);
-          r.addMatch(mr.start, mr.end,'orb', r.score);
+        if (mr instanceof TransitionOrb) {
+          if (mr.end > startJd && mr.start < endJd) {
+            matchedRanges.push(mr);
+            r.addMatch(mr.start, mr.end,'orb', r.score);
+          }
+          
         }
       }
     }

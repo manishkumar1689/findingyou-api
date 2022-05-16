@@ -798,7 +798,7 @@ export const buildCurrentAndBirthExtendedTransitions = async (
     const extra = await buildCurrentAndBirthExtendedTransitions(chart,
       geo,
       jd,
-      0.49);
+      0.495);
     extra.transitions.forEach(tr => {
       const key = tr.key + '2';
       transitions.push({...tr, key});
