@@ -2380,7 +2380,7 @@ export const calculatePanchaPakshiData = async (
                 times.push(pk);
                 if (minuteScore > pk.max) {
                   pk.setMax(minuteScore);
-                  pk.setPeak(julToDateParts(peakJd).unixTime);
+                  pk.setPeak(julToDateParts(peakJd).unixTimeInt);
                 }
               }
               isLucky = true;
