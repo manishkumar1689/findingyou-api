@@ -1992,10 +1992,55 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
   } else if (r.key.length === 2) {
     grahaKeys = [r.key];
   }
+  const isDahsha = r.context.startsWith('dasha_');
+  const isDasha2 = !isDahsha && r.context.startsWith('antardasha_');
+  if (isDahsha || isDasha2) {
+    const refDashaLord = isDasha2 ? birdGrahaSet.dasha2Lord : birdGrahaSet.dashaLord;
+    subs = filterDashaLordByObjectType(
+      refDashaLord,
+      allSubs,
+      birdGrahaSet,
+      r.key,
+    );
+    subs.forEach(sub => {
+      r.addMatch(sub.start, sub.end, 'subyama', r.score);
+    })
+  }
+  const isLord = r.context.startsWith('lord');
+  let filterByGrahasAndAction = isLord;
+  if (isLord) {
+    grahaKeys = mapLords(chart, r.context);
+  } else if (r.key === 'yoga_karaka') {
+    grahaKeys = [chart.yogaKaraka];
+    filterByGrahasAndAction = true;
+  } else if (r.key === 'brighu_bindu') {
+    grahaKeys = ['brghuBindu'];
+    filterByGrahasAndAction = true;
+  } else if (r.key.endsWith('yogi_point')) {
+    grahaKeys = r.context.includes('avayogi') ? ['avayogi'] : ['yogi'];
+    filterByGrahasAndAction = true;
+  } else if (r.key.endsWith('yogi_graha')) {
+    const objKey = r.context.includes('avayogi') ? 'avayogi' : 'yogi';
+    const gk = chart.matchObject(objKey);
+    if (gk) {
+      grahaKeys = [gk];
+      filterByGrahasAndAction = true;
+    }
+  }
+  if (filterByGrahasAndAction) {
+    subs = allSubs.filter(
+      s =>
+        s.key === r.action && s.rulers.some(gk => grahaKeys.includes(gk)),
+    );
+    subs.forEach(sub => {
+      r.addMatch(sub.start, sub.end, 'subyama', r.score);
+    })
+  }
   if (isTr) {
+    const lcGrKeys = grahaKeys.map(gk => gk.toLowerCase());
     const relTrs = relTransItems.filter(tr => {
       const rKey = tr.key.toLowerCase().replace('2', '');
-      return rKey === trRef.toLowerCase() || grahaKeys.includes(rKey);
+      return rKey === trRef.toLowerCase() || lcGrKeys.includes(rKey);
     });
     if (relTrs.length > 0) {
       for (const relTr of relTrs) {
@@ -2022,44 +2067,7 @@ const processPPTransition = (r: PPRule, chart: Chart, allSubs = [], birthTransit
       }
     }
   }
-  const isDahsha = r.context.startsWith('dasha_');
-  const isDasha2 = !isDahsha && r.context.startsWith('antardasha_');
-  if (isDahsha || isDasha2) {
-    const refDashaLord = isDasha2 ? birdGrahaSet.dasha2Lord : birdGrahaSet.dashaLord;
-    subs = filterDashaLordByObjectType(
-      refDashaLord,
-      allSubs,
-      birdGrahaSet,
-      r.key,
-    );
-    subs.forEach(sub => {
-      r.addMatch(sub.start, sub.end, 'subyama', r.score);
-    })
-  }
-  const isLord = r.context.startsWith('lord');
-  let filterByGrahasAndAction = isLord;
-  if (isLord) {
-    grahaKeys = mapLords(chart, r.context);
-  } else if (r.context === 'yoga_karaka') {
-    grahaKeys = [chart.yogaKaraka];
-    filterByGrahasAndAction = true;
-  } else if (r.context.endsWith('yogi_graha')) {
-    const objKey = r.context.includes('avayogi') ? 'avayogi' : 'yogi';
-    const gk = chart.matchObject(objKey);
-    if (gk) {
-      grahaKeys = [gk];
-      filterByGrahasAndAction = true;
-    }
-  }
-  if (filterByGrahasAndAction) {
-    subs = allSubs.filter(
-      s =>
-        s.key === r.action && s.rulers.some(gk => grahaKeys.includes(gk)),
-    );
-    subs.forEach(sub => {
-      r.addMatch(sub.start, sub.end, 'subyama', r.score);
-    })
-  }
+
   /* const matched = matchedRanges.length > 0 || pp2.valid || subs.length > 0; */
   const matched = matchedRanges.length > 0 || subs.length > 0;
   
