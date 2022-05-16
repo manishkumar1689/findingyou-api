@@ -27,6 +27,7 @@ export class PeakTime {
   start = 0;
   end = 0;
   max = -1;
+  peak = 0;
 
   constructor(startTs = 0, startMinIndex = 0, endMinIndex = 0) {
     this.startTs = startTs;
@@ -46,14 +47,18 @@ export class PeakTime {
     this.max = Math.ceil(max);
   }
 
-  get peak(): number {
-    return this.start + (this.end - this.start) / 2;
+  setPeak(peak = 0) {
+    this.peak = peak;
+  }
+
+  get calculatedPeak(): number {
+    return this.peak > 0? this.peak : this.start + (this.end - this.start) / 2;
   }
 
   toObject() {
     return {
       start: this.start,
-      peak: this.peak,
+      peak: this.calculatedPeak,
       end: this.end,
       max: this.max
      }
@@ -1913,6 +1918,7 @@ const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1) => {
   let score = 0;
   let ppScore = 0;
   const names: string[] = [];
+  let peakJd = 0;
   for (const rule of rules) { 
     if (rule.isMatched) {
       // a rule may only match one in a given minute even if valid match spans may overlap
@@ -1924,6 +1930,7 @@ const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1) => {
             if (endSubJd < 0 || (peak <= endSubJd && endSubJd > 0)) {
               score += (rule.score * fraction);
               names.push(rule.name);
+              peakJd = peak;
             }
           } else {
             if (rule.validateAtMinJd(minJd)) {
@@ -1938,7 +1945,7 @@ const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1) => {
       }
     }
   }
-  return { minuteScore: score, ppScore, names };
+  return { minuteScore: score, ppScore, names, peakJd };
 }
 
 const translateTransitionKey = (key = '', isTr = false) => {
@@ -2343,7 +2350,7 @@ export const calculatePanchaPakshiData = async (
             }); */
             const currSub = allSubs.find(s => currJd >= s.start && currJd <= s.end)
             const endSubJd = applySubYamaTransitCutoff ? currSub instanceof Object ? currSub.end : -1 : -1;
-            const { minuteScore, ppScore, names } = matchPPRulesToMinutes(currJd, rules, endSubJd);
+            const { minuteScore, ppScore, names, peakJd } = matchPPRulesToMinutes(currJd, rules, endSubJd);
             scores.push(minuteScore);
             names.forEach(nm => {
               if (matchedRulesNames.indexOf(nm) < 0) {
@@ -2373,6 +2380,7 @@ export const calculatePanchaPakshiData = async (
                 times.push(pk);
                 if (minuteScore > pk.max) {
                   pk.setMax(minuteScore);
+                  pk.setPeak(julToDateParts(peakJd).unixTime);
                 }
               }
               isLucky = true;
