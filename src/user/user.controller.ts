@@ -815,12 +815,20 @@ export class UserController {
       //notFlags = ['like', 'superlike', 'passed3'];
       const enforcePaidMembership = await this.settingService.enforcePaidMembershipLogic();
 
-      
+      const currQueryKeys = Object.keys(query);
       if (userAge > 17) {
         query.ageRange = userAge;
       }
-      if (hasUser && userInfo.hasAgeRange) {
-        query.age = userInfo.ageRange;
+      if (hasUser) {
+        if (userInfo.hasAgeRange && currQueryKeys.includes('age') === false) {
+          query.age = userInfo.ageRange;
+        }
+        if (userInfo.genders.length > 0 && currQueryKeys.includes('genders') === false) {
+          query.gender = userInfo.genders;
+        }
+        if (userInfo.gender && currQueryKeys.includes('genders') === false) {
+          query.genders = userInfo.gender;
+        }
       }
       if (queryKeys.includes('near') === false && hasUser) {
         let maxDistKm = userInfo.maxDistance;

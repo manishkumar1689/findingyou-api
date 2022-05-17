@@ -122,7 +122,7 @@ export class UserService {
             profiles: [],
             dob: null,
           };
-    const { _id, nickName, dob, geo, roles, profiles, preferences, surveys } = obj;
+    const { _id, nickName, dob, gender, geo, roles, profiles, preferences, surveys } = obj;
     let profileImg = '';
     if (profiles instanceof Array && profiles.length > 0) {
       const { mediaItems } = profiles[0];
@@ -153,6 +153,21 @@ export class UserService {
       [0, 0],
       2,
     );
+    const otherGender = gender === 'm'? 'f' : 'm';
+    let genders = extractArrayFromKeyedItems(
+      preferences,
+      'genders',
+      [],
+      1,
+    );
+    if (genders.length < 1) {
+      genders = extractArrayFromKeyedItems(
+        preferences,
+        'gender',
+        [otherGender],
+        1,
+      );
+    }
 
     const hasAgeRange = ageRange.length > 0 && ageRange[0] > 0;
 
@@ -189,6 +204,7 @@ export class UserService {
       nickName,
       roles,
       geo: geoObj,
+      gender,
       age,
       ageRange,
       pushNotifications,
@@ -198,6 +214,7 @@ export class UserService {
       hideFromExplore,
       maxDistance,
       lang,
+      genders,
       isPaidMember,
       surveys: surveyItems
     };
@@ -226,7 +243,7 @@ export class UserService {
     const fieldList =
       fields.length > 0
         ? fields.join(' ')
-        : '_id active nickName dob geo roles profiles preferences surveys';
+        : '_id active nickName dob geo gender roles profiles preferences surveys';
     const items = await this.userModel
       .find({
         _id: uid,
@@ -400,13 +417,13 @@ export class UserService {
             filter.set('$or', [{ nickName: rgx }, { fullName: rgx }]);
             break;
           case 'gender':
-            filter.set(
-              'gender',
-              val
-                .trim()
-                .toLowerCase()
-                .substring(0, 1),
-            );
+            const genderOpts = val instanceof Array ? val : typeof val === 'string' ? [val.trim().toLowerCase().substring(0, 1),] : [];
+            if (genderOpts.length > 0) {
+              filter.set(
+                'gender',
+                { $in: genderOpts }
+              );
+            }
             break;
           case 'age':
             filter.set('dob', this.translateAgeRange(val));
@@ -1952,7 +1969,7 @@ export class UserService {
     };
   }
 
-  translateTargetGenders(val = null) {
+  /* translateTargetGenders(val = null) {
     const availableKeys = ['f', 'm', 'nb'];
     const opts =
       typeof val === 'string'
@@ -1983,7 +2000,27 @@ export class UserService {
         value: { $in: optList },
       },
     };
+  } */
+
+  translateTargetGenders(val = '') {
+    const combos = [['f', 'm'], ['m', 'f'], ['f'], ['m']];
+    const optList = combos.filter(pair => pair.includes(val));
+    return {
+      $elemMatch: {
+        key: { $in: ['gender', 'genders'] },
+        value: { $in: optList },
+      },
+    };
   }
+
+ /*  translateTargetGenders(val = '') {
+    return {
+      $elemMatch: {
+        key: { $in: ['gender', 'genders'] },
+        value: { elemMatch: { $eq: val } },
+      },
+    };
+  } */
 
   translateAgeRangeWithin(val = null) {
     const age = smartCastInt(val, 0);
