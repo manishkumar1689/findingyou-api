@@ -55,6 +55,10 @@ export class PeakTime {
     return this.peak > 0? this.peak : this.start + (this.end - this.start) / 2;
   }
 
+  get notExactPeak(): boolean {
+    return this.peak <= 0;
+  }
+
   toObject() {
     return {
       start: this.start,
@@ -2380,7 +2384,9 @@ export const calculatePanchaPakshiData = async (
                 times.push(pk);
                 if (minuteScore > pk.max) {
                   pk.setMax(minuteScore);
-                  pk.setPeak(julToDateParts(peakJd).unixTimeInt);
+                  if (peakJd > 0 && pk.notExactPeak) {
+                    pk.setPeak(julToDateParts(peakJd).unixTimeInt);
+                  }
                 }
               }
               isLucky = true;
