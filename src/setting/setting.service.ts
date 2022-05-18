@@ -722,6 +722,7 @@ export class SettingService {
       );
       if (setting) {
         message = 'Setting has been updated successfully';
+        this.clearCacheByKey(key);
       }
     } else {
       const settingDTO = {
@@ -1119,12 +1120,11 @@ export class SettingService {
     return offset;
   }
 
-  async synastryOrbs(skipCache = false): Promise<number> {
-    const key = 'synastry_orbs';
+  async fetchCachedSetting(key = '', skipCache = false, minSize = 2): Promise<number> {
     const stored = skipCache? null : await this.redisGet(key);
     let isStored = false;
     let orbMap = null;
-    const isValid = (obj: any = null) => obj instanceof Object && Object.keys(obj).length > 1;
+    const isValid = (obj: any = null) => obj instanceof Object && Object.keys(obj).length >= minSize;
     if (stored instanceof Object) {
       if (isValid(stored)) {
         orbMap = stored;
@@ -1140,6 +1140,26 @@ export class SettingService {
       }
     }
     return orbMap;
+  }
+
+  async synastryOrbs(skipCache = false): Promise<number> {
+    const key = 'synastry_orbs';
+    return await this.fetchCachedSetting(key, skipCache, 2);
+  }
+
+  async p2Scores(skipCache = false) {
+    const key = 'p2_scores';
+    return await this.fetchCachedSetting(key, skipCache, 1);
+  }
+
+  async customCompatibilitySettings() {
+    const kutaSet = await this.getKutaSettings();
+    const kcScoreSet = await this.getKotaChakraScoreSet();
+    const orbMap = await this.synastryOrbs();
+    const p2Scores = await this.p2Scores();
+    return {
+      kutaSet, kcScoreSet, orbMap, p2Scores
+    }
   }
 
   async resetCustomSettingsCache(): Promise<boolean> {

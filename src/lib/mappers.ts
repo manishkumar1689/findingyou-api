@@ -62,3 +62,25 @@ export const removeIds = (item: any = null) => {
   }
   return item;
 };
+
+
+export const assignGenderOpt = (genderVal: any = null): string[] => {
+  if (typeof genderVal === 'string') {
+    const strVal = genderVal.trim();
+    if (strVal.length > 0) {
+      const firstLetter = strVal.substring(0, 1).toLowerCase();
+      switch (firstLetter) {
+        case 'm':
+          return ['m'];
+        case 'f':
+        case 'w':
+          return ['f'];
+        case 'b':
+          return ['f', 'm'];
+      }
+    }
+  } else if (genderVal instanceof Array) {
+    return genderVal.filter(op => typeof op === 'string').map(op => op.toLowerCase());
+  }
+  return [];
+}

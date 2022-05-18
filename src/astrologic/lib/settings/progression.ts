@@ -33,6 +33,61 @@ export const astroYearLength = {
   anomalistic: 365.259636,
 };
 
+export const P2AspectMatchScores = {
+	"su_ve": {
+		default: {
+			entry:7, 
+			peak:10, 
+			exit:5
+		}
+	},
+	"ve_ve": {
+		default: {
+			entry:6, 
+			peak:8, 
+			exit:5
+		}
+	},
+	"ve_ma": {
+		square: {
+			"entry":5, 
+			peak:8, 
+			"exit":6
+		},
+		default: {
+			entry: 6, 
+			peak: 8, 
+			exit: 5
+		}
+	}
+}
+
+export const matchP2ScoreSet = (refConfig: any = {}, key = '', frac = 0, isEntry = false) => {
+  const parts = key.split('_');
+  let scSet = { entry: 0, peak: 0, exit: 0, min: 0, score: 0 };
+  if (parts.length > 2) {
+    const pair1 = [parts[0], parts[1]].join('_');
+    const pair2 = [parts[1], parts[0]].join('_');
+    const aspect = parts.slice(2).join('_');
+    const scKeys = Object.keys(refConfig);
+    const scSetData = scKeys.includes(pair1) ? refConfig[pair1] : scKeys.includes(pair2) ? refConfig[pair2] : null;
+    if (scSetData instanceof Object) {
+      const aspectKeys = Object.keys(scSetData);
+      if (aspectKeys.includes(aspect)) {
+        scSet = scSetData[aspect];
+      } else if (aspectKeys.includes('default')) {
+        scSet = scSetData.default;
+      }
+      if (scSet.peak > 0) {
+        scSet.min = isEntry ? scSet.entry : scSet.exit;
+        const scoreDiff = scSet.peak - scSet.min;
+        scSet.score = (frac * scoreDiff) + scSet.min;
+      }
+    }
+  }
+  return scSet;
+}
+
 export const getYearLength = (yearType = 'tropical') => {
   switch (yearType) {
     case 'sidereal':
@@ -273,15 +328,16 @@ export const calcProgressAspectDataFromProgressItems = (p1: any[] = [], p2: any[
   return progressItemsToDataSet(items);
 }
 
-export const calcProgressSummary = (items: any[] = [], maxDistance = 2 + 1/60) => {
+export const calcProgressSummary = (items: any[] = [], widenOrb = false, customConfig = null, maxDistance = 2 + 1/60) => {
   const mp: Map<string, any> = new Map();
   const currJd = currentJulianDay();
+  const initMaxOrb = widenOrb? maxDistance * 1.5 : maxDistance;
   items.forEach(item => {
     if (item instanceof Object && Object.keys(item).includes('pairs')) {
       for (const pair of item.pairs) {
         if (pair.aspects.length > 0) {
           for (const asItem of pair.aspects) {
-            if (asItem.distance <= maxDistance) {
+            if (asItem.distance <= initMaxOrb) {
               const mk = [pair.k1, pair.k2, asItem.key].join('_');
               const mItems = mp.has(mk)? mp.get(mk) : [];
               mItems.push({
@@ -295,6 +351,58 @@ export const calcProgressSummary = (items: any[] = [], maxDistance = 2 + 1/60) =
       }
     }
   })
+  if (mp.size > 0) {
+    const scores: any[] = [];
+    const justOverHalfYear = 368/2;
+    const justOverHalfYearAgo = 0 - justOverHalfYear;
+    const orb = 2 + (1/60);
+    const refConfig = customConfig instanceof Object? customConfig : P2AspectMatchScores;
+    for (const [key, values] of mp) {
+      const currValues = values.filter(row => row.days < justOverHalfYear && row.days > justOverHalfYearAgo);
+      const minusVals = currValues.filter(row => row.days < 0);
+      const plusVals = currValues.filter(row => row.days > 0);
+      minusVals.sort((a, b) => b.days - a.days);
+      plusVals.sort((a, b) => a.days - b.days);
+      
+      if (plusVals.length > 0) {
+        const bestPlus = plusVals[0];
+        const hasMinus = minusVals.length > 0;
+        const bestMinus = hasMinus ? minusVals[0] : bestPlus;
+        const dist = bestPlus.days - bestMinus.days;
+        const prog = (dist - bestPlus.days) / dist;
+        const diff = bestPlus.dist - bestMinus.dist;
+        const value = bestMinus.dist + (diff * prog);
+        const isEntry = diff < 0;
+        const frac = (orb - value) / orb;
+        const scoreSet = matchP2ScoreSet(refConfig, key, frac, isEntry);
+        if (scoreSet.peak > 0) {
+          if (frac >= 0) {
+            scores.push([key, { 
+              value,
+              frac,
+              isEntry,
+              score: scoreSet.score
+            }]);
+          }
+        }
+        
+      }
+      if (widenOrb) {
+        for (const [key, values] of mp) {
+          if (key !== 'scores' && values instanceof Array) {
+            const filteredVals = values.filter(row => row.dist <= maxDistance);
+            if (filteredVals.length < 1) {
+              mp.delete(key);
+            } else {
+              mp.set(key, filteredVals);
+            }
+          }
+        }
+      }
+    }
+    mp.set('scores', Object.fromEntries(scores));
+  }
+  
   return Object.fromEntries(mp.entries());
 }
 

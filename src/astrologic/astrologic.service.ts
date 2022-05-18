@@ -1746,13 +1746,15 @@ export class AstrologicService {
       .exec();
   }
 
-  async expandUserWithChartData(user: User, flags: UserFlagSet, refChart: ChartClass, kutaSet: any = null, kcScoreSet: KotaCakraScoreSet, orbMap = null, fullChart = false, ayanamshaKey = 'true_citra', simpleMode = 'basic') {
+  async expandUserWithChartData(user: User, flags: UserFlagSet, refChart: ChartClass, customSettings: any = {}, fullChart = false, ayanamshaKey = 'true_citra', simpleMode = 'basic') {
     const chartObj = await this.getUserBirthChart(user._id);
     const hasChart = chartObj instanceof Object;
     const chartSource = hasChart ? chartObj.toObject() : {};
     const chart = new ChartClass(chartSource);
     const chartData = hasChart ? fullChart ? chart : simplifyChart(chartSource, ayanamshaKey, simpleMode) : {};
     const refUserId = user._id.toString();
+    // kutaSet: any = null, kcScoreSet: KotaCakraScoreSet, orbMap = null
+    const { kutaSet, kcScoreSet, orbMap, p2Scores } = customSettings;
     const preferences =
       user.preferences instanceof Array && user.preferences.length > 0
         ? user.preferences.filter(filterCorePreference)
@@ -1769,7 +1771,7 @@ export class AstrologicService {
     ) : {};
     addExtraPanchangeNumValuesFromClass(chartData, chart, 'true_citra');
     const pd = calcProgressAspectDataFromProgressItems(chart.matchProgressItems(), refChart.matchProgressItems());
-    const p2Summary = pd.num > 0 ? calcProgressSummary(pd.items) : {};
+    const p2Summary = pd.num > 0 ? calcProgressSummary(pd.items, true) : {};
     const kcS1 = calcKotaChakraScoreData(refChart, chart, kcScoreSet, true);
     const kcS2 = calcKotaChakraScoreData(chart, refChart, kcScoreSet, true);
     const baseAspectKeys = ['as','su','mo','me','ve','ma'];

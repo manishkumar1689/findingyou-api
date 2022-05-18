@@ -917,13 +917,12 @@ export class UserController {
             otherUserIds,
           )
         : userFlags;
-    const kutaSet = await this.settingService.getKutaSettings();
-    const kcScoreSet = await this.settingService.getKotaChakraScoreSet();
     const jungianRef = extractSurveyScoresByType(userInfo);
-    const orbMap = await this.settingService.synastryOrbs();
+
+    const customSettings = await this.settingService.customCompatibilitySettings();
     for (const user of users) {
       if (hasRefChart) {
-        const extraData = await this.astrologicService.expandUserWithChartData(user, flags, refChart, kutaSet, kcScoreSet, orbMap, fullChart, ayanamshaKey, simpleMode);
+        const extraData = await this.astrologicService.expandUserWithChartData(user, flags, refChart, customSettings, fullChart, ayanamshaKey, simpleMode);
         const jungian = extractSurveyScoresByType(user);
         const personality = compareJungianPolarities(jungianRef, jungian);
         if (extraData.hasChart) {

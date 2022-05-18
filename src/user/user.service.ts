@@ -53,7 +53,7 @@ import { defaultPushNotifications } from '../lib/notifications';
 import { AnswerDTO } from './dto/answer.dto';
 import { AnswerSet } from './interfaces/answer-set.interface';
 import { KeyNumValue } from '../lib/interfaces';
-import { removeIds } from '../lib/mappers';
+import { assignGenderOpt, removeIds } from '../lib/mappers';
 
 const userEditPaths = [
   'fullName',
@@ -1492,6 +1492,20 @@ export class UserService {
     const filteredPreferences = prefItems.filter(
       pr => pr instanceof Object && pr.type !== 'user',
     );
+
+    const gendersOptIndex = filteredPreferences.findIndex(op => op.type !== 'user' && ['gender', 'genders'].includes(op.key));
+    let removeOldGenderOpt = false;
+    if (gendersOptIndex >= 0) {
+      const gOpt = prefItems[gendersOptIndex];
+      
+      const gendersVal = gOpt.value instanceof Array ? gOpt : assignGenderOpt(gOpt.value)
+      filteredPreferences[gendersOptIndex] = { 
+        key: 'genders',
+        value: gendersVal,
+        type: 'array_string'
+      }
+      removeOldGenderOpt = preferences.some(op => op.key === 'gender');
+    }
     for (const prefItem of filteredPreferences) {
       const pKeys = Object.keys(prefItem);
       if (
@@ -1509,7 +1523,7 @@ export class UserService {
         }
       }
     }
-    return prefs;
+    return prefs.filter(op => !removeOldGenderOpt || op.key !== 'gender');
   }
 
   async saveProfile(userID: string, profile: ProfileDTO) {
@@ -2111,6 +2125,7 @@ export class UserService {
     }
   }
 
+  // not used, as all members results are now prefiltered via a DB query
   filterByPreferences(
     items = [],
     query = null,
@@ -2200,6 +2215,7 @@ export class UserService {
     const itemVal = matchedPref.value;
     switch (mo.key) {
       case 'gender':
+      case 'genders':
         value = value.split(',');
         break;
       case 'age_range':
@@ -2208,6 +2224,7 @@ export class UserService {
     }
     switch (mo.key) {
       case 'gender':
+      case 'genders':
         if (itemVal instanceof Array) {
           valid = itemVal.some(v => value.includes(v));
         }
