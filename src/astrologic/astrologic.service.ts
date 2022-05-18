@@ -1771,7 +1771,7 @@ export class AstrologicService {
     ) : {};
     addExtraPanchangeNumValuesFromClass(chartData, chart, 'true_citra');
     const pd = calcProgressAspectDataFromProgressItems(chart.matchProgressItems(), refChart.matchProgressItems());
-    const p2Summary = pd.num > 0 ? calcProgressSummary(pd.items, true) : {};
+    const p2Summary = pd.num > 0 ? calcProgressSummary(pd.items, true, p2Scores) : {};
     const kcS1 = calcKotaChakraScoreData(refChart, chart, kcScoreSet, true);
     const kcS2 = calcKotaChakraScoreData(chart, refChart, kcScoreSet, true);
     const baseAspectKeys = ['as','su','mo','me','ve','ma'];
