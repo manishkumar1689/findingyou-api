@@ -808,6 +808,10 @@ export class AstrologicController {
         ...p2,
         progressSets: progressData.p2,
       };
+      const customConfig = await this.settingService.p2Scores();
+      const pd = await this.astrologicService.progressAspectsFromJds(jd1, jd2);
+      data.summary = calcProgressSummary(pd.items, true, customConfig);
+      data.items = pd.items;
       data.key = '';
       data.valid = progressData.p2.length > 0;
       if (hasPublicUserId || hasUserId) {
