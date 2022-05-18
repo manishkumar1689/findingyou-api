@@ -855,12 +855,13 @@ export class AstrologicController {
         pd = await this.astrologicService.progressAspectsFromJds(chart1.jd, chart2.jd);
       }
       if (pd.num > 0) {
+        const customConfig = await this.settingService.p2Scores();
         data.num = pd.num;
         data.numWithAspects = pd.numWithAspects;
         data.jd1 = pd.jd1;
         data.jd2 = pd.jd2;
         data.items = pd.items;
-        data.summary = calcProgressSummary(pd.items);
+        data.summary = calcProgressSummary(pd.items, true, customConfig);
       }
     }
     return res.status(HttpStatus.OK).json(data);

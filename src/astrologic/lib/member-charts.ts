@@ -114,7 +114,7 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra', mode
   }
   chart.mc = subtractLng360(smartCastFloat(chart.mc), ayanamshaVal);
   chart.vertex = subtractLng360(smartCastFloat(chart.vertex), ayanamshaVal);
-  delete chart._id;
+  //delete chart._id;
   chart.ayanamshas = chart.ayanamshas.map(removeIds).filter(row => showExtraDataSets || row.key === ayanamshaKey);
   chart.upagrahas = chart.upagrahas.map(removeIds);
   /* if (chart.sphutas instanceof Array && ayanamshaIndex < chart.sphutas.length) {
