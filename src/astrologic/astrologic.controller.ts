@@ -716,6 +716,7 @@ export class AstrologicController {
     let jd2 = 0;
     let p1Base: any = {};
     let p2Base: any = {};
+    let showProgressSummary = false;
     const sub1 = {
       name: '',
       gender: '',
@@ -759,6 +760,9 @@ export class AstrologicController {
       }
       if (params.has('to2')) {
         sub2.tzOffset = smartCastInt(params.get('to2'));
+      }
+      if (params.has('scores')) {
+        showProgressSummary = smartCastInt(params.get('scores')) > 0;
       }
     } else if (useCharts) {
       const co1 = await this.astrologicService.getChart(c1);
@@ -808,10 +812,12 @@ export class AstrologicController {
         ...p2,
         progressSets: progressData.p2,
       };
-      const customConfig = await this.settingService.p2Scores();
-      const pd = await this.astrologicService.progressAspectsFromJds(jd1, jd2);
-      data.summary = calcProgressSummary(pd.items, true, customConfig);
-      data.items = pd.items;
+      if (showProgressSummary) {
+        const customConfig = await this.settingService.p2Scores();
+        const pd = await this.astrologicService.progressAspectsFromJds(jd1, jd2);
+        data.summary = calcProgressSummary(pd.items, true, customConfig);
+        data.items = pd.items;
+      }
       data.key = '';
       data.valid = progressData.p2.length > 0;
       if (hasPublicUserId || hasUserId) {
