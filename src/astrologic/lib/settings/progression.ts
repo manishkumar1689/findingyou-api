@@ -381,26 +381,32 @@ export const calcProgressSummary = (items: any[] = [], widenOrb = false, customC
               value,
               frac,
               isEntry,
-              score: scoreSet.score
+              score: scoreSet.score,
+              max: scoreSet.peak
             }]);
           }
         }
         
       }
-      if (widenOrb) {
-        for (const [key, values] of mp) {
-          if (key !== 'scores' && values instanceof Array) {
-            const filteredVals = values.filter(row => row.dist <= maxDistance);
-            if (filteredVals.length < 1) {
-              mp.delete(key);
-            } else {
-              mp.set(key, filteredVals);
-            }
+    }
+    if (widenOrb) {
+      for (const [key, values] of mp) {
+        if (key !== 'scores' && values instanceof Array) {
+          const filteredVals = values.filter(row => row.dist <= maxDistance);
+          if (filteredVals.length < 1) {
+            mp.delete(key);
+          } else {
+            mp.set(key, filteredVals);
           }
         }
       }
     }
+    const genScore = scores.map(entry => entry[1].score).reduce((a,b) => a + b, 0);
+    const genMax = scores.map(entry => entry[1].max).reduce((a,b) => a + b, 0);
+    const pc = (genScore / genMax * 100 / 2) + 50;
     mp.set('scores', Object.fromEntries(scores));
+    mp.set('pc', pc);
+    mp.set('gen', { score: genScore, max: genMax});
   }
   
   return Object.fromEntries(mp.entries());
