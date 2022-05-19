@@ -585,6 +585,16 @@ export const compareJungianPolarities = (jungianRef: KeyNumValue[] = [], jungian
     return [ key, value ]
   });
   entries.push(['score', score]);
+  const spectra = ['IE', 'SN', 'FT', 'JP'];
+  const letters = spectra.map(pair => {
+  const item = jungian.find(lt => lt.key === pair);
+    if (item instanceof Object) {
+      return item.value < 0 ? pair.substring(0,1) : pair.substring(1,2);
+    } else {
+      return '';
+    }
+  }).join('').toLowerCase();
+  entries.push(['letters', letters]);
   entries.push(['values', toSimplePolarityValues(jungian)]);
   return Object.fromEntries(entries);
 }
