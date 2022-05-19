@@ -556,6 +556,18 @@ const polarityDifferencesToScore = (rows: KeyNumValue[] = []): number => {
   return rows.length > 0 ? rows.map(row => 100 - Math.abs(row.value) ).reduce((a, b) => a + b, 0) / rows.length : -1;
 }
 
+const extractLettersFromJungianSummary = (jungian: KeyNumValue[] = []) => {
+  const spectra = ['IE', 'SN', 'FT', 'JP'];
+  return spectra.map(pair => {
+    const item = jungian.find(row => row.key === pair);
+    if (item instanceof Object) {
+      return item.value < 0 ? pair.substring(0,1) : pair.substring(1,2);
+    } else {
+      return '';
+    }
+  }).join('').toLowerCase();
+}
+
 export const toSimplePolarityValues = (jungian: KeyNumValue[] = []) => {
   const mp: Map<string, number> = new Map();
   jungian.forEach(({key, value}) => {
@@ -585,15 +597,7 @@ export const compareJungianPolarities = (jungianRef: KeyNumValue[] = [], jungian
     return [ key, value ]
   });
   entries.push(['score', score]);
-  const spectra = ['IE', 'SN', 'FT', 'JP'];
-  const letters = spectra.map(pair => {
-  const item = jungian.find(lt => lt.key === pair);
-    if (item instanceof Object) {
-      return item.value < 0 ? pair.substring(0,1) : pair.substring(1,2);
-    } else {
-      return '';
-    }
-  }).join('').toLowerCase();
+  const letters = extractLettersFromJungianSummary(jungian);
   entries.push(['letters', letters]);
   entries.push(['values', toSimplePolarityValues(jungian)]);
   return Object.fromEntries(entries);
