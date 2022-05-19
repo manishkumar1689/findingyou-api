@@ -332,6 +332,7 @@ export const calcProgressSummary = (items: any[] = [], widenOrb = false, customC
   const mp: Map<string, any> = new Map();
   const currJd = currentJulianDay();
   const initMaxOrb = widenOrb? maxDistance * 1.5 : maxDistance;
+  let pc = 0;
   items.forEach(item => {
     if (item instanceof Object && Object.keys(item).includes('pairs')) {
       for (const pair of item.pairs) {
@@ -389,6 +390,8 @@ export const calcProgressSummary = (items: any[] = [], widenOrb = false, customC
         
       }
     }
+    // if the source set of aspects uses a wider orb, to calculate entry and exit times,
+    // post-filter results to return only those that fall within the orb
     if (widenOrb) {
       for (const [key, values] of mp) {
         if (key !== 'scores' && values instanceof Array) {
@@ -401,14 +404,15 @@ export const calcProgressSummary = (items: any[] = [], widenOrb = false, customC
         }
       }
     }
-    const genScore = scores.map(entry => entry[1].score).reduce((a,b) => a + b, 0);
-    const genMax = scores.map(entry => entry[1].max).reduce((a,b) => a + b, 0);
-    const pc = (genScore / genMax * 100 / 2) + 50;
-    mp.set('scores', Object.fromEntries(scores));
-    mp.set('pc', pc);
-    mp.set('gen', { score: genScore, max: genMax});
+    if (scores.length > 0) {
+      const genScore = scores.map(entry => entry[1].score).reduce((a,b) => a + b, 0);
+      const genMax = scores.map(entry => entry[1].max).reduce((a,b) => a + b, 0);
+      pc = (genScore / genMax * 100 / 2) + 50;
+      //mp.set('general', { score: genScore, max: genMax});
+      mp.set('scores', Object.fromEntries(scores));
+    }
   }
-  
+  mp.set('percent', pc);
   return Object.fromEntries(mp.entries());
 }
 
