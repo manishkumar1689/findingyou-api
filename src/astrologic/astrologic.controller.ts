@@ -187,7 +187,7 @@ import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
 import { julToDateParts } from './lib/julian-date';
 import { buildSbcScoreGrid, traverseAllNak28Cells } from './lib/calc-sbc';
-import { calcKotaChakraScoreData, calcKotaChakraScoreSet, KotaCakraScoreSet } from './lib/settings/kota-values';
+import { calcKotaChakraScoreData, calcKotaChakraScoreSet } from './lib/settings/kota-values';
 
 @Controller('astrologic')
 export class AstrologicController {

@@ -35,3 +35,11 @@ export interface SimpleResult {
 }
 
 export type ScaleScores = Big5ScaleMap[] | JungianScaleMap[];
+
+export interface DeviceVersion {
+  key: string;
+  name: string;
+  version: string;
+  forceUpdate: boolean;
+  valid?: boolean;
+}

@@ -55,6 +55,9 @@ import {
   PPRule,
 } from '../astrologic/lib/settings/pancha-pakshi';
 import { KotaCakraScoreSet } from '../astrologic/lib/settings/kota-values';
+import { DeviceVersion } from './lib/interfaces';
+import { defaultDeviceVersions } from './settings/device-versions';
+import { DeviceVersionDTO } from './dto/device-version.dto';
 
 @Injectable()
 export class SettingService {
@@ -828,6 +831,47 @@ export class SettingService {
     return value;
   }
 
+  async deviceVersions(skipCache = false): Promise<DeviceVersion[]> {
+    const cKey = 'device_versions';
+    const versions = await this.fetchCachedSetting(cKey, skipCache);
+    if (versions instanceof Array && versions.length > 0) {
+      return versions.filter(row => row instanceof Object);
+    } else {
+      return defaultDeviceVersions;
+    }
+  }
+
+  async deviceVersion(key = '', skipCache = false): Promise<DeviceVersion> {
+    const versions = await this.deviceVersions(skipCache);
+    if (versions instanceof Array && versions.length > 0) {
+      let version = versions.find(v => v.key === key);
+      if (!version) {
+        const endKey = '__' + key;
+        version = versions.find(v => v.key.endsWith(endKey));
+      }
+      if (version instanceof Object) {
+        return { ...version, valid: true };
+      }
+    }
+    return { key: '', name: '', version: '', forceUpdate: false, valid: false };
+  }
+
+  async saveDeviceVersions(versions: DeviceVersionDTO[]): Promise<DeviceVersion[]> {
+    const key = 'device_versions';
+    if (versions instanceof Array && versions.length > 0) {
+      const value = versions.filter(row => row instanceof Object);
+      if (value.length > 0) {
+        const createDTO = {
+          key,
+          value,
+        } as CreateSettingDTO;
+        const result = await this.updateSettingByKey(key, createDTO);
+        return result.setting.value;
+      }
+    }
+    return [];
+  }
+
   async getProtocol(itemID: string) {
     return await this.protocolModel.findById(itemID);
   }
@@ -1120,14 +1164,14 @@ export class SettingService {
     return offset;
   }
 
-  async fetchCachedSetting(key = '', skipCache = false, minSize = 2): Promise<number> {
+  async fetchCachedSetting(key = '', skipCache = false, minSize = 2): Promise<any> {
     const stored = skipCache? null : await this.redisGet(key);
     let isStored = false;
-    let orbMap = null;
+    let settingValue = null;
     const isValid = (obj: any = null) => obj instanceof Object && Object.keys(obj).length >= minSize;
     if (stored instanceof Object) {
       if (isValid(stored)) {
-        orbMap = stored;
+        settingValue = stored;
         isStored = true;
       }
     }
@@ -1135,14 +1179,14 @@ export class SettingService {
       const data = await this.getByKey(key);
       const { value } = data;
       if (isValid(value)) {
-        orbMap = value;
+        settingValue = value;
         this.redisSet(key, value);
       }
     }
-    return orbMap;
+    return settingValue;
   }
 
-  async synastryOrbs(skipCache = false): Promise<number> {
+  async synastryOrbs(skipCache = false): Promise<{[key: string]: number}> {
     const key = 'synastry_orbs';
     return await this.fetchCachedSetting(key, skipCache, 2);
   }

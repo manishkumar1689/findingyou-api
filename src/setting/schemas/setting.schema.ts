@@ -31,6 +31,7 @@ export const SettingSchema = new mongoose.Schema({
       'languages',
       'flags',
       'rules',
+      'device_version',
       'custom',
     ],
   },

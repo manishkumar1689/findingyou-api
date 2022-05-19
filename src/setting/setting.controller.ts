@@ -43,7 +43,8 @@ import { ipWhitelistFileData } from '../auth/auth.utils';
 import { StringsDTO } from './dto/strings.dto';
 import { PredictiveRuleSetDTO } from './dto/predictive-rule-set.dto';
 import { smartCastInt } from '../lib/converters';
-import { Model } from 'mongoose';
+import { DeviceVersion } from './lib/interfaces';
+import { DeviceVersionDTO } from './dto/device-version.dto';
 
 @Controller('setting')
 export class SettingController {
@@ -113,6 +114,41 @@ export class SettingController {
   async getAllSetting(@Res() res) {
     const settings = await this.settingService.getAllSetting();
     return res.status(HttpStatus.OK).json(settings);
+  }
+
+  @Get('device/version/:key')
+  async getDeviceVersion(@Res() res, @Param('key') key) {
+    const version = await this.settingService.deviceVersion(key);
+    return res.status(HttpStatus.OK).json(version);
+  }
+
+  @Get('device/versions/:userID')
+  async getDeviceVersions(@Res() res, @Param('userID') userID) {
+    let versions: DeviceVersion[] = [];
+    let status = HttpStatus.FORBIDDEN;
+    const isAdminUser = await this.userService.isAdminUser(userID);
+    if (isAdminUser) {
+      versions = await this.settingService.deviceVersions();
+      status = HttpStatus.OK;
+    }
+    return res.status(status).json(versions);
+  }
+
+  @Put('device/save-versions/:userID')
+  async saveDeviceVersions(@Res() res, @Param('userID') userID, @Body() versions: DeviceVersionDTO[] ) {
+    let result: any = { valid: false, items: [] };
+    let status = HttpStatus.FORBIDDEN;
+    const isAdminUser = await this.userService.isAdminUser(userID);
+    if (isAdminUser) {
+      versions = await this.settingService.saveDeviceVersions(versions);
+      if (versions.length > 0) {
+        result = {valid: true, items: versions };
+        status = HttpStatus.OK;
+      } else {
+        status = HttpStatus.NOT_ACCEPTABLE;
+      }
+    }
+    return res.status(status).json(result);
   }
 
   @Get('ip-whitelist/list/:userID')

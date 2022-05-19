@@ -1886,7 +1886,7 @@ export class UserService {
   }
 
   async isAdminUser(userID: string): Promise<boolean> {
-    const user = await this.getUser(userID);
+    const user = isValidObjectId(userID) ? await this.getUser(userID) : null;
     return user instanceof Object ? this.hasAdminRole(user) : false;
   }
 
