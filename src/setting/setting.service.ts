@@ -816,13 +816,16 @@ export class SettingService {
   }
   async enforcePaidMembershipLogic(resetCache = false): Promise<boolean> {
     let value = false;
+    let hasCached = false;
     const cKey = 'members__enforce_paid_logic';
     if (!resetCache) {
       const cached = await this.redisGet(cKey);
       if (cached === true || cached === false) {
         value = cached;
+        hasCached = true
       }
-    } else {
+    } 
+    if (!hasCached) {
       const setting = await this.getByKey(cKey);
       if (setting instanceof Object) {
         value = setting.value === true;

@@ -134,6 +134,14 @@ export class SettingController {
     return res.status(status).json(versions);
   }
 
+  @Get('enforce-paid-logic')
+  async enforcePaidLogic(@Res() res) {
+    const enforce = await this.settingService.enforcePaidMembershipLogic();
+    const valid = typeof enforce === 'boolean';
+    const status = valid ? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
+    return res.status(status).json({enforce, valid});
+  }
+
   @Put('device/save-versions/:userID')
   async saveDeviceVersions(@Res() res, @Param('userID') userID, @Body() versions: DeviceVersionDTO[] ) {
     let result: any = { valid: false, items: [] };
