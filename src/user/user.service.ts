@@ -1498,7 +1498,7 @@ export class UserService {
     if (gendersOptIndex >= 0) {
       const gOpt = prefItems[gendersOptIndex];
       
-      const gendersVal = gOpt.value instanceof Array ? gOpt : assignGenderOpt(gOpt.value)
+      const gendersVal = gOpt.value instanceof Array ? gOpt.value : assignGenderOpt(gOpt.value)
       filteredPreferences[gendersOptIndex] = { 
         key: 'genders',
         value: gendersVal,
