@@ -154,20 +154,12 @@ export class UserService {
       2,
     );
     const otherGender = gender === 'm'? 'f' : 'm';
-    let genders = extractArrayFromKeyedItems(
+    const genders = extractArrayFromKeyedItems(
       preferences,
       'genders',
-      [],
+      [otherGender],
       1,
     );
-    if (genders.length < 1) {
-      genders = extractArrayFromKeyedItems(
-        preferences,
-        'gender',
-        [otherGender],
-        1,
-      );
-    }
 
     const hasAgeRange = ageRange.length > 0 && ageRange[0] > 0;
 
@@ -2016,12 +2008,15 @@ export class UserService {
     };
   } */
 
-  translateTargetGenders(val = '') {
+  translateTargetGenders(val = '', singleGenderAttractionOnly = false) {
+    // simplify options
     const combos = [['f', 'm'], ['m', 'f'], ['f'], ['m']];
-    const optList = combos.filter(pair => pair.includes(val));
+    const maxComboNum = singleGenderAttractionOnly ? 1 : 3;
+    const optList = combos.filter(combo => combo.includes(val) && combo.length <= maxComboNum);
     return {
       $elemMatch: {
-        key: { $in: ['gender', 'genders'] },
+        //key: { $in: ['gender', 'genders'] },
+        key: 'genders',
         value: { $in: optList },
       },
     };
