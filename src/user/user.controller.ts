@@ -823,12 +823,17 @@ export class UserController {
         if (userInfo.hasAgeRange && currQueryKeys.includes('age') === false) {
           query.age = userInfo.ageRange;
         }
-        if (userInfo.genders.length > 0 && currQueryKeys.includes('genders') === false) {
+        const hasGendersOverride = currQueryKeys.includes('gender');
+        if (userInfo.genders.length > 0 && !hasGendersOverride) {
           query.gender = userInfo.genders;
+        } else if (hasGendersOverride) {
+          const targetGenders = query.gender.split(',').filter(letter => letter.length > 0);
+          query.gender = targetGenders;
         }
-        if (userInfo.gender && currQueryKeys.includes('genders') === false) {
+        if (userInfo.gender) {
           query.genders = userInfo.gender;
         }
+
       }
       if (queryKeys.includes('near') === false && hasUser) {
         let maxDistKm = userInfo.maxDistance;
