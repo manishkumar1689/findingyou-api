@@ -105,7 +105,6 @@ import {
   summariseJungianAnswers,
   big5FacetedScaleOffset,
   compareJungianPolarities,
-  toSimplePolarityValues,
   extractSurveyScoresByType,
 } from '../setting/lib/mappers';
 import { PublicUserDTO } from './dto/public-user.dto';
@@ -1036,11 +1035,19 @@ export class UserController {
     };
     const entryToPerm = entry => entryToRow(entry, false);
     const entryToLimit = entry => entryToRow(entry, true);
+    const repeatInterval = await this.settingService.swipeMemberRepeatInterval();
+    const limits = Object.entries(permObj)
+    .filter(entry => typeof entry[1] === 'number')
+    .map(entryToLimit);
+    limits.push({
+      key: 'members__repeat_interval',
+      name: 'Swipe member repear interval (minutes)',
+      value: repeatInterval
+    })
+    const items = Object.entries(permObj).filter(entry => typeof entry[1] !== 'number').map(entryToPerm);
     return res.status(HttpStatus.OK).json({
-      items: Object.entries(permObj).map(entryToPerm),
-      limits: Object.entries(permObj)
-        .filter(entry => typeof entry[1] === 'number')
-        .map(entryToLimit),
+      items,
+      limits,
     });
   }
 
