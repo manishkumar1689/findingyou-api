@@ -1041,7 +1041,7 @@ export class UserController {
     .map(entryToLimit);
     limits.push({
       key: 'members__repeat_interval',
-      name: 'Swipe member repear interval (minutes)',
+      name: 'Swipe member repeat interval (minutes)',
       value: repeatInterval
     })
     const items = Object.entries(permObj).filter(entry => typeof entry[1] !== 'number').map(entryToPerm);
