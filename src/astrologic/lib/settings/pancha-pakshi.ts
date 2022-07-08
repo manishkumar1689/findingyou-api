@@ -1852,20 +1852,25 @@ export interface PPMatchRange {
 }
 
 export const matchTransitionPeak = (rk = '', relTr: TransitionData): number => {
-  switch (rk) {
-    case 'as':
-    case 'rise':
-    case 'rising':
-      return relTr.rise.jd;
-    case 'ds':
-    case 'set':
-    case 'setting':
-      return relTr.set.jd;
-    case 'mc':
-    case 'ic':
-      return relTr[rk].jd;
-    default:
-      return -1;
+  if (relTr instanceof Object) {
+    const keys = Object.keys(relTr);
+    switch (rk) {
+      case 'as':
+      case 'rise':
+      case 'rising':
+        return keys.includes('rise')? relTr.rise.jd : -1;
+      case 'ds':
+      case 'set':
+      case 'setting':
+        return keys.includes('set')? relTr.set.jd : -1;
+      case 'mc':
+      case 'ic':
+        return keys.includes(rk)? relTr[rk].jd : -1;
+      default:
+        return -1;
+    }
+  } else {
+    return -1;
   }
 };
 
@@ -1921,7 +1926,7 @@ const calcValueWithinOrb = (minJd = 0, start = 0, end = 0): { fraction: number; 
   return { fraction, peak };
 }
 
-const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1) => {
+const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1, skipTransitions = false) => {
   let score = 0;
   let ppScore = 0;
   const names: string[] = [];
@@ -1933,11 +1938,13 @@ const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1) => {
       for (const match of rule.validMatches) {
         if (!isMatched && minJd >= match.start && minJd <= match.end) {
           if (match.type === 'orb') {
-            const { fraction, peak } = calcValueWithinOrb(minJd, match.start, match.end);
-            if (endSubJd < 0 || (peak <= endSubJd && endSubJd > 0)) {
-              score += (rule.score * fraction);
-              names.push(rule.name);
-              peaks.push(peak);
+            if (!skipTransitions) {
+              const { fraction, peak } = calcValueWithinOrb(minJd, match.start, match.end);
+              if (endSubJd < 0 || (peak <= endSubJd && endSubJd > 0)) {
+                score += (rule.score * fraction);
+                names.push(rule.name);
+                peaks.push(peak);
+              }
             }
           } else {
             if (rule.validateAtMinJd(minJd)) {
@@ -1953,6 +1960,20 @@ const matchPPRulesToMinutes = (minJd = 0, rules: PPRule[], endSubJd = -1) => {
     }
   }
   return { minuteScore: score, ppScore, names, peaks };
+}
+
+const matchPPRulesOnly = (minJd = 0, rules: PPRule[]) => {
+  return matchPPRulesToMinutes(minJd, rules, 0, true);
+}
+
+const mapPPRuleResults = (ym = null, rules: PPRule[] = []) => {
+  const isValid = ym instanceof Object && Object.keys(ym).includes('subs') && ym.subs instanceof Array;
+    const subs = isValid ? ym.subs.map(sy => {
+      const result = matchPPRulesOnly(sy.start + (1 / 1440), rules);
+      return { ...sy, result: result.ppScore };
+    }) : [];
+    const item = isValid ? ym : [];
+    return { ...item, subs };
 }
 
 const translateTransitionKey = (key = '', isTr = false) => {
@@ -2376,8 +2397,11 @@ export const calculatePanchaPakshiData = async (
           let isLucky = false;
           let peakTimeIndex = -1;
           let prevPP = -1;
+          // round minutes to next exact minute after sunrise to make it easier to remap to exact 24 hour days
+          const roundedStartJd = Math.ceil(startJd * 1440) / 1440;
+          data.set('minuteStart', julToDateParts(roundedStartJd).unixTimeInt);
           for (let i = 0; i < maxMins; i++) {
-            const currJd = startJd + minJd * i;
+            const currJd = roundedStartJd + minJd * i;
             /* const refSub = subPeriods.find(
               sp => currJd >= sp.start && currJd <= sp.end,
             );
@@ -2481,8 +2505,17 @@ export const calculatePanchaPakshiData = async (
               }
             }
           }
+          const ys1 = ym1.map(ym => {
+            return mapPPRuleResults(ym, rules);
+          });
+          const ys2 = ym2.map(ym => {
+            return mapPPRuleResults(ym, rules);
+          });
+          data.set('yamas', ys1);
+          data.set('yamas2', ys2);
         }
         times.sort((a, b) => a.peak - b.peak);
+        
         const notMatchedRuleNames = rules.map(r => r.name).filter(nm => matchedRulesNames.indexOf(nm) < 0);
 /*         console.log(times.map(time => {
           const before = time.end < time.peak;
@@ -2525,7 +2558,7 @@ export const calcLuckyTimes = async (chart: Chart, jd = 0, geo: GeoLoc, rules: a
     customCutoff
   );
   if (ppData.get('valid') === true) {
-    const keys = ['max', 'cutOff', 'minutes', 'times'];
+    const keys = ['minuteStart', 'cutOff', 'minutes', 'times'];
     if (showRules) {
       keys.push('rules');
     }
