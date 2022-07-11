@@ -62,6 +62,7 @@ import {
   calcGrahaPos,
 } from './lib/core';
 import {
+  calcAltitudeResult,
   calcAltitudeSE,
   calcTransposedObjectTransitionsSimple,
 } from './lib/point-transitions';
@@ -2266,9 +2267,8 @@ export class AstrologicController {
      const flLng = smartCastFloat(lng);
      const flLat = smartCastFloat(lat);
      const isEqual = smartCastInt(equal) > 0;
-     const altitude = await calcAltitudeSE(jd, geo, flLng, flLat, isEqual);
-     
-     return res.json({ altitude, lng: flLng, lat: flLat, geo, jd, dtUtc });
+     const { altitude, azimuth } = await calcAltitudeResult(jd, geo, flLng, flLat, isEqual);
+     return res.json({ altitude, azimuth, lng: flLng, lat: flLat, geo, jd, dtUtc });
    }
 
   /*
