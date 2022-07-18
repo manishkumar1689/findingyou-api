@@ -7,7 +7,7 @@ export const BodySpeedSchema = new mongoose.Schema({
   },
   datetime: {
     type: Date,
-    required: true,
+    required: false,
   },
   num: {
     type: Number,

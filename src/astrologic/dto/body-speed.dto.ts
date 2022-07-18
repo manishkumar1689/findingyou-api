@@ -5,7 +5,7 @@ export class BodySpeedDTO {
   readonly jd: number;
 
   @ApiProperty()
-  readonly datetime: string;
+  readonly datetime?: string;
 
   @ApiProperty()
   readonly num: number;
@@ -14,7 +14,7 @@ export class BodySpeedDTO {
   readonly lng: number;
 
   @ApiProperty()
-  readonly speed: number;
+  readonly speed?: number;
 
   @ApiProperty()
   readonly acceleration: number;

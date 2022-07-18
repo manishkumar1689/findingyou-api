@@ -2012,10 +2012,9 @@ export class AstrologicService {
       .exec();
     if (record instanceof Object) {
       const { _id } = record;
-      await this.bodySpeedModel
-        .findByIdAndUpdate(_id, data, { new: false })
+      return await this.bodySpeedModel
+        .findByIdAndUpdate(_id, data, { new:false })
         .exec();
-      return await this.bodySpeedModel.findById(_id);
     } else {
       const newBodySpeed = await this.bodySpeedModel.create(data);
       return newBodySpeed.save();
@@ -2241,7 +2240,7 @@ export class AstrologicService {
           isNumber(prevSpeed) && prevSpeed !== 0 ? start.speed / prevSpeed : 0;
         const sd1: BodySpeedDTO = {
           num,
-          speed: start.spd,
+          speed: start.speed,
           lng: start.lng,
           jd: start.jd,
           datetime: start.datetime,
@@ -2544,6 +2543,7 @@ export class AstrologicService {
     if (last2 instanceof Array && last2.length > 1) {
       minJd = last2[1].jd;
     }
+    
     const data = await this.bodySpeedModel
       .find({ num, station: 'sample', jd: { $gt: minJd } })
       .sort({ jd: 1 })
@@ -2567,8 +2567,9 @@ export class AstrologicService {
           } else if (!maxMatched && prevRow instanceof Object) {
             maxMatched = true;
             if (rowsMatched < 4) {
-              results.push(prevRow);
-              this.saveBodySpeedStation(prevRow.jd, num, 'peak');
+              const station = 'peak';
+              results.push({...prevRow, station});
+              this.saveBodySpeedStation(prevRow.jd, num, station);
             }
             rowsMatched++;
             maxSpd = -1;
@@ -2580,8 +2581,9 @@ export class AstrologicService {
           } else if (!minMatched && prevRow instanceof Object) {
             minMatched = true;
             if (rowsMatched < 4) {
-              results.push(prevRow);
-              this.saveBodySpeedStation(prevRow.jd, num, 'retro-peak');
+              const station = 'retro-peak';
+              results.push({...prevRow, station});
+              this.saveBodySpeedStation(prevRow.jd, num, station);
             }
             rowsMatched++;
             minSpd = 1;
@@ -2595,7 +2597,7 @@ export class AstrologicService {
           minSpd = 1;
           const rs = prevPolarity < 0 ? 'retro-end' : 'retro-start';
           this.saveBodySpeedStation(prevRow.jd, num, rs);
-          results.push(row);
+          results.push({...row.toObject(), station: rs});
         }
         prevPolarity = currPolarity;
         prevRow = Object.assign({}, row.toObject());
