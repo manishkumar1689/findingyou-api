@@ -2891,7 +2891,7 @@ export class AstrologicService {
       locParts.push(geo.alt)
     };
     const loc = locParts.join(',');
-    const bKeys = keys.length > 0 ? keys : ['as','mc', 'su', 'mo', 'me', 've', 'ma', 'ju', 'sa', 'ur', 'ne', 'pl', 'ra', 'ke'];
+    const bKeys = keys.length > 0 ? keys.filter(k => ['as','mc'].includes(k) === false) : ['su', 'mo', 'me', 've', 'ma', 'ju', 'sa', 'ur', 'ne', 'pl', 'ra', 'ke'];
     const bodyKeyStr = bKeys.join(',');
     const options = {
       jd,
@@ -2927,24 +2927,24 @@ export class AstrologicService {
             lng: points.ascendant,
             azimuth: points.ascAzi,
             altitude: 0,
-            declination: 0,
+            declination: points.ascDec,
             lat: 0,
             latSpeed: 0,
             lngSpeed: 0,
             lngSpeedEq: 0,
-            rectAscension: 0,
+            rectAscension: points.ascRa,
           }
           const mc = {
             key: "mc",
             lng: points.mc,
             azimuth: points.mcAzimuth,
             altitude: points.mcAlt,
-            declination: 0,
+            declination: points.mcDec,
             lat: 0,
             latSpeed: 0,
             lngSpeed: 0,
             lngSpeedEq: 0,
-            rectAscension: 0,
+            rectAscension: points.mcRa,
           }
           bodies = [ ascendant, mc, ...result.bodies ];
           valid = bodies.length > 2;
@@ -2975,7 +2975,7 @@ export class AstrologicService {
         })
       }
     }
-    return { valid, ayanamsha, ayanamshaApplied, bodies };
+    return { valid, ayanamsha: { ...ayanamsha, applied: ayanamshaApplied }, bodies };
   }
 
   async pairedDuplicates(start = 0, limit = 20000) {
