@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { HttpService, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, Model, Types } from 'mongoose';
+import { AxiosResponse } from 'axios';
 import { BodySpeed } from './interfaces/body-speed.interface';
 import { Chart } from './interfaces/chart.interface';
 import { BodySpeedDTO } from './dto/body-speed.dto';
@@ -82,7 +83,7 @@ import {
   generateNameSearchRegex,
   calcCoordsDistance,
 } from './lib/helpers';
-import { minRemainingPaired } from '../.config';
+import { astroCalcApi, minRemainingPaired } from '../.config';
 import { calcTropicalAscendantDt } from './lib/calc-ascendant';
 import { GeoLoc } from './lib/models/geo-loc';
 import { LngLat } from './lib/interfaces';
@@ -97,8 +98,9 @@ import { mapLikeabilityRelations, UserFlagSet } from '../lib/notifications';
 import { User } from '../user/interfaces/user.interface';
 import { KeyNumValue } from '../lib/interfaces';
 import { calcKsetraBala, calcNavamshaBala, calcUccaBalaValues, calcUdayaBalaValues, calcVakraBala } from './lib/calc-sbc';
-import { calcKotaChakraScoreData, KotaCakraScoreSet } from './lib/settings/kota-values';
+import { calcKotaChakraScoreData } from './lib/settings/kota-values';
 import { addSnippetKeyToSynastryAspectMatches } from './lib/synastry-aspect-mapper';
+import { buildQueryString } from 'src/setting/lib/mappers';
 const { ObjectId } = Types;
 
 @Injectable()
@@ -107,6 +109,7 @@ export class AstrologicService {
     @InjectModel('BodySpeed') private bodySpeedModel: Model<BodySpeed>,
     @InjectModel('Chart') private chartModel: Model<Chart>,
     @InjectModel('PairedChart') private pairedChartModel: Model<PairedChart>,
+    private http: HttpService,
     private readonly redisService: RedisService,
   ) {}
 
@@ -123,6 +126,10 @@ export class AstrologicService {
   async redisSet(key: string, value, expire = -1): Promise<boolean> {
     const client = await this.redisClient();
     return await storeInRedis(client, key, value, expire);
+  }
+
+  getHttp(url: string): Promise<AxiosResponse> {
+    return this.http.get(url).toPromise();
   }
 
   async createChart(data: CreateChartDTO) {
@@ -2876,6 +2883,99 @@ export class AstrologicService {
       }
     });
     return { rows, datetime: chartData.datetime, geo: chartData.geo };
+  }
+
+  async getChartData(jd = 0, geo: GeoLoc, eq = 3, keys = [], topo = true, appliedAyanamshaKey = '') {
+    const locParts = [geo.lat, geo.lng];
+    if (geo.alt !== 0) {
+      locParts.push(geo.alt)
+    };
+    const loc = locParts.join(',');
+    const bKeys = keys.length > 0 ? keys : ['as','mc', 'su', 'mo', 'me', 've', 'ma', 'ju', 'sa', 'ur', 'ne', 'pl', 'ra', 'ke'];
+    const bodyKeyStr = bKeys.join(',');
+    const options = {
+      jd,
+      loc,
+      eq,
+      topo: topo ? 1 : 0,
+      bodies: bodyKeyStr
+    };
+    const uri = [astroCalcApi, 'chart-data'].join('/') + buildQueryString(options, false);
+    let result: any = { valid: false };
+
+    await this.getHttp(uri).then(response => {
+      if (response instanceof Object) {
+        const { data } = response;
+        if (data instanceof Object) {
+          result = data;
+        }
+      }
+    });
+    let valid = false;
+    let ayanamsha = {
+      key: '',
+      value: 0,
+    }
+    let bodies: any[] = [];
+    let ayanamshaApplied = false;
+    let ayaVal = 0;
+    if (result.valid && result.bodies.length > 0 && result.house instanceof Object) {
+        const { points } = result.house;
+        if (points instanceof Object) {
+          const ascendant = {
+            key: "as",
+            lng: points.ascendant,
+            azimuth: points.ascAzi,
+            altitude: 0,
+            declination: 0,
+            lat: 0,
+            latSpeed: 0,
+            lngSpeed: 0,
+            lngSpeedEq: 0,
+            rectAscension: 0,
+          }
+          const mc = {
+            key: "mc",
+            lng: points.mc,
+            azimuth: points.mcAzimuth,
+            altitude: points.mcAlt,
+            declination: 0,
+            lat: 0,
+            latSpeed: 0,
+            lngSpeed: 0,
+            lngSpeedEq: 0,
+            rectAscension: 0,
+          }
+          bodies = [ ascendant, mc, ...result.bodies ];
+          valid = bodies.length > 2;
+        }
+        if (result.ayanamshas.length > 0) {
+          ayanamsha = result.ayanamshas[0];
+
+        if (notEmptyString(appliedAyanamshaKey)) {
+          const hasAyaVal = ayanamsha instanceof Object && Object.keys(ayanamsha).includes('value') && isNumeric(ayanamsha.value);
+          ayaVal = hasAyaVal ? ayanamsha.value : 0;
+          if (ayaVal !== 0) {
+            ayanamshaApplied = true;
+          }
+        }
+
+        bodies = bodies.map(b => {
+          const { key, lng, azimuth, altitude, declination, lat, lngSpeed, rectAscension } = b;
+          return { 
+            key,
+            lng: subtractLng360(lng, ayaVal),
+            spe: lngSpeed,
+            lat,
+            azi: azimuth,
+            alt: altitude,
+            rca: rectAscension,
+            dec: declination
+          }
+        })
+      }
+    }
+    return { valid, ayanamsha, ayanamshaApplied, bodies };
   }
 
   async pairedDuplicates(start = 0, limit = 20000) {

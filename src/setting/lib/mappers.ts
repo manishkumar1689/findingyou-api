@@ -621,3 +621,26 @@ export const extractSurveyScoresByType = (user: any = null, type = 'jungian'): K
   return [];
 }
 
+export const buildQueryString = (criteria = null, literal = false) => {
+  let str = "";
+  if (criteria instanceof Object) {
+    const parts: Array<string> = [];
+    Object.entries(criteria).forEach((entry) => {
+      const [key, val] = entry;
+      let paramVal = val;
+      if (typeof val === "string") {
+        paramVal = literal ? val : encodeURIComponent(val);
+      } else if (typeof val === "number" || typeof val === "boolean") {
+        paramVal = val.toString();
+      } else if (val instanceof Array) {
+        paramVal = val.join(",");
+      }
+      parts.push(key + "=" + paramVal);
+    });
+    if (parts.length > 0) {
+      str = "?" + parts.join("&");
+    }
+  }
+  return str;
+};
+

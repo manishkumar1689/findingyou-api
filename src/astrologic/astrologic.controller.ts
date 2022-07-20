@@ -186,7 +186,7 @@ import {
 } from './lib/settings/progression';
 import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
-import { julToDateParts } from './lib/julian-date';
+import { currentJulianDay, dateStringToJulianDay, julToDateParts } from './lib/julian-date';
 import { buildSbcScoreGrid, traverseAllNak28Cells } from './lib/calc-sbc';
 import { calcKotaChakraScoreData, calcKotaChakraScoreSet } from './lib/settings/kota-values';
 
@@ -4960,6 +4960,27 @@ export class AstrologicController {
     }
     return res.status(HttpStatus.OK).json(result);
   }
+
+  /**
+   * Analysis
+   */
+   @Get('chart-data')
+  async fullChartData(@Res() res, @Query() query) {
+    const queryKeys = query instanceof Object ? Object.keys(query) : [];
+    const jdRef = queryKeys.includes('jd') && isNumeric(query.jd) ? smartCastFloat(query.jd) : 0;
+    const hasDt = queryKeys.includes('dt') && validISODateString(query.dt);
+    const jd = jdRef > 20000 ? jdRef : hasDt ? dateStringToJulianDay(query.dt.split('.').shift()) : currentJulianDay();
+    const loc = queryKeys.includes('loc') ? query.loc : '';
+    const locStr = validLocationParameter(loc) ? loc : '0,0';
+    const keys = queryKeys.includes('keys') && notEmptyString(query.keys,2) ? query.keys.split(',') : [];
+    const eq = queryKeys.includes('eq')? smartCastInt(query.eq, 3) : 3;
+    const topo = queryKeys.includes('topo')? smartCastInt(query.topo, 0) > 0 : true;
+    const ayaKey = queryKeys.includes('aya')? query.aya: '';
+    const geo = locStringToGeo(locStr);
+    const result = await this.astrologicService.getChartData(jd, geo, eq, keys, topo, ayaKey);
+    return res.json(result);
+  }
+
   /*
    * development
    */
