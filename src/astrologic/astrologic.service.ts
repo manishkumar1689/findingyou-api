@@ -2931,21 +2931,15 @@ export class AstrologicService {
             altitude: 0,
             declination: points.ascDec,
             lat: 0,
-            latSpeed: 0,
-            lngSpeed: 0,
-            lngSpeedEq: 0,
             rectAscension: points.ascRa,
           }
           const mc = {
             key: "mc",
             lng: points.mc,
-            azimuth: points.mcAzimuth,
+            azimuth: points.mcAzi,
             altitude: points.mcAlt,
             declination: points.mcDec,
             lat: 0,
-            latSpeed: 0,
-            lngSpeed: 0,
-            lngSpeedEq: 0,
             rectAscension: points.mcRa,
           }
           bodies = [ ascendant, mc, ...result.bodies ];
@@ -2987,7 +2981,7 @@ export class AstrologicService {
       const firstEntries = [
         ['jd', dateObj.jd],
         ['utc', dateObj.utc],
-        ['geo', [geo.lat, geo.lng].join(' / ')],
+        ['geo', [geoObj.lat, geoObj.lng].join(' / ')],
         [shortAyaKey, ayanamsha.value],
         ['mode', sidModeKey],
       ];
