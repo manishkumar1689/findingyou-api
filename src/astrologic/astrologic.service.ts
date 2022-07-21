@@ -2919,6 +2919,8 @@ export class AstrologicService {
     let bodies: any[] = [];
     let ayanamshaApplied = false;
     let ayaVal = 0;
+    let dateObj: any = { jd: 0, utc: '', unix: 0 };
+    let geoObj = {lng: 0, lat: 0 };
     if (result.valid && result.bodies.length > 0 && result.house instanceof Object) {
         const { points } = result.house;
         if (points instanceof Object) {
@@ -2948,6 +2950,8 @@ export class AstrologicService {
           }
           bodies = [ ascendant, mc, ...result.bodies ];
           valid = bodies.length > 2;
+          dateObj = result.date;
+          geoObj = result.geo;
         }
         if (result.ayanamshas.length > 0) {
           ayanamsha = result.ayanamshas[0];
@@ -2962,20 +2966,35 @@ export class AstrologicService {
 
         bodies = bodies.map(b => {
           const { key, lng, azimuth, altitude, declination, lat, lngSpeed, rectAscension } = b;
-          return { 
+          return [
             key,
-            lng: subtractLng360(lng, ayaVal),
-            spe: lngSpeed,
-            lat,
-            azi: azimuth,
-            alt: altitude,
-            rca: rectAscension,
-            dec: declination
-          }
+            { 
+              lng: subtractLng360(lng, ayaVal),
+              spe: lngSpeed,
+              lat,
+              azi: azimuth,
+              alt: altitude,
+              rca: rectAscension,
+              dec: declination
+            }
+          ]
         })
       }
     }
-    return { valid, ayanamsha: { ...ayanamsha, applied: ayanamshaApplied }, bodies };
+    if (valid) {
+      const shortAyaKey = ayanamsha.key.replace(/^true_/, '')
+      const sidModeKey = ayanamshaApplied ? 'sideral' : 'tropical';
+      const firstEntries = [
+        ['jd', dateObj.jd],
+        ['utc', dateObj.utc],
+        ['geo', [geo.lat, geo.lng].join(' / ')],
+        [shortAyaKey, ayanamsha.value],
+        ['mode', sidModeKey],
+      ];
+      return Object.fromEntries([...firstEntries, ...bodies]);
+    } else {
+      return { valid: false }
+    }
   }
 
   async pairedDuplicates(start = 0, limit = 20000) {
