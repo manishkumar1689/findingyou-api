@@ -13,6 +13,7 @@ import {
   UploadedFile,
   UseGuards,
 } from '@nestjs/common';
+import { Model } from 'mongoose';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SettingService } from './setting.service';
 import { UserService } from '../user/user.service';
@@ -21,7 +22,6 @@ import { CreateSettingDTO } from './dto/create-setting.dto';
 import { IdBoolDTO } from './dto/id-bool.dto';
 import { ScoreDTO } from './dto/score.dto';
 import { isNumeric, notEmptyString, validISODateString } from '../lib/validators';
-import { extractDocId } from '../lib/entities';
 import { exportCollection, listFiles } from '../lib/operations';
 import {
   checkFileExists,
@@ -45,6 +45,7 @@ import { PredictiveRuleSetDTO } from './dto/predictive-rule-set.dto';
 import { smartCastInt } from '../lib/converters';
 import { DeviceVersion } from './lib/interfaces';
 import { DeviceVersionDTO } from './dto/device-version.dto';
+import { CreateSnippetDTO } from '../snippet/dto/create-snippet.dto';
 
 @Controller('setting')
 export class SettingController {
@@ -89,11 +90,34 @@ export class SettingController {
   ) {
     let setting: any = {};
     let message = 'Invalid key or user ID';
-    if (this.userService.isAdminUser(userID)) {
+    const isAdmin = await this.userService.isAdminUser(userID);
+    if (isAdmin) {
       const result = await this.settingService.updateSettingByKey(key, createSettingDTO);
       if (notEmptyString(result.message)) {
         message = result.message;
         setting = result.setting;
+      }
+      if (createSettingDTO.type === 'preferences' && createSettingDTO.value instanceof Array && createSettingDTO.value.length > 0) {
+        for (const item of createSettingDTO.value) {
+          if (item instanceof Object) {
+            const { prompt, versions, key } = item;
+            if (notEmptyString(prompt) && versions instanceof Array && versions.length > 0) {
+              const snKey = [createSettingDTO.key, key].join('__');
+              if (versions[0].lang === 'en') {
+                const sn = await this.snippetService.getByKey(snKey);
+                if (sn instanceof Model) {
+                  const snObj = sn.toObject();
+                  if (snObj.values instanceof Array && snObj.values.length > 0) {
+                    if (snObj.values[0].lang === 'en') {
+                      snObj.values[0].text = prompt;
+                    }
+                  }
+                  this.snippetService.save(snObj as CreateSnippetDTO)
+                }
+              }
+            }
+          }
+        }
       }
     }
     return res.status(HttpStatus.OK).json({
