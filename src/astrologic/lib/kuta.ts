@@ -1,3 +1,4 @@
+import { KeyNumValue } from '../../lib/interfaces';
 import { smartCastFloat } from '../../lib/converters';
 import { inRange, isNumeric, notEmptyString } from '../../lib/validators';
 import { matchNakshatra } from './core';
@@ -157,6 +158,7 @@ export interface KutaScoreMatch {
 
 export class KutaValueSet {
   key = '';
+  title = '';
   head = '';
   c1Value = '-';
   c2Value = '-';
@@ -174,6 +176,7 @@ export class KutaValueSet {
           case 'c1Value':
           case 'c2Value':
           case 'variantRef':
+          case 'title':
             if (typeof v === 'string') {
               this[k] = v;
             }
@@ -198,10 +201,31 @@ export class KutaValueSet {
   }
 }
 
+export interface KutaVSet {
+  key?:	string;
+  title: string;
+  c1Value:	string;
+  c2Value: string;
+  score: number;
+  max: number;
+}
+
 export interface KutaValueSetItems {
   k1: string;
   k2: string;
   values: KutaValueSet[];
+}
+
+export interface KutaVSetItems {
+  k1: string;
+  k2: string;
+  values: KutaVSet[];
+}
+
+export interface KutaValueSetValues {
+  k1: string;
+  k2: string;
+  values: KeyNumValue[];
 }
 
 class KutaKeyVariant {
@@ -549,7 +573,7 @@ export class Kuta {
     return grahas;
   } */
 
-  calcAllSingleKutasFull(grahaKeys: string[] = [], allCombos = true) {
+  calcAllSingleKutasFull(grahaKeys: string[] = [], allCombos = true): KutaValueSetItems[] {
     const items = [];
     const refKeys = grahaKeys.length > 1 ? grahaKeys : this.allKeys;
     refKeys.forEach(k1 => {
@@ -570,7 +594,7 @@ export class Kuta {
     grahaKeys: string[] = [],
     kutaType = 'all',
     allCombos = true,
-  ) {
+  ): KutaValueSetItems[] | KutaValueSetValues[] {
     this.kutaType = kutaType;
     const items = this.calcAllSingleKutasFull(grahaKeys, allCombos);
     const simplifyKuta = (item: KutaValueSet) => {
@@ -589,6 +613,10 @@ export class Kuta {
             values: values.map(simplifyKuta),
           };
         });
+  }
+
+  calcAllSingleFullKutas( grahaKeys: string[] = [], kutaType = 'all', allCombos = true): KutaValueSetItems[] {
+    return this.calcAllSingleKutas(true,grahaKeys,kutaType,allCombos) as KutaValueSetItems[];
   }
 
   calcSingleKutasAsObj(gr1: Graha, gr2: Graha) {
@@ -707,7 +735,7 @@ export class Kuta {
       if (settings instanceof Object) {
         const femaleIndex = dataSets.findIndex(ds => ds.gender === 'f');
         const maleIndex = dataSets.findIndex(ds => ds.gender === 'm');
-        const hasMale = maleIndex >= 0;
+        //const hasMale = maleIndex >= 0;
         const hasFemale = femaleIndex >= 0;
         const femaleFirst = hasFemale && femaleIndex < maleIndex;
         /* const female = hasFemale ? dataSets[femaleIndex] : null;
@@ -724,7 +752,7 @@ export class Kuta {
               this._calcVashya(settings, result, dataSets, femaleFirst);
               break;
             case 'grahamaitri':
-              this._calcGrahamaitri(settings, result, dataSets);
+              this._calcGrahamaitri(settings, result, dataSets, femaleFirst);
               break;
             case 'tara':
               this._calcTara(settings, result, dataSets);

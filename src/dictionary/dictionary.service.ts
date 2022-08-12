@@ -5,14 +5,32 @@ import { Lexeme } from './interfaces/lexeme.interface';
 import { CreateLexemeDTO } from './dto/create-lexeme.dto';
 import { TranslationDTO } from './dto/translation.dto';
 import { CategoryKeys } from './interfaces/category-keys';
-import { hashMapToObject } from '../lib/entities';
+import { extractFromRedisClient, extractFromRedisMap, hashMapToObject, storeInRedis } from '../lib/entities';
+import * as Redis from 'ioredis';
+import { RedisService } from 'nestjs-redis';
 
 @Injectable()
 export class DictionaryService {
   constructor(
     @InjectModel('Lexeme')
     private lexemeModel: Model<Lexeme>,
+    private readonly redisService: RedisService,
   ) {}
+
+  async redisClient(): Promise<Redis.Redis> {
+    const redisMap = this.redisService.getClients();
+    return extractFromRedisMap(redisMap);
+  }
+
+  async redisGet(key: string): Promise<any> {
+    const client = await this.redisClient();
+    return await extractFromRedisClient(client, key);
+  }
+
+  async redisSet(key: string, value): Promise<boolean> {
+    const client = await this.redisClient();
+    return await storeInRedis(client, key, value);
+  }
 
   async getAll(criteria: any): Promise<Lexeme[]> {
     const filter = new Map<string, any>();
@@ -66,6 +84,11 @@ export class DictionaryService {
       categories = catKeys.filter((key, ki) => catKeys.indexOf(key) === ki);
     }
     return categories;
+  }
+
+  async getByCategories(keys: string[] = []): Promise<Lexeme[]> {
+    const rgx = new RegExp('^(' + keys.join('|') + ')__');
+    return await this.lexemeModel.find({ key: rgx });
   }
 
   async getCategoriesAndKeys(): Promise<Array<CategoryKeys>> {
@@ -157,4 +180,47 @@ export class DictionaryService {
     }
     return hashMapToObject(mp);
   }
+
+  async getKutaDictMap(): Promise<Map<string, string>> {
+    const mp: Map<string, string> = new Map();
+    const lexemes = await this.getByCategories(['kuta', 'rashi', 'nakshatra', 'dignity']);
+    const matchKey = (longKey: string) => {
+      const [start, end] = longKey.split('__');
+      if (start === 'kuta') {
+        return end.replace(/_/, '/');
+      } else if (start === 'rashi') {
+        return ['sign', end].join('/');
+      } else {
+        return [start, end].join('/');
+      }
+    }
+    lexemes.forEach(lex => {
+      const mKey = matchKey(lex.key);
+      mp.set(mKey, lex.name);
+    });
+    return mp;
+  }
+
+  async getKutaDict(): Promise<Map<string, string>> {
+    const key = 'kuta_dict';
+    const stored = await this.redisGet(key)
+    let mp: Map<string, string> = new Map();
+    let hasStored = false;
+    if (stored instanceof Object) {
+      const entries = Object.entries(stored);
+      if (entries.length > 10) {
+        mp = new Map(entries) as Map<string, string>;
+        hasStored = true;
+      }
+    }
+    if (!hasStored) {
+      const data = await this.getKutaDictMap();
+      if (data instanceof Map && data.size > 10) {
+        this.redisSet(key, Object.fromEntries(data.entries()));
+        mp = data;
+      }
+    }
+    return mp;
+  }
+
 }

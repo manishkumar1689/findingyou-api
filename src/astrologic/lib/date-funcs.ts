@@ -297,7 +297,28 @@ export const shortTzAbbr = (
   return abbr;
 };
 
-export const applyTzOffsetToDateString = (dt, offsetSecs: number) => {
+export const applyTzOffsetToDateString = (
+  dt: string | Date,
+  offsetSecs: number,
+) => {
+  if (typeof dt === 'string') {
+    let isNeg = false;
+    let refStr = dt;
+    if (dt.startsWith('-')) {
+      isNeg = true;
+      refStr = dt.substring(1);
+    }
+    const parts = refStr.split('-');
+    let yearRef = parts.shift();
+    if (yearRef.length < 4) {
+      yearRef = zeroPad(yearRef, 4);
+    }
+    if (isNeg) {
+      yearRef = '-00' + yearRef;
+    }
+    parts.unshift(yearRef);
+    dt = parts.join('-');
+  }
   return moment
     .utc(dt)
     .subtract(offsetSecs, 'seconds')
@@ -421,4 +442,4 @@ export const dtStringToNearest15Minutes = (dtStr = '') => {
   } else {
     return dtStr;
   }
-}
+};

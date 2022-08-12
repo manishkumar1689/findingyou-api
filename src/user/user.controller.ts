@@ -79,7 +79,7 @@ import {
 import { PreferenceDTO } from './dto/preference.dto';
 import { SampleDataDTO } from './dto/sample-data.dto';
 import { SampleRecordDTO } from './dto/sample-record.dto';
-import { addExtraPanchangeNumValues, simplifyChart } from '../astrologic/lib/member-charts';
+import { addExtraPanchangaNumValues, simplifyChart } from '../astrologic/lib/member-charts';
 import { MediaItemDTO } from './dto/media-item.dto';
 import {
   filterLikeabilityContext,
@@ -1463,7 +1463,7 @@ export class UserController {
         if (chart instanceof Object) {
           const chartObj = isMemberLogin ? simplifyChart(chart, 'true_citra', 'basic') : chart;
           if (isMemberLogin) {
-            addExtraPanchangeNumValues(chartObj, 'true_citra');
+            addExtraPanchangaNumValues(chartObj, 'true_citra');
           }
           userData.set('chart', chartObj);
         }

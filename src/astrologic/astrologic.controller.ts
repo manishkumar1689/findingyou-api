@@ -15,6 +15,7 @@ import { AstrologicService } from './astrologic.service';
 import { GeoService } from './../geo/geo.service';
 import { UserService } from './../user/user.service';
 import { SettingService } from './../setting/setting.service';
+import { DictionaryService } from '../dictionary/dictionary.service';
 import { CreateChartDTO } from './dto/create-chart.dto';
 import {
   isNumeric,
@@ -31,11 +32,12 @@ import {
   locStringToGeo,
 } from './lib/converters';
 import {
-  addExtraPanchangeNumValues,
+  addExtraPanchangaNumValues,
   applyAscendantToSimpleChart,
   simplifyAstroChart,
   simplifyChart,
   simplifyConditions,
+  addExtraPanchangaNumValuesFromClass
 } from './lib/member-charts';
 import {
   calcAllTransitions,
@@ -176,7 +178,6 @@ import {
   panchaPakshiDayNightSet,
 } from './lib/settings/pancha-pakshi';
 import { PairsSetDTO } from './dto/pairs-set.dto';
-import { randomCompatibilityText } from './lib/settings/compatibility-texts';
 import {
   buildProgressSetPairs,
   buildSingleProgressSet,
@@ -197,6 +198,7 @@ export class AstrologicController {
     private geoService: GeoService,
     private userService: UserService,
     private settingService: SettingService,
+    private dictionaryService: DictionaryService
   ) {}
 
   /*
@@ -1436,46 +1438,68 @@ export class AstrologicController {
     return res.json({ jd, dtUtc, geo, hoursOffset });
   } */
 
-  @Get('compare-chart/:loc/:dt/:userID')
+  @Get('compare-chart')
   async compareWithChart(
     @Res() res,
-    @Param('loc') loc,
-    @Param('dt') dt,
-    @Param('userID') userID,
+    @Query() query
   ) {
-    const geo = locStringToGeo(loc);
-    const refDt = validISODateString(dt) ? dt : currentISODate();
-    const geoInfo = await this.fetchGeoInfo(geo, refDt);
-    const dtUtc = applyTzOffsetToDateString(refDt, geoInfo.offset);
+    const keys = query instanceof Object ? Object.keys(query) : [];
+    const loc = keys.includes('loc')? query.loc : '0,0';
+    //const geo = locStringToGeo(loc);
+    const userID = keys.includes('user') && isValidObjectId(query.user) ? query.user : '';
+    const roddenValue = keys.includes('rodden') && isNumeric(query.rodden) ? smartCastInt(query.rodden) : 200;
+    const refDt = keys.includes('dt') && validISODateString(query.dt) ? query.dt : currentISODate();
+    //const geoInfo = await this.fetchGeoInfo(geo, refDt);
+    const gender = keys.includes('gender') ? query.gender : '';
+    const name = keys.includes('gender') ? query.name : 'N/A';
+    const showUserChart = keys.includes('uc') ? smartCastInt(query.uc, 0) > 0 : false;
+    const showP2 = keys.includes('p2') ? smartCastInt(query.p2, 0) > 0 : false;
+    //const dtUtc = applyTzOffsetToDateString(refDt, geoInfo.offset);
+    // refDT in local time will be converted to UTC
     const data = await this.fetchCompactChart(
       loc,
-      dtUtc,
+      refDt,
       'top',
       'true_citra',
       false,
       false,
     );
+    data.isDefaultBirthChart = false;
+    data.subject = {
+      name,
+      gender,
+      type: 'person',
+      eventType: 'birth',
+      roddenValue
+    }
+    data.progressItems = showP2 ? await buildSingleProgressSetKeyValues(
+      data.jd,
+    ) : [];
+  const c2 = new Chart(data);
+    c2.setAyanamshaItemByKey('true_citra')
     const otherChart = simplifyAstroChart(data, true, true);
-
+    addExtraPanchangaNumValuesFromClass(data, c2, 'true_citra');
     let userChart = null;
+    let c1 = new Chart();
     if (notEmptyString(userID, 16)) {
-      const chartData = await this.astrologicService.getUserBirthChart(userID);
-      if (chartData instanceof Model) {
+      const chartRecord = await this.astrologicService.getUserBirthChart(userID);
+      if (chartRecord instanceof Model) {
+        const chartData = chartRecord.toObject();
+        c1 = new Chart(chartData);
         userChart = simplifyAstroChart(chartData, true, true);
+        addExtraPanchangaNumValuesFromClass(chartData, c1, 'true_citra');
       }
     }
     const hasUserChart = userChart instanceof Object;
-    const percent = hasUserChart
-      ? Math.round(Math.random() * 80 + Math.random() * 10 + 10)
-      : 0;
-    const text = hasUserChart ? randomCompatibilityText() : '';
-    const compatibility = {
-      general: {
-        percent,
-        text,
-      },
-    };
-    return res.json({ compatibility, otherChart, userChart });
+    if (hasUserChart) {
+      const kutaDict = await this.dictionaryService.getKutaDict();
+      const customSettings = await this.settingService.customCompatibilitySettings(kutaDict);
+      const compatibility = this.astrologicService.compareCharts(c1, c2,customSettings);
+      const result = showUserChart ? { valid: true, ...compatibility, otherChart, userChart } : { valid: true, ...compatibility, chart: otherChart };
+      return res.json(result);
+    } else {
+      return res.status(HttpStatus.BAD_REQUEST).json({ valid: false });
+    }
   }
 
   /*
@@ -1569,7 +1593,7 @@ export class AstrologicController {
     const chart = valid ? simplifyChart(data.chart, ayaKey, simpleMode) : {};
     // only add calculated moonNak and vara if valid object returned and ayaKey is true_citra
     if (valid && ayaKey === 'true_citra') {
-      addExtraPanchangeNumValues(data.chart, ayaKey);
+      addExtraPanchangaNumValues(data.chart, ayaKey);
     }
     return res.status(HttpStatus.OK).json({ valid, shortTz, chart });
   }
@@ -2561,7 +2585,6 @@ export class AstrologicController {
     if (validISODateString(before)) {
       data.result = await this.astrologicService.bulkDeletePaired(
         before,
-        maxInt,
       );
     }
     return res.status(HttpStatus.OK).json(data);
