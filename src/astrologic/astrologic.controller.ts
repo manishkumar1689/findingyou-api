@@ -37,7 +37,7 @@ import {
   simplifyAstroChart,
   simplifyChart,
   simplifyConditions,
-  addExtraPanchangaNumValuesFromClass
+  addExtraPanchangaNumValuesFromClass,
 } from './lib/member-charts';
 import {
   calcAllTransitions,
@@ -187,9 +187,16 @@ import {
 } from './lib/settings/progression';
 import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
-import { currentJulianDay, dateStringToJulianDay, julToDateParts } from './lib/julian-date';
+import {
+  currentJulianDay,
+  dateStringToJulianDay,
+  julToDateParts,
+} from './lib/julian-date';
 import { buildSbcScoreGrid, traverseAllNak28Cells } from './lib/calc-sbc';
-import { calcKotaChakraScoreData, calcKotaChakraScoreSet } from './lib/settings/kota-values';
+import {
+  calcKotaChakraScoreData,
+  calcKotaChakraScoreSet,
+} from './lib/settings/kota-values';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -198,7 +205,7 @@ export class AstrologicController {
     private geoService: GeoService,
     private userService: UserService,
     private settingService: SettingService,
-    private dictionaryService: DictionaryService
+    private dictionaryService: DictionaryService,
   ) {}
 
   /*
@@ -444,7 +451,7 @@ export class AstrologicController {
         const rules = processRules
           ? await this.settingService.getPPRules()
           : [];
-        const customCutoff = await this.settingService.getPPCutoff(); 
+        const customCutoff = await this.settingService.getPPCutoff();
         data = await calculatePanchaPakshiData(
           chart,
           jd,
@@ -454,7 +461,7 @@ export class AstrologicController {
           fetchNightAndDay,
           true,
           customCutoff,
-          debugMode
+          debugMode,
         );
         if (data.get('valid') === true) {
           status = HttpStatus.OK;
@@ -472,55 +479,62 @@ export class AstrologicController {
     #mobile
     #testing
   */
-    @Get('lucky-times/:chartRef/:loc/:dt?/:dateMode')
-    async ppLuckyTimes(
-      @Res() res,
-      @Param('chartRef') chartRef,
-      @Param('loc') loc,
-      @Param('dt') dt,
-      @Param('dtMode') dtMode,
-    ) {
-      let status = HttpStatus.BAD_REQUEST;
-      const dateMode = notEmptyString(dtMode)? dtMode.toLowerCase() : 'simple';
-      const data: Map<string, any> = new Map(
-        Object.entries({
-          valid: false,
-          message: '',
-        }),
-      );
-      let chartID = chartRef;
-      if (chartRef.includes('@') && chartRef.includes('.')) {
-        chartID = await this.astrologicService.getChartIDByEmail(chartRef);
-      }
-      if (notEmptyString(chartID) && notEmptyString(loc, 3)) {
-        const geo = locStringToGeo(loc);
-        const { dtUtc, jd } = matchJdAndDatetime(dt);
-
-        data.set('jd', jd);
-        data.set('unix', julToDateParts(jd).unixTimeInt);
-        data.set('dtUtc', dtUtc);
-        const chartData = await this.astrologicService.getChart(chartID);
-        const hasChart = chartData instanceof Model;
-        const valid = hasChart && chartData.grahas.length > 1;
-        data.set('valid', valid);
-        if (valid) {
-          const chartObj = hasChart ? chartData.toObject() : {};
-          const chart = new Chart(chartObj);
-          const rules = await this.settingService.getPPRules();
-          const customCutoff = await this.settingService.getPPCutoff();
-          const ppData = await calcLuckyTimes(chart, jd, geo, rules, customCutoff, dateMode);
-          ppData.forEach((v, k) => {
-            data.set(k, v);
-          });
-          if (data.get('valid')) {
-            status = HttpStatus.OK;
-          }
-        }
-      } else {
-        data.set('message', 'Invalid parameters');
-      }
-      return res.status(status).json(Object.fromEntries(data));
+  @Get('lucky-times/:chartRef/:loc/:dt?/:dateMode')
+  async ppLuckyTimes(
+    @Res() res,
+    @Param('chartRef') chartRef,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Param('dtMode') dtMode,
+  ) {
+    let status = HttpStatus.BAD_REQUEST;
+    const dateMode = notEmptyString(dtMode) ? dtMode.toLowerCase() : 'simple';
+    const data: Map<string, any> = new Map(
+      Object.entries({
+        valid: false,
+        message: '',
+      }),
+    );
+    let chartID = chartRef;
+    if (chartRef.includes('@') && chartRef.includes('.')) {
+      chartID = await this.astrologicService.getChartIDByEmail(chartRef);
     }
+    if (notEmptyString(chartID) && notEmptyString(loc, 3)) {
+      const geo = locStringToGeo(loc);
+      const { dtUtc, jd } = matchJdAndDatetime(dt);
+
+      data.set('jd', jd);
+      data.set('unix', julToDateParts(jd).unixTimeInt);
+      data.set('dtUtc', dtUtc);
+      const chartData = await this.astrologicService.getChart(chartID);
+      const hasChart = chartData instanceof Model;
+      const valid = hasChart && chartData.grahas.length > 1;
+      data.set('valid', valid);
+      if (valid) {
+        const chartObj = hasChart ? chartData.toObject() : {};
+        const chart = new Chart(chartObj);
+        const rules = await this.settingService.getPPRules();
+        const customCutoff = await this.settingService.getPPCutoff();
+        const ppData = await calcLuckyTimes(
+          chart,
+          jd,
+          geo,
+          rules,
+          customCutoff,
+          dateMode,
+        );
+        ppData.forEach((v, k) => {
+          data.set(k, v);
+        });
+        if (data.get('valid')) {
+          status = HttpStatus.OK;
+        }
+      }
+    } else {
+      data.set('message', 'Invalid parameters');
+    }
+    return res.status(status).json(Object.fromEntries(data));
+  }
 
   /*
     #astrotesting
@@ -817,7 +831,10 @@ export class AstrologicController {
       };
       if (showProgressSummary) {
         const customConfig = await this.settingService.p2Scores();
-        const pd = await this.astrologicService.progressAspectsFromJds(jd1, jd2);
+        const pd = await this.astrologicService.progressAspectsFromJds(
+          jd1,
+          jd2,
+        );
         data.summary = calcProgressSummary(pd.items, true, customConfig);
         data.items = pd.items;
       }
@@ -855,17 +872,30 @@ export class AstrologicController {
 
   @Get('p2-simple/:c1/:c2')
   async getProgressionSimple(@Res() res, @Param('c1') c1, @Param('c2') c2) {
-    const data: any = { valid: false, num: 0, numWithAspects: 0, jd1: 0, jd2: 0, items: [] };
+    const data: any = {
+      valid: false,
+      num: 0,
+      numWithAspects: 0,
+      jd1: 0,
+      jd2: 0,
+      items: [],
+    };
     const co1 = await this.astrologicService.getChart(c1);
     const co2 = await this.astrologicService.getChart(c2);
     if (co1 instanceof Object && co2 instanceof Object) {
       const chart1 = new Chart(co1.toObject());
       const chart2 = new Chart(co2.toObject());
-      let pd: any = { num: 0, jd1:0, jd2: 0, items: [], numWithAspects: 0 };
+      let pd: any = { num: 0, jd1: 0, jd2: 0, items: [], numWithAspects: 0 };
       if (chart1.hasCurrentProgressItems && chart2.hasCurrentProgressItems) {
-          pd = calcProgressAspectDataFromProgressItems(chart1.matchProgressItems(), chart2.matchProgressItems());
+        pd = calcProgressAspectDataFromProgressItems(
+          chart1.matchProgressItems(),
+          chart2.matchProgressItems(),
+        );
       } else {
-        pd = await this.astrologicService.progressAspectsFromJds(chart1.jd, chart2.jd);
+        pd = await this.astrologicService.progressAspectsFromJds(
+          chart1.jd,
+          chart2.jd,
+        );
       }
       if (pd.num > 0) {
         const customConfig = await this.settingService.p2Scores();
@@ -880,9 +910,13 @@ export class AstrologicController {
     return res.status(HttpStatus.OK).json(data);
   }
 
-
   @Get('sbc-vedhas/:chartRef/:loc/:dt?')
-  async getSbcVedhas(@Res() res, @Param('chartRef') chartRef, @Param('loc') loc, @Param('dt') dt) {
+  async getSbcVedhas(
+    @Res() res,
+    @Param('chartRef') chartRef,
+    @Param('loc') loc,
+    @Param('dt') dt,
+  ) {
     let chartID = chartRef;
     if (chartRef.includes('@') && chartRef.includes('.')) {
       chartID = await this.astrologicService.getChartIDByEmail(chartRef);
@@ -903,7 +937,10 @@ export class AstrologicController {
     if (transitCData instanceof Object) {
       const transit = new Chart(transitCData);
       transit.setAyanamshaItemByKey('true_citra');
-      result.set('transit', transit.grahasByKeys().map(gr => gr.toKeyLng()));
+      result.set(
+        'transit',
+        transit.grahasByKeys().map(gr => gr.toKeyLng()),
+      );
       if (isValidObjectId(chartID)) {
         const bData = await this.astrologicService.getChart(chartID);
         if (bData instanceof Model) {
@@ -912,7 +949,10 @@ export class AstrologicController {
           const sbc = traverseAllNak28Cells(transit, birth);
           result.set('sbc', sbc);
           const grid = buildSbcScoreGrid(sbc);
-          result.set('natal', birth.grahasByKeys().map(gr => gr.toKeyLng()));
+          result.set(
+            'natal',
+            birth.grahasByKeys().map(gr => gr.toKeyLng()),
+          );
           result.set('grid', grid);
           result.set('natalWd', birth.indianTime.weekDayNum);
           result.set('natalMoonSign', birth.moon.sign);
@@ -922,19 +962,27 @@ export class AstrologicController {
         }
       }
     }
-    return res.json(Object.fromEntries( result.entries() ));
+    return res.json(Object.fromEntries(result.entries()));
   }
 
   @Get('kota-chakra/:chartRef/:loc/:dt?')
-  async getKotaChakra(@Res() res, @Param('chartRef') chartRef, @Param('loc') loc, @Param('dt') dt, @Query() query) {
+  async getKotaChakra(
+    @Res() res,
+    @Param('chartRef') chartRef,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Query() query,
+  ) {
     let chartID = chartRef;
     if (chartRef.includes('@') && chartRef.includes('.')) {
       chartID = await this.astrologicService.getChartIDByEmail(chartRef);
     }
     const { dtUtc, jd } = matchJdAndDatetime(dt);
-    const params = query instanceof Object? query : {};
+    const params = query instanceof Object ? query : {};
     const paramKeys = Object.keys(params);
-    const separateSP = paramKeys.includes('separate')? smartCastInt(params.separate, 0) > 0 : false;
+    const separateSP = paramKeys.includes('separate')
+      ? smartCastInt(params.separate, 0) > 0
+      : false;
     const topList = 'true_citra';
     const transitCData = await this.fetchCompactChart(
       loc,
@@ -959,22 +1007,37 @@ export class AstrologicController {
           result.set('birthJd', birth.jd);
           result.set('birthUtc', birth.datetime);
           result.set('birthLocation', birth.geo);
-          const {scores, total, moonNakshatra, svami, pala, scoreSet } = calcKotaChakraScoreSet(birth, transit, ruleData, separateSP);
+          const {
+            scores,
+            total,
+            moonNakshatra,
+            svami,
+            pala,
+            scoreSet,
+          } = calcKotaChakraScoreSet(birth, transit, ruleData, separateSP);
           result.set('svami', svami);
           result.set('pala', pala);
           result.set('total', total);
           result.set('scores', scores);
           result.set('moonNakshatra', moonNakshatra);
           result.set('scoreSet', scoreSet);
-          result.set('transit', transit.grahasByKeys().map(gr => gr.toKeyLng()));
+          result.set(
+            'transit',
+            transit.grahasByKeys().map(gr => gr.toKeyLng()),
+          );
         }
       }
     }
-    return res.json(Object.fromEntries( result.entries() ));
+    return res.json(Object.fromEntries(result.entries()));
   }
 
   @Get('kota-chakra-compare/:c1/:c2?')
-  async compareKotaChakra(@Res() res, @Param('c1') c1, @Param('c2') c2, @Query() query) {
+  async compareKotaChakra(
+    @Res() res,
+    @Param('c1') c1,
+    @Param('c2') c2,
+    @Query() query,
+  ) {
     let chartID1 = c1;
     if (c1.includes('@') && c1.includes('.')) {
       chartID1 = await this.astrologicService.getChartIDByEmail(c1);
@@ -983,12 +1046,18 @@ export class AstrologicController {
     if (c2.includes('@') && c2.includes('.')) {
       chartID2 = await this.astrologicService.getChartIDByEmail(c2);
     }
-    const params = query instanceof Object? query : {};
+    const params = query instanceof Object ? query : {};
     const paramKeys = Object.keys(params);
-    const separateSP = paramKeys.includes('separate')? smartCastInt(params.separate, 0) > 0 : false;
+    const separateSP = paramKeys.includes('separate')
+      ? smartCastInt(params.separate, 0) > 0
+      : false;
     const result: Map<string, any> = new Map();
-    const cData1 = isValidObjectId(chartID1) ? await this.astrologicService.getChart(chartID1) : null;
-    const cData2 = isValidObjectId(chartID2) ? await this.astrologicService.getChart(chartID2) : null;
+    const cData1 = isValidObjectId(chartID1)
+      ? await this.astrologicService.getChart(chartID1)
+      : null;
+    const cData2 = isValidObjectId(chartID2)
+      ? await this.astrologicService.getChart(chartID2)
+      : null;
     if (cData1 instanceof Model && cData2 instanceof Model) {
       const chart1 = new Chart(cData1.toObject());
       chart1.setAyanamshaItemByKey('true_citra');
@@ -1001,30 +1070,40 @@ export class AstrologicController {
       result.set('c2Jd', chart2.jd);
       result.set('c2Utc', chart2.datetime);
       result.set('c2Location', chart2.geo);
-      const s1Data = calcKotaChakraScoreData(chart1, chart2, scoreSet, separateSP);
+      const s1Data = calcKotaChakraScoreData(
+        chart1,
+        chart2,
+        scoreSet,
+        separateSP,
+      );
       result.set('s1', {
         moonNakshatra: s1Data.moonNakshatra,
         svami: s1Data.svami,
         pala: s1Data.pala,
         total: s1Data.total,
-        scores: s1Data.scores
+        scores: s1Data.scores,
       });
-      const s2Data = calcKotaChakraScoreData(chart2, chart1, scoreSet, separateSP);
+      const s2Data = calcKotaChakraScoreData(
+        chart2,
+        chart1,
+        scoreSet,
+        separateSP,
+      );
       result.set('s2', {
         moonNakshatra: s2Data.moonNakshatra,
         svami: s2Data.svami,
         pala: s2Data.pala,
         total: s2Data.total,
-        scores: s2Data.scores
+        scores: s2Data.scores,
       });
     }
-    return res.json(Object.fromEntries( result.entries() ));
+    return res.json(Object.fromEntries(result.entries()));
   }
 
   @Get('retro-scores/:chartRef')
-  async getRetroScores(@Res() res, @Param('chartRef') chartRef ) {
+  async getRetroScores(@Res() res, @Param('chartRef') chartRef) {
     let chartID = chartRef;
-    const data = {valid: false, result: null }
+    const data = { valid: false, result: null };
     if (chartRef.includes('@') && chartRef.includes('.')) {
       chartID = await this.astrologicService.getChartIDByEmail(chartRef);
     }
@@ -1039,7 +1118,7 @@ export class AstrologicController {
     return res.json(data);
   }
 
-/*   @Get('test-vedhas/:nak/:pada?')
+  /*   @Get('test-vedhas/:nak/:pada?')
   async testSbcVedhas(@Res() res, @Param('nak') nak, @Param('pada') pada) {
     const nakNum = isNumeric(nak)? smartCastInt(nak) : 0;
     const padaNum = isNumeric(pada)? smartCastInt(pada) : 0;
@@ -1420,13 +1499,18 @@ export class AstrologicController {
     );
     const chart = simplify ? simplifyAstroChart(data, true, true) : data;
     if (chart instanceof Object) {
-      const vakraScale = queryKeys.includes('vakra') ? smartCastInt(query.vakra, 60) : 60;
-      chart.numValues = await this.astrologicService.calcExtraScoresForChart(data, vakraScale);
+      const vakraScale = queryKeys.includes('vakra')
+        ? smartCastInt(query.vakra, 60)
+        : 60;
+      chart.numValues = await this.astrologicService.calcExtraScoresForChart(
+        data,
+        vakraScale,
+      );
     }
     return res.json(chart);
   }
 
-/*   @Get('noon-jd/:loc/:dt')
+  /*   @Get('noon-jd/:loc/:dt')
   async fetchNoonJd(
     @Res() res,
     @Param('loc') loc,
@@ -1439,20 +1523,26 @@ export class AstrologicController {
   } */
 
   @Get('compare-chart')
-  async compareWithChart(
-    @Res() res,
-    @Query() query
-  ) {
+  async compareWithChart(@Res() res, @Query() query) {
     const keys = query instanceof Object ? Object.keys(query) : [];
-    const loc = keys.includes('loc')? query.loc : '0,0';
+    const loc = keys.includes('loc') ? query.loc : '0,0';
     //const geo = locStringToGeo(loc);
-    const userID = keys.includes('user') && isValidObjectId(query.user) ? query.user : '';
-    const roddenValue = keys.includes('rodden') && isNumeric(query.rodden) ? smartCastInt(query.rodden) : 200;
-    const refDt = keys.includes('dt') && validISODateString(query.dt) ? query.dt : currentISODate();
+    const userID =
+      keys.includes('user') && isValidObjectId(query.user) ? query.user : '';
+    const roddenValue =
+      keys.includes('rodden') && isNumeric(query.rodden)
+        ? smartCastInt(query.rodden)
+        : 200;
+    const refDt =
+      keys.includes('dt') && validISODateString(query.dt)
+        ? query.dt
+        : currentISODate();
     //const geoInfo = await this.fetchGeoInfo(geo, refDt);
     const gender = keys.includes('gender') ? query.gender : '';
     const name = keys.includes('gender') ? query.name : 'N/A';
-    const showUserChart = keys.includes('uc') ? smartCastInt(query.uc, 0) > 0 : false;
+    const showUserChart = keys.includes('uc')
+      ? smartCastInt(query.uc, 0) > 0
+      : false;
     const showP2 = keys.includes('p2') ? smartCastInt(query.p2, 0) > 0 : false;
     //const dtUtc = applyTzOffsetToDateString(refDt, geoInfo.offset);
     // refDT in local time will be converted to UTC
@@ -1470,19 +1560,21 @@ export class AstrologicController {
       gender,
       type: 'person',
       eventType: 'birth',
-      roddenValue
-    }
-    data.progressItems = showP2 ? await buildSingleProgressSetKeyValues(
-      data.jd,
-    ) : [];
-  const c2 = new Chart(data);
-    c2.setAyanamshaItemByKey('true_citra')
+      roddenValue,
+    };
+    data.progressItems = showP2
+      ? await buildSingleProgressSetKeyValues(data.jd)
+      : [];
+    const c2 = new Chart(data);
+    c2.setAyanamshaItemByKey('true_citra');
     const otherChart = simplifyAstroChart(data, true, true);
     addExtraPanchangaNumValuesFromClass(data, c2, 'true_citra');
     let userChart = null;
     let c1 = new Chart();
     if (notEmptyString(userID, 16)) {
-      const chartRecord = await this.astrologicService.getUserBirthChart(userID);
+      const chartRecord = await this.astrologicService.getUserBirthChart(
+        userID,
+      );
       if (chartRecord instanceof Model) {
         const chartData = chartRecord.toObject();
         c1 = new Chart(chartData);
@@ -1493,9 +1585,17 @@ export class AstrologicController {
     const hasUserChart = userChart instanceof Object;
     if (hasUserChart) {
       const kutaDict = await this.dictionaryService.getKutaDict();
-      const customSettings = await this.settingService.customCompatibilitySettings(kutaDict);
-      const compatibility = this.astrologicService.compareCharts(c1, c2,customSettings);
-      const result = showUserChart ? { valid: true, ...compatibility, otherChart, userChart } : { valid: true, ...compatibility, chart: otherChart };
+      const customSettings = await this.settingService.customCompatibilitySettings(
+        kutaDict,
+      );
+      const compatibility = this.astrologicService.compareCharts(
+        c1,
+        c2,
+        customSettings,
+      );
+      const result = showUserChart
+        ? { valid: true, ...compatibility, otherChart, userChart }
+        : { valid: true, ...compatibility, chart: otherChart };
       return res.json(result);
     } else {
       return res.status(HttpStatus.BAD_REQUEST).json({ valid: false });
@@ -1830,7 +1930,7 @@ export class AstrologicController {
             };
             if (notEmptyString(parent, 16)) {
               data.chart.parent = parent;
-            }  else {
+            } else {
               // remove parent Object ID ref altogether
               data.chart.parent = null;
             }
@@ -2276,24 +2376,45 @@ export class AstrologicController {
     const { jd, dtUtc } = matchJdAndDatetime(dt);
     const grNum = matchPlanetNum(key);
     const dV = await calcDeclination(jd, grNum);
-    return {...dV, dtUtc };
+    return { ...dV, dtUtc };
   }
 
-   /*
-  * #astrotesting
-  * fetch altitude of any point in the sky at a given location
-  * Can be used to calculate transits
-  */
-   @Get('altitude/:loc/:dt/:lng/:lat/:equal?')
-   async matchAltitude(@Res() res, @Param('loc') loc, @Param('dt') dt, @Param('lng') lng, @Param('lat') lat, @Param('equal') equal) {
-     const { jd, dtUtc } = matchJdAndDatetime(dt);
-     const geo = locStringToGeo(loc);
-     const flLng = smartCastFloat(lng);
-     const flLat = smartCastFloat(lat);
-     const isEqual = smartCastInt(equal) > 0;
-     const { altitude, azimuth } = await calcAltitudeResult(jd, geo, flLng, flLat, isEqual);
-     return res.json({ altitude, azimuth, lng: flLng, lat: flLat, geo, jd, dtUtc });
-   }
+  /*
+   * #astrotesting
+   * fetch altitude of any point in the sky at a given location
+   * Can be used to calculate transits
+   */
+  @Get('altitude/:loc/:dt/:lng/:lat/:equal?')
+  async matchAltitude(
+    @Res() res,
+    @Param('loc') loc,
+    @Param('dt') dt,
+    @Param('lng') lng,
+    @Param('lat') lat,
+    @Param('equal') equal,
+  ) {
+    const { jd, dtUtc } = matchJdAndDatetime(dt);
+    const geo = locStringToGeo(loc);
+    const flLng = smartCastFloat(lng);
+    const flLat = smartCastFloat(lat);
+    const isEqual = smartCastInt(equal) > 0;
+    const { altitude, azimuth } = await calcAltitudeResult(
+      jd,
+      geo,
+      flLng,
+      flLat,
+      isEqual,
+    );
+    return res.json({
+      altitude,
+      azimuth,
+      lng: flLng,
+      lat: flLat,
+      geo,
+      jd,
+      dtUtc,
+    });
+  }
 
   /*
   #astrotesting
@@ -2411,7 +2532,7 @@ export class AstrologicController {
     @Res() res,
     @Param('ruleID') ruleID,
     @Param('chartID') chartID,
-    @Param('loc') loc
+    @Param('loc') loc,
   ) {
     const ruleData = await this.settingService.getRuleSet(ruleID);
     const result = { valid: false, matches: false, items: [] };
@@ -2455,16 +2576,18 @@ export class AstrologicController {
             rule.type,
             chart,
             geo,
-            settings
+            settings,
           );
           outerItems.push(newOuterItem);
         }
       }
     }
-    
+
     const valid = chart.grahas.length > 6;
     const numOuterValid = outerItems.filter(oi => oi.valid).length;
-    const matches = isPP? outerItems.length > 0 : andMode
+    const matches = isPP
+      ? outerItems.length > 0
+      : andMode
       ? numOuterValid === outerItems.length
       : numOuterValid > 0;
     return { valid, matches, items: outerItems };
@@ -2583,9 +2706,7 @@ export class AstrologicController {
     const data = { valid: false, result: null };
     const maxInt = smartCastInt(max, 1000000);
     if (validISODateString(before)) {
-      data.result = await this.astrologicService.bulkDeletePaired(
-        before,
-      );
+      data.result = await this.astrologicService.bulkDeletePaired(before);
     }
     return res.status(HttpStatus.OK).json(data);
   }
@@ -4032,8 +4153,15 @@ export class AstrologicController {
   }
 
   @Put('save-chart-order/:userID')
-  async saveRecentChartOrder(@Res() res, @Param('userID') userID: string, @Body() idStrings: string[]) {
-    const result = await this.userService.saveRecentChartOrder(userID, idStrings);
+  async saveRecentChartOrder(
+    @Res() res,
+    @Param('userID') userID: string,
+    @Body() idStrings: string[],
+  ) {
+    const result = await this.userService.saveRecentChartOrder(
+      userID,
+      idStrings,
+    );
     return res.json(result);
   }
 
@@ -4053,7 +4181,7 @@ export class AstrologicController {
             if (c.subject.eventType === 'birth') {
               items.push(c);
               num++;
-              matchedIds.push()
+              matchedIds.push();
               if (!valid) {
                 valid = true;
               }
@@ -4337,20 +4465,20 @@ export class AstrologicController {
   }
 
   @Get('speed-progress/:key/:dt?')
-  async retrogradePorgress(
-    @Res() res,
-    @Param('key') key,
-    @Param('dt') dt,
-  ) {
+  async retrogradePorgress(@Res() res, @Param('key') key, @Param('dt') dt) {
     const mp: Map<string, any> = new Map();
     const { dtUtc, jd } = matchJdAndDatetime(dt);
-    mp.set('jd', jd)
-    mp.set('dtUtc', dtUtc)
+    mp.set('jd', jd);
+    mp.set('dtUtc', dtUtc);
     if (jd > 0 && notEmptyString(key, 1)) {
       const num = matchPlanetNum(key);
       const gData = await calcGrahaPos(jd, num);
       mp.set('data', gData);
-      const progress = await this.astrologicService.speedProgress(key, gData.longitudeSpeed, jd)
+      const progress = await this.astrologicService.speedProgress(
+        key,
+        gData.longitudeSpeed,
+        jd,
+      );
       mp.set('progress', progress);
     }
     res.send(Object.fromEntries(mp.entries()));
@@ -4971,7 +5099,7 @@ export class AstrologicController {
       if (isNumeric(limit)) {
         const limitInt = smartCastInt(limit, 100);
         chartIDs = await this.astrologicService.idsWithoutProgressItems(
-          limitInt
+          limitInt,
         );
       }
     }
@@ -4987,20 +5115,40 @@ export class AstrologicController {
   /**
    * Analysis
    */
-   @Get('chart-data')
+  @Get('chart-data')
   async fullChartData(@Res() res, @Query() query) {
     const queryKeys = query instanceof Object ? Object.keys(query) : [];
-    const jdRef = queryKeys.includes('jd') && isNumeric(query.jd) ? smartCastFloat(query.jd) : 0;
+    const jdRef =
+      queryKeys.includes('jd') && isNumeric(query.jd)
+        ? smartCastFloat(query.jd)
+        : 0;
     const hasDt = queryKeys.includes('dt') && validISODateString(query.dt);
-    const jd = jdRef > 20000 ? jdRef : hasDt ? dateStringToJulianDay(query.dt.split('.').shift()) : currentJulianDay();
+    const jd =
+      jdRef > 20000
+        ? jdRef
+        : hasDt
+        ? dateStringToJulianDay(query.dt.split('.').shift())
+        : currentJulianDay();
     const loc = queryKeys.includes('loc') ? query.loc : '';
     const locStr = validLocationParameter(loc) ? loc : '0,0';
-    const keys = queryKeys.includes('keys') && notEmptyString(query.keys,2) ? query.keys.split(',') : [];
-    const eq = queryKeys.includes('eq')? smartCastInt(query.eq, 3) : 3;
-    const topo = queryKeys.includes('topo')? smartCastInt(query.topo, 0) > 0 : true;
-    const ayaKey = queryKeys.includes('aya')? query.aya: '';
+    const keys =
+      queryKeys.includes('keys') && notEmptyString(query.keys, 2)
+        ? query.keys.split(',')
+        : [];
+    const eq = queryKeys.includes('eq') ? smartCastInt(query.eq, 3) : 3;
+    const topo = queryKeys.includes('topo')
+      ? smartCastInt(query.topo, 0) > 0
+      : true;
+    const ayaKey = queryKeys.includes('aya') ? query.aya : '';
     const geo = locStringToGeo(locStr);
-    const result = await this.astrologicService.getChartData(jd, geo, eq, keys, topo, ayaKey);
+    const result = await this.astrologicService.getChartData(
+      jd,
+      geo,
+      eq,
+      keys,
+      topo,
+      ayaKey,
+    );
     return res.json(result);
   }
 
