@@ -54,6 +54,7 @@ import { AnswerDTO } from './dto/answer.dto';
 import { AnswerSet } from './interfaces/answer-set.interface';
 import { KeyNumValue } from '../lib/interfaces';
 import { assignGenderOpt, removeIds } from '../lib/mappers';
+import { IdBoolDTO } from './dto/id-bool.dto';
 
 const userEditPaths = [
   'fullName',
@@ -122,7 +123,17 @@ export class UserService {
             profiles: [],
             dob: null,
           };
-    const { _id, nickName, dob, gender, geo, roles, profiles, preferences, surveys } = obj;
+    const {
+      _id,
+      nickName,
+      dob,
+      gender,
+      geo,
+      roles,
+      profiles,
+      preferences,
+      surveys,
+    } = obj;
     let profileImg = '';
     if (profiles instanceof Array && profiles.length > 0) {
       const { mediaItems } = profiles[0];
@@ -153,7 +164,7 @@ export class UserService {
       [0, 0],
       2,
     );
-    const otherGender = gender === 'm'? 'f' : 'm';
+    const otherGender = gender === 'm' ? 'f' : 'm';
     const genders = extractArrayFromKeyedItems(
       preferences,
       'genders',
@@ -190,7 +201,10 @@ export class UserService {
       geo instanceof Object
         ? { lat: geo.lat, lng: geo.lng }
         : { lat: 0, lng: 0 };
-    const surveyItems = surveys instanceof Array && surveys.length > 0 ? surveys.map(removeIds) : [];
+    const surveyItems =
+      surveys instanceof Array && surveys.length > 0
+        ? surveys.map(removeIds)
+        : [];
     return {
       _id,
       nickName,
@@ -208,7 +222,7 @@ export class UserService {
       lang,
       genders,
       isPaidMember,
-      surveys: surveyItems
+      surveys: surveyItems,
     };
   }
 
@@ -345,16 +359,20 @@ export class UserService {
             switch (val) {
               case 'admin':
               case 'admins':
-                filter.set('$or', [{roles: 'superadmin'}, {roles: 'admin'}, {roles: 'editor'}]);
+                filter.set('$or', [
+                  { roles: 'superadmin' },
+                  { roles: 'admin' },
+                  { roles: 'editor' },
+                ]);
                 break;
               case 'members':
               case 'member':
                 filter.set('roles', 'active');
                 break;
             }
-          break;
+            break;
           case 'active':
-            filter.set(key, smartCastInt(val,0) > 0 ? true : false);
+            filter.set(key, smartCastInt(val, 0) > 0 ? true : false);
             break;
           case 'fullName':
           case 'nickName':
@@ -366,7 +384,10 @@ export class UserService {
             break;
           case 'usearch':
             const rgx = new RegExp('\\b' + val, 'i');
-            const rgxEm = new RegExp('\\b' + val.replace('.', '\\.')+ '.?@', 'i');
+            const rgxEm = new RegExp(
+              '\\b' + val.replace('.', '\\.') + '.?@',
+              'i',
+            );
             filter.set('$or', [
               { identifier: rgxEm },
               { nickName: rgx },
@@ -423,12 +444,19 @@ export class UserService {
             filter.set('$or', [{ nickName: rgx }, { fullName: rgx }]);
             break;
           case 'gender':
-            const genderOpts = val instanceof Array ? val : typeof val === 'string' ? [val.trim().toLowerCase().substring(0, 1),] : [];
+            const genderOpts =
+              val instanceof Array
+                ? val
+                : typeof val === 'string'
+                ? [
+                    val
+                      .trim()
+                      .toLowerCase()
+                      .substring(0, 1),
+                  ]
+                : [];
             if (genderOpts.length > 0) {
-              filter.set(
-                'gender',
-                { $in: genderOpts }
-              );
+              filter.set('gender', { $in: genderOpts });
             }
             break;
           case 'age':
@@ -1284,6 +1312,15 @@ export class UserService {
     return false;
   }
 
+  async updateTestStatus(values: IdBoolDTO[]): Promise<boolean> {
+    for (const item of values) {
+      await this.userModel.findByIdAndUpdate(item.id, {
+        test: item.value,
+      });
+    }
+    return true;
+  }
+
   async members(
     start = 0,
     limit = 100,
@@ -1496,11 +1533,15 @@ export class UserService {
       user: null,
       valid: false,
     };
-    if (notEmptyString(userID, 16) && idRefs instanceof Array && idRefs.length > 0) {
+    if (
+      notEmptyString(userID, 16) &&
+      idRefs instanceof Array &&
+      idRefs.length > 0
+    ) {
       const preference = {
         key: 'recent_chart_ids',
         type: 'array_string',
-        value: idRefs, 
+        value: idRefs,
       } as PreferenceDTO;
       const sd = await this.savePreferences(userID, [preference]);
       if (sd.valid) {
@@ -1533,17 +1574,20 @@ export class UserService {
       pr => pr instanceof Object && pr.type !== 'user',
     );
 
-    const gendersOptIndex = filteredPreferences.findIndex(op => op.type !== 'user' && ['gender', 'genders'].includes(op.key));
+    const gendersOptIndex = filteredPreferences.findIndex(
+      op => op.type !== 'user' && ['gender', 'genders'].includes(op.key),
+    );
     let removeOldGenderOpt = false;
     if (gendersOptIndex >= 0) {
       const gOpt = prefItems[gendersOptIndex];
-      
-      const gendersVal = gOpt.value instanceof Array ? gOpt.value : assignGenderOpt(gOpt.value)
-      filteredPreferences[gendersOptIndex] = { 
+
+      const gendersVal =
+        gOpt.value instanceof Array ? gOpt.value : assignGenderOpt(gOpt.value);
+      filteredPreferences[gendersOptIndex] = {
         key: 'genders',
         value: gendersVal,
-        type: 'array_string'
-      }
+        type: 'array_string',
+      };
       removeOldGenderOpt = preferences.some(op => op.key === 'gender');
     }
     for (const prefItem of filteredPreferences) {
@@ -2060,7 +2104,9 @@ export class UserService {
     // simplify options
     const combos = [['f', 'm'], ['m', 'f'], ['f'], ['m']];
     const maxComboNum = singleGenderAttractionOnly ? 1 : 3;
-    const optList = combos.filter(combo => combo.includes(val) && combo.length <= maxComboNum);
+    const optList = combos.filter(
+      combo => combo.includes(val) && combo.length <= maxComboNum,
+    );
     return {
       $elemMatch: {
         //key: { $in: ['gender', 'genders'] },
@@ -2070,7 +2116,7 @@ export class UserService {
     };
   }
 
- /*  translateTargetGenders(val = '') {
+  /*  translateTargetGenders(val = '') {
     return {
       $elemMatch: {
         key: { $in: ['gender', 'genders'] },
@@ -2490,28 +2536,45 @@ export class UserService {
     return await this.answerSetModel.findOne({ user: userID, type });
   }
 
-  async getSurveyAnswers(userID = '', type = '', base = 1, scale = 5, asPerc = false) {
+  async getSurveyAnswers(
+    userID = '',
+    type = '',
+    base = 1,
+    scale = 5,
+    asPerc = false,
+  ) {
     const data = await this.getAnswerSet(userID, type);
-    const offset = base < 0? 0 : base === 0 ? scale / 2 - 0.5 : scale / 2 + 0.5;
+    const offset =
+      base < 0 ? 0 : base === 0 ? scale / 2 - 0.5 : scale / 2 + 0.5;
     let answers: any[] = [];
-    const multiplier = asPerc ? base < 0 ? 100 / (scale / 2 - 0.5) : 100 / (scale - 1) : 1;
+    const multiplier = asPerc
+      ? base < 0
+        ? 100 / (scale / 2 - 0.5)
+        : 100 / (scale - 1)
+      : 1;
     if (data instanceof Model) {
       const obj = data.toObject();
       if (obj.answers instanceof Array) {
         answers = obj.answers.map(row => {
           const value = (row.value + offset) * multiplier;
-          return {...row, value }
+          return { ...row, value };
         });
       }
     }
     return answers;
   }
 
-  async getSurveyDomainScoresAndAnswers(userID = '', type = '', filterAnswers = false): Promise<{items: KeyNumValue[], answers: any[]}> {
+  async getSurveyDomainScoresAndAnswers(
+    userID = '',
+    type = '',
+    filterAnswers = false,
+  ): Promise<{ items: KeyNumValue[]; answers: any[] }> {
     const answers = await this.getSurveyAnswers(userID, type, -1, 5, true);
     const mp: Map<string, any> = new Map();
     answers.forEach(row => {
-      const item = mp.has(row.domain)? mp.get(row.domain) : { num: 0, total: 0 };
+      const item = mp.has(row.domain)
+        ? mp.get(row.domain)
+        : { num: 0, total: 0 };
       item.total += row.value;
       item.num += 1;
       mp.set(row.domain, item);
@@ -2520,16 +2583,18 @@ export class UserService {
       const value = item.total / item.num;
       return { key, value };
     });
-    const simpleAnswers = filterAnswers ? answers.map(ans => {
-      const { key, value, domain, subdomain } = ans;
-      const score = Math.round(value / (100 / 2)) + 3;
-      return {
-        key,
-        score,
-        domain,
-        facet: subdomain
-      }
-    }) : answers;
+    const simpleAnswers = filterAnswers
+      ? answers.map(ans => {
+          const { key, value, domain, subdomain } = ans;
+          const score = Math.round(value / (100 / 2)) + 3;
+          return {
+            key,
+            score,
+            domain,
+            facet: subdomain,
+          };
+        })
+      : answers;
     return { items, answers: simpleAnswers };
   }
 
