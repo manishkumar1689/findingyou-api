@@ -2688,7 +2688,6 @@ export class UserController {
     const mayEdit = await this.userService.isAdminUser(userID);
     const result = { valid: false, values: [] };
     let status = HttpStatus.NOT_ACCEPTABLE;
-    console.log(userID, mayEdit, values);
     if (mayEdit) {
       this.userService.updateTestStatus(values);
       result.valid = true;
