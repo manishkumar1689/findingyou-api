@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { isValidObjectId, Model } from 'mongoose';
 import { minutesAgoTs, yearsAgoString } from '../astrologic/lib/date-funcs';
 import { extractDocId, extractSimplified } from '../lib/entities';
 import { notEmptyString, validISODateString } from '../lib/validators';
 import { CreateFlagDTO } from './dto/create-flag.dto';
 import { Feedback } from './interfaces/feedback.interface';
-import { Flag, SimpleFlag} from './interfaces/flag.interface';
+import { Flag, SimpleFlag } from './interfaces/flag.interface';
 import {
   filterLikeabilityFlags,
   mapFlagItems,
@@ -21,6 +21,106 @@ export class FeedbackService {
     @InjectModel('Feedback') private readonly feedbackModel: Model<Feedback>,
     @InjectModel('Flag') private flagModel: Model<Flag>,
   ) {}
+
+  async listAll(start = 0, limit = 100, criteria: any = null) {
+    const keys = criteria instanceof Object ? Object.keys(criteria) : [];
+    const filter: Map<string, any> = new Map();
+    if (keys.length < 1) {
+      filter.set('createdAt', {
+        $gt: new Date('2020-01-01T00:00:00'),
+      });
+    } else {
+      for (const k of keys) {
+        switch (k) {
+          case 'key':
+            filter.set('key', criteria.key);
+            break;
+          case 'user':
+            filter.set('user', criteria.user);
+            break;
+        }
+      }
+    }
+
+    const steps = [
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'u',
+        },
+      },
+      {
+        $unwind: '$u',
+      },
+      {
+        $match: Object.fromEntries(filter),
+      },
+      {
+        $project: {
+          _id: 1,
+          key: 1,
+          text: 1,
+          active: 1,
+          deviceDetails: 1,
+          mediaItems: 1,
+          createdAt: 1,
+          modifiedAt: 1,
+          user: 1,
+          userId: '$u._id',
+          email: '$u.identifier',
+          fullName: '$u.fullName',
+          nickName: '$u.nickName',
+          roles: '$u.roles',
+          userActive: '$u.active',
+        },
+      },
+      {
+        $skip: start,
+      },
+      {
+        $limit: limit,
+      },
+    ];
+    return await this.feedbackModel.aggregate(steps);
+  }
+
+  async saveFeedback(data: any = null): Promise<string> {
+    if (data instanceof Object) {
+      const dt = new Date();
+      const { user, targetUser, key, text, deviceDetails, mediaItems } = data;
+      if (
+        isValidObjectId(user) &&
+        notEmptyString(key) &&
+        notEmptyString(text)
+      ) {
+        const edited: any = { user, key, text, createdAt: dt, modifiedAt: dt };
+        if (notEmptyString(targetUser) && isValidObjectId(targetUser)) {
+          edited.targetUser = targetUser;
+        }
+        if (notEmptyString(deviceDetails)) {
+          edited.deviceDetails = deviceDetails;
+        }
+        if (
+          mediaItems instanceof Array &&
+          mediaItems.length > 0 &&
+          mediaItems[0] instanceof Object
+        ) {
+          edited.mediaItems = mediaItems.filter(
+            mi => mi instanceof Object && notEmptyString(mi.filename, 7),
+          );
+        }
+        const fb = new this.feedbackModel(edited);
+        const fbRecord = await fb.save();
+        if (fbRecord instanceof Model) {
+          fbRecord.save();
+          return fbRecord._id.toString();
+        }
+      }
+    }
+    return '-';
+  }
 
   async getByTargetUserOrKey(userRef = '', keyRef = '', otherCriteria = null) {
     const criteria = this.buildFilterCriteria(userRef, keyRef, otherCriteria);
