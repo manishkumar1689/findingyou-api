@@ -59,6 +59,11 @@ export class FeedbackService {
         },
       },
       {
+        $sort: {
+          modifiedAt: -1,
+        },
+      },
+      {
         $skip: start,
       },
       {
