@@ -23,25 +23,7 @@ export class FeedbackService {
   ) {}
 
   async listAll(start = 0, limit = 100, criteria: any = null) {
-    const keys = criteria instanceof Object ? Object.keys(criteria) : [];
-    const filter: Map<string, any> = new Map();
-    if (keys.length < 1) {
-      filter.set('createdAt', {
-        $gt: new Date('2020-01-01T00:00:00'),
-      });
-    } else {
-      for (const k of keys) {
-        switch (k) {
-          case 'key':
-            filter.set('key', criteria.key);
-            break;
-          case 'user':
-            filter.set('user', criteria.user);
-            break;
-        }
-      }
-    }
-
+    const matchedCriteria = this.translateFbCriteria(criteria);
     const steps = [
       {
         $lookup: {
@@ -55,7 +37,7 @@ export class FeedbackService {
         $unwind: '$u',
       },
       {
-        $match: Object.fromEntries(filter),
+        $match: matchedCriteria,
       },
       {
         $project: {
@@ -84,6 +66,60 @@ export class FeedbackService {
       },
     ];
     return await this.feedbackModel.aggregate(steps);
+  }
+
+  async countAll(criteria: any = null) {
+    const matchedCriteria = this.translateFbCriteria(criteria);
+    const steps = [
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'u',
+        },
+      },
+      {
+        $unwind: '$u',
+      },
+      {
+        $match: matchedCriteria,
+      },
+      { $group: { _id: null, count: { $sum: 1 } } },
+    ];
+    const rows: any[] = await this.feedbackModel.aggregate(steps);
+    if (
+      rows instanceof Array &&
+      rows.length > 0 &&
+      rows[0] instanceof Object &&
+      rows[0].count > 0
+    ) {
+      return rows[0].count;
+    } else {
+      return 0;
+    }
+  }
+
+  translateFbCriteria(criteria: any = null) {
+    const keys = criteria instanceof Object ? Object.keys(criteria) : [];
+    const filter: Map<string, any> = new Map();
+    if (keys.length < 1) {
+      filter.set('createdAt', {
+        $gt: new Date('2020-01-01T00:00:00'),
+      });
+    } else {
+      for (const k of keys) {
+        switch (k) {
+          case 'key':
+            filter.set('key', criteria.key);
+            break;
+          case 'user':
+            filter.set('user', criteria.user);
+            break;
+        }
+      }
+    }
+    return Object.fromEntries(filter);
   }
 
   async saveFeedback(data: any = null): Promise<string> {

@@ -46,8 +46,18 @@ export class FeedbackController {
     const startInt = isNumeric(start) ? smartCastInt(start, 0) : 0;
     const limitInt = isNumeric(limit) ? smartCastInt(limit, 100) : 100;
 
-    const data = await this.feedbackService.listAll(startInt, limitInt, query);
-    return res.json(data);
+    const items = await this.feedbackService.listAll(startInt, limitInt, query);
+    const num = items instanceof Array ? items.length : 0;
+    const valid = num > 0;
+    const total = await this.feedbackService.countAll(query);
+    return res.json({
+      valid,
+      num,
+      start: startInt,
+      perPage: limitInt,
+      total,
+      items,
+    });
   }
 
   @Get('list-by-target/:user?/:key?')
