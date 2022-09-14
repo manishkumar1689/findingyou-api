@@ -11,7 +11,12 @@ export const globalApikey = 'eKabd7G;bd';
 export const suffixSplitChars = ['%', '.', ','];
 export const authMode = 'dynamic';
 export const ipWhitelist = ['84.93.111.229'];
-export const pathWhitelist = ['get-file/:directory/:name', 'user/ip', 'astrologic/chart-data'];
+export const pathWhitelist = [
+  'get-file/:directory/:name',
+  'user/ip',
+  'astrologic/chart-data',
+  'feedback/view-file',
+];
 
 export const mongo = {
   name: 'findingyou',
