@@ -51,11 +51,13 @@ export class FeedbackController {
     const num = items instanceof Array ? items.length : 0;
     const valid = num > 0;
     const total = await this.feedbackService.countAll(query);
+    const types = await this.feedbackService.getFeedbackTypes();
     return res.json({
       valid,
       num,
       start: startInt,
       perPage: limitInt,
+      types,
       total,
       items,
     });

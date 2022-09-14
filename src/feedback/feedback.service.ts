@@ -105,6 +105,32 @@ export class FeedbackService {
     }
   }
 
+  async getFeedbackTypes() {
+    const steps = [
+      {
+        $group: { _id: '$key', num: { $sum: 1 } },
+      },
+    ];
+    const rows = await this.feedbackModel.aggregate(steps);
+    return rows instanceof Array
+      ? rows.map(row => {
+          const { _id, num } = row;
+          const words = _id.split('_').map(w => {
+            let str = '';
+            if (w.length > 0) {
+              str = w.substring(0, 1).toUpperCase();
+              if (w.length > 1) {
+                str += w.substring(1);
+              }
+            }
+            return str;
+          });
+          const title = words.join(' ');
+          return { key: _id, title, num };
+        })
+      : [];
+  }
+
   translateFbCriteria(criteria: any = null) {
     const keys = criteria instanceof Object ? Object.keys(criteria) : [];
     const filter: Map<string, any> = new Map();
