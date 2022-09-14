@@ -24,6 +24,7 @@ import { objectToMap } from '../lib/entities';
 import { isValidObjectId } from 'mongoose';
 import { fromBase64 } from '../lib/hash';
 import { SnippetService } from '../snippet/snippet.service';
+import { buildFullPath, matchFile, matchMimeFromExtension } from '../lib/files';
 
 @Controller('feedback')
 export class FeedbackController {
@@ -423,5 +424,29 @@ export class FeedbackController {
       query,
     );
     return res.json(data);
+  }
+
+  @Get('view-file/:filename/:userID')
+  async showImageFile(
+    @Res() res,
+    @Param('filename') filename,
+    @Param('userID') userID,
+  ) {
+    const isAdmin = await this.userService.isAdminUser(userID);
+    let fp = buildFullPath('no-image.png', 'files');
+    let mime = 'image/png';
+    if (isAdmin && notEmptyString(filename, 8)) {
+      const fileData = matchFile(filename);
+      if (fileData.size > 64 && filename.includes('.')) {
+        fp = fileData.path;
+        const ext = filename
+          .split('.')
+          .pop()
+          .toLowerCase();
+        mime = matchMimeFromExtension(ext);
+        res.setHeader('Content-Type', mime);
+      }
+    }
+    return res.sendFile(fp);
   }
 }

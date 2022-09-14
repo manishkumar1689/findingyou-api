@@ -486,7 +486,7 @@ export const readRawFile = (filename: string, dir = '', subDir = '') => {
   return out;
 };
 
-const matchMimeFromExtension = (extension = '') => {
+export const matchMimeFromExtension = (extension = '') => {
   switch (extension) {
     case 'jpeg':
     case 'jpg':
@@ -532,4 +532,13 @@ export const matchFileTypeAndMime = (filename = '', mimetype = '') => {
   }
   const type = matchTypeFromMime(mime);
   return { mime, fileType: type };
+};
+
+export const matchFile = (filename: string, directory = 'files') => {
+  const filePath = buildFullPath(filename, directory);
+  if (fs.existsSync(filePath)) {
+    return getFileData(filePath);
+  } else {
+    return { modified: '', path: '', size: 0 };
+  }
 };
