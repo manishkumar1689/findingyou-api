@@ -2472,6 +2472,7 @@ export const calculatePanchaPakshiData = async (
         const dayLength = endJd - startJd;
         const maxMins = Math.ceil(dayLength * minsDay);
         const minuteMatches: MinuteMatch[] = [];
+        let prevMinMatchScore = -1;
         const times: PeakTime[] = [];
         const peaksUsed: number[] = [];
         if (showMinutes) {
@@ -2526,18 +2527,21 @@ export const calculatePanchaPakshiData = async (
             }
 
             if (debug) {
-              const subIndex = allSubs.findIndex(
-                s => currJd >= s.start && currJd <= s.end,
-              );
-              const yama = Math.floor(subIndex / 5) + 1;
-              minuteMatches.push({
-                min: i + 1,
-                dt: julToDateParts(currJd).toISOString(),
-                yama,
-                sub: (subIndex % 5) + 1,
-                rules: names,
-                score: minuteScore,
-              });
+              if (minuteScore !== prevMinMatchScore) {
+                const subIndex = allSubs.findIndex(
+                  s => currJd >= s.start && currJd <= s.end,
+                );
+                const yama = Math.floor(subIndex / 5) + 1;
+                minuteMatches.push({
+                  min: i + 1,
+                  dt: julToDateParts(currJd).toISOString(),
+                  yama,
+                  sub: (subIndex % 5) + 1,
+                  rules: names,
+                  score: minuteScore,
+                });
+              }
+              prevMinMatchScore = minuteScore;
             }
 
             if (minuteScore >= cutOff) {
