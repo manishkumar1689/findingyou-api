@@ -46,6 +46,7 @@ import { PreferenceDTO } from './dto/preference.dto';
 import { matchFileTypeAndMime } from '../lib/files';
 import { PublicUser } from './interfaces/public-user.interface';
 import {
+  buildPlacenamsFromString,
   jungianAnswersToResults,
   normalizedToPreference,
 } from '../setting/lib/mappers';
@@ -55,6 +56,7 @@ import { AnswerSet } from './interfaces/answer-set.interface';
 import { KeyNumValue } from '../lib/interfaces';
 import { assignGenderOpt, removeIds } from '../lib/mappers';
 import { IdBoolDTO } from './dto/id-bool.dto';
+import { IdsLocationDTO } from './dto/ids-location.dto';
 
 const userEditPaths = [
   'fullName',
@@ -1245,6 +1247,37 @@ export class UserService {
         { new: true },
       );
     }
+  }
+
+  async bulkUpdateLocation(
+    payload: IdsLocationDTO,
+  ): Promise<{ ids: string[]; geo: any; placenames: any[] }> {
+    const { ids, lng, lat, name } = payload;
+    const edited: string[] = [];
+    let placenames: any[] = [];
+    let geo = { lat: 0, lng: 0, alt: 0 };
+    if (notEmptyString(name) && isNumeric(lng) && isNumeric(lat)) {
+      placenames = buildPlacenamsFromString(name, lat, lng);
+      geo = {
+        lat,
+        lng,
+        alt: 20,
+      };
+      const coords = [lng, lat];
+      if (ids.length > 0 && placenames.length > 0) {
+        for (const id of ids) {
+          const updated = await this.userModel.findByIdAndUpdate(id, {
+            geo,
+            coords,
+            placenames,
+          });
+          if (updated instanceof Model) {
+            edited.push(id);
+          }
+        }
+      }
+    }
+    return { ids: edited, geo, placenames };
   }
 
   async requestReset(userID: string, mode: string) {

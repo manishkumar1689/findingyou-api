@@ -70,7 +70,11 @@ import {
   matchBmGrahaKeys,
 } from './protocol-models';
 import { calcInclusiveSignPositions } from '../math-funcs';
-import { naturalBenefics, naturalMalefics, combustionOrbs } from '../settings/graha-values';
+import {
+  naturalBenefics,
+  naturalMalefics,
+  combustionOrbs,
+} from '../settings/graha-values';
 import { BmMatchRow, SignHouse } from '../../interfaces/sign-house';
 import { Kuta } from '../kuta';
 import { matchKotaPala } from '../settings/kota-values';
@@ -521,13 +525,13 @@ export class Chart {
   }
 
   calcRelationship(key = '') {
-    const gr = this.graha(key)
+    const gr = this.graha(key);
     const lord = matchLord(gr);
     return mapRelationships(
       gr.sign,
       this.graha(lord).sign,
       gr.isOwnSign,
-      gr.natural
+      gr.natural,
     );
   }
 
@@ -543,8 +547,8 @@ export class Chart {
 
   matchProgressItems(past = 2, future = 8): ProgressResult[] {
     const currJd = currentJulianDay();
-    const jdAgo = currJd - (365.25 * past);
-    const jdFuture = currJd + (365.25 * (future + 0.5));
+    const jdAgo = currJd - 365.25 * past;
+    const jdFuture = currJd + 365.25 * (future + 0.5);
     const items = this.progressItems.filter(
       pi => pi.jd >= jdAgo && pi.jd <= jdFuture,
     );
@@ -658,9 +662,7 @@ export class Chart {
   // If values are not from a birth chart, the sidereal natal ascendant must be specified
   relativeLoFDay(isBirth = true, birthLagna = 0) {
     const relLagna = isBirth ? this.lagna : birthLagna;
-    return (
-      (relLagna + (this.moon.longitude - this.sun.longitude) + 360) % 360
-    );
+    return (relLagna + (this.moon.longitude - this.sun.longitude) + 360) % 360;
   }
 
   // If values are not from a birth chart, the sidereal natal ascendant must be specified
@@ -679,7 +681,9 @@ export class Chart {
 
   // required for current lot of fortune relative to someone's birth ascendant and time of birth (night or day)
   relativeLotFortune(birthLagna = 0, isDayTime = true) {
-    return isDayTime ? this.relativeLoFDay(false, birthLagna) : this.relativeLoFNight(false, birthLagna);
+    return isDayTime
+      ? this.relativeLoFDay(false, birthLagna)
+      : this.relativeLoFNight(false, birthLagna);
   }
 
   // This follows the reverse logic of Lot of fortune
@@ -693,6 +697,12 @@ export class Chart {
 
   get lotOfSpirit() {
     return this.isDayTime ? this.loFNight : this.loFDay;
+  }
+
+  get brghuBindu() {
+    const moLng = this.graha('mo').longitude;
+    const raLng = this.graha('ra').longitude;
+    return ((moLng + raLng) / 2) % 360;
   }
 
   buildGreekLot(key: string, ref = 'F') {
@@ -932,7 +942,20 @@ export class Chart {
     return graha;
   }
 
-  grahasByKeys(keys: string[] = ['su', 'mo', 'ma', 'me', 'ju', 've', 'sa', 'ke', 'ra', 'as']): Graha[] {
+  grahasByKeys(
+    keys: string[] = [
+      'su',
+      'mo',
+      'ma',
+      'me',
+      'ju',
+      've',
+      'sa',
+      'ke',
+      'ra',
+      'as',
+    ],
+  ): Graha[] {
     return keys.map(k => {
       const g = this.graha(k);
       if (this.ayanamshaItem) {
@@ -1015,7 +1038,7 @@ export class Chart {
       const graha = this.graha(key);
       const isRetro = graha.lngSpeed < 0;
       const distance = calcDist360(this.sun.longitude, graha.longitude);
-      const orb = isRetro? orbRow.retro : orbRow.direct;
+      const orb = isRetro ? orbRow.retro : orbRow.direct;
       valid = distance <= orb;
     }
     return valid;
@@ -1133,7 +1156,9 @@ export class Chart {
 
   get hasCurrentProgressItems() {
     const currJd = currentJulianDay();
-    return this.hasProgressItems && this.progressItems.filter(pi => pi.jd > currJd);
+    return (
+      this.hasProgressItems && this.progressItems.filter(pi => pi.jd > currJd)
+    );
   }
 
   localDate(fmt = 'euro1', timePrecision = 's') {
@@ -2485,8 +2510,6 @@ export const generateBasicChart = async (
   );
 };
 
-
-
 export const extractPanchangaData = (chart: Chart): Map<string, any> => {
   chart.setAyanamshaItemByKey('true_citra');
   const pd: Map<string, any> = new Map();
@@ -2495,8 +2518,8 @@ export const extractPanchangaData = (chart: Chart): Map<string, any> => {
   pd.set('vara', {
     num: vara.num,
     ruler: vara.ruler,
-    ...term1
-  })
+    ...term1,
+  });
   /*   karana: chart.karana,
     tithi: chart.tithi,
     yoga: chart.yoga,
@@ -2507,7 +2530,7 @@ export const extractPanchangaData = (chart: Chart): Map<string, any> => {
     num: karana.num,
     ruler: karana.ruler,
     percent: karana.percent,
-    ...term2
+    ...term2,
   });
 
   const tithi = chart.tithi;
@@ -2516,7 +2539,7 @@ export const extractPanchangaData = (chart: Chart): Map<string, any> => {
     num: tithi.num,
     ruler: tithi.lord,
     percent: tithi.percent,
-    ...term3
+    ...term3,
   });
   const yoga = chart.yoga;
   const term4 = matchPanchangaTerm('yoga', yoga.num);
@@ -2524,8 +2547,8 @@ export const extractPanchangaData = (chart: Chart): Map<string, any> => {
     num: yoga.num,
     ruler: yoga.ruler,
     percent: tithi.percent,
-    ...term4
-  })
+    ...term4,
+  });
 
   const nakshatra = chart.moon.nakshatra;
   const term5 = matchPanchangaTerm('nakshatra', nakshatra.num);
@@ -2533,8 +2556,8 @@ export const extractPanchangaData = (chart: Chart): Map<string, any> => {
     num: nakshatra.num,
     ruler: nakshatra.ruler,
     percent: nakshatra.percent,
-    ...term5
-  })
+    ...term5,
+  });
 
   return pd;
-}
+};

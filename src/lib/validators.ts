@@ -1,4 +1,4 @@
-import { subtractLng360 } from "../astrologic/lib/math-funcs";
+import { subtractLng360 } from '../astrologic/lib/math-funcs';
 
 export const isString = str => typeof str === 'string' || str instanceof String;
 
@@ -64,23 +64,34 @@ export const inRange = (num, range: number[]) => {
   return valid;
 };
 
+export const appoximatesNum = (num1: number, num2: number, tolerance = 0) => {
+  const min = num2 - tolerance;
+  const max = num2 + tolerance;
+  return inRange(num1, [min, max]);
+};
+
 export const inRange360 = (num, range: number[]) => {
   const [start, end] = range;
   if (start <= end) {
     return inRange(num, range);
   } else {
-    return [[start, 360], [0, end]].some(rng => inRange(num, rng));
+    return [
+      [start, 360],
+      [0, end],
+    ].some(rng => inRange(num, rng));
   }
 };
 
 export const withinRanges = (num: number, ranges: number[][]) => {
   return ranges.some(range => inRange(num, range));
-}
+};
 
 export const inTolerance360 = (deg = 0, target = 0, tolerance = 1) => {
   const range = [subtractLng360(target, tolerance), (target + tolerance) % 360];
   const spanZero = deg + tolerance > 360 || deg - tolerance < 0;
-  return spanZero? (deg >= range[0] || deg < range[1]) && (deg < range[1] || deg > range[0]) : deg >= range[0] && deg <= range[1];
+  return spanZero
+    ? (deg >= range[0] || deg < range[1]) && (deg < range[1] || deg > range[0])
+    : deg >= range[0] && deg <= range[1];
 };
 
 export const withinTolerance = (
@@ -130,20 +141,25 @@ export const validISODateString = str => {
 export const validEmail = (email: string) => {
   const rgx = /^(([^<>()\[\]\.,;:\s@\"]+(\.[^<>()\[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i;
   return email.length > 5 && rgx.test(email);
-}
+};
 
 export const isSystemFileName = (str = null) => {
-  return typeof str === 'string' && /^[0-9a-f]{20,32}-\d+(\.\w{3,6})$/i.test(str);
-}
+  return (
+    typeof str === 'string' && /^[0-9a-f]{20,32}-\d+(\.\w{3,6})$/i.test(str)
+  );
+};
 
 /**
- * Basic URI check for remote resource references, typically with schema + 
+ * Basic URI check for remote resource references, typically with schema +
  */
 export const validUri = (uri = null) => {
   const rgx = /^\w+:\/\/\w+[^ ]+$/i;
   return notEmptyString(uri, 5) && rgx.test(uri);
-}
+};
 
 export const isLocationString = (loc = null) => {
-  return typeof loc === 'string' && /^-?\d+(\.\d+)?,-?\d+(\.\d+)?(,-?\d+)?/.test(loc.trim());
-}
+  return (
+    typeof loc === 'string' &&
+    /^-?\d+(\.\d+)?,-?\d+(\.\d+)?(,-?\d+)?/.test(loc.trim())
+  );
+};

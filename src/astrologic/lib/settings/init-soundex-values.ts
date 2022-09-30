@@ -30,7 +30,7 @@ const soundMap = [
   { type: 'co', value: 'na', ipa: ['n'] },
   { type: 'co', value: 'ṛ', ipa: ['ṛ', 'ɾ'] },
   { type: 'vo', value: 'ī', ipa: ['i:'] },
-  { type: 'vo', value: 'i', ipa: ['i'] }
+  { type: 'vo', value: 'i', ipa: ['i'] },
 ];
 
 export const initLetterMatchesbyLang = [
@@ -39,338 +39,338 @@ export const initLetterMatchesbyLang = [
     overrides: [
       {
         key: 'j',
-        value: 'ja'
+        value: 'ja',
       },
       {
         key: 'w',
-        value: 'va'
+        value: 'va',
       },
       {
         key: 'k',
-        value: 'kha'
+        value: 'kha',
       },
       {
         key: 'c',
-        value: 'kha'
+        value: 'kha',
       },
       {
         key: 'ch',
-        value: 'ca'
+        value: 'ca',
       },
       {
         key: 'ce',
-        value: 'sa'
+        value: 'sa',
       },
       {
         key: 'ci',
-        value: 'sa'
+        value: 'sa',
       },
       {
         key: 'ge',
-        value: 'ja'
+        value: 'ja',
       },
       {
         key: 'gi',
-        value: 'ja'
+        value: 'ja',
       },
       {
         key: 'gertrude',
-        value: 'ga'
+        value: 'ga',
       },
       {
         key: 'ear',
-        value: 'e'
+        value: 'e',
       },
       {
         key: 'o',
-        value: 'a'
+        value: 'a',
       },
       {
         key: 'or',
-        value: 'o'
+        value: 'o',
       },
       {
         key: 'oo',
-        value: 'ū'
+        value: 'ū',
       },
       {
         key: 'au',
-        value: 'o'
+        value: 'o',
       },
       {
         key: 'aw',
-        value: 'o'
+        value: 'o',
       },
       {
         key: 'ee',
-        value: 'ī'
+        value: 'ī',
       },
       {
         key: 'u[bcdfghklmnprstvwxz][aeiou]',
-        value: 'ya'
+        value: 'ya',
       },
       {
         key: 'th',
-        value: 'ta'
+        value: 'ta',
       },
       {
         key: 'sh',
-        value: 'ś'
+        value: 'ś',
       },
-    ]
+    ],
   },
   {
     key: 'de',
     overrides: [
       {
         key: 'j',
-        value: 'y'
+        value: 'y',
       },
       {
         key: 'w',
-        value: 'va'
+        value: 'va',
       },
       {
         key: 'k',
-        value: 'kha'
+        value: 'kha',
       },
       {
         key: 'ae',
-        value: 'e'
+        value: 'e',
       },
       {
         key: 'ä',
-        value: 'e'
+        value: 'e',
       },
       {
         key: 'oe',
-        value: 'e'
+        value: 'e',
       },
       {
         key: 'ö',
-        value: 'e'
+        value: 'e',
       },
       {
         key: 'ue',
-        value: 'u'
+        value: 'u',
       },
       {
         key: 'ü',
-        value: 'u'
+        value: 'u',
       },
       {
         key: 'z',
-        value: 't'
+        value: 't',
       },
       {
         key: 'sch',
-        value: 's'
+        value: 's',
       },
       {
         key: 'eu',
-        value: 'o'
+        value: 'o',
       },
       {
         key: 'ei',
-        value: 'ai'
+        value: 'ai',
       },
-    ]
+    ],
   },
   {
     key: 'es',
     overrides: [
       {
-        key: 'j',
-        value: 'ha'
+        key: 'ja',
+        value: 'ha',
       },
       {
         key: 'w',
-        value: 'va'
+        value: 'va',
       },
       {
         key: 'v',
-        value: 'ba'
+        value: 'ba',
       },
       {
         key: 'h',
-        value: ''
+        value: '',
       },
       {
         key: 'ge',
-        value: 'ha'
+        value: 'ha',
       },
       {
         key: 'gi',
-        value: 'ha'
+        value: 'ha',
       },
       {
         key: 'z',
-        value: 's'
+        value: 's',
       },
       {
         key: 'll',
-        value: 'y'
+        value: 'y',
       },
       {
         key: 'h',
-        value: ''
+        value: '',
       },
       {
         key: 'ci',
-        value: 'sa'
+        value: 'sa',
       },
       {
         key: 'ce',
-        value: 'sa'
+        value: 'sa',
       },
-    ]
+    ],
   },
   {
     key: 'fr',
     overrides: [
       {
         key: 'j',
-        value: 'ja'
+        value: 'ja',
       },
       {
         key: 'w',
-        value: 'va'
+        value: 'va',
       },
       {
         key: 'v',
-        value: 'ba'
+        value: 'ba',
       },
       {
         key: 'h',
-        value: ''
+        value: '',
       },
       {
         key: 'ge',
-        value: 'ja'
+        value: 'ja',
       },
       {
         key: 'gi',
-        value: 'ja'
+        value: 'ja',
       },
       {
         key: 'z',
-        value: 's'
+        value: 's',
       },
       {
         key: 'ch',
-        value: 'ca'
+        value: 'ca',
       },
       {
         key: 'h',
-        value: ''
+        value: '',
       },
       {
         key: 'ci',
-        value: 'sa'
+        value: 'sa',
       },
       {
         key: 'ce',
-        value: 'sa'
+        value: 'sa',
       },
       {
         key: 'ou',
-        value: 'u'
+        value: 'u',
       },
       {
         key: 'eu',
-        value: 'e'
+        value: 'e',
       },
-    ]
+    ],
   },
   {
     key: 'it',
     overrides: [
       {
         key: 'j',
-        value: 'y'
+        value: 'y',
       },
       {
         key: 'w',
-        value: 'va'
+        value: 'va',
       },
       {
         key: 'k',
-        value: 'ka'
+        value: 'ka',
       },
       {
         key: 'ue',
-        value: 'u'
+        value: 'u',
       },
       {
         key: 'ge',
-        value: 'j'
+        value: 'j',
       },
       {
         key: 'gi',
-        value: 'j'
+        value: 'j',
       },
       {
         key: 'z',
-        value: 'd'
+        value: 'd',
       },
       {
         key: 'ch',
-        value: 'k'
+        value: 'k',
       },
       {
         key: 'gli',
-        value: 'lr'
+        value: 'lr',
       },
       {
         key: 'h',
-        value: ''
+        value: '',
       },
       {
         key: 'ci',
-        value: 'ca'
+        value: 'ca',
       },
       {
         key: 'ce',
-        value: 'ca'
+        value: 'ca',
       },
-    ]
+    ],
   },
   {
     key: 'pl',
     overrides: [
       {
         key: 'j',
-        value: 'y'
+        value: 'y',
       },
       {
         key: 'w',
-        value: 'va'
+        value: 'va',
       },
       {
         key: 'k',
-        value: 'ka'
+        value: 'ka',
       },
       {
         key: 'dź',
-        value: 'j'
+        value: 'j',
       },
       {
         key: 'ź',
-        value: 'j'
+        value: 'j',
       },
       {
         key: 'z',
-        value: 's'
+        value: 's',
       },
       {
         key: 'Ł',
-        value: 'va'
+        value: 'va',
       },
       {
         key: 'cz',
-        value: 'ca'
-      }
-    ]
+        value: 'ca',
+      },
+    ],
   },
 ];
 

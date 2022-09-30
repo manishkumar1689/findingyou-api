@@ -25,6 +25,7 @@ import {
   isLocationString,
   validLocationParameter,
   validEmail,
+  appoximatesNum,
 } from '../lib/validators';
 import {
   correctDatetime,
@@ -62,11 +63,15 @@ import {
   buildExtendedTransitions,
   calcBaseLngSetJd,
   calcGrahaPos,
+  toSimplePositions,
+  buildCurrentAndBirthExtendedTransitions,
+  calcSpecialObjectPositions,
 } from './lib/core';
 import {
   calcAltitudeResult,
   calcAltitudeSE,
   calcTransposedObjectTransitionsSimple,
+  GrahaPos,
 } from './lib/point-transitions';
 import { sampleBaseObjects } from './lib/custom-transits';
 import {
@@ -145,7 +150,7 @@ import {
 } from './lib/mappers';
 import { CreateSettingDTO } from '../setting/dto/create-setting.dto';
 import typeTags from './lib/settings/relationship-types';
-import { KeyName } from './lib/interfaces';
+import { KeyName, TransitionItem } from './lib/interfaces';
 import { TagReassignDTO } from './dto/tag-reassign.dto';
 import { TagDTO } from './dto/tag.dto';
 import { RuleSetDTO } from '../setting/dto/rule-set.dto';
@@ -175,7 +180,11 @@ import { processPredictiveRuleSet } from './lib/predictions';
 import {
   calcLuckyTimes,
   calculatePanchaPakshiData,
+  extractAllYamasWithSubs,
+  mapBirdSet,
+  matchPeriodsWithPPScoresOnly,
   panchaPakshiDayNightSet,
+  toAllYamaSubs,
 } from './lib/settings/pancha-pakshi';
 import { PairsSetDTO } from './dto/pairs-set.dto';
 import {
@@ -188,6 +197,7 @@ import {
 import { objectToMap } from '../lib/entities';
 import { PreferenceDTO } from '../user/dto/preference.dto';
 import {
+  calcPreviousMidnightJd,
   currentJulianDay,
   dateStringToJulianDay,
   julToDateParts,
@@ -197,6 +207,10 @@ import {
   calcKotaChakraScoreData,
   calcKotaChakraScoreSet,
 } from './lib/settings/kota-values';
+import {
+  addAllTransitionItemsWithinRange,
+  addMatched5PTransitions,
+} from './calc-5p';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -473,6 +487,142 @@ export class AstrologicController {
       data.set('message', 'Invalid parameters');
     }
     return res.status(status).json(Object.fromEntries(data));
+  }
+
+  @Get('compare-transitions/:chartRef/:loc/:dt?')
+  async compareTransitions(
+    @Res() res,
+    @Param('chartRef') chartRef,
+    @Param('loc') loc,
+    @Param('dt') dt,
+  ) {
+    let chartID = chartRef;
+    if (chartRef.includes('@') && chartRef.includes('.')) {
+      chartID = await this.astrologicService.getChartIDByEmail(chartRef);
+    }
+    const result: any = { valid: false };
+    let status = HttpStatus.BAD_REQUEST;
+    if (notEmptyString(chartID) && notEmptyString(loc, 3)) {
+      const geo = locStringToGeo(loc);
+      const { dtUtc, jd } = matchJdAndDatetime(dt);
+      const chartData = await this.astrologicService.getChart(chartID);
+      const hasChart = chartData instanceof Model;
+      const valid = hasChart && chartData.grahas.length > 1;
+      result.dtUtc = dtUtc;
+      const nowDt = new Date();
+      const nowDtStr = nowDt
+        .toISOString()
+        .split('.')
+        .shift();
+
+      const timeInfo = await this.geoService.fetchTzData(geo, nowDtStr);
+
+      const midNightJd = calcPreviousMidnightJd(timeInfo.tzOffset, jd);
+
+      const endJd = midNightJd + 1;
+
+      if (valid) {
+        const chartObj = hasChart ? chartData.toObject() : {};
+        const chart = new Chart(chartObj);
+        const dayFirst = true;
+        const rules = await this.settingService.getPPRules();
+        const ppData1 = await panchaPakshiDayNightSet(jd - 1, geo, chart, true);
+        //result.pp1 = Object.fromEntries(ppData1.entries());
+        const ppData2 = await panchaPakshiDayNightSet(jd, geo, chart, true);
+        //result.pp2 = Object.fromEntries(ppData2.entries());
+        result.birdGrahaSet1 = mapBirdSet(ppData1);
+        result.birdGrahaSet2 = mapBirdSet(ppData2);
+        result.yamas1 = extractAllYamasWithSubs(ppData1);
+        result.yamas2 = extractAllYamasWithSubs(ppData2);
+        result.periods1 = matchPeriodsWithPPScoresOnly(
+          result.yamas1,
+          rules,
+          result.birdGrahaSet1,
+          true,
+        );
+
+        result.periods2 = matchPeriodsWithPPScoresOnly(
+          result.yamas2,
+          rules,
+          result.birdGrahaSet2,
+          true,
+        );
+
+        const specialPos = ppData2.get('moon').current;
+
+        const positions = toSimplePositions(chart, 'special');
+
+        if (specialPos instanceof Object) {
+          const { sun, moon, ra } = specialPos;
+          if (isNumeric(sun) && isNumeric(ra) && isNumeric(moon)) {
+            const extraPos = calcSpecialObjectPositions(
+              chart.lagna,
+              chart.indianTime.isDayTime,
+              moon,
+              sun,
+              ra,
+              'current',
+            );
+            extraPos.forEach((row: GrahaPos) => {
+              positions.push(row);
+            });
+          }
+        }
+        const startScanJd = jd - 0.5;
+        const transitions: TransitionItem[] = [];
+        const trData = await this.astrologicService.fetchCurrentAndTransposedTransitions(
+          positions,
+          startScanJd,
+          geo,
+          chart.geo,
+        );
+        result.span = [midNightJd, endJd];
+        result.keys = Object.keys(trData);
+
+        if (trData.currentTransitions instanceof Array) {
+          addAllTransitionItemsWithinRange(
+            transitions,
+            trData.currentTransitions,
+            midNightJd,
+            endJd,
+            false,
+          );
+        }
+        if (trData.transposedTransitions instanceof Array) {
+          addAllTransitionItemsWithinRange(
+            transitions,
+            trData.transposedTransitions,
+            midNightJd,
+            endJd,
+            true,
+          );
+        }
+
+        result.transitions = transitions;
+        const allSubs1 = toAllYamaSubs(result.periods1, dayFirst);
+        addMatched5PTransitions(
+          chart,
+          allSubs1,
+          rules,
+          transitions,
+          result.birdGrahaSet1,
+        );
+
+        const allSubs2 = toAllYamaSubs(result.periods2, dayFirst);
+        addMatched5PTransitions(
+          chart,
+          allSubs2,
+          rules,
+          transitions,
+          result.birdGrahaSet2,
+        );
+
+        result.rules = rules;
+        result.valid = valid;
+        status = HttpStatus.OK;
+      }
+    }
+    return res.status(status).json(result);
   }
 
   /*
@@ -2287,7 +2437,8 @@ export class AstrologicController {
       items: [],
       chart: null,
     };
-    let cData = null;
+    let cData: any = null;
+    let rm: any = null;
     if (hasChartId) {
       cData = await this.astrologicService.getChart(chartId);
       if (!cData) {
@@ -2363,12 +2514,54 @@ export class AstrologicController {
           });
         }
       }
+      const pos = toSimplePositions(result.chart);
+      const remRes = await this.astrologicService.fetchCurrentAndTransposedTransitions(
+        pos,
+        jd,
+        geo,
+        chart.geo,
+      );
+      if (remRes.transposedTransitions instanceof Array) {
+        rm = remRes.transposedTransitions.map(row => {
+          const { key, items } = row;
+          const or = result.items.find(it => it.key === key);
+          const refItem = items.find(
+            it =>
+              it.key === 'rise' && appoximatesNum(or.rise.jd, it.value, 0.05),
+          );
+          const rise =
+            or instanceof Object && refItem instanceof Object
+              ? {
+                  r: refItem.value,
+                  n: or.rise.jd,
+                  d: (refItem.value - or.rise.jd) * 1440,
+                  dtn: julToISODate(or.rise.jd),
+                  dt: julToISODate(refItem.value),
+                }
+              : {};
+          const refItem2 = items.find(
+            it => it.key === 'set' && appoximatesNum(or.set.jd, it.value, 0.05),
+          );
+          const set =
+            or instanceof Object && refItem2 instanceof Object
+              ? {
+                  r: refItem2.value,
+                  n: or.set.jd,
+                  d: (refItem2.value - or.set.jd) * 1440,
+                  dtn: julToISODate(or.set.jd),
+                  dt: julToISODate(refItem2.value),
+                }
+              : {};
+          return { key, rise, set, items };
+        });
+      }
     } else {
       if (result.message.length < 3) {
         result.message = 'Invalid parameters';
       }
     }
-    return res.json({ ...result, chartId });
+
+    return res.json({ ...result, chartId, rm });
   }
 
   @Get('declination/:key/:dt')

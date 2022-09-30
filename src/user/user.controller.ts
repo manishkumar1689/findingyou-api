@@ -138,6 +138,7 @@ import { calcLuckyTimes } from '../astrologic/lib/settings/pancha-pakshi';
 import { locStringToGeo } from '../astrologic/lib/converters';
 import { calcKotaChakraScoreData } from '../astrologic/lib/settings/kota-values';
 import { IdBoolDTO } from './dto/id-bool.dto';
+import { IdsLocationDTO } from './dto/ids-location.dto';
 
 @Controller('user')
 export class UserController {
@@ -2692,6 +2693,30 @@ export class UserController {
       this.userService.updateTestStatus(values);
       result.valid = true;
       result.values = values;
+      status = HttpStatus.OK;
+    }
+    return res.status(status).json(result);
+  }
+
+  @Put('update-custom-locations/:userID')
+  async bulkUpdateCustomLocation(
+    @Res() res,
+    @Param('userID') userID,
+    @Body() payload: IdsLocationDTO,
+  ) {
+    const mayEdit = await this.userService.isAdminUser(userID);
+    const result = { valid: false, ids: [], geo: null, placenames: [] };
+    let status = HttpStatus.NOT_ACCEPTABLE;
+    if (mayEdit) {
+      const {
+        ids,
+        placenames,
+        geo,
+      } = await this.userService.bulkUpdateLocation(payload);
+      result.valid = true;
+      result.ids = ids;
+      result.geo = geo;
+      result.placenames = placenames;
       status = HttpStatus.OK;
     }
     return res.status(status).json(result);

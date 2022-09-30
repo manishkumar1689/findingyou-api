@@ -553,94 +553,144 @@ export const filterMapSurveyByType = (
 };
 
 const polarityDifferencesToScore = (rows: KeyNumValue[] = []): number => {
-  return rows.length > 0 ? rows.map(row => 100 - Math.abs(row.value) ).reduce((a, b) => a + b, 0) / rows.length : -1;
-}
+  return rows.length > 0
+    ? rows.map(row => 100 - Math.abs(row.value)).reduce((a, b) => a + b, 0) /
+        rows.length
+    : -1;
+};
 
 const extractLettersFromJungianSummary = (jungian: KeyNumValue[] = []) => {
   const spectra = ['IE', 'SN', 'FT', 'JP'];
-  return spectra.map(pair => {
-    const item = jungian.find(row => row.key === pair);
-    if (item instanceof Object) {
-      return item.value < 0 ? pair.substring(0,1) : pair.substring(1,2);
-    } else {
-      return '';
-    }
-  }).join('').toLowerCase();
-}
+  return spectra
+    .map(pair => {
+      const item = jungian.find(row => row.key === pair);
+      if (item instanceof Object) {
+        return item.value < 0 ? pair.substring(0, 1) : pair.substring(1, 2);
+      } else {
+        return '';
+      }
+    })
+    .join('')
+    .toLowerCase();
+};
 
 export const toSimplePolarityValues = (jungian: KeyNumValue[] = []) => {
   const mp: Map<string, number> = new Map();
-  jungian.forEach(({key, value}) => {
+  jungian.forEach(({ key, value }) => {
     const isNeg = value < 0;
-    const letter = isNeg ? key.substring(0, 1) : key.substring(1, 2)
+    const letter = isNeg ? key.substring(0, 1) : key.substring(1, 2);
     const numVal = Math.abs(value);
     mp.set(letter, numVal);
   });
   return Object.fromEntries(mp.entries());
-}
+};
 
-export const compareJungianPolarities = (jungianRef: KeyNumValue[] = [], jungian: KeyNumValue[] = []) => {
-  const rows = jungianRef.map(row => {
-    const { key, value } = row;
-    const other = jungian.find(r2 => r2.key === key);
-    const matched = other instanceof Object;
-    const otherVal = matched ? other.value : 0;
-    return { 
-      key,
-      value: value - otherVal, 
-      matched
-    }
-  }).filter(row => row.matched);
+export const compareJungianPolarities = (
+  jungianRef: KeyNumValue[] = [],
+  jungian: KeyNumValue[] = [],
+) => {
+  const rows = jungianRef
+    .map(row => {
+      const { key, value } = row;
+      const other = jungian.find(r2 => r2.key === key);
+      const matched = other instanceof Object;
+      const otherVal = matched ? other.value : 0;
+      return {
+        key,
+        value: value - otherVal,
+        matched,
+      };
+    })
+    .filter(row => row.matched);
   const score = polarityDifferencesToScore(rows);
   const entries: any[] = rows.map(row => {
     const { key, value } = row;
-    return [ key, value ]
+    return [key, value];
   });
   entries.push(['score', score]);
   const letters = extractLettersFromJungianSummary(jungian);
   entries.push(['letters', letters]);
   entries.push(['values', toSimplePolarityValues(jungian)]);
   return Object.fromEntries(entries);
-}
+};
 
-export const extractSurveyScoresByType = (user: any = null, type = 'jungian'): KeyNumValue[] => {
-  if (user instanceof Object && Object.keys(user).includes('surveys') && user.surveys instanceof Array) {
+export const extractSurveyScoresByType = (
+  user: any = null,
+  type = 'jungian',
+): KeyNumValue[] => {
+  if (
+    user instanceof Object &&
+    Object.keys(user).includes('surveys') &&
+    user.surveys instanceof Array
+  ) {
     const scoreSet = user.surveys.find(row => row.type === type);
     if (scoreSet instanceof Object) {
       if (scoreSet.values instanceof Array) {
         return scoreSet.values.map(row => {
-          const {domain, value } = row;
-          return { 
+          const { domain, value } = row;
+          return {
             key: domain,
-            value
-          }
+            value,
+          };
         });
       }
     }
   }
   return [];
-}
+};
 
 export const buildQueryString = (criteria = null, literal = false) => {
-  let str = "";
+  let str = '';
   if (criteria instanceof Object) {
     const parts: Array<string> = [];
-    Object.entries(criteria).forEach((entry) => {
+    Object.entries(criteria).forEach(entry => {
       const [key, val] = entry;
       let paramVal = val;
-      if (typeof val === "string") {
+      if (typeof val === 'string') {
         paramVal = literal ? val : encodeURIComponent(val);
-      } else if (typeof val === "number" || typeof val === "boolean") {
+      } else if (typeof val === 'number' || typeof val === 'boolean') {
         paramVal = val.toString();
       } else if (val instanceof Array) {
-        paramVal = val.join(",");
+        paramVal = val.join(',');
       }
-      parts.push(key + "=" + paramVal);
+      parts.push(key + '=' + paramVal);
     });
     if (parts.length > 0) {
-      str = "?" + parts.join("&");
+      str = '?' + parts.join('&');
     }
   }
   return str;
 };
 
+export const buildPlacename = (type = 'PPLA', name = '', lat = 0, lng = 0) => {
+  return {
+    fullName: name,
+    type,
+    name,
+    geo: {
+      alt: 20,
+      lat,
+      lng,
+    },
+  };
+};
+
+export const buildPlacenamsFromString = (name = '', lat = 0, lng = 0) => {
+  let names = [];
+  const plns: any[] = [];
+  if (name.includes('(') && name.includes(')')) {
+    names = name.split('(').map(str => str.replace(/\)\s*$/, ''));
+  } else if (name.includes(',')) {
+    names = name.split(',');
+  }
+
+  if (names.length > 0) {
+    const first = names.shift();
+    plns.push(buildPlacename('PPLA', first, lat, lng));
+    if (names.length > 1) {
+      const last = names.pop();
+      plns.push(buildPlacename('ADM1', last, lat, lng));
+    }
+  }
+  return plns;
+};
