@@ -692,6 +692,5 @@ export const buildPlacenamsFromString = (name = '', lat = 0, lng = 0) => {
       plns.push(buildPlacename('ADM1', last, lat, lng));
     }
   }
-  console.log(plns);
   return plns;
 };
