@@ -112,7 +112,7 @@ import {
 } from './lib/calc-sbc';
 import { calcKotaChakraScoreData } from './lib/settings/kota-values';
 import { addSnippetKeyToSynastryAspectMatches } from './lib/synastry-aspect-mapper';
-import { buildQueryString } from 'src/setting/lib/mappers';
+import { buildQueryString } from '../setting/lib/mappers';
 import { GrahaPos } from './lib/point-transitions';
 const { ObjectId } = Types;
 
