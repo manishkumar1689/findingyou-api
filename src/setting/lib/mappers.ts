@@ -687,10 +687,11 @@ export const buildPlacenamsFromString = (name = '', lat = 0, lng = 0) => {
   if (names.length > 0) {
     const first = names.shift();
     plns.push(buildPlacename('PPLA', first, lat, lng));
-    if (names.length > 1) {
+    if (names.length > 0) {
       const last = names.pop();
       plns.push(buildPlacename('ADM1', last, lat, lng));
     }
   }
+  console.log(plns);
   return plns;
 };
