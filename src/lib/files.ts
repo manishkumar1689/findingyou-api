@@ -64,7 +64,7 @@ const maxLargeSizeKey = (imageSizes = null) => {
 };
 
 export const mediaPath = (type = 'media', subDir = '') => {
-  let relPath = 'media';
+  let relPath = mediaDirectory;
 
   switch (type) {
     case 'export':
@@ -84,9 +84,6 @@ export const mediaPath = (type = 'media', subDir = '') => {
       break;
     case 'swisseph':
       relPath = ephemerisPath;
-      break;
-    case 'media':
-      relPath = mediaDirectory;
       break;
   }
   if (notEmptyString(subDir)) {
