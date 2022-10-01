@@ -346,6 +346,7 @@ export class UserService {
 
   buildCriteria = (criteria: object, activeOnly: boolean): object => {
     const filter = new Map<string, any>();
+
     if (criteria instanceof Object) {
       const keys = Object.keys(criteria);
       for (const key of keys) {
@@ -396,8 +397,21 @@ export class UserService {
               { fullName: rgx },
             ]);
             break;
+          case 'place':
+          case 'places':
+          case 'placenames':
+            const rgxPl = new RegExp('\\b' + val, 'i');
+            filter.set('$or', [
+              { 'placenames.name': rgxPl },
+              { 'placenames.fullName': rgxPl },
+              { pob: rgxPl },
+            ]);
+            break;
           case 'near':
             filter.set('coords', this.buildNearQuery(val));
+            break;
+          case 'gender':
+            filter.set('gender', val);
             break;
           case 'test':
             const boolVal = smartCastBool(val);
