@@ -454,7 +454,7 @@ export class UserController {
       criteriaKeys.filter(k => ['totals', 'admin'].includes(k) === false)
         .length > 0;
     if (criteriaKeys.includes('totals')) {
-      activeTotal = await this.userService.count({}, true);
+      activeTotal = await this.userService.count({ active: true }, true);
       grandTotal = await this.userService.count({}, true);
     }
     if (!hasFilterKeys && grandTotal > 0) {
