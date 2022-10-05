@@ -201,7 +201,6 @@ import {
   calcKotaChakraScoreSet,
 } from './lib/settings/kota-values';
 import { process5PRulesWithPeaks, processTransitionData } from './calc-5p';
-import { tr } from 'date-fns/locale';
 
 @Controller('astrologic')
 export class AstrologicController {
