@@ -1,16 +1,22 @@
-import { notEmptyString } from '../lib/validators';
+import { smartCastInt } from 'src/lib/converters';
+import { julToDateFormat, julToUnixTime } from './lib/date-funcs';
 import { TransitionItem } from './lib/interfaces';
 import { Chart } from './lib/models/chart';
+import { GeoLoc } from './lib/models/geo-loc';
 import { matchDikBalaTransition } from './lib/settings/graha-values';
 import {
   BirdGrahaSet,
   calcValueWithinOrb,
+  extractAllYamasWithSubs,
   filterDashaLordByObjectType,
+  mapBirdSet,
   mapLords,
+  matchPeriodsWithPPScoresOnly,
   matchTransitionItemRange,
-  matchTransitionRange,
+  panchaPakshiDayNightSet,
   PPRule,
   RuleDataSet,
+  toAllYamaSubs,
   toTransitKey,
   TransitionOrb,
   translateTransitionKey,
@@ -154,7 +160,6 @@ export const process5PTransition = (
         if (relTr.type === rk) {
           const mr = matchTransitionItemRange(relTr);
           if (mr instanceof TransitionOrb) {
-            console.log({ startJd, endJd });
             if (mr.end > startJd && mr.start < endJd) {
               matchedRanges.push(mr);
               r.addMatch(mr.start, mr.end, 'orb', r.score);
@@ -256,4 +261,152 @@ export const matchPPRulesToJd = (
     }
   }
   return { minuteScore: score, ppScore, names, peaks };
+};
+
+export const processTransitionData = (
+  trData = null,
+  midNightJd = 0,
+  endJd = 0,
+) => {
+  const transitions: TransitionItem[] = [];
+  if (trData instanceof Object) {
+    if (trData.currentTransitions instanceof Array) {
+      addAllTransitionItemsWithinRange(
+        transitions,
+        trData.currentTransitions,
+        midNightJd,
+        endJd,
+        false,
+      );
+    }
+    if (trData.transposedTransitions instanceof Array) {
+      addAllTransitionItemsWithinRange(
+        transitions,
+        trData.transposedTransitions,
+        midNightJd,
+        endJd,
+        true,
+      );
+    }
+  }
+  return transitions;
+};
+
+const roundToInt = (num: number | undefined): number => {
+  return typeof num === 'number' ? Math.round(num) : 0;
+};
+
+const julToUnixInt = (num: number | undefined): number => {
+  return roundToInt(julToUnixTime(num));
+};
+
+const mapToSimplePeak = (item: any) => {
+  const { ts, score } = item;
+  return { start: ts - 210, peak: ts, end: ts + 210, max: score };
+};
+
+export const process5PRulesWithPeaks = async (
+  chart: Chart,
+  span: number[] = [0, 0, 0],
+  geo: GeoLoc,
+  transitions: TransitionItem[] = [],
+  rules: PPRule[] = [],
+  cutoff = 80,
+  tzOffset = 0,
+  showRules = false,
+): Promise<Map<string, any>> => {
+  const result: Map<string, any> = new Map();
+  const [jd, startJd, endJd] = span;
+  const dayFirst = true;
+  const ppData1 = await panchaPakshiDayNightSet(jd - 1, geo, chart, true);
+  //result.pp1 = Object.fromEntries(ppData1.entries());
+  const ppData2 = await panchaPakshiDayNightSet(jd, geo, chart, true);
+  //result.pp2 = Object.fromEntries(ppData2.entries());
+  const birdGrahaSet1 = mapBirdSet(ppData1);
+  const birdGrahaSet2 = mapBirdSet(ppData2);
+  const yamas1 = extractAllYamasWithSubs(ppData1);
+  const yamas2 = extractAllYamasWithSubs(ppData2);
+  const periods1 = matchPeriodsWithPPScoresOnly(
+    yamas1,
+    rules,
+    birdGrahaSet1,
+    true,
+  );
+
+  const periods2 = matchPeriodsWithPPScoresOnly(
+    yamas2,
+    rules,
+    birdGrahaSet2,
+    true,
+  );
+
+  //const specialPos = ppData2.get('moon').current;
+
+  const allSubs1 = toAllYamaSubs(periods1, dayFirst);
+  addMatched5PTransitions(chart, allSubs1, rules, transitions, birdGrahaSet1);
+  const allSubs2 = toAllYamaSubs(periods2, dayFirst);
+  addMatched5PTransitions(chart, allSubs2, rules, transitions, birdGrahaSet2);
+  const totalMatched = rules.filter(r => r.matches.length > 0).length;
+  const transitionRules = rules.filter(r =>
+    ['birth', 'transit'].includes(r.from),
+  );
+  const peaks: any[] = [];
+  const jds: number[] = [];
+  const ruleJds: number[] = rules
+    .map(r =>
+      r.matches
+        .map(m => {
+          const midJd = (m.start + m.end) / 2;
+          return midJd;
+        })
+        .filter(mj => mj >= startJd && mj <= endJd),
+    )
+    .reduce((a, b) => a.concat(b));
+  transitionRules.forEach(tr => {
+    tr.matches.forEach(tm => {
+      const midJd = (tm.start + tm.end) / 2;
+      const item = matchPPRulesToJd(midJd, rules, -1, true);
+      const score = item.ppScore + tr.score;
+      const { ppScore, names } = item;
+      names.push(tr.name);
+      if (jds.includes(midJd) === false) {
+        peaks.push({
+          jd: midJd,
+          ppScore,
+          trScore: tr.score,
+          score,
+          ruleKeys: names,
+        });
+        jds.push(midJd);
+      }
+    });
+  });
+  const filteredPeaks = peaks
+    .filter(p => p.score >= cutoff)
+    .map(item => {
+      const ts = julToUnixInt(item.jd);
+      const dt = julToDateFormat(item.jd, tzOffset, 'iso');
+      return { ...item, ts, dt };
+    });
+  /* result.set('periods1', periods1);
+  result.set('periods2', periods2); */
+  ruleJds.sort();
+  result.set('jd', jd);
+  result.set('unix', julToUnixInt(jd));
+  result.set('spanUnix', [julToUnixInt(startJd), julToUnixInt(endJd)]);
+  result.set('sunset', julToUnixInt(ppData2.get('set')));
+  result.set('sunrise', julToUnixInt(ppData2.get('rise')));
+  result.set('yamas1', yamas1);
+  result.set('yamas2', yamas2);
+  const mappedPeaks = showRules
+    ? filteredPeaks
+    : filteredPeaks.map(mapToSimplePeak);
+  result.set('peaks', mappedPeaks);
+  result.set('totalMatched', totalMatched);
+  result.set('span', [startJd, endJd]);
+  if (showRules) {
+    result.set('rules', rules);
+  }
+  result.set('ruleJds', ruleJds);
+  return result;
 };

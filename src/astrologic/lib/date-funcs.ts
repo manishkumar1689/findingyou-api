@@ -390,6 +390,7 @@ export const julToDateFormat = (
 
   let dp = [d, m, y];
   let sep = '/';
+  let timeSep = ' ';
   switch (fmt) {
     case 'us':
       dp = [m, d, y];
@@ -399,6 +400,8 @@ export const julToDateFormat = (
       break;
     case 'iso':
       dp = [y, m, d];
+      sep = '-';
+      timeSep = 'T';
       break;
     case '-':
     case '':
@@ -414,7 +417,7 @@ export const julToDateFormat = (
     const tp = timeOptions.seconds ? timeParts : timeParts.slice(0, 2);
     parts.push(tp.join(':'));
   }
-  return parts.join(' ');
+  return parts.join(timeSep);
 };
 
 export const decimalYear = (strDate = '') => {

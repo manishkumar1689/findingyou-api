@@ -3186,6 +3186,7 @@ export class AstrologicService {
     jd: number,
     geo: GeoPos,
     geoB = null,
+    isDayTime = true,
   ) {
     const geo2 =
       geoB instanceof GeoLoc
@@ -3206,6 +3207,7 @@ export class AstrologicService {
       geo2,
       positions,
       days: 1,
+      isDayTime,
     };
 
     const remResp = await this.postHttp(uri, payload);
