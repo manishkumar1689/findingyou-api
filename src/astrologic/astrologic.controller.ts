@@ -64,14 +64,11 @@ import {
   calcBaseLngSetJd,
   calcGrahaPos,
   toSimplePositions,
-  buildCurrentAndBirthExtendedTransitions,
-  calcSpecialObjectPositions,
 } from './lib/core';
 import {
   calcAltitudeResult,
   calcAltitudeSE,
   calcTransposedObjectTransitionsSimple,
-  GrahaPos,
 } from './lib/point-transitions';
 import { sampleBaseObjects } from './lib/custom-transits';
 import {
@@ -180,11 +177,7 @@ import { processPredictiveRuleSet } from './lib/predictions';
 import {
   calcLuckyTimes,
   calculatePanchaPakshiData,
-  extractAllYamasWithSubs,
-  mapBirdSet,
-  matchPeriodsWithPPScoresOnly,
   panchaPakshiDayNightSet,
-  toAllYamaSubs,
 } from './lib/settings/pancha-pakshi';
 import { PairsSetDTO } from './dto/pairs-set.dto';
 import {
@@ -207,13 +200,7 @@ import {
   calcKotaChakraScoreData,
   calcKotaChakraScoreSet,
 } from './lib/settings/kota-values';
-import {
-  addAllTransitionItemsWithinRange,
-  addMatched5PTransitions,
-  matchPPRulesToJd,
-  process5PRulesWithPeaks,
-  processTransitionData,
-} from './calc-5p';
+import { process5PRulesWithPeaks, processTransitionData } from './calc-5p';
 import { tr } from 'date-fns/locale';
 
 @Controller('astrologic')
