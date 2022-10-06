@@ -503,9 +503,6 @@ export class AstrologicController {
       const showYamas = paramKeys.includes('yamas')
         ? smartCastInt(query.yamas, 0) > 0
         : false;
-      const expanded = paramKeys.includes('expanded')
-        ? smartCastInt(query.expanded, 0) > 0
-        : false;
       const geo = locStringToGeo(loc);
       const { dtUtc, jd } = matchJdAndDatetime(dt);
       const chartData = await this.astrologicService.getChart(chartID);

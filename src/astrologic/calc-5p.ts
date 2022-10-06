@@ -228,6 +228,8 @@ export const matchPPRulesToJd = (
   let ppScore = 0;
   const names: string[] = [];
   const peaks = [];
+  const starts: number[] = [];
+  const ends: number[] = [];
   for (const rule of rules) {
     if (rule.isMatched) {
       // a rule may only match one in a given minute even if valid match spans may overlap
@@ -255,12 +257,22 @@ export const matchPPRulesToJd = (
             }
           }
           isMatched = true;
+          if (starts.indexOf(match.start) < 0) {
+            starts.push(match.start);
+          }
+          if (ends.indexOf(match.end) < 0) {
+            ends.push(match.end);
+          }
           break;
         }
       }
     }
   }
-  return { minuteScore: score, ppScore, names, peaks };
+  starts.sort();
+  ends.sort();
+  const endJd = ends.length > 0 ? ends[0] : 0;
+  const startJd = starts.length > 0 ? starts[starts.length - 1] : 0;
+  return { minuteScore: score, ppScore, names, peaks, startJd, endJd };
 };
 
 export const processTransitionData = (
@@ -301,8 +313,8 @@ const julToUnixInt = (num: number | undefined): number => {
 };
 
 const mapToSimplePeak = (item: any) => {
-  const { ts, score } = item;
-  return { start: ts - 210, peak: ts, end: ts + 210, max: score };
+  const { peak, score, start, end } = item;
+  return { start, peak, end, max: score };
 };
 
 export const process5PRulesWithPeaks = async (
@@ -367,8 +379,9 @@ export const process5PRulesWithPeaks = async (
       const midJd = (tm.start + tm.end) / 2;
       const item = matchPPRulesToJd(midJd, rules, -1, true);
       const score = item.ppScore + tr.score;
-      const { ppScore, names } = item;
+      const { ppScore, names, startJd, endJd } = item;
       names.push(tr.name);
+
       if (jds.includes(midJd) === false) {
         peaks.push({
           jd: midJd,
@@ -376,6 +389,8 @@ export const process5PRulesWithPeaks = async (
           trScore: tr.score,
           score,
           ruleKeys: names,
+          startJd,
+          endJd,
         });
         jds.push(midJd);
       }
@@ -384,9 +399,31 @@ export const process5PRulesWithPeaks = async (
   const filteredPeaks = peaks
     .filter(p => p.score >= cutoff)
     .map(item => {
-      const ts = julToUnixInt(item.jd);
+      const peak = julToUnixInt(item.jd);
       const dt = julToDateFormat(item.jd, tzOffset, 'iso');
-      return { ...item, ts, dt };
+      const diffScore = item.score - item.ppScore;
+      const diffCutoff = item.score > cutoff ? item.score - cutoff : 1 / 6;
+      const frac = diffCutoff / diffScore;
+      const sinceStartPP = peak - julToUnixInt(item.startJd);
+      const tillEndStartPP = julToUnixInt(item.endJd) - peak;
+      const start =
+        sinceStartPP > 0 ? Math.round(peak - sinceStartPP * frac) : peak - 180;
+      const end =
+        tillEndStartPP > 0
+          ? Math.round(peak + tillEndStartPP * frac)
+          : peak + 180;
+      const duration = end - start;
+      return {
+        ...item,
+        start,
+        peak,
+        end,
+        dt,
+        diffScore,
+        diffCutoff,
+        frac,
+        duration,
+      };
     });
   /* result.set('periods1', periods1);
   result.set('periods2', periods2); */
