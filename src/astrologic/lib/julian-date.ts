@@ -441,7 +441,7 @@ export const currentTzOffset = (): number => {
 
 const calcMidNightStartFrac = (secs: number) => (1.5 - secs / 86400) % 1;
 
-const calcPreviousMidNightJd = (frac: number, jd: number) => {
+const calcPreviousMidJd = (frac: number, jd: number) => {
   const jdZero = Math.floor(jd);
   const tgJd = jdZero + frac;
   return tgJd < jd ? tgJd : tgJd - 1;
@@ -452,5 +452,5 @@ export const calcPreviousMidnightJd = (
 ): number => {
   const currJd = refJd < 100 ? currentJulianDay() : refJd;
   const startFrac = calcMidNightStartFrac(offsetSecs);
-  return calcPreviousMidNightJd(startFrac, currJd);
+  return calcPreviousMidJd(startFrac, currJd);
 };

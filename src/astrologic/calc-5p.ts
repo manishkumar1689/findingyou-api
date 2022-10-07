@@ -1,4 +1,3 @@
-import { smartCastInt } from 'src/lib/converters';
 import { julToDateFormat, julToUnixTime } from './lib/date-funcs';
 import { TransitionItem } from './lib/interfaces';
 import { Chart } from './lib/models/chart';
@@ -438,7 +437,7 @@ export const process5PRulesWithPeaks = async (
   const mappedPeaks = showRules
     ? filteredPeaks
     : filteredPeaks.map(mapToSimplePeak);
-  result.set('peaks', mappedPeaks);
+  result.set('times', mappedPeaks);
   result.set('totalMatched', totalMatched);
   result.set('span', [startJd, endJd]);
   if (showRules) {
