@@ -2664,20 +2664,7 @@ export class UserController {
             const kutaSet = await this.settingService.getKutaSettings();
             const kutaBuilder = new Kuta(c1, c2);
             kutaBuilder.loadCompatibility(kutaSet);
-            const grahaKeys = [
-              'su',
-              'mo',
-              'me',
-              've',
-              'ma',
-              'ju',
-              'sa',
-              'ur',
-              'ne',
-              'pl',
-              'ra',
-              'ke',
-            ];
+            const grahaKeys = ['su', 'mo', 've', 'as'];
             data.kutas = kutaBuilder.calcAllSingleKutas(
               true,
               grahaKeys,
