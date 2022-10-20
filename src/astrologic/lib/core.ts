@@ -2055,6 +2055,7 @@ export const calcAllAspects = (
   c2: Chart,
   grahaKeys1: string[] = [],
   grahaKeys2: string[] = [],
+  mutual = false,
 ) => {
   const aspects = [];
   const keys1 = grahaKeys1.length > 0 ? grahaKeys1 : defaultAspectGrahaKeys;
@@ -2069,6 +2070,17 @@ export const calcAllAspects = (
         k2,
         value: angle,
       });
+      if (mutual && grahaKeys1.includes(k2) === false) {
+        //if (mutual) {
+        const gr1B = c1.graha(k2);
+        const gr2B = c2.graha(k1);
+        const angleB = relativeAngle(gr1B.longitude, gr2B.longitude);
+        aspects.push({
+          k1,
+          k2,
+          value: angleB,
+        });
+      }
     });
   });
   return aspects;
@@ -2082,16 +2094,31 @@ export const calcAspectMatches = (
   orbMap = null,
   aspectDegs: number[] = [0, 90, 120, 180],
   ascAspectDegs = [0, 30, 60, 90, 120, 150, 180],
+  mutual = false,
 ): SynastryAspectMatch[] => {
-  const aspects = calcAllAspects(c1, c2, grahaKeys1, grahaKeys2);
+  const aspects = calcAllAspects(c1, c2, grahaKeys1, grahaKeys2, mutual);
+  const hasOrbMap = orbMap instanceof Object;
+  const orbMapKeys = hasOrbMap ? Object.keys(orbMap) : [];
+  const hasExtendedOrb = hasOrbMap
+    ? orbMapKeys.includes('major') &&
+      orbMapKeys.includes('minor') &&
+      orbMap.minor instanceof Object
+    : false;
   return aspects
     .map(asp => {
       const aDegs =
-        asp.k1 === 'as' && asp.k2 === 'as' ? ascAspectDegs : aspectDegs;
+        hasExtendedOrb && asp.k1 === 'as' && asp.k2 === 'as'
+          ? ascAspectDegs
+          : aspectDegs;
       return aDegs
         .map(deg => {
-          // const row = matchAspectRowByDeg(deg);
-          const orbRow = matchSynastryOrbRange(asp.k1, asp.k2, deg, orbMap);
+          const isMinor = hasExtendedOrb && aspectDegs.includes(deg) === false;
+          const refOrbMap = isMinor
+            ? orbMap.minor
+            : hasExtendedOrb
+            ? orbMap.major
+            : orbMap;
+          const orbRow = matchSynastryOrbRange(asp.k1, asp.k2, deg, refOrbMap);
           const ranges = orbRow.ranges
             .map(range => {
               const [first, second] = range;
