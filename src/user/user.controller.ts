@@ -139,6 +139,7 @@ import { locStringToGeo } from '../astrologic/lib/converters';
 import { calcKotaChakraScoreData } from '../astrologic/lib/settings/kota-values';
 import { IdBoolDTO } from './dto/id-bool.dto';
 import { IdsLocationDTO } from './dto/ids-location.dto';
+import { BlockRecord } from '../feedback/lib/interfaces';
 
 @Controller('user')
 export class UserController {
@@ -2188,6 +2189,28 @@ export class UserController {
   ) {
     const data = await this.userService.savePreferences(userID, preferences);
     return res.json(data);
+  }
+
+  /*
+   * Admin / mobile
+   */
+  @Get('blocks/:userID')
+  async listBlocks(@Res() res, @Param('userID') userID) {
+    const items: BlockRecord[] = [];
+    let valid = false;
+    if (isValidObjectId(userID)) {
+      const blocks = await this.feedbackService.getBlocksByUser(userID);
+      valid = true;
+      if (blocks.length > 0) {
+        for (const item of blocks) {
+          const info = await this.userService.getCoreFields(item.user);
+          if (info instanceof Object) {
+            items.push({ ...item, info });
+          }
+        }
+      }
+    }
+    return res.json({ valid, items });
   }
 
   /*
