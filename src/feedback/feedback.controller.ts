@@ -50,6 +50,7 @@ export class FeedbackController {
     const limitInt = isNumeric(limit) ? smartCastInt(limit, 100) : 100;
 
     const data = await this.feedbackService.listAll(startInt, limitInt, query);
+    const total = await this.feedbackService.countAll(query);
     const items: any[] = [];
     for (const row of data) {
       if (row instanceof Object) {
@@ -71,7 +72,19 @@ export class FeedbackController {
         items.push({ ...row, targetUser: tu, hasTargetUser });
       }
     }
-    return res.json(items);
+    const num = items.length;
+    const valid = num > 0;
+    const types = await this.feedbackService.getFeedbackTypes();
+
+    return res.json({
+      valid,
+      types,
+      start: startInt,
+      perPage: limitInt,
+      num,
+      total,
+      items,
+    });
   }
 
   @Get('list-by-target/:user?/:key?')
