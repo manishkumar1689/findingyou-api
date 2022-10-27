@@ -2536,6 +2536,29 @@ export class UserService {
     return answerSet;
   }
 
+  async mergeTargetUsersWithFeedbackItems(data: any[] = []) {
+    const items: any[] = [];
+    for (const row of data) {
+      if (row instanceof Object) {
+        const { targetUser } = row;
+        let hasTargetUser = false;
+        let tu: any = { _id: '' };
+        if (targetUser instanceof Object) {
+          const otherUser = await this.getCoreFields(targetUser.toString());
+          if (
+            otherUser instanceof Object &&
+            notEmptyString(otherUser.identifier, 4)
+          ) {
+            tu = otherUser;
+            hasTargetUser = true;
+          }
+        }
+        items.push({ ...row, targetUser: tu, hasTargetUser });
+      }
+    }
+    return items;
+  }
+
   async saveSurveyAnswersKeyVals(
     userID = '',
     type = 'jungian',

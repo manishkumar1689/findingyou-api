@@ -2097,6 +2097,7 @@ export const calcAspectMatches = (
   mutual = false,
 ): SynastryAspectMatch[] => {
   const aspects = calcAllAspects(c1, c2, grahaKeys1, grahaKeys2, mutual);
+
   const hasOrbMap = orbMap instanceof Object;
   const orbMapKeys = hasOrbMap ? Object.keys(orbMap) : [];
   const hasExtendedOrb = hasOrbMap
