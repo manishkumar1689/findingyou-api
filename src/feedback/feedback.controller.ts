@@ -26,6 +26,7 @@ import { fromBase64 } from '../lib/hash';
 import { SnippetService } from '../snippet/snippet.service';
 import { buildFullPath, matchFile, matchMimeFromExtension } from '../lib/files';
 import { UserPairDTO } from './dto/user-pair.dto';
+import { CreateFeedbackDTO } from './dto/create-feedback.dto';
 
 @Controller('feedback')
 export class FeedbackController {
@@ -48,20 +49,29 @@ export class FeedbackController {
     const startInt = isNumeric(start) ? smartCastInt(start, 0) : 0;
     const limitInt = isNumeric(limit) ? smartCastInt(limit, 100) : 100;
 
-    const items = await this.feedbackService.listAll(startInt, limitInt, query);
-    const num = items instanceof Array ? items.length : 0;
-    const valid = num > 0;
-    const total = await this.feedbackService.countAll(query);
-    const types = await this.feedbackService.getFeedbackTypes();
-    return res.json({
-      valid,
-      num,
-      start: startInt,
-      perPage: limitInt,
-      types,
-      total,
-      items,
-    });
+    const data = await this.feedbackService.listAll(startInt, limitInt, query);
+    const items: any[] = [];
+    for (const row of data) {
+      if (row instanceof Object) {
+        const { targetUser } = row;
+        let hasTargetUser = false;
+        let tu: any = { _id: '' };
+        if (targetUser instanceof Object) {
+          const otherUser = await this.userService.getCoreFields(
+            targetUser.toString(),
+          );
+          if (
+            otherUser instanceof Object &&
+            notEmptyString(otherUser.identifier, 4)
+          ) {
+            tu = otherUser;
+            hasTargetUser = true;
+          }
+        }
+        items.push({ ...row, targetUser: tu, hasTargetUser });
+      }
+    }
+    return res.json(items);
   }
 
   @Get('list-by-target/:user?/:key?')
@@ -99,6 +109,13 @@ export class FeedbackController {
   @Post('save-flag')
   async saveFlag(@Res() res, @Body() createFlagDTO: CreateFlagDTO) {
     const data = await this.feedbackService.saveFlag(createFlagDTO);
+    return res.json(data);
+  }
+
+  @Post('report')
+  async saveMessage(@Res() res, @Body() createFeedbackDTO: CreateFeedbackDTO) {
+    const payload = { ...createFeedbackDTO, key: 'message' };
+    const data = await this.feedbackService.saveFeedback(payload);
     return res.json(data);
   }
 

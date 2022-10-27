@@ -45,12 +45,14 @@ export class FeedbackService {
         $project: {
           _id: 1,
           key: 1,
+          reason: 1,
           text: 1,
           active: 1,
           deviceDetails: 1,
           mediaItems: 1,
           createdAt: 1,
           modifiedAt: 1,
+          targetUser: 1,
           user: 1,
           userId: '$u._id',
           email: '$u.identifier',
@@ -271,13 +273,28 @@ export class FeedbackService {
   async saveFeedback(data: any = null): Promise<string> {
     if (data instanceof Object) {
       const dt = new Date();
-      const { user, targetUser, key, text, deviceDetails, mediaItems } = data;
+      const {
+        user,
+        targetUser,
+        key,
+        reason,
+        text,
+        deviceDetails,
+        mediaItems,
+      } = data;
       if (
         isValidObjectId(user) &&
         notEmptyString(key) &&
         notEmptyString(text)
       ) {
-        const edited: any = { user, key, text, createdAt: dt, modifiedAt: dt };
+        const edited: any = {
+          user,
+          key,
+          reason,
+          text,
+          createdAt: dt,
+          modifiedAt: dt,
+        };
         if (notEmptyString(targetUser) && isValidObjectId(targetUser)) {
           edited.targetUser = targetUser;
         }

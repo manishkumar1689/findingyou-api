@@ -170,8 +170,10 @@ export const uploadMediaFile = (
   originalname: string,
   data: any,
   imageType = 'media',
+  prefix = '',
 ) => {
-  const filename = generateFileName(userID, originalname);
+  const baseName = notEmptyString(prefix) ? [prefix, userID].join('_') : userID;
+  const filename = generateFileName(baseName, originalname);
   const extension = filename
     .split('.')
     .pop()

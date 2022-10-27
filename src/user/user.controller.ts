@@ -39,7 +39,7 @@ import {
   toBase64,
   tokenTo6Digits,
 } from '../lib/hash';
-import { mailDetails, maxResetMinutes } from '../.config';
+import { mailDetails, maxResetMinutes, webBaseUrl } from '../.config';
 import * as bcrypt from 'bcrypt';
 import {
   extractDocId,
@@ -140,6 +140,7 @@ import { calcKotaChakraScoreData } from '../astrologic/lib/settings/kota-values'
 import { IdBoolDTO } from './dto/id-bool.dto';
 import { IdsLocationDTO } from './dto/ids-location.dto';
 import { BlockRecord } from '../feedback/lib/interfaces';
+import { CreateFeedbackDTO } from '../feedback/dto/create-feedback.dto';
 
 @Controller('user')
 export class UserController {
@@ -2991,6 +2992,188 @@ export class UserController {
       mode: 'local',
     };
     this.userService.create(user);
+  }
+
+  async sendFeedback(
+    payload: CreateFeedbackDTO,
+    key = 'message',
+    targetUser = '',
+    sendToTargetUser = false,
+  ) {
+    const user = await this.userService.getBasicById(payload.user, [
+      'identifier',
+      'fullName',
+    ]);
+    const keyStr = notEmptyString(key)
+      ? key.replace(/-/g, '_').toLowerCase()
+      : 'message';
+
+    const result: any = {
+      valid: false,
+      msgId: '',
+      identifier: '',
+      fullName: '',
+      mail: 'not_sent',
+    };
+    let isToAdmin = true;
+    let toUserEmail = mailDetails.fromAddress;
+    let toName = 'Support';
+    if (
+      sendToTargetUser &&
+      notEmptyString(targetUser, 12) &&
+      isValidObjectId(targetUser)
+    ) {
+      const toUser = await this.userService.getBasicById(payload.user, [
+        'identifier',
+        'fullName',
+      ]);
+      if (toUser instanceof Object) {
+        toName = toUser.fullName;
+        toUserEmail = toUser.identifier;
+      }
+      isToAdmin = false;
+    }
+    if (user instanceof Object && notEmptyString(user.identifier, 5)) {
+      const id = await this.feedbackService.saveFeedback({
+        ...payload,
+        key: keyStr,
+      });
+      result.text = payload.text;
+      if (payload.deviceDetails) {
+        result.deviceDetails = payload.deviceDetails;
+      }
+      if (
+        payload.mediaItems instanceof Array &&
+        payload.mediaItems.length > 0
+      ) {
+        result.mediaItems = payload.mediaItems;
+      }
+      if (notEmptyString(id, 12)) {
+        const fbType = keyStr.replace(/_/g, ' ');
+        const subject = `${fbType}: ${user.fullName}`;
+        result.valid = true;
+        result.msgId = id;
+        result.identifier = user.identifier;
+        result.fullName = user.fullName;
+        let bodyText = '';
+        if (isToAdmin) {
+          const path = webBaseUrl + '/manage/users/edit/' + payload.user;
+          bodyText = `<p>User id: <a href="${path}" target="_blank">${payload.user}</a></p>`;
+        }
+
+        if (payload.deviceDetails) {
+          bodyText += '<p>' + `Device: ${payload.deviceDetails}` + '</p>';
+        }
+
+        bodyText += `<br /><hr /><br /><article>` + payload.text + '</article>';
+
+        const mailPayload = {
+          to: toUserEmail, // list of receivers
+          toName,
+          from: user.identifier, // sender address
+          fromName: user.fullName, //
+          subject, //
+          body: bodyText,
+        };
+        const md = await this.messageService.sendMail(mailPayload);
+        if (md instanceof Object && md.result instanceof Object) {
+          const mrKeys = Object.keys(md.result);
+          if (mrKeys.includes('stack')) {
+            result.mail = 'error';
+          } else {
+            result.mail = 'sent';
+          }
+        }
+      }
+    }
+    return result;
+  }
+
+  /*
+   * mobile post feedback with optional attachment
+   */
+  @Post('post-feedback/:key')
+  @UseInterceptors(FileInterceptor('file'))
+  async postFeedback(
+    @Res() res,
+    @Body() payload,
+    @Param('key') key,
+    @UploadedFile('file') file,
+  ) {
+    let result: any = { valid: false };
+    const payloadKeys =
+      typeof payload === 'object' && payload !== null
+        ? Object.keys({ ...payload })
+        : [];
+    if (
+      file instanceof Object &&
+      notEmptyString(key) &&
+      payloadKeys.includes('text') &&
+      payloadKeys.includes('user') &&
+      notEmptyString(payload.text) &&
+      notEmptyString(payload.user) &&
+      notEmptyString(key)
+    ) {
+      const { originalname, mimetype, size, buffer } = file;
+      const userID = payload.user;
+      const fn = generateFileName(['feedback', userID].join('_'), originalname);
+      const { fileType, mime } = matchFileTypeAndMime(originalname, mimetype);
+      const title = key.replace(/[_-]/g, ' ');
+      const fileData = {
+        filename: fn,
+        mime,
+        type: fileType,
+        source: 'local',
+        size,
+        title,
+        attributes: {},
+        variants: [],
+      };
+      const { attributes } = uploadMediaFile(
+        userID,
+        originalname,
+        buffer,
+        'files',
+        'feedback',
+      );
+      if (attributes) {
+        fileData.attributes = attributes;
+      }
+      const saveData: any = {
+        user: payload.user,
+        key,
+        text: payload.text,
+      };
+      if (
+        payloadKeys.includes('deviceDetails') &&
+        notEmptyString(payload.deviceDetails)
+      ) {
+        saveData.deviceDetails = payload.deviceDetails;
+      }
+      let hasTarget = false;
+      if (
+        payloadKeys.includes('targetUser') &&
+        isValidObjectId(payload.targetUser)
+      ) {
+        saveData.targetUser = payload.targetUser;
+        hasTarget = true;
+      }
+      if (payloadKeys.includes('reason') && notEmptyString(payload.reason)) {
+        saveData.reason = payload.reason;
+      }
+
+      saveData.mediaItems = [fileData];
+      const sendToTargetUser = hasTarget && ['user_report'].includes(key);
+      const recipientUserId = sendToTargetUser ? payload.targetUser : '';
+      result = await this.sendFeedback(
+        saveData as CreateFeedbackDTO,
+        key,
+        recipientUserId,
+        sendToTargetUser,
+      );
+      result.valid = true;
+    }
+    res.json(result);
   }
 
   @Post('test-mail')
