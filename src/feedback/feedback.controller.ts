@@ -203,7 +203,9 @@ export class FeedbackController {
     let result: any = { valid: false };
     if (isValidObjectId(from) && isValidObjectId(to)) {
       result = await this.feedbackService.blockOtherUser(from, to);
-      if (!result.valid) {
+      if (result.valid) {
+        status = HttpStatus.OK;
+      } else {
         status = HttpStatus.NOT_FOUND;
       }
     }
