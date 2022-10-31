@@ -225,11 +225,12 @@ export class FeedbackController {
     customTitle = '',
     customBody = '',
   ) {
-    const targetDeviceToken = await this.userService.getUserDeviceToken(
-      createFlagDTO.targetUser,
-    );
-    let fcm: any = { valid: false, reason: 'missing device token' };
     const { key, type, value, user, targetUser } = createFlagDTO;
+    const blockStatus = await this.feedbackService.isBlocked(user, targetUser);
+    const targetDeviceToken = blockStatus.blocked
+      ? ''
+      : await this.userService.getUserDeviceToken(targetUser);
+    let fcm: any = { valid: false, reason: 'missing device token' };
 
     if (notEmptyString(targetDeviceToken, 5)) {
       const plainText = type === 'text' && notEmptyString(value);
