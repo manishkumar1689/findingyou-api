@@ -825,6 +825,15 @@ export class UserService {
       }
     }
     if (isNew) {
+      const fn = userData.get('fullName');
+      const nn = userData.get('nickName');
+      const hasFullName = notEmptyString(fn, 2);
+      const hasNickName = notEmptyString(nn);
+      if (!hasFullName && hasNickName) {
+        userData.set('fullName', nn);
+      } else if (hasFullName && !hasNickName) {
+        userData.set('nickName', fn);
+      }
       userData.set('active', true);
       userData.set('createdAt', dt);
     }
