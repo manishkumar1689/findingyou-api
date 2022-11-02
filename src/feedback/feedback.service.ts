@@ -249,6 +249,67 @@ export class FeedbackService {
     return records;
   }
 
+  async getBlockList(start = 0, perPage = 0) {
+    const steps = [
+      {
+        $match: {
+          key: 'blocked',
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'from',
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'targetUser',
+          foreignField: '_id',
+          as: 'to',
+        },
+      },
+      { $unwind: '$from' },
+      { $unwind: '$to' },
+      {
+        $project: {
+          user: 1,
+          targetUser: 1,
+          fromName: '$from.fullName',
+          fromNickName: '$from.nickName',
+          fromGender: '$from.gender',
+          fromoDob: '$from.dob',
+          fromEmail: '$from.identifier',
+          fromActive: '$from.active',
+          fromRoles: '$from.roles',
+          toName: '$to.fullName',
+          toNickName: '$to.nickName',
+          toGender: '$to.gender',
+          toDob: '$to.dob',
+          toEmail: '$to.identifier',
+          toActive: '$to.active',
+          toRoles: '$to.roles',
+          createdAt: 1,
+        },
+      },
+      {
+        $sort: {
+          createdAt: -1,
+        },
+      },
+      {
+        $skip: start,
+      },
+      {
+        $limit: perPage,
+      },
+    ];
+    return await this.feedbackModel.aggregate(steps);
+  }
+
   async getFeedbackTypes() {
     const steps = [
       {
