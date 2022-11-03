@@ -2266,6 +2266,23 @@ export class UserController {
   }
 
   /*
+   * Admin / mobile
+   */
+  @Get('block-list/:start?/:limit?')
+  async listAllBlocks(
+    @Res() res,
+    @Param('start') start,
+    @Param('limit') limit,
+  ) {
+    const startInt = smartCastInt(start, 0);
+    const limitInt = smartCastInt(limit, 0);
+    const perPage = limitInt < 10 ? 100 : limitInt;
+    const items = await this.feedbackService.getBlockList(startInt, perPage);
+    const valid = items instanceof Array && items.length > 0;
+    return res.json({ valid, items });
+  }
+
+  /*
     #admin
   */
   @Put('survey/save/:type/:userID/:lang?/:reset?')

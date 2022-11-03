@@ -307,7 +307,7 @@ export class FeedbackService {
         $limit: perPage,
       },
     ];
-    return await this.feedbackModel.aggregate(steps);
+    return await this.flagModel.aggregate(steps);
   }
 
   async getFeedbackTypes() {
