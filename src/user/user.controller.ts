@@ -2273,13 +2273,24 @@ export class UserController {
     @Res() res,
     @Param('start') start,
     @Param('limit') limit,
+    @Query() query,
   ) {
     const startInt = smartCastInt(start, 0);
     const limitInt = smartCastInt(limit, 0);
     const perPage = limitInt < 10 ? 100 : limitInt;
-    const items = await this.feedbackService.getBlockList(startInt, perPage);
+    const paramKeys = query instanceof Object ? Object.keys(query) : [];
+    const search =
+      paramKeys.includes('search') && notEmptyString(query.search)
+        ? decodeURIComponent(query.search)
+        : '';
+    const hasSearch = notEmptyString(search);
+    const items = await this.feedbackService.getBlockList(
+      search,
+      startInt,
+      perPage,
+    );
     const valid = items instanceof Array && items.length > 0;
-    return res.json({ valid, items });
+    return res.json({ valid, hasSearch, start, perPage, items });
   }
 
   /*

@@ -249,13 +249,22 @@ export class FeedbackService {
     return records;
   }
 
-  async getBlockList(start = 0, perPage = 0) {
+  async getBlockList(search = '', start = 0, perPage = 0) {
+    const hasSearch = notEmptyString(search);
+    const filter: Map<string, any> = new Map();
+    filter.set('key', 'blocked');
+    if (hasSearch) {
+      const rgx = new RegExp('\\b' + search, 'i');
+      filter.set('$or', [
+        { 'to.nickName': rgx },
+        { 'from.nickName': rgx },
+        { 'to.fullName': rgx },
+        { 'from.fullName': rgx },
+        { 'to.identifier': rgx },
+        { 'from.identifier': rgx },
+      ]);
+    }
     const steps = [
-      {
-        $match: {
-          key: 'blocked',
-        },
-      },
       {
         $lookup: {
           from: 'users',
@@ -274,6 +283,9 @@ export class FeedbackService {
       },
       { $unwind: '$from' },
       { $unwind: '$to' },
+      {
+        $match: Object.fromEntries(filter.entries()),
+      },
       {
         $project: {
           user: 1,
