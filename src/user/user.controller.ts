@@ -2289,8 +2289,24 @@ export class UserController {
       startInt,
       perPage,
     );
+    const total = await this.feedbackService.getBlockListTotal(search);
+    const grandTotal = hasSearch
+      ? await this.feedbackService.getBlockListTotal('')
+      : total;
     const valid = items instanceof Array && items.length > 0;
-    return res.json({ valid, hasSearch, start, perPage, items });
+    const num = items.length;
+    const page = Math.floor(startInt / perPage) + 1;
+    return res.json({
+      valid,
+      hasSearch,
+      start: startInt,
+      page,
+      perPage,
+      num,
+      total,
+      grandTotal,
+      items,
+    });
   }
 
   /*

@@ -216,7 +216,7 @@ export class FeedbackService {
     if (['both', 'all', 'from'].includes(mode)) {
       const fromConds = hasTarget
         ? { targetUser: userObjId, user: targetObjId }
-        : { user: userObjId };
+        : { targetUser: userObjId };
       orConditions.push(fromConds);
     }
     const items = await this.flagModel.find({
@@ -250,6 +250,7 @@ export class FeedbackService {
   }
 
   async getBlockList(search = '', start = 0, perPage = 0) {
+    const countMode = perPage < 0;
     const hasSearch = notEmptyString(search);
     const filter: Map<string, any> = new Map();
     filter.set('key', 'blocked');
@@ -264,7 +265,7 @@ export class FeedbackService {
         { 'from.identifier': rgx },
       ]);
     }
-    const steps = [
+    const steps: any[] = [
       {
         $lookup: {
           from: 'users',
@@ -286,40 +287,53 @@ export class FeedbackService {
       {
         $match: Object.fromEntries(filter.entries()),
       },
-      {
-        $project: {
-          user: 1,
-          targetUser: 1,
-          fromName: '$from.fullName',
-          fromNickName: '$from.nickName',
-          fromGender: '$from.gender',
-          fromoDob: '$from.dob',
-          fromEmail: '$from.identifier',
-          fromActive: '$from.active',
-          fromRoles: '$from.roles',
-          toName: '$to.fullName',
-          toNickName: '$to.nickName',
-          toGender: '$to.gender',
-          toDob: '$to.dob',
-          toEmail: '$to.identifier',
-          toActive: '$to.active',
-          toRoles: '$to.roles',
-          createdAt: 1,
-        },
-      },
-      {
-        $sort: {
-          createdAt: -1,
-        },
-      },
-      {
-        $skip: start,
-      },
-      {
-        $limit: perPage,
-      },
     ];
+    if (countMode) {
+      steps.push({
+        $count: 'total',
+      });
+    } else {
+      steps.push(
+        {
+          $project: {
+            user: 1,
+            targetUser: 1,
+            fromName: '$from.fullName',
+            fromNickName: '$from.nickName',
+            fromGender: '$from.gender',
+            fromoDob: '$from.dob',
+            fromEmail: '$from.identifier',
+            fromActive: '$from.active',
+            fromRoles: '$from.roles',
+            toName: '$to.fullName',
+            toNickName: '$to.nickName',
+            toGender: '$to.gender',
+            toDob: '$to.dob',
+            toEmail: '$to.identifier',
+            toActive: '$to.active',
+            toRoles: '$to.roles',
+            createdAt: 1,
+          },
+        },
+        {
+          $sort: {
+            createdAt: -1,
+          },
+        },
+        {
+          $skip: start,
+        },
+        {
+          $limit: perPage,
+        },
+      );
+    }
     return await this.flagModel.aggregate(steps);
+  }
+
+  async getBlockListTotal(search = '') {
+    const data = await this.getBlockList(search, 0, -1);
+    return data instanceof Array && data.length > 0 ? data[0].total : 0;
   }
 
   async getFeedbackTypes() {
