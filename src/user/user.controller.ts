@@ -2284,11 +2284,27 @@ export class UserController {
         ? decodeURIComponent(query.search)
         : '';
     const hasSearch = notEmptyString(search);
-    const items = await this.feedbackService.getBlockList(
+    const rows = await this.feedbackService.getBlockList(
       search,
       startInt,
       perPage,
     );
+    const items: any[] = [];
+    const nowMs = Date.now();
+    const calcAge = (dob: Date) =>
+      Math.floor((nowMs - dob.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+    const matchAge = (dob: any = null) =>
+      dob instanceof Date ? calcAge(dob) : -1;
+    if (rows.length > 0) {
+      for (const row of rows) {
+        const targetTotal = await this.feedbackService.getBlockedTotalByTarget(
+          row.targetUser,
+        );
+        const fromAge = matchAge(row.fromDob);
+        const toAge = matchAge(row.toDob);
+        items.push({ ...row, fromAge, toAge, targetTotal });
+      }
+    }
     const total = await this.feedbackService.getBlockListTotal(search);
     const grandTotal = hasSearch
       ? await this.feedbackService.getBlockListTotal('')

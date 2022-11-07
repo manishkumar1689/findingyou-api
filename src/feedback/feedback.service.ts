@@ -249,10 +249,18 @@ export class FeedbackService {
     return records;
   }
 
-  async getBlockList(search = '', start = 0, perPage = 0) {
+  async getBlockList(
+    search = '',
+    start = 0,
+    perPage = 0,
+    userId = '',
+    userIdDir = 'to',
+  ) {
     const countMode = perPage < 0;
     const hasSearch = notEmptyString(search);
     const filter: Map<string, any> = new Map();
+    const hasUserFilter = !hasSearch && isValidObjectId(userId);
+    const hasFromFilter = hasUserFilter && userIdDir === 'from';
     filter.set('key', 'blocked');
     if (hasSearch) {
       const rgx = new RegExp('\\b' + search, 'i');
@@ -264,6 +272,10 @@ export class FeedbackService {
         { 'to.identifier': rgx },
         { 'from.identifier': rgx },
       ]);
+    }
+    if (hasUserFilter) {
+      const userField = hasFromFilter ? 'user' : 'targetUser';
+      filter.set(userField, ObjectId(userId));
     }
     const steps: any[] = [
       {
@@ -301,7 +313,7 @@ export class FeedbackService {
             fromName: '$from.fullName',
             fromNickName: '$from.nickName',
             fromGender: '$from.gender',
-            fromoDob: '$from.dob',
+            fromDob: '$from.dob',
             fromEmail: '$from.identifier',
             fromActive: '$from.active',
             fromRoles: '$from.roles',
@@ -333,6 +345,11 @@ export class FeedbackService {
 
   async getBlockListTotal(search = '') {
     const data = await this.getBlockList(search, 0, -1);
+    return data instanceof Array && data.length > 0 ? data[0].total : 0;
+  }
+
+  async getBlockedTotalByTarget(targetId = '') {
+    const data = await this.getBlockList('', 0, -1, targetId);
     return data instanceof Array && data.length > 0 ? data[0].total : 0;
   }
 
