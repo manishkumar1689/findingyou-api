@@ -2859,6 +2859,7 @@ export class UserService {
   }
 
   async getReportedUsers(start = 0, limit = 100, search = '') {
+    const countMode = start < 0;
     const filter = new Map<string, any>();
     filter.set('reports.key', 'user_report');
     if (notEmptyString(search, 1)) {
@@ -2870,7 +2871,7 @@ export class UserService {
       ]);
     }
     const criteria = Object.fromEntries(filter.entries());
-    const steps = [
+    const steps: any[] = [
       {
         $lookup: {
           from: 'reporters',
@@ -2882,26 +2883,42 @@ export class UserService {
       {
         $match: criteria,
       },
-      {
-        $project: {
-          targetUser: '$_id',
-          reports: 1,
-          identifier: 1,
-          fullName: 1,
-          nickName: 1,
-          active: 1,
-          roles: 1,
-          dob: 1,
-          geo: 1,
-          gender: 1,
-          login: 1,
-          joined: '$createdAt',
-          modifiedAt: 1,
-        },
-      },
-      { $skip: start },
-      { $limit: limit },
     ];
+    if (countMode) {
+      steps.push({
+        $count: 'total',
+      });
+    } else {
+      steps.push(
+        {
+          $project: {
+            targetUser: '$_id',
+            reports: 1,
+            identifier: 1,
+            fullName: 1,
+            nickName: 1,
+            active: 1,
+            roles: 1,
+            dob: 1,
+            geo: 1,
+            gender: 1,
+            login: 1,
+            joined: '$createdAt',
+            modifiedAt: 1,
+          },
+        },
+        { $skip: start },
+        { $limit: limit },
+      );
+    }
     return await this.userModel.aggregate(steps);
+  }
+  async totalReportedUsers(search = ''): Promise<number> {
+    const items = await this.getReportedUsers(-1, 1, search);
+    if (items instanceof Array && items.length > 0) {
+      return parseInt(items[0].total);
+    } else {
+      return 0;
+    }
   }
 }

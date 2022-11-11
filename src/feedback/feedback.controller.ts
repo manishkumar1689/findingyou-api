@@ -86,12 +86,29 @@ export class FeedbackController {
   }
 
   @Get('reported/:start?/:limit?')
-  async listReported(@Res() res, @Param('start') start, @Param('limit') limit) {
+  async listReported(
+    @Res() res,
+    @Param('start') start,
+    @Param('limit') limit,
+    @Query() query,
+  ) {
     const startInt = smartCastInt(start, 0);
     const limitIntVal = smartCastInt(limit, 100);
     const limitInt = limitIntVal > 0 ? limitIntVal : 100;
-    const items = await this.userService.getReportedUsers(startInt, limitInt);
-    return res.json({ items });
+    const paramKeys = query instanceof Object ? Object.keys(query) : [];
+    const searchStr =
+      paramKeys.includes('search') && notEmptyString(query.search, 1)
+        ? decodeURIComponent(query.search)
+        : '';
+    const items = await this.userService.getReportedUsers(
+      startInt,
+      limitInt,
+      searchStr,
+    );
+    const total = await this.userService.totalReportedUsers(searchStr);
+    const valid = total > 0;
+    const num = items.length;
+    return res.json({ valid, num, total, items });
   }
 
   @Get('flags-by-user/:user?')
