@@ -2857,4 +2857,51 @@ export class UserService {
     }
     return result;
   }
+
+  async getReportedUsers(start = 0, limit = 100, search = '') {
+    const filter = new Map<string, any>();
+    filter.set('reports.key', 'user_report');
+    if (notEmptyString(search, 1)) {
+      const rgx = new RegExp('\\b' + search, 'i');
+      filter.set('$or', [
+        { fullName: rgx },
+        { nickName: rgx },
+        { identifier: rgx },
+      ]);
+    }
+    const criteria = Object.fromEntries(filter.entries());
+    const steps = [
+      {
+        $lookup: {
+          from: 'reporters',
+          localField: '_id',
+          foreignField: 'user',
+          as: 'reports',
+        },
+      },
+      {
+        $match: criteria,
+      },
+      {
+        $project: {
+          targetUser: '$_id',
+          reports: 1,
+          identifier: 1,
+          fullName: 1,
+          nickName: 1,
+          active: 1,
+          roles: 1,
+          dob: 1,
+          geo: 1,
+          gender: 1,
+          login: 1,
+          joined: '$createdAt',
+          modifiedAt: 1,
+        },
+      },
+      { $skip: start },
+      { $limit: limit },
+    ];
+    return await this.userModel.aggregate(steps);
+  }
 }

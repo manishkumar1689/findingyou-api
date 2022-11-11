@@ -85,6 +85,15 @@ export class FeedbackController {
     return res.json(data);
   }
 
+  @Get('reported/:start?/:limit?')
+  async listReported(@Res() res, @Param('start') start, @Param('limit') limit) {
+    const startInt = smartCastInt(start, 0);
+    const limitIntVal = smartCastInt(limit, 100);
+    const limitInt = limitIntVal > 0 ? limitIntVal : 100;
+    const items = await this.userService.getReportedUsers(startInt, limitInt);
+    return res.json({ items });
+  }
+
   @Get('flags-by-user/:user?')
   async getAllFlagsByUser(@Res() res, @Param('user') user) {
     const data = await this.feedbackService.getAllUserInteractions(user);
