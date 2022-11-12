@@ -2876,7 +2876,7 @@ export class UserService {
         $lookup: {
           from: 'reporters',
           localField: '_id',
-          foreignField: 'user',
+          foreignField: 'targetUser',
           as: 'reports',
         },
       },
@@ -2907,6 +2907,7 @@ export class UserService {
             modifiedAt: 1,
           },
         },
+        { $sort: { 'reports.modifiedAt': -1 } },
         { $skip: start },
         { $limit: limit },
       );
