@@ -387,6 +387,14 @@ export class FeedbackService {
         $gt: new Date('2020-01-01T00:00:00'),
       });
     } else {
+      const buildSearch = (str: string) => {
+        const rgx = new RegExp('\\b' + decodeURIComponent(str), 'i');
+        return [
+          { 'u.fullName': rgx },
+          { 'u.nickName': rgx },
+          { 'u.identifier': rgx },
+        ];
+      };
       for (const k of keys) {
         switch (k) {
           case 'key':
@@ -394,6 +402,11 @@ export class FeedbackService {
             break;
           case 'user':
             filter.set('user', ObjectId(criteria.user));
+            break;
+          case 'search':
+            if (notEmptyString(criteria.search)) {
+              filter.set('$or', buildSearch(criteria.search));
+            }
             break;
         }
       }
