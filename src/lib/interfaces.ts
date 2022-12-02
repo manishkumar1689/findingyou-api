@@ -19,3 +19,9 @@ export interface TimeItem {
   jd: number;
   dt: string;
 }
+
+export interface KeyNameCount {
+  key: string;
+  name: string;
+  count?: number;
+}

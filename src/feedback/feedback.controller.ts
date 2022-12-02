@@ -100,20 +100,44 @@ export class FeedbackController {
       paramKeys.includes('search') && notEmptyString(query.search, 1)
         ? decodeURIComponent(query.search)
         : '';
+    const reasonStr =
+      paramKeys.includes('reason') && notEmptyString(query.reason, 1)
+        ? decodeURIComponent(query.reason)
+        : '';
+    const sortKey =
+      paramKeys.includes('sort') && notEmptyString(query.sort, 2)
+        ? query.sort
+        : 'modified';
     const items = await this.userService.getReportedUsers(
       startInt,
       limitInt,
       searchStr,
+      reasonStr,
+      sortKey,
     );
-    const total = await this.userService.totalReportedUsers(searchStr);
+    const total = await this.userService.totalReportedUsers(
+      searchStr,
+      reasonStr,
+    );
     const valid = total > 0;
     const num = items.length;
-    return res.json({ valid, num, total, items });
+    return res.json({
+      valid,
+      num,
+      total,
+      items,
+    });
   }
 
   @Get('flags-by-user/:user?')
   async getAllFlagsByUser(@Res() res, @Param('user') user) {
     const data = await this.feedbackService.getAllUserInteractions(user);
+    return res.json(data);
+  }
+
+  @Get('report-reasons')
+  async reportReasons(@Res() res) {
+    const data = await this.feedbackService.reportReasonSet();
     return res.json(data);
   }
 

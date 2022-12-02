@@ -2858,7 +2858,29 @@ export class UserService {
     return result;
   }
 
-  async getReportedUsers(start = 0, limit = 100, search = '') {
+  async getReportedUsers(
+    start = 0,
+    limit = 100,
+    search = '',
+    reason = '',
+    sortKey = 'modified',
+  ) {
+    const sortFilter: Map<string, number> = new Map();
+    switch (sortKey) {
+      case 'num':
+      case 'reports':
+      case 'numReports':
+        sortFilter.set('numReports', -1);
+        break;
+      case 'users':
+      case 'reporters':
+      case 'numReporters':
+        sortFilter.set('numReporters', -1);
+      default:
+        sortFilter.set('reports.modifiedAt', -1);
+        break;
+    }
+    const sortCriteria = Object.fromEntries(sortFilter.entries());
     const countMode = start < 0;
     const filter = new Map<string, any>();
     filter.set('reports.key', 'user_report');
@@ -2869,6 +2891,15 @@ export class UserService {
         { nickName: rgx },
         { identifier: rgx },
       ]);
+    }
+    let reasonRgx = new RegExp('.*');
+    const filterByReason = notEmptyString(reason, 3);
+    if (filterByReason) {
+      reasonRgx = new RegExp(
+        '^' + reason.toLowerCase().replace(/[^a-z0-9]/i, '.*'),
+        'i',
+      );
+      filter.set('reports.reason', reasonRgx);
     }
     const criteria = Object.fromEntries(filter.entries());
     const steps: any[] = [
@@ -2889,10 +2920,18 @@ export class UserService {
         $count: 'total',
       });
     } else {
+      steps.push({
+        $addFields: {
+          numReports: { $size: '$reports' },
+          numReporters: { $size: { $setUnion: '$reports.user' } },
+        },
+      });
       steps.push(
         {
           $project: {
             targetUser: '$_id',
+            numReports: 1,
+            numReporters: 1,
             reports: 1,
             identifier: 1,
             fullName: 1,
@@ -2907,15 +2946,29 @@ export class UserService {
             modifiedAt: 1,
           },
         },
-        { $sort: { 'reports.modifiedAt': -1 } },
+        { $sort: sortCriteria },
         { $skip: start },
         { $limit: limit },
       );
     }
-    return await this.userModel.aggregate(steps);
+    const items = await this.userModel.aggregate(steps);
+    return items.map(item => {
+      const reports =
+        item.reports instanceof Array
+          ? filterByReason
+            ? item.reports.filter(r => reasonRgx.test(r.reason))
+            : item.reports
+          : [];
+      const numReports = reports.length;
+      const numReporters = filterByReason
+        ? new Set(reports.map(r => r.user.toString())).size
+        : item.numReporters;
+      return { ...item, reports, numReports, numReporters };
+    });
   }
-  async totalReportedUsers(search = ''): Promise<number> {
-    const items = await this.getReportedUsers(-1, 1, search);
+
+  async totalReportedUsers(search = '', reason = ''): Promise<number> {
+    const items = await this.getReportedUsers(-1, 1, search, reason);
     if (items instanceof Array && items.length > 0) {
       return parseInt(items[0].total);
     } else {

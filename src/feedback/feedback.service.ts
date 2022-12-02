@@ -14,9 +14,10 @@ import {
   mapUserFlag,
   UserFlagSet,
 } from '../lib/notifications';
-import { smartCastInt } from '../lib/converters';
+import { sanitize, smartCastInt } from '../lib/converters';
 import { BlockRecord } from './lib/interfaces';
 import { chatApi } from '../.config';
+import { KeyNameCount } from '../lib/interfaces';
 const { ObjectId } = Types;
 
 @Injectable()
@@ -114,6 +115,55 @@ export class FeedbackService {
     } else {
       return 0;
     }
+  }
+
+  async reportReasonSet(): Promise<KeyNameCount[]> {
+    const steps = [
+      {
+        $match: {
+          key: 'user_report',
+        },
+      },
+      { $group: { _id: null, reason: { $addToSet: '$reason' } } },
+      {
+        $project: {
+          _id: 0,
+          reason: 1,
+        },
+      },
+    ];
+    const rows = await this.feedbackModel.aggregate(steps);
+    const items: KeyNameCount[] = [];
+    if (rows instanceof Array && rows.length > 0) {
+      if (rows[0] instanceof Object && rows[0].reason instanceof Array) {
+        const keys: string[] = [];
+        const names = rows[0].reason;
+        for (const name of names) {
+          const key = sanitize(name, '-');
+          if (keys.indexOf(key) < 0) {
+            const rgx = new RegExp(key.replace(/-/g, '.*?'), 'i');
+            const c = await this.feedbackModel.count({
+              key: 'user_report',
+              reason: rgx,
+            });
+            items.push({
+              key,
+              name,
+              count: c,
+            });
+            keys.push(key);
+          }
+        }
+      }
+    }
+    const calcWeight = (row: KeyNameCount) => {
+      const k1 = row.key.charCodeAt(0) - 45;
+      return row.count * 200 + k1;
+    };
+    items.sort((a, b) => {
+      return calcWeight(b) - calcWeight(a);
+    });
+    return items;
   }
 
   async isBlocked(
