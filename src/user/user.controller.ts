@@ -1091,7 +1091,10 @@ export class UserController {
     };
     const entryToPerm = entry => entryToRow(entry, false);
     const entryToLimit = entry => entryToRow(entry, true);
-    const repeatInterval = await this.settingService.swipeMemberRepeatInterval();
+    const repeatInterval = await this.settingService.swipeMemberRepeatInterval(
+      -1,
+      true,
+    );
     const limits = Object.entries(permObj)
       .filter(entry => typeof entry[1] === 'number')
       .map(entryToLimit);
