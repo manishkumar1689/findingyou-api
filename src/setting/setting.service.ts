@@ -797,7 +797,9 @@ export class SettingService {
   }
 
   async minPassValue() {
-    let minValue = -3;
+    const maxPass = this.getByKey('max_pass_repeat');
+    const maxPassInt = typeof maxPass === 'number' && maxPass > 0 ? maxPass : 3;
+    let minValue = 0 - maxPassInt;
     const likeability = await this.getFlagInfo('likeability');
     if (likeability.range instanceof Array && likeability.range.length > 1) {
       minValue = likeability.range[0];

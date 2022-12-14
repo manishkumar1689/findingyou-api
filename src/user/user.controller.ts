@@ -1103,6 +1103,15 @@ export class UserController {
       name: 'Swipe member repeat interval (minutes)',
       value: repeatInterval,
     });
+
+    const maxLikeResetHours = await this.settingService.getFreeMemberLikeResetHours();
+
+    limits.push({
+      key: 'members__like_reset_hours',
+      name: 'Swipe member repeat interval (hours)',
+      value: maxLikeResetHours,
+    });
+
     const items = Object.entries(permObj)
       .filter(entry => typeof entry[1] !== 'number')
       .map(entryToPerm);
