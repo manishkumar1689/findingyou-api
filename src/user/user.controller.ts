@@ -1108,10 +1108,9 @@ export class UserController {
 
     limits.push({
       key: 'members__like_reset_hours',
-      name: 'Swipe member repeat interval (hours)',
+      name: 'Like/Superlike bucketlist reset interval (hours)',
       value: maxLikeResetHours,
     });
-
     const items = Object.entries(permObj)
       .filter(entry => typeof entry[1] !== 'number')
       .map(entryToPerm);
