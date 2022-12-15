@@ -21,7 +21,11 @@ import { SnippetService } from '../snippet/snippet.service';
 import { CreateSettingDTO } from './dto/create-setting.dto';
 import { IdBoolDTO } from './dto/id-bool.dto';
 import { ScoreDTO } from './dto/score.dto';
-import { isNumeric, notEmptyString, validISODateString } from '../lib/validators';
+import {
+  isNumeric,
+  notEmptyString,
+  validISODateString,
+} from '../lib/validators';
 import { exportCollection, listFiles } from '../lib/operations';
 import {
   checkFileExists,
@@ -92,27 +96,48 @@ export class SettingController {
     let message = 'Invalid key or user ID';
     const isAdmin = await this.userService.isAdminUser(userID);
     if (isAdmin) {
-      const result = await this.settingService.updateSettingByKey(key, createSettingDTO);
+      const result = await this.settingService.updateSettingByKey(
+        key,
+        createSettingDTO,
+      );
       if (notEmptyString(result.message)) {
         message = result.message;
         setting = result.setting;
       }
-      if (createSettingDTO.type === 'preferences' && createSettingDTO.value instanceof Array && createSettingDTO.value.length > 0) {
+      if (
+        key.includes('limits') ||
+        key.startsWith('members__') ||
+        key.includes('permission')
+      ) {
+        this.settingService.clearCacheByKey('permissions');
+      }
+      if (
+        createSettingDTO.type === 'preferences' &&
+        createSettingDTO.value instanceof Array &&
+        createSettingDTO.value.length > 0
+      ) {
         for (const item of createSettingDTO.value) {
           if (item instanceof Object) {
             const { prompt, versions, key } = item;
-            if (notEmptyString(prompt) && versions instanceof Array && versions.length > 0) {
+            if (
+              notEmptyString(prompt) &&
+              versions instanceof Array &&
+              versions.length > 0
+            ) {
               const snKey = [createSettingDTO.key, key].join('__');
               if (versions[0].lang === 'en') {
                 const sn = await this.snippetService.getByKey(snKey);
                 if (sn instanceof Model) {
                   const snObj = sn.toObject();
-                  if (snObj.values instanceof Array && snObj.values.length > 0) {
+                  if (
+                    snObj.values instanceof Array &&
+                    snObj.values.length > 0
+                  ) {
                     if (snObj.values[0].lang === 'en') {
                       snObj.values[0].text = prompt;
                     }
                   }
-                  this.snippetService.save(snObj as CreateSnippetDTO)
+                  this.snippetService.save(snObj as CreateSnippetDTO);
                 }
               }
             }
@@ -163,18 +188,22 @@ export class SettingController {
     const enforce = await this.settingService.enforcePaidMembershipLogic();
     const valid = typeof enforce === 'boolean';
     const status = valid ? HttpStatus.OK : HttpStatus.NOT_ACCEPTABLE;
-    return res.status(status).json({enforce, valid});
+    return res.status(status).json({ enforce, valid });
   }
 
   @Put('device/save-versions/:userID')
-  async saveDeviceVersions(@Res() res, @Param('userID') userID, @Body() versions: DeviceVersionDTO[] ) {
+  async saveDeviceVersions(
+    @Res() res,
+    @Param('userID') userID,
+    @Body() versions: DeviceVersionDTO[],
+  ) {
     let result: any = { valid: false, items: [] };
     let status = HttpStatus.FORBIDDEN;
     const isAdminUser = await this.userService.isAdminUser(userID);
     if (isAdminUser) {
       versions = await this.settingService.saveDeviceVersions(versions);
       if (versions.length > 0) {
-        result = {valid: true, items: versions };
+        result = { valid: true, items: versions };
         status = HttpStatus.OK;
       } else {
         status = HttpStatus.NOT_ACCEPTABLE;
@@ -335,20 +364,40 @@ export class SettingController {
   }
 
   @Get('last-modified/:key/:lang?')
-  async getLastModified(@Res() res, @Param('key') key, @Param('lang') lang = 'en') {
+  async getLastModified(
+    @Res() res,
+    @Param('key') key,
+    @Param('lang') lang = 'en',
+  ) {
     const setting = await this.settingService.getByKey(key);
-    const exists = setting instanceof Object && Object.keys(setting).includes('value') && setting.value !== null;
+    const exists =
+      setting instanceof Object &&
+      Object.keys(setting).includes('value') &&
+      setting.value !== null;
     const mod = exists ? setting.modifiedAt : null;
-    
+
     const ts = new Date().getTime() / 1000;
     const modTs = mod instanceof Date ? mod.getTime() / 1000 : 0;
-    const snippetData = exists? await this.snippetService.lastModified(lang, key) : null;
-    const hasSnippets = snippetData instanceof Object && validISODateString(snippetData.modifiedAt);
-    const translationModifiedAt = hasSnippets? snippetData.modifiedAt : '';
-    const translationSecondsAgo = hasSnippets ? snippetData.hasLocale? snippetData.locale : snippetData.general : 0;
-    const secondsAgo = exists? Math.floor(ts - modTs) : 0;
-    const modifiedAt = exists? mod.toISOString().split('.').shift() : '';
-    const status = exists? HttpStatus.OK : HttpStatus.NOT_FOUND;
+    const snippetData = exists
+      ? await this.snippetService.lastModified(lang, key)
+      : null;
+    const hasSnippets =
+      snippetData instanceof Object &&
+      validISODateString(snippetData.modifiedAt);
+    const translationModifiedAt = hasSnippets ? snippetData.modifiedAt : '';
+    const translationSecondsAgo = hasSnippets
+      ? snippetData.hasLocale
+        ? snippetData.locale
+        : snippetData.general
+      : 0;
+    const secondsAgo = exists ? Math.floor(ts - modTs) : 0;
+    const modifiedAt = exists
+      ? mod
+          .toISOString()
+          .split('.')
+          .shift()
+      : '';
+    const status = exists ? HttpStatus.OK : HttpStatus.NOT_FOUND;
     return res.status(status).json({
       exists,
       modifiedAt,
@@ -361,7 +410,11 @@ export class SettingController {
 
   // List all cache keys matching the specified pattern. Admin user ID required
   @Get('redis-keys/:userID/:pattern')
-  async listCackeysByPattern(@Res() res, @Param('userID') userID, @Param('pattern') pattern) {
+  async listCackeysByPattern(
+    @Res() res,
+    @Param('userID') userID,
+    @Param('pattern') pattern,
+  ) {
     const result = { valid: false, keys: [], num: 0 };
     const isAdmin = await this.userService.isAdminUser(userID);
     if (isAdmin) {
@@ -379,7 +432,11 @@ export class SettingController {
 
   // List all empty cache keys. Admin user ID required
   @Get('redis-keys-empty/:userID/:remove?')
-  async listEmptyCacheKeys(@Res() res, @Param('userID') userID, @Param('remove') remove) {
+  async listEmptyCacheKeys(
+    @Res() res,
+    @Param('userID') userID,
+    @Param('remove') remove,
+  ) {
     const result = { valid: false, keys: [], num: 0 };
     const isAdmin = await this.userService.isAdminUser(userID);
     if (isAdmin) {
@@ -398,7 +455,7 @@ export class SettingController {
   @Get('redis-info/:key')
   async getRedisInfo(@Res() res, @Param('key') key) {
     const result = { valid: false, data: null, size: 0 };
-    const cleanedKey = key.replace(/--/g,'/')
+    const cleanedKey = key.replace(/--/g, '/');
     const data = await this.settingService.redisGet(cleanedKey);
     let status = HttpStatus.NOT_FOUND;
     if (data !== null) {
@@ -495,9 +552,12 @@ export class SettingController {
   async getKotaCakra(@Res() res) {
     const result = await this.settingService.getKotaChakraScoreData();
     const isObj = result instanceof Object;
-    const valid = isObj && Object.keys(result).includes('scores') && result.scores instanceof Array;
+    const valid =
+      isObj &&
+      Object.keys(result).includes('scores') &&
+      result.scores instanceof Array;
     const obj = isObj ? result : {};
-    return res.send({...obj, valid});
+    return res.send({ ...obj, valid });
   }
 
   @Get('sbc-criteria/:skip?')
@@ -548,19 +608,23 @@ export class SettingController {
   }
 
   @Post('save-pp-cutoff?')
-  async savePPCutoff(@Res() res, @Body() payload: ScoreDTO ) {
+  async savePPCutoff(@Res() res, @Body() payload: ScoreDTO) {
     const key = 'pp_cutoff';
     let message = '';
     let setting = null;
     let valid = false;
     if (payload.key === key) {
       const { value } = payload;
-      const settingDTO = { 
+      const settingDTO = {
         key,
         value,
-        type: 'integer'
+        type: 'integer',
       } as CreateSettingDTO;
-      const result = await this.settingService.updateSettingByKey(key, settingDTO, true);
+      const result = await this.settingService.updateSettingByKey(
+        key,
+        settingDTO,
+        true,
+      );
       if (notEmptyString(result.message)) {
         message = result.message;
         setting = result.setting;
@@ -585,18 +649,19 @@ export class SettingController {
     return res.status(HttpStatus.CREATED).send(data);
   }
 
-
-
   @Post('predictive-rules-status')
   async savePredictiveRuleStatus(@Res() res, @Body() items: IdBoolDTO[]) {
     const result: Map<string, any> = new Map([['valid', false]]);
 
     if (items.length > 0) {
-      const ids = await this.settingService.savePredictiveRulesActive(items, true);
+      const ids = await this.settingService.savePredictiveRulesActive(
+        items,
+        true,
+      );
       result.set('ids', ids);
       result.set('valid', ids.length > 0);
     }
-    return res.json(Object.fromEntries(result))
+    return res.json(Object.fromEntries(result));
   }
 
   // Fetch a particular setting using ID
@@ -622,10 +687,10 @@ export class SettingController {
   async resetCustomCache(@Res() res, @Param('userID') userID) {
     const isAdmin = await this.userService.isAdminUser(userID);
     let valid = false;
-    if (isAdmin) { 
+    if (isAdmin) {
       valid = await this.settingService.resetCustomSettingsCache();
     }
-    return res.json({valid});
+    return res.json({ valid });
   }
 
   // Fetch a particular setting using ID
