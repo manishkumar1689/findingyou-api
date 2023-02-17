@@ -57,6 +57,7 @@ import { KeyNumValue } from '../lib/interfaces';
 import { assignGenderOpt, removeIds } from '../lib/mappers';
 import { IdBoolDTO } from './dto/id-bool.dto';
 import { IdsLocationDTO } from './dto/ids-location.dto';
+import { ResultValueSchema } from './schemas/result-value.schema';
 
 const userEditPaths = [
   'fullName',
@@ -2976,11 +2977,12 @@ export class UserService {
     }
   }
 
-  async bulkPrefCorrect(): Promise<number> {
+  async bulkPrefCorrect(): Promise<{ updated: number; results: any[] }> {
     let updated = 0;
+    const results: any[] = [];
     const items = await this.userModel
       .find({
-        'preferences.key': /(birthChart|prientation)/i,
+        'preferences.key': /(birthChart|orientation)/i,
       })
       .select({ _id: 1, preferences: 1 });
     for (const row of items) {
@@ -3021,10 +3023,14 @@ export class UserService {
           }
           return { type, key: newKey, value: newVal };
         });
-        this.userModel.findByIdAndUpdate(row._id, { preferences: prefs });
+        const result = await this.userModel.findByIdAndUpdate(
+          row._id.toString(),
+          { preferences: prefs },
+        );
+        results.push(result);
         updated++;
       }
     }
-    return updated;
+    return { updated, results };
   }
 }
