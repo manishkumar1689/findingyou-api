@@ -2985,22 +2985,41 @@ export class UserService {
       .select({ _id: 1, preferences: 1 });
     for (const row of items) {
       if (row.preferences instanceof Array) {
-        const prefs = u.preferences.map(row => {
-          switch (row.key) {
-            case 'orientation':
-              if (typeof row.value === 'string' && row.value.length > 0) {
-                row.value = row.value
-                  .trim()
-                  .toLowerCase()
-                  .substring(0, 1);
-              }
-              break;
-            case 'birthChart_bymbol':
-              row.key = 'birth_chart_symbol';
-              row.value = row.value.trim().toLowerCase();
-              break;
+        const prefs = row.preferences.map(pr => {
+          const { key, type, value } = pr;
+          let newVal = value;
+          let newKey = key;
+          if (typeof value === 'string') {
+            const hasVal = value.trim().length > 0;
+            switch (key) {
+              case 'orientation':
+                newVal = hasVal
+                  ? value
+                      .trim()
+                      .toLowerCase()
+                      .substring(0, 1)
+                  : 'o';
+                break;
+              case 'birthChart_bymbol':
+                newKey = 'birth_chart_symbol';
+                newVal = hasVal ? value.trim().toLowerCase() : '';
+                break;
+              case 'birthChart_sign':
+                newKey = 'birth_chart_sign';
+                newVal = hasVal
+                  ? value
+                      .trim()
+                      .substring(0, 1)
+                      .toLowerCase()
+                  : '';
+                break;
+              case 'birthChart_type':
+                newKey = 'birth_chart_type';
+                newVal = hasVal ? value.trim().toUpperCase() : '';
+                break;
+            }
           }
-          return row;
+          return { type, key: newKey, value: newVal };
         });
         this.userModel.findByIdAndUpdate(row._id, { preferences: prefs });
         updated++;
