@@ -3061,7 +3061,7 @@ export class UserService {
               case 'push_notifications':
                 newType = 'array_string';
                 break; */
-            case 'birth_chart_type':
+            case 'birth_chart_symbol':
               newVal = trCt(value);
               break;
           }
