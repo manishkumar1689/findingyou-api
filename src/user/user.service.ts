@@ -3037,7 +3037,11 @@ export class UserService {
           row._id.toString(),
           { preferences: prefs },
         );
-        results.push(result);
+        if (result instanceof Object) {
+          if (result._id) {
+            results.push(result._id);
+          }
+        }
         updated++;
       }
     }
