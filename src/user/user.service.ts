@@ -3015,7 +3015,7 @@ export class UserService {
                 break;
               case 'birthChart_type':
                 newKey = 'birth_chart_type';
-                newVal = hasVal ? value.trim().toUpperCase() : '';
+                newVal = hasVal ? value.trim().toUpperCase() : 'N';
                 break;
             }
           }
