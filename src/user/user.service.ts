@@ -3016,14 +3016,18 @@ export class UserService {
           return 'ia';
       }
     };
-
+    const newCT = () => {
+      const vals = ['W', 'NI', 'SI', 'EI'];
+      const rnd = Math.floor(Math.random() * 3.999);
+      return vals[rnd];
+    };
     for (const row of items) {
       if (row.preferences instanceof Array) {
         const prefs = row.preferences.map(pr => {
           const { key, type, value } = pr;
           let newVal = value;
-          /* let newKey = key;
-          let newType = type; */
+          // let newKey = key;
+          let newType = type;
           if (typeof value === 'string') {
             const hasVal = value.trim().length > 0;
             switch (key) {
@@ -3061,11 +3065,15 @@ export class UserService {
               case 'push_notifications':
                 newType = 'array_string';
                 break; */
+            case 'birth_chart_type':
+              newVal = newCT();
+              newType = 'string';
+              break;
             case 'birth_chart_symbol':
               newVal = trCt(value);
               break;
           }
-          return { type, key, value: newVal };
+          return { type: newType, key, value: newVal };
         });
         const result = await this.userModel.findByIdAndUpdate(
           row._id.toString(),
