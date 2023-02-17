@@ -2982,7 +2982,7 @@ export class UserService {
     const results: any[] = [];
     const items = await this.userModel
       .find({
-        'preferences.key': /(birthChart|orientation)/i,
+        'preferences.key': /(birthChart|orientation|push_notif)/i,
       })
       .select({ _id: 1, preferences: 1 });
     for (const row of items) {
@@ -2991,6 +2991,7 @@ export class UserService {
           const { key, type, value } = pr;
           let newVal = value;
           let newKey = key;
+          let newType = type;
           if (typeof value === 'string') {
             const hasVal = value.trim().length > 0;
             switch (key) {
@@ -3025,9 +3026,12 @@ export class UserService {
               case 'orientation':
                 newVal = 's';
                 break;
+              case 'push_notifications':
+                newType = 'array_string';
+                break;
             }
           }
-          return { type, key: newKey, value: newVal };
+          return { type: newType, key: newKey, value: newVal };
         });
         const result = await this.userModel.findByIdAndUpdate(
           row._id.toString(),
