@@ -3066,7 +3066,7 @@ export class UserService {
                 newType = 'array_string';
                 break; */
             case 'birth_chart_type':
-              newVal = value.toString();
+              newVal = value.toLowerCase();
               newType = 'string';
               break;
             case 'birth_chart_symbol':
