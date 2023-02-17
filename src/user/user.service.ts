@@ -2982,7 +2982,7 @@ export class UserService {
     const results: any[] = [];
     const items = await this.userModel
       .find({
-        'preferences.key': /(birthChart|orientation|push_notif)/i,
+        'preferences.key': /birth_chart_type/i,
       })
       .select({ _id: 1, preferences: 1 });
 
