@@ -2985,13 +2985,45 @@ export class UserService {
         'preferences.key': /(birthChart|orientation|push_notif)/i,
       })
       .select({ _id: 1, preferences: 1 });
+
+    const trCt = (prevVal = '') => {
+      switch (prevVal) {
+        case 'symbol':
+          return 'ws';
+        case 'devnagri':
+          return 'hi';
+        case 'gujarati':
+          return 'gu';
+        case 'punjabi':
+          return 'pa';
+        case 'bengali':
+          return 'bn';
+        case 'tamil':
+          return 'ta';
+        case 'malyalam':
+          return 'ml';
+        case 'kannada':
+          return 'kn';
+        case 'telugu':
+          return 'te';
+        case 'tibetian':
+          return 'bo';
+        case 'chinese':
+          return 'zh';
+        case 'english':
+          return 'en';
+        case 'IAST':
+          return 'ia';
+      }
+    };
+
     for (const row of items) {
       if (row.preferences instanceof Array) {
         const prefs = row.preferences.map(pr => {
           const { key, type, value } = pr;
           let newVal = value;
-          let newKey = key;
-          let newType = type;
+          /* let newKey = key;
+          let newType = type; */
           if (typeof value === 'string') {
             const hasVal = value.trim().length > 0;
             switch (key) {
@@ -3003,7 +3035,7 @@ export class UserService {
                       .substring(0, 1)
                   : 'o';
                 break;
-              case 'birthChart_bymbol':
+              /*         case 'birthChart_bymbol':
                 newKey = 'birth_chart_symbol';
                 newVal = hasVal ? value.trim().toLowerCase() : '';
                 break;
@@ -3019,19 +3051,21 @@ export class UserService {
               case 'birthChart_type':
                 newKey = 'birth_chart_type';
                 newVal = hasVal ? value.trim().toUpperCase() : 'N';
-                break;
+                break; */
             }
-          } else {
-            switch (key) {
-              case 'orientation':
+          }
+          switch (key) {
+            /* case 'orientation':
                 newVal = 's';
                 break;
               case 'push_notifications':
                 newType = 'array_string';
-                break;
-            }
+                break; */
+            case 'birth_chart_type':
+              newVal = trCt(value);
+              break;
           }
-          return { type: newType, key: newKey, value: newVal };
+          return { type, key, value: newVal };
         });
         const result = await this.userModel.findByIdAndUpdate(
           row._id.toString(),
