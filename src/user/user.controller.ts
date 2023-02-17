@@ -3304,6 +3304,12 @@ export class UserController {
     return res.json(result);
   }
 
+  @Get('bulk-correct')
+  async bulkPrefCorrect(@Res() res) {
+    const updated = await this.userService.bulkPrefCorrect();
+    return res.json({ updated });
+  }
+
   async sendMail(emailParams: EmailParamsDTO) {
     const { to, toName, subject, html, from, fromName } = emailParams;
     const result = { valid: false, sent: false, error: null, response: null };
