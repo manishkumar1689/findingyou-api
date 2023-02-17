@@ -3020,6 +3020,12 @@ export class UserService {
                 newVal = hasVal ? value.trim().toUpperCase() : 'N';
                 break;
             }
+          } else {
+            switch (key) {
+              case 'orientation':
+                newVal = 's';
+                break;
+            }
           }
           return { type, key: newKey, value: newVal };
         });
