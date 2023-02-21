@@ -3298,6 +3298,19 @@ export class UserController {
     res.json(result);
   }
 
+  @Get('quick-match/:search/:gender?')
+  async getQuickMatch(
+    @Res() res,
+    @Param('search') search,
+    @Param('gender') gender,
+  ) {
+    const genderKey = notEmptyString(gender) ? gender.toLowerCase() : '';
+    const matches = notEmptyString(search, 2)
+      ? await this.userService.matchBasicUsersByRef(search, genderKey)
+      : [];
+    return res.json(matches);
+  }
+
   @Post('test-mail')
   async testMail(@Res() res, @Body() inData: EmailParamsDTO) {
     const result = await this.sendMail(inData);

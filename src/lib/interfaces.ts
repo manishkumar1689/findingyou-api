@@ -3,6 +3,11 @@ export interface KeyNum {
   num: number;
 }
 
+export interface KeyString {
+  key: string;
+  value: string;
+}
+
 export interface KeyNumValue {
   key: string;
   value: number;

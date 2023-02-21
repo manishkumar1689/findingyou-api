@@ -53,7 +53,7 @@ import {
 import { defaultPushNotifications } from '../lib/notifications';
 import { AnswerDTO } from './dto/answer.dto';
 import { AnswerSet } from './interfaces/answer-set.interface';
-import { KeyNumValue } from '../lib/interfaces';
+import { KeyNumValue, KeyString } from '../lib/interfaces';
 import { assignGenderOpt, removeIds } from '../lib/mappers';
 import { IdBoolDTO } from './dto/id-bool.dto';
 import { IdsLocationDTO } from './dto/ids-location.dto';
@@ -285,6 +285,62 @@ export class UserService {
   async getNickName(uid: string): Promise<string> {
     const userRec = await this.getBasicById(uid, ['nickName']);
     return userRec instanceof Object ? userRec.nickName : '';
+  }
+
+  async matchBasicUsersByRef(
+    search: string,
+    gender = '-',
+  ): Promise<KeyString[]> {
+    const emailRegex = new RegExp(
+      '^' + search.toLowerCase().replace(/\./g, '\\.'),
+      'i',
+    );
+    const nameRegex = new RegExp(
+      '\\b' + search.toLowerCase().replace(/[^a-z0-9àáéèêøüöîïßñõã]/g, '.*?'),
+      'i',
+    );
+    const matches: KeyString[] = [];
+    const filter: Map<string, any> = new Map();
+    filter.set('$or', [
+      { identifier: emailRegex },
+      { fullName: nameRegex },
+      { nickName: nameRegex },
+    ]);
+    if (['m', 'f'].includes(gender)) {
+      filter.set('gender', gender);
+    }
+    const criteria = Object.fromEntries(filter.entries());
+    const users = await this.userModel
+      .find(criteria)
+      .select('_id identifier fullName nickName gender dob')
+      .sort({ login: -1, reatedAt: -1 });
+    console.log(users);
+    const nowMs = new Date().getTime();
+    const msInYear = 365.25 * 24 * 60 * 60 * 1000;
+    if (users.length > 0) {
+      for (const user of users) {
+        const name = notEmptyString(user.fullName)
+          ? user.fullName
+          : notEmptyString(user.nickName)
+          ? user.nickName
+          : '';
+        if (notEmptyString(name)) {
+          let age = '-';
+          if (user.dob instanceof Date) {
+            const msAgo = user.dob.getTime();
+            const ageInt = Math.floor((nowMs - msAgo) / msInYear);
+            if (ageInt >= 18) {
+              age = ageInt.toString();
+            }
+          }
+          matches.push({
+            key: user._id.toString(),
+            value: `${name} - ${user.identifier} (${age} ${user.gender})`,
+          });
+        }
+      }
+    }
+    return matches;
   }
 
   /* async updatePrefValue(userID = '', key = '', value = null, type = 'string') {
