@@ -314,7 +314,6 @@ export class UserService {
       .find(criteria)
       .select('_id identifier fullName nickName gender dob')
       .sort({ login: -1, reatedAt: -1 });
-    console.log(users);
     const nowMs = new Date().getTime();
     const msInYear = 365.25 * 24 * 60 * 60 * 1000;
     if (users.length > 0) {
