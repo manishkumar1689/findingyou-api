@@ -446,3 +446,17 @@ export const dtStringToNearest15Minutes = (dtStr = '') => {
     return dtStr;
   }
 };
+
+export const calcYearsAgo = (dt: Date): number => {
+  const msInYear = 365.25 * 24 * 60 * 60 * 1000;
+  let age = -1;
+  if (dt instanceof Date) {
+    const nowMs = new Date().getTime();
+    const msAgo = dt.getTime();
+    const ageInt = Math.floor((nowMs - msAgo) / msInYear);
+    if (ageInt >= 18) {
+      age = ageInt;
+    }
+  }
+  return age;
+};

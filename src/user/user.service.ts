@@ -57,7 +57,7 @@ import { KeyNumValue, KeyString } from '../lib/interfaces';
 import { assignGenderOpt, removeIds } from '../lib/mappers';
 import { IdBoolDTO } from './dto/id-bool.dto';
 import { IdsLocationDTO } from './dto/ids-location.dto';
-import { ResultValueSchema } from './schemas/result-value.schema';
+import { calcYearsAgo } from '../astrologic/lib/date-funcs';
 
 const userEditPaths = [
   'fullName',
@@ -314,8 +314,6 @@ export class UserService {
       .find(criteria)
       .select('_id identifier fullName nickName gender dob')
       .sort({ login: -1, reatedAt: -1 });
-    const nowMs = new Date().getTime();
-    const msInYear = 365.25 * 24 * 60 * 60 * 1000;
     if (users.length > 0) {
       for (const user of users) {
         const name = notEmptyString(user.fullName)
@@ -326,9 +324,8 @@ export class UserService {
         if (notEmptyString(name)) {
           let age = '-';
           if (user.dob instanceof Date) {
-            const msAgo = user.dob.getTime();
-            const ageInt = Math.floor((nowMs - msAgo) / msInYear);
-            if (ageInt >= 18) {
+            const ageInt = calcYearsAgo(user.dob);
+            if (ageInt > 16) {
               age = ageInt.toString();
             }
           }

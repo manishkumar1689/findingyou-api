@@ -88,6 +88,7 @@ import { filterLikeabilityContext, UserFlagSet } from '../lib/notifications';
 import { isValidObjectId, Model } from 'mongoose';
 import { ActiveStatusDTO } from './dto/active-status.dto';
 import {
+  calcYearsAgo,
   dateAgoString,
   matchJdAndDatetime,
 } from '../astrologic/lib/date-funcs';
@@ -998,7 +999,7 @@ export class UserController {
     #mobile
     #admin
   */
-  @Get('likes/:userID/:startRef?/:mode?/:fullMode')
+  @Get('likes/:userID/:startRef?/:mode?/:fullMode?')
   async getLikesToUser(
     @Res() res,
     @Param('userID') userID,
@@ -1014,11 +1015,13 @@ export class UserController {
       : startRef;
     const returnFullObjects = fullMode === 'full';
     const { refNum, gte } = filterLikeabilityKey(mode);
+    const mutual = mode === 'likeability' ? 1 : 0;
     const flags = await this.feedbackService.fetchByLikeability(
       userID,
       startDate,
       refNum,
       gte,
+      mutual,
     );
     if (!returnFullObjects) {
       return res.status(HttpStatus.OK).json(flags);
@@ -1029,6 +1032,46 @@ export class UserController {
       });
       return res.json(items);
     }
+  }
+
+  @Get('likeability/:userID')
+  async getLikeability(@Res() res, @Param('userID') userID) {
+    const rows = isValidObjectId(userID)
+      ? await this.feedbackService.getLikes(userID)
+      : [];
+    const items: any[] = [];
+    for (const row of rows) {
+      const fromMode = row.user.toString() === userID;
+      const { value, modifiedAt } = row;
+      const otherId = fromMode ? row.targetUser : row.user;
+      const user = await this.userService.getBasicById(otherId, [
+        'nickName',
+        'fullName',
+        'gender',
+        'identifier',
+        'dob',
+      ]);
+      if (user instanceof Object) {
+        const age = calcYearsAgo(user.dob);
+        const name = notEmptyString(user.fullName)
+          ? user.fullName
+          : notEmptyString(user.nickName)
+          ? user.fullName
+          : '';
+        const { identifier, gender } = user;
+        items.push({
+          mode: fromMode ? 'from' : 'to',
+          value: value,
+          date: modifiedAt,
+          otherId,
+          name,
+          identifier,
+          age,
+          gender,
+        });
+      }
+    }
+    return res.json(items);
   }
 
   /*

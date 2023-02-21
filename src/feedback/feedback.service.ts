@@ -690,6 +690,19 @@ export class FeedbackService {
     }
   }
 
+  async getLikes(refUserId = '', max = 100, skip = 0) {
+    const rows = await this.flagModel
+      .find({
+        key: 'likeability',
+        $or: [{ user: refUserId }, { targetUser: refUserId }],
+      })
+      .select({ _id: 0, user: 1, targetUser: 1, value: 1, modifiedAt: 1 })
+      .sort({ modifiedAt: -1 })
+      .skip(skip)
+      .limit(max);
+    return rows;
+  }
+
   async countLikesGiven(userID = '', likeStartTs = 0) {
     const startDt = new Date(likeStartTs);
     return await this.flagModel.count({
