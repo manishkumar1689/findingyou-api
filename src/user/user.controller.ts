@@ -1043,7 +1043,9 @@ export class UserController {
     for (const row of rows) {
       const fromMode = row.user.toString() === userID;
       const { value, modifiedAt } = row;
-      const otherId = fromMode ? row.targetUser : row.user;
+      const otherId = fromMode
+        ? row.targetUser.toString()
+        : row.user.toString();
       const user = await this.userService.getBasicById(otherId, [
         'nickName',
         'fullName',
@@ -1059,6 +1061,15 @@ export class UserController {
           ? user.fullName
           : '';
         const { identifier, gender } = user;
+        const isMutual = rows.some(r => {
+          const to = r.targetUser.toString();
+          const from = r.user.toString();
+          if (fromMode) {
+            return to === userID && from === otherId;
+          } else {
+            return from === userID && to === otherId;
+          }
+        });
         items.push({
           mode: fromMode ? 'from' : 'to',
           value: value,
@@ -1068,6 +1079,7 @@ export class UserController {
           identifier,
           age,
           gender,
+          isMutual,
         });
       }
     }
