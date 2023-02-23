@@ -795,7 +795,8 @@ export class UserController {
       const filterByLikeability = notEmptyString(matchedKey);
       if (filterByLikeability) {
         const { refNum, gte } = filterLikeabilityKey(matchedKey);
-        const startDate = toStartRef(params[matchedKey]);
+        const startDateRef = toStartRef(params[matchedKey]);
+        const startDate = startDateRef === 1 ? 2 : startDateRef;
         const mutual =
           paramKeys.includes('mutual') && parseInt(params.mutual, 10) > 0;
         const unrated =
@@ -966,7 +967,7 @@ export class UserController {
       hasUser && !preFetchFlags
         ? await this.feedbackService.getAllUserInteractions(
             userId,
-            1,
+            2,
             otherUserIds,
           )
         : userFlags;
@@ -1037,7 +1038,7 @@ export class UserController {
   @Get('likeability/:userID')
   async getLikeability(@Res() res, @Param('userID') userID) {
     const rows = isValidObjectId(userID)
-      ? await this.feedbackService.getLikes(userID)
+      ? await this.feedbackService.getLikes(userID, 250)
       : [];
     const items: any[] = [];
     for (const row of rows) {
@@ -1064,10 +1065,11 @@ export class UserController {
         const isMutual = rows.some(r => {
           const to = r.targetUser.toString();
           const from = r.user.toString();
+          const matched = r.value > 0 && value > 0;
           if (fromMode) {
-            return to === userID && from === otherId;
+            return matched && to === userID && from === otherId;
           } else {
-            return from === userID && to === otherId;
+            return matched && from === userID && to === otherId;
           }
         });
         items.push({

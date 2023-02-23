@@ -575,7 +575,7 @@ export class FeedbackService {
       ? startDate
       : typeof startDate === 'number'
       ? yearsAgoString(startDate)
-      : yearsAgoString(1);
+      : yearsAgoString(2);
 
     const criteria: Map<string, any> = new Map();
     if (otherUserIds.length > 0) {
@@ -741,7 +741,6 @@ export class FeedbackService {
     const toLikeFlags = likeability.to.map(fi => {
       return { ...fi, key: 'likeability' };
     });
-
     const fromFlags = preFetchFlags ? [...fromLikeFlags, ...from] : [];
 
     const toFlags = preFetchFlags ? [...toLikeFlags, ...to] : [];
