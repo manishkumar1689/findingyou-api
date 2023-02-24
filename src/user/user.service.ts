@@ -662,6 +662,12 @@ export class UserService {
     return notEmptyString(tokenRef, 5) ? tokenRef : '';
   }
 
+  async getUserDeviceTokens(userID: string): Promise<string[]> {
+    const tokenData = await this.getUser(userID, ['deviceTokens']);
+    const tokenRefs = tokenData instanceof Object ? tokenData.deviceTokens : [];
+    return tokenRefs instanceof Array ? tokenRefs : [];
+  }
+
   async getUserStatus(userID: string): Promise<any> {
     const statusData = await this.getUser(userID, [
       'active',

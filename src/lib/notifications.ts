@@ -1,6 +1,7 @@
 import * as admin from 'firebase-admin';
 import { googleFCMKeyPath, googleFCMBase, googleFCMDomain } from '../.config';
-import { isNumeric } from './validators';
+import { isNumeric, notEmptyString } from './validators';
+import { CreateFlagDTO } from '../feedback/dto/create-flag.dto';
 
 const initApp = () => {
   if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
@@ -30,7 +31,7 @@ export interface UserFlagSet {
   likeability: {
     to: IFlag[];
     from: IFlag[];
-  }
+  };
 }
 
 export interface FlagVal {
@@ -237,3 +238,57 @@ export const defaultPushNotifications = [
   'been_superliked',
   'message_received',
 ];
+
+export const sendNotificationMessage = async (
+  targetDeviceToken: string,
+  createFlagDTO: CreateFlagDTO,
+  customTitle = '',
+  customBody = '',
+  notificationKey = '',
+  nickName = '',
+  profileImg = '',
+): Promise<any> => {
+  let result: any = { valid: false };
+  const { key, type, value, user, targetUser } = createFlagDTO;
+  if (notEmptyString(targetDeviceToken, 5)) {
+    const plainText = type === 'text' && notEmptyString(value);
+    const titleText =
+      type === 'title_text' &&
+      value instanceof Object &&
+      Object.keys(value).includes('title');
+    const hasCustomTitle = notEmptyString(customTitle, 3);
+    if (plainText || titleText || customTitle) {
+      const hasCustomBody = notEmptyString(customBody, 3);
+      const title = hasCustomTitle
+        ? customTitle
+        : plainText
+        ? key.replace(/_/g, ' ')
+        : value.title;
+      const body = hasCustomBody
+        ? customBody
+        : plainText
+        ? notEmptyString(value, 2)
+          ? value
+          : 'Someone has interacted with you.'
+        : value.text;
+      const payload: any = {
+        key,
+        type,
+        value,
+        user,
+        targetUser,
+      };
+      if (notEmptyString(notificationKey)) {
+        payload.notificationKey = notificationKey;
+      }
+      if (notEmptyString(nickName)) {
+        payload.nickName = nickName;
+      }
+      if (notEmptyString(profileImg, 5)) {
+        payload.profileImg = profileImg;
+      }
+      result = await pushMessage(targetDeviceToken, title, body, payload);
+    }
+  }
+  return result;
+};

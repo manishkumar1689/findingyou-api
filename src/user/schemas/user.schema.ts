@@ -87,6 +87,7 @@ export const UserSchema = new mongoose.Schema({
   boosts: { type: Number, required: false, default: 0 },
   status: [StatusSchema],
   deviceToken: String,
+  deviceTokens: [String],
   token: String,
   likeStartTs: { type: Number, default: 0 },
   superlikeStartTs: { type: Number, default: 0 },

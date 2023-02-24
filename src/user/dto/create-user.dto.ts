@@ -81,6 +81,9 @@ export class CreateUserDTO {
   readonly deviceToken?: string;
 
   @ApiProperty()
+  readonly deviceTokens?: string[];
+
+  @ApiProperty()
   readonly likeStartTs?: number;
 
   @ApiProperty()
