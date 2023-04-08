@@ -16,17 +16,21 @@ export const isChartObject = (chart = null) => {
   let valid = false;
   if (chart instanceof Object) {
     const keys = Object.keys(chart);
-    if (keys.includes("jd") && keys.includes("ascendant") && keys.includes("grahas")) {
+    if (
+      keys.includes('jd') &&
+      keys.includes('ascendant') &&
+      keys.includes('grahas')
+    ) {
       valid = chart.grahas instanceof Array && chart.grahas.length > 5;
     }
   }
   return valid;
-}
+};
 
 export const simplifyUpagraha = (up: KeyValue, ayaOffset = 0) => {
-  const {key, value } = up;
-  return { key, value: subtractLng360(value, ayaOffset)};
-}
+  const { key, value } = up;
+  return { key, value: subtractLng360(value, ayaOffset) };
+};
 
 export const simplifyGraha = (gr, ayanamshaVal = 0, ayanamshaNum = 9) => {
   const lng = subtractLng360(gr.lng, ayanamshaVal);
@@ -37,17 +41,13 @@ export const simplifyGraha = (gr, ayanamshaVal = 0, ayanamshaNum = 9) => {
     };
   });
   let extra: any = {};
-  
+
   if (gr.variants instanceof Array) {
     const variant = gr.variants.find(v => v.num === ayanamshaNum);
     if (variant instanceof Object) {
-      extra = Object.assign(
-        {},
-        removeIds(extractObject(variant)),
-      );
+      extra = Object.assign({}, removeIds(extractObject(variant)));
       delete extra.num;
     }
-    
   }
   const { key, lat, lngSpeed, declination } = gr;
   return {
@@ -61,7 +61,7 @@ export const simplifyGraha = (gr, ayanamshaVal = 0, ayanamshaNum = 9) => {
   };
 };
 
-const matchAyanamshaDataSet = (chart: any = null, key = "", num = 27) => {
+const matchAyanamshaDataSet = (chart: any = null, key = '', num = 27) => {
   if (chart instanceof Object) {
     const keys = Object.keys(chart);
     if (keys.includes(key) && chart[key] instanceof Array) {
@@ -74,11 +74,18 @@ const matchAyanamshaDataSet = (chart: any = null, key = "", num = 27) => {
     }
   }
   return [];
-}
+};
 
-export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra', mode = 'complete', applyAyanamsha = true, adjustAscendant = true) => {
-  const isModel = chartRef instanceof Object && chartRef.constructor.name === 'model';
-  const chart = isModel? chartRef.toObject() : chartRef;
+export const simplifyChart = (
+  chartRef = null,
+  ayanamshaKey = 'true_citra',
+  mode = 'complete',
+  applyAyanamsha = true,
+  adjustAscendant = true,
+) => {
+  const isModel =
+    chartRef instanceof Object && chartRef.constructor.name === 'model';
+  const chart = isModel ? chartRef.toObject() : chartRef;
   let ayanamshaVal = 0;
   let ayanamshaIndex = 0;
   const { grahas, ayanamshas } = chart;
@@ -94,7 +101,7 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra', mode
   const ayanamshaNum = matchAyanamshaNum(ayanamshaKey);
   if (applyAyanamsha) {
     chart.grahas = grahas.map(gr =>
-      simplifyGraha(gr, ayanamshaVal, ayanamshaNum)
+      simplifyGraha(gr, ayanamshaVal, ayanamshaNum),
     );
   }
   chart.placenames = chart.placenames.map(pl => {
@@ -115,14 +122,18 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra', mode
   chart.mc = subtractLng360(smartCastFloat(chart.mc), ayanamshaVal);
   chart.vertex = subtractLng360(smartCastFloat(chart.vertex), ayanamshaVal);
   //delete chart._id;
-  chart.ayanamshas = chart.ayanamshas.map(removeIds).filter(row => showExtraDataSets || row.key === ayanamshaKey);
+  chart.ayanamshas = chart.ayanamshas
+    .map(removeIds)
+    .filter(row => showExtraDataSets || row.key === ayanamshaKey);
   chart.upagrahas = chart.upagrahas.map(removeIds);
   /* if (chart.sphutas instanceof Array && ayanamshaIndex < chart.sphutas.length) {
     chart.sphutas = chart.sphutas[ayanamshaIndex].items.map(removeIds);
   } */
-  
-  if (chart.upagrahas instanceof Array  && chart.upagrahas.length > 0) {
-    chart.upagrahas = showUpagrahas? chart.upagrahas.map(up => simplifyUpagraha(up, ayanamshaVal)) : [];
+
+  if (chart.upagrahas instanceof Array && chart.upagrahas.length > 0) {
+    chart.upagrahas = showUpagrahas
+      ? chart.upagrahas.map(up => simplifyUpagraha(up, ayanamshaVal))
+      : [];
   }
   delete chart.__v;
   if (!showExtraDataSets) {
@@ -143,32 +154,47 @@ export const simplifyChart = (chartRef = null, ayanamshaKey = 'true_citra', mode
   return chart;
 };
 
-export const addExtraPanchangaNumValuesFromClass = (chartData = null, chart: Chart, ayaKey = 'true_citra') => {
-  if (chartData instanceof Object && Object.keys(chartData).includes('numValues') && chartData.numValues instanceof Array) {
+export const addExtraPanchangaNumValuesFromClass = (
+  chartData = null,
+  chart: Chart,
+  ayaKey = 'true_citra',
+) => {
+  if (
+    chartData instanceof Object &&
+    Object.keys(chartData).includes('numValues') &&
+    chartData.numValues instanceof Array
+  ) {
     chart.setAyanamshaItemByKey(ayaKey);
     const varaNum = chart.vara.num;
     chartData.numValues.push({ key: 'vara', value: varaNum });
     const moonNak = chart.moon.nakshatra27;
     chartData.numValues.push({ key: 'moonNak', value: moonNak });
   }
-}
+};
 
-export const addExtraPanchangaNumValues = (chartData = null, ayaKey = 'true_citra') => {
+export const addExtraPanchangaNumValues = (
+  chartData = null,
+  ayaKey = 'true_citra',
+) => {
   const chart = new Chart(chartData);
   return addExtraPanchangaNumValuesFromClass(chartData, chart, ayaKey);
-}
+};
 
-export const simplifyAstroChart = (data: any = null, applyAyanamsha = true, adjustAscendant = true) => {
+export const simplifyAstroChart = (
+  data: any = null,
+  applyAyanamsha = true,
+  adjustAscendant = true,
+) => {
   if (data instanceof Object) {
     const keys = Object.keys(data);
     let ayaOffset = 0;
     if (applyAyanamsha) {
-      const ayaRow = data.ayanamshas.find(ay => ay.key !== "raw");
+      const ayaRow = data.ayanamshas.find(ay => ay.key !== 'raw');
       if (ayaRow instanceof Object) {
         ayaOffset = ayaRow.value;
       }
     }
-    if (keys.includes("grahas") && data.grahas instanceof Array) {
+    if (keys.includes('grahas') && data.grahas instanceof Array) {
       data.grahas = data.grahas.map(row => {
         const {
           num,
@@ -178,23 +204,47 @@ export const simplifyAstroChart = (data: any = null, applyAyanamsha = true, adju
           lngSpeed,
           declination,
           transitions,
-          variants
+          variants,
         } = row;
         const trs = transitions.map(tr => {
           const { type, jd } = tr;
-          return {type, jd};
+          return { type, jd };
         });
-        return {key, num, lng: subtractLng360(lng, ayaOffset), lat, lngSpeed, declination, transitions: trs, ...variants[0]};
+        return {
+          key,
+          num,
+          lng: subtractLng360(lng, ayaOffset),
+          lat,
+          lngSpeed,
+          declination,
+          transitions: trs,
+          ...variants[0],
+        };
       });
     }
-    if (keys.includes("rashis") && data.rashis instanceof Array && data.rashis.length > 0) {
+    if (
+      keys.includes('rashis') &&
+      data.rashis instanceof Array &&
+      data.rashis.length > 0
+    ) {
       data.rashis = data.rashis[0].items;
     }
-    if (keys.includes("objects") && data.objects instanceof Array  && data.objects.length > 0) {
+    if (
+      keys.includes('objects') &&
+      data.objects instanceof Array &&
+      data.objects.length > 0
+    ) {
       data.objects = data.objects[0].items;
     }
-    if (applyAyanamsha && keys.includes("upagrahas") && data.upagrahas instanceof Array  && data.upagrahas.length > 0) {
-      data.upagrahas = data.upagrahas.map(up => simplifyUpagraha(up, ayaOffset));
+    if (
+      applyAyanamsha &&
+      keys.includes('upagrahas') &&
+      data.upagrahas instanceof Array &&
+      data.upagrahas.length > 0
+    ) {
+      data.upagrahas = data.upagrahas.map(up =>
+        simplifyUpagraha(up, ayaOffset),
+      );
     }
     if (adjustAscendant) {
       data.ascendant = subtractLng360(data.ascendant, ayaOffset);
@@ -202,37 +252,52 @@ export const simplifyAstroChart = (data: any = null, applyAyanamsha = true, adju
       data.vertex = subtractLng360(data.vertex, ayaOffset);
       data.houses = data.houses.map((hs: HouseSystem) => {
         const { system, values } = hs;
-        return { system, values: values.map(v => {
-          const av = subtractLng360(v, ayaOffset);
-          return system === 'W'? Math.floor(av/30) * 30 : av;
-        })};
-      })
+        return {
+          system,
+          values: values.map(v => {
+            const av = subtractLng360(v, ayaOffset);
+            return system === 'W' ? Math.floor(av / 30) * 30 : av;
+          }),
+        };
+      });
     }
   }
   return data;
-}
+};
 
-
-export const applyAscendantToSimpleChart = (chart = null, geo: GeoPos, ayanamshaKey = "true_citra") => {
+export const applyAscendantToSimpleChart = (
+  chart = null,
+  geo: GeoPos,
+  ayanamshaKey = 'true_citra',
+) => {
   if (isChartObject(chart)) {
     const ayaRow = chart.ayanamshas.find(r => r.key === ayanamshaKey);
-    const ayanamshaVal = ayaRow instanceof Object? ayaRow.value : 0;
+    const ayanamshaVal = ayaRow instanceof Object ? ayaRow.value : 0;
     const asc = calcOffsetAscendant(geo.lat, geo.lng, chart.jd, ayanamshaVal);
     const firstHouse = Math.floor(asc / 30) * 30;
     const houses = [
-      { 
-        system: "W",
-        values: [firstHouse]
-      }
-    ]
+      {
+        system: 'W',
+        values: [firstHouse],
+      },
+    ];
     const grahas = chart.grahas.map(gr => {
-      return { ...gr, transitions: [] }
+      return { ...gr, transitions: [] };
     });
-    return { ...chart, placenames: [], grahas, indianTime: {}, upagrahas: [], geo, ascendant: asc, houses };
+    return {
+      ...chart,
+      placenames: [],
+      grahas,
+      indianTime: {},
+      upagrahas: [],
+      geo,
+      ascendant: asc,
+      houses,
+    };
   } else {
     return Object.assign({}, chart);
   }
-}
+};
 
 export const simplifyCondition = (conditionRef = null) => {
   const condition = new Condition(conditionRef);
@@ -242,9 +307,11 @@ export const simplifyCondition = (conditionRef = null) => {
     isAspect: condition.contextType.isAspect,
     objects: [condition.object1, condition.object2],
     vargas: [condition.varga1, condition.varga2],
-  }
-}
+  };
+};
 
 export const simplifyConditions = (conditionRefs: any[] = []) => {
-  return conditionRefs.filter(cr => cr instanceof Object && Object.keys(cr).includes('fromMode')).map(cr => simplifyCondition(cr));
-}
+  return conditionRefs
+    .filter(cr => cr instanceof Object && Object.keys(cr).includes('fromMode'))
+    .map(cr => simplifyCondition(cr));
+};

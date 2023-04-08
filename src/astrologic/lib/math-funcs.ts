@@ -2,7 +2,7 @@ import vargaValues from './settings/varga-values';
 import { GeoPos } from '../interfaces/geo-pos';
 import { TransitJdSet } from './interfaces';
 import rise from './astronomia/rise';
-import sidereal, { secsToExactJd }  from './astronomia/sidereal';
+import sidereal, { secsToExactJd } from './astronomia/sidereal';
 import { getDeltaT, getSidTime } from './sweph-async';
 import { nutation } from './astronomia/nutation';
 
@@ -27,8 +27,9 @@ export const mapSignToHouse = (sign: number, houses: Array<number>): number => {
   const numH = houses.length;
   let hn = 0;
   if (numH > 0) {
+    const numHs = numH === 1 ? 12 : numH;
     const diff = houses[0] / 30;
-    const hnr = (sign - diff) % numH;
+    const hnr = (sign - diff) % numHs;
     hn = hnr < 1 ? hnr + numH : hnr;
   }
   return hn;
@@ -39,8 +40,8 @@ export const limitValueToRange = (num = 0, min = 0, max = 360): number => {
   const val = (num - min) % span;
   const refVal = val > 0 ? val : span + val;
   const outVal = refVal + min;
-  return (min < 0 && (val < 0 || num > max))? 0 - outVal: outVal;
-}
+  return min < 0 && (val < 0 || num > max) ? 0 - outVal : outVal;
+};
 
 export const calcVargaValue = (lng: number, num = 1) => (lng * num) % 360;
 
@@ -89,15 +90,27 @@ export const geoToRadians = (coords: GeoPos) => {
   };
 };
 
-export const calcDeclinationFromLngLatEcl = (lng = 0, lat = 0, ecliptic = 0): number => {
-	const sinD = Math.cos(toRadians(lat)) * Math.sin(toRadians(lng)) * Math.sin(toRadians(ecliptic)) + Math.sin(toRadians(lat)) * Math.cos(toRadians(ecliptic));
-	return toDegrees(Math.asin(sinD));
-}
+export const calcDeclinationFromLngLatEcl = (
+  lng = 0,
+  lat = 0,
+  ecliptic = 0,
+): number => {
+  const sinD =
+    Math.cos(toRadians(lat)) *
+      Math.sin(toRadians(lng)) *
+      Math.sin(toRadians(ecliptic)) +
+    Math.sin(toRadians(lat)) * Math.cos(toRadians(ecliptic));
+  return toDegrees(Math.asin(sinD));
+};
 
 export const calcRectAscension = (lng = 0, lat = 0, ecliptic = 0): number => {
-	const radians = Math.atan((Math.cos(toRadians(ecliptic))  * Math.sin(toRadians (lng)) - Math.sin(toRadians (ecliptic)) * Math.tan(toRadians(lat)) ) / Math.cos(toRadians (lng)) );
-	return toDegrees(radians);
-}
+  const radians = Math.atan(
+    (Math.cos(toRadians(ecliptic)) * Math.sin(toRadians(lng)) -
+      Math.sin(toRadians(ecliptic)) * Math.tan(toRadians(lat))) /
+      Math.cos(toRadians(lng)),
+  );
+  return toDegrees(radians);
+};
 /*----------------------------------------------------------------
 public static double altitudeForEquatorialPosition(final double geoLat, final double declination, final double rightAscension, final double raMC) {
     final double hourAngle = RangeUtil.limitValueToRange(raMC - rightAscension, 0, 360);
@@ -110,16 +123,21 @@ public static double altitudeForEquatorialPosition(final double geoLat, final do
     return RangeUtil.limitValueToRange(Math.toDegrees(Math.asin(sinAltitude)), -90, 90);
 }
 */
-export const altitudeForEquatorialPosition = (geoLat = 0, declination = 0, rightAscension = 0, raMC = 0): number => {
+export const altitudeForEquatorialPosition = (
+  geoLat = 0,
+  declination = 0,
+  rightAscension = 0,
+  raMC = 0,
+): number => {
   const hourAngle = limitValueToRange(raMC - rightAscension, 0, 360);
   const cosHourAngle = Math.cos(toRadians(hourAngle));
   const sinGeoLat = Math.sin(toRadians(geoLat));
   const cosGeoLat = Math.cos(toRadians(geoLat));
   const sinDecl = Math.sin(toRadians(declination));
   const cosDecl = Math.cos(toRadians(declination));
-  const sinAltitude = (sinGeoLat * sinDecl) + (cosGeoLat * cosDecl * cosHourAngle);
+  const sinAltitude = sinGeoLat * sinDecl + cosGeoLat * cosDecl * cosHourAngle;
   return limitValueToRange(toDegrees(Math.asin(sinAltitude)), -90, 90);
-}
+};
 
 export const midPointSurface = (coord1: GeoPos, coord2: GeoPos) => {
   const c1 = geoToRadians(coord1);
@@ -134,7 +152,13 @@ export const midPointSurface = (coord1: GeoPos, coord2: GeoPos) => {
   return { lat: toDegrees(midLat), lng: toDegrees(midLng) };
 };
 
-export const approxTransitTimes = (geo: GeoPos, alt: number, jd: number, ra: number, decl: number): TransitJdSet => {
+export const approxTransitTimes = (
+  geo: GeoPos,
+  alt: number,
+  jd: number,
+  ra: number,
+  decl: number,
+): TransitJdSet => {
   const deltaT = getDeltaT(jd);
   const nut = nutation(jd + deltaT)[0];
   const sidTime = getSidTime(jd, 0, nut);
@@ -145,19 +169,26 @@ export const approxTransitTimes = (geo: GeoPos, alt: number, jd: number, ra: num
   const th0 = sidTime;
   //const th1 = sidereal.apparent0UT(jd - 0.5);
   const th1 = getSidTime(jd - 0.5, 0, nut);
-  const transData = rise.approxTimes({lat: toRadians(geo.lat), lon: toRadians(geo.lng)}, h0, th0, α, δ, th1);
+  const transData = rise.approxTimes(
+    { lat: toRadians(geo.lat), lon: toRadians(geo.lng) },
+    h0,
+    th0,
+    α,
+    δ,
+    th1,
+  );
   const result = { rise: 0, set: 0, mc: 0, ic: 0 };
   if (transData instanceof Object) {
     const keys = Object.keys(transData);
-    if (keys.includes("rise") && keys.includes("set")) {
+    if (keys.includes('rise') && keys.includes('set')) {
       result.rise = secsToExactJd(jd, transData.rise, geo.lng);
       result.set = secsToExactJd(jd, transData.set, geo.lng);
-      result.mc = secsToExactJd(jd, transData.mc, geo.lng),
-      result.ic = secsToExactJd(jd, transData.ic, geo.lng);
+      (result.mc = secsToExactJd(jd, transData.mc, geo.lng)),
+        (result.ic = secsToExactJd(jd, transData.ic, geo.lng));
     }
   }
   return result;
-}
+};
 
 export const to360 = lng => (lng >= 0 ? lng + 180 : 180 + lng);
 
