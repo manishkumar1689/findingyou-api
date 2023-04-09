@@ -1745,6 +1745,34 @@ const matchNaturalRelationship = (row = null, ruler = '') => {
   return natural;
 };
 
+const postProcessVariants = (variants: Map<string, any>[]) => {
+  for (const v of variants) {
+    const gk = v.get('key');
+    const gRow = grahaValues.find(row => row.key == gk);
+    if (gRow) {
+      const sign = v.get('sign');
+      if (gRow.ownSign instanceof Array) {
+        const isOwnSign = gRow.ownSign.includes(sign);
+        const ruler = grahaValues.find(b => b.ownSign.includes(sign));
+        if (ruler) {
+          const rulerV = variants.find(v2 => v2.get('key') === ruler.key);
+          if (rulerV) {
+            const rulerSign = rulerV.get('sign');
+            const natRel = matchNaturalRelationship(gRow, ruler.key);
+            const relationship = mapRelationships(
+              sign,
+              rulerSign,
+              isOwnSign,
+              natRel,
+            );
+            v.set('relationship', relationship.compound);
+          }
+        }
+      }
+    }
+  }
+};
+
 export const calcCompactChartData = async (
   datetime: string,
   geo: GeoPos,
@@ -1835,33 +1863,7 @@ export const calcCompactChartData = async (
             variants.push(variant);
           });
           // add relationships
-          for (const v of variants) {
-            const gk = v.get('key');
-            const gRow = grahaValues.find(row => row.key == gk);
-            if (gRow) {
-              const sign = v.get('sign');
-              if (gRow.ownSign instanceof Array) {
-                const isOwnSign = gRow.ownSign.includes(sign);
-                const ruler = grahaValues.find(b => b.ownSign.includes(sign));
-                if (ruler) {
-                  const rulerV = variants.find(
-                    v2 => v2.get('key') === ruler.key,
-                  );
-                  if (rulerV) {
-                    const rulerSign = rulerV.get('sign');
-                    const natRel = matchNaturalRelationship(gRow, ruler.key);
-                    const relationship = mapRelationships(
-                      sign,
-                      rulerSign,
-                      isOwnSign,
-                      natRel,
-                    );
-                    v.set('relationship', relationship.compound);
-                  }
-                }
-              }
-            }
-          }
+          postProcessVariants(variants);
           if (addExtraSets) {
             sphutaSet.push({ num: aya.value, items: av.sphutas });
             objectSets.push({ num: aya.value, items: av.objects });
