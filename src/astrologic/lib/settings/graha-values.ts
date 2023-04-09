@@ -221,7 +221,7 @@ const grahaValues = [
     caste: 5,
     dhatu: 1,
     dosha: ['2_1'],
-    friends: ['ve','sa','ke','me'],
+    friends: ['ve', 'sa', 'ke', 'me'],
     neutral: ['ju'],
     enemies: ['su', 'mo', 'ma'],
     ownSign: [11, 6],
@@ -473,4 +473,3 @@ export const matchDikBalaTransition = (key = '') => {
     ? directionalStrengthToTransitionMap[key]
     : '';
 };
-
