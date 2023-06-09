@@ -1846,18 +1846,23 @@ export class AstrologicController {
   /*
     #astrotesting
   */
-  @Get('save-test-users-birth-chart/:start?/:limit?')
+  @Get('save-test-users-birth-chart/:start?/:limit?/:mode?')
   async saveTestUsersBirthChart(
     @Res() res,
     @Param('start') start,
     @Param('limit') limit,
+    @Param('mode') mode,
   ) {
     const startInt = smartCastInt(start, 0);
     const limitInt = smartCastInt(limit, 100);
+    const status = notEmptyString(mode, 2) ? mode : 'test';
+    const criteria = ['demo'].includes(status)
+      ? { roles: status }
+      : { test: true };
     const users = await this.userService.list(
       startInt,
       limitInt,
-      { test: true },
+      criteria,
       true,
     );
     const chartIds = [];
@@ -1879,7 +1884,7 @@ export class AstrologicController {
             alt: geo.alt,
             notes: '',
             type: 'person',
-            status: 'test',
+            status: status,
             isDefaultBirthChart: true,
             gender: user.gender,
             eventType: 'birth',

@@ -36,6 +36,12 @@ db.createView(
       login: "$from.login",
       gender: "$from.gender",
       joined: "$from.createdAt"
+    },
+  },
+  {
+    $sort: {
+      createdAt: -1,
     }
-  }]
+  }
+]
 );
