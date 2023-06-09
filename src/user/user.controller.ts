@@ -2498,7 +2498,7 @@ export class UserController {
     const categoryEntries = Object.entries(analysis)
       .map(([key, value]) => {
         let polarity = spectra.find(pair => pair.includes(key.toUpperCase()));
-        const segment = value <= 20 ? 'ave' : 'high';
+        const segment = (value as number) <= 20 ? 'ave' : 'high';
         let text = '';
         if (notEmptyString(polarity)) {
           const snKey = ['_', 'sub', polarity, key, segment]

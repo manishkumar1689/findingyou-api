@@ -440,6 +440,9 @@ export class UserService {
               case 'member':
                 filter.set('roles', 'active');
                 break;
+              case 'demo':
+                filter.set('roles', 'demo');
+                break;
             }
             break;
           case 'active':
