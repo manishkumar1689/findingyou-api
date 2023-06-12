@@ -69,6 +69,9 @@ export class CreateUserDTO {
   readonly publicProfileText?: string;
 
   @ApiProperty()
+  readonly publicCaptions?: string[];
+
+  @ApiProperty()
   readonly dob?: Date;
 
   @ApiProperty()

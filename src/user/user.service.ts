@@ -983,6 +983,16 @@ export class UserService {
           text: createUserDTO.publicProfileText,
         } as ProfileDTO;
         await this.saveProfile(userID, profile);
+        editKeys.push('publicProfileText');
+      }
+      const hasCaptions =
+        Object.keys(createUserDTO).includes('publicCaptions') &&
+        createUserDTO.publicCaptions instanceof Array &&
+        createUserDTO.publicCaptions.length > 0;
+      if (hasCaptions) {
+        valid = true;
+        await this.saveCaptions(userID, createUserDTO.publicCaptions, 0);
+        editKeys.push('publicCaptions');
       }
       const hasPreferences =
         Object.keys(createUserDTO).includes('preferences') &&
@@ -1779,6 +1789,53 @@ export class UserService {
           new: true,
         },
       );
+      data.valid = true;
+    }
+    return data;
+  }
+
+  async saveCaptions(
+    userID: string,
+    captions: string[] = [],
+    profileIndex = 0,
+  ) {
+    const user = await this.userModel.findById(userID);
+    const data = {
+      user: null,
+      valid: false,
+    };
+    if (user instanceof Object) {
+      const dt = new Date();
+      const updateMap: Map<string, any> = new Map();
+      if (user.profiles instanceof Array) {
+        const numProfiles = user.profiles.length;
+        if (profileIndex < numProfiles) {
+          const profile = user.profiles[profileIndex];
+          if (
+            profile instanceof Object &&
+            profile.mediaItems instanceof Array
+          ) {
+            const numMedia = profile.mediaItems.length;
+            if (numMedia > 0) {
+              updateMap.set('modifiedAt', dt);
+              for (let i = 0; i < captions.length; i++) {
+                if (i < numMedia) {
+                  updateMap.set(
+                    `profiles.${profileIndex}.mediaItems.${i}.title`,
+                    captions[i],
+                  );
+                }
+              }
+            }
+          }
+        }
+      }
+      if (updateMap.size > 1) {
+        const updateObj = Object.fromEntries(updateMap.entries());
+        data.user = await this.userModel.findByIdAndUpdate(userID, updateObj, {
+          new: true,
+        });
+      }
       data.valid = true;
     }
     return data;
