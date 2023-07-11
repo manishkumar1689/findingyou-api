@@ -58,6 +58,7 @@ import { assignGenderOpt, removeIds } from '../lib/mappers';
 import { IdBoolDTO } from './dto/id-bool.dto';
 import { IdsLocationDTO } from './dto/ids-location.dto';
 import { calcYearsAgo } from '../astrologic/lib/date-funcs';
+import { Status } from './interfaces/status.interface';
 
 const userEditPaths = [
   'fullName',
@@ -999,11 +1000,39 @@ export class UserService {
         createUserDTO.preferences instanceof Array &&
         createUserDTO.preferences.length > 0;
       if (hasPreferences) {
-        const user = await this.userModel.findById(userID);
         const prefs = this.mergePreferences(user, createUserDTO.preferences);
         userObj.preferences = prefs;
       }
       const mayNotEditPassword = hasPassword && !mayEditPassword;
+
+      if (editKeys.includes('roles')) {
+        const roles = userObj.roles instanceof Array ? userObj.roles : [];
+        const currRoles = user.roles instanceof Array ? user.roles : [];
+        if (
+          roles.includes('blocked') &&
+          !userObj.active &&
+          user.status instanceof Array &&
+          currRoles.includes('blocked') === false
+        ) {
+          userObj.status = this.addNewStatus(user.status, 'blocked');
+        } else if (currRoles.includes('blocked') && userObj.active) {
+          if (user instanceof Model) {
+            if (user.toObject().status instanceof Array) {
+              const currDt = new Date();
+              const status = user.toObject().status.map(row => {
+                if (row.role === 'blocked' && row.current) {
+                  const expiresAt = currDt;
+                  const modifiedAt = currDt;
+                  return { ...row, current: false, expiresAt, modifiedAt };
+                } else {
+                  return row;
+                }
+              });
+              userObj.status = status;
+            }
+          }
+        }
+      }
       if (editKeys.length > 0 && !mayNotEditPassword) {
         updatedUser = await this.userModel.findByIdAndUpdate(userID, userObj, {
           new: true,
@@ -1131,6 +1160,22 @@ export class UserService {
       { new: true },
     );
     return updatedUser;
+  }
+
+  addNewStatus(statusItems: Status[] = [], statusKey = '', days = 0): Status[] {
+    const currDt = new Date();
+    const numDays = days < 1 ? 366 : days;
+    const endMs = currDt.getTime() + numDays * 24 * 60 * 60 * 10000;
+    const expiryDate = new Date(endMs);
+    const newStatus = {
+      role: statusKey,
+      current: true,
+      payments: [],
+      createdAt: currDt,
+      expiresAt: expiryDate,
+      modifiedAt: currDt,
+    } as Status;
+    return [...statusItems, newStatus];
   }
 
   async updateStatus(
