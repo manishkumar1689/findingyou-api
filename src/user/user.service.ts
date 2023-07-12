@@ -1008,6 +1008,7 @@ export class UserService {
       if (editKeys.includes('roles')) {
         const roles = userObj.roles instanceof Array ? userObj.roles : [];
         const currRoles = user.roles instanceof Array ? user.roles : [];
+        // Use updateStatus for other roles or statuses requriing precise timing and/or payments
         if (
           roles.includes('blocked') &&
           !userObj.active &&
@@ -1016,21 +1017,7 @@ export class UserService {
         ) {
           userObj.status = this.addNewStatus(user.status, 'blocked');
         } else if (currRoles.includes('blocked') && userObj.active) {
-          if (user instanceof Model) {
-            if (user.toObject().status instanceof Array) {
-              const currDt = new Date();
-              const status = user.toObject().status.map(row => {
-                if (row.role === 'blocked' && row.current) {
-                  const expiresAt = currDt;
-                  const modifiedAt = currDt;
-                  return { ...row, current: false, expiresAt, modifiedAt };
-                } else {
-                  return row;
-                }
-              });
-              userObj.status = status;
-            }
-          }
+          this.disableBlockedStatus(user, userObj);
         }
       }
       if (editKeys.length > 0 && !mayNotEditPassword) {
@@ -1162,10 +1149,12 @@ export class UserService {
     return updatedUser;
   }
 
+  // Add a new status object when editing a user. For paid / timed roles use updateStatus instead
   addNewStatus(statusItems: Status[] = [], statusKey = '', days = 0): Status[] {
     const currDt = new Date();
     const numDays = days < 1 ? 366 : days;
-    const endMs = currDt.getTime() + numDays * 24 * 60 * 60 * 10000;
+    // default, on year
+    const endMs = currDt.getTime() + numDays * 24 * 60 * 60 * 1000;
     const expiryDate = new Date(endMs);
     const newStatus = {
       role: statusKey,
@@ -1176,6 +1165,25 @@ export class UserService {
       modifiedAt: currDt,
     } as Status;
     return [...statusItems, newStatus];
+  }
+
+  // only called when unblocking someone, not when assigning other roles
+  disableBlockedStatus(user: User, newUserObj: any = null) {
+    if (user instanceof Model) {
+      if (user.toObject().status instanceof Array) {
+        const currDt = new Date();
+        const status = user.toObject().status.map(row => {
+          if (row.role === 'blocked' && row.current) {
+            const expiresAt = currDt;
+            const modifiedAt = currDt;
+            return { ...row, current: false, expiresAt, modifiedAt };
+          } else {
+            return row;
+          }
+        });
+        newUserObj.status = status;
+      }
+    }
   }
 
   async updateStatus(
