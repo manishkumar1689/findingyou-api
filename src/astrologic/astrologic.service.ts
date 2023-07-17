@@ -3210,6 +3210,7 @@ export class AstrologicService {
       isDayTime,
     };
 
+    console.log(payload);
     const remResp = await this.postHttp(uri, payload);
     if (remResp.status < 300) {
       return remResp.data;
