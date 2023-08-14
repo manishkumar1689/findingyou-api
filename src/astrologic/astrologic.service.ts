@@ -114,6 +114,7 @@ import { calcKotaChakraScoreData } from './lib/settings/kota-values';
 import { addSnippetKeyToSynastryAspectMatches } from './lib/synastry-aspect-mapper';
 import { buildQueryString } from '../setting/lib/mappers';
 import { GrahaPos } from './lib/point-transitions';
+import { DtCoordsDTO } from './dto/dt-coords.dto';
 const { ObjectId } = Types;
 
 @Injectable()
@@ -3304,4 +3305,34 @@ export class AstrologicService {
     const totalBefore = total - totalAfter;
     return { total, before: totalBefore, after: totalAfter, deleted };
   }
+
+  async fetchBulkLongitudeSets(dtcoords: DtCoordsDTO[], eq = 0, topo = 0, aya = 'true_citra') {
+    const uri =
+      [astroCalcApi, 'position-sets'].join('/');
+    const bodies = ['as', 'su', 'mo', 'ma', 'me', 'ju', 've', 'sa'];
+    const payload = {
+      dtcoords,
+      bodies,
+      eq,
+      topo,
+      aya
+    }
+   const response = await this.postHttp(uri, payload);
+   if (response.status < 300) {
+      const { data } = response;
+      if ( data instanceof Object ) {
+        const { items } = data;
+        if ( items instanceof Array) {
+          return items;
+        } else {
+          return [];
+        }
+      } else {
+        return [];
+      }
+   } else {
+    return [];
+   }
+  }
+
 }

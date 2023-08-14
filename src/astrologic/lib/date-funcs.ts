@@ -1,6 +1,11 @@
 import * as swisseph from 'swisseph';
 import * as moment from 'moment-timezone';
-import { isNumeric, isInteger, validISODateString } from '../../lib/validators';
+import {
+  isNumeric,
+  isInteger,
+  validISODateString,
+  notEmptyString,
+} from '../../lib/validators';
 import { Moment } from 'moment';
 import { zeroPad } from '../../lib/converters';
 
@@ -46,7 +51,9 @@ export const toDateParts = (strDate: string): DateParts => {
     .trim()
     .replace(' ', 'T')
     .split('T');
-  const timeStr = remainder.split('.').shift();
+  const timeStr = notEmptyString(remainder)
+    ? remainder.split('.').shift()
+    : '00:00:00';
   const isNeg = dtPart.startsWith('-');
   const dtStr = isNeg ? dtPart.substring(1) : dtPart;
   const [years, months, days] = dtStr

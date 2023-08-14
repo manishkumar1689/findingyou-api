@@ -128,6 +128,7 @@ import {
   basicSetToFullChart,
   Chart,
   generateBasicChart,
+  simpleSetToFullChart,
 } from './lib/models/chart';
 import { AspectSet, calcOrb } from './lib/calc-orbs';
 import { AspectSetDTO } from './dto/aspect-set.dto';
@@ -201,6 +202,8 @@ import {
   calcKotaChakraScoreSet,
 } from './lib/settings/kota-values';
 import { process5PRulesWithPeaks, processTransitionData } from './calc-5p';
+import { PairedInputDTO } from './dto/paired-input.dto';
+import { DtCoordsDTO } from './dto/dt-coords.dto';
 
 @Controller('astrologic')
 export class AstrologicController {
@@ -4077,6 +4080,56 @@ export class AstrologicController {
       limitInt,
     );
     return res.json(items);
+  }
+
+  @Post('kuta-pairs')
+  async fetchKutaPairs(
+    @Res() res,
+    @Body() payload: PairedInputDTO,
+  ) {
+    const eq = smartCastInt(payload.eq, 0);
+    const topo = smartCastInt(payload.topo, 0);
+    const aya = notEmptyString(payload.ayanamsha)? payload.ayanamsha : 'true_citra';
+    const pairs = payload.pairs instanceof Array ? payload.pairs : [];
+    const dtcoords: DtCoordsDTO[] = [];
+    for (const pair of pairs) {
+      if (pair.length === 2) {
+        dtcoords.push(pair[0]);
+        dtcoords.push(pair[1]);
+      }
+    }
+    const items = await this.astrologicService.fetchBulkLongitudeSets(
+      dtcoords,
+      eq,
+      topo,
+      aya
+    );
+    const kutaSet = await this.settingService.getKutas(false);
+    const results: any[] = [];
+    if (items instanceof Array && items.length > 1) {
+      const numItems = items.length;
+      for (let i = 0; i < numItems; i++) {
+        if (i % 2 === 1) {
+          if (items[i - 1] instanceof Object) {
+            const p1 = items[i - 1];
+            const p2 = items[i];
+            const c1 = simpleSetToFullChart(p1.date.jd, p1.geo, p1.longitudes, p1.ayaVal, p1.name, p1.gender, aya);
+            const c2 = simpleSetToFullChart(p2.date.jd, p2.geo, p2.longitudes, p2.ayaVal, p2.name, p2.gender, aya);      
+            const kutaBuilder = new Kuta(c1, c2);
+            kutaBuilder.loadCompatibility(kutaSet);
+            const kutas = kutaBuilder.calcAllSingleKutas(
+              true,
+              ['as', 'su', 'mo', 'ma', 'me', 'ju', 've', 'sa'],
+              'ashta',
+              false,
+            );
+            results.push({kutas, p1, p2});
+          }
+        }
+      }
+    }
+
+    return res.json(results);
   }
 
   @Post('save-charts')
