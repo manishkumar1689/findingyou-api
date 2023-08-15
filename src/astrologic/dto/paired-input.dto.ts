@@ -14,4 +14,10 @@ export class PairedInputDTO {
   @ApiProperty()
   readonly ayanamsha?: string;
 
+  @ApiProperty()
+  readonly allCombos?: boolean;
+
+  @ApiProperty()
+  readonly bodies?: string[];
+
 }

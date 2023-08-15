@@ -4091,6 +4091,9 @@ export class AstrologicController {
     const topo = smartCastInt(payload.topo, 0);
     const aya = notEmptyString(payload.ayanamsha)? payload.ayanamsha : 'true_citra';
     const pairs = payload.pairs instanceof Array ? payload.pairs : [];
+    const bds = payload.bodies instanceof Array ? payload.bodies.filter(b => notEmptyString(b) && b.length === 2) : [];
+    const allCombos = payload.allCombos === true;
+    const bodies = bds.length > 1 ? bds : ['as', 'su', 'mo', 'ma', 'me', 'ju', 've', 'sa'];
     const dtcoords: DtCoordsDTO[] = [];
     for (const pair of pairs) {
       if (pair.length === 2) {
@@ -4119,9 +4122,9 @@ export class AstrologicController {
             kutaBuilder.loadCompatibility(kutaSet);
             const kutas = kutaBuilder.calcAllSingleKutas(
               true,
-              ['as', 'su', 'mo', 'ma', 'me', 'ju', 've', 'sa'],
+              bodies,
               'ashta',
-              false,
+              allCombos,
             );
             results.push({kutas, p1, p2});
           }
