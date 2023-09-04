@@ -4090,6 +4090,7 @@ export class AstrologicController {
     const eq = smartCastInt(payload.eq, 0);
     const topo = smartCastInt(payload.topo, 0);
     const aya = notEmptyString(payload.ayanamsha)? payload.ayanamsha : 'true_citra';
+    const kutaSetKey = notEmptyString(payload.kutaSetKey)? payload.kutaSetKey : 'dvadasha';
     const pairs = payload.pairs instanceof Array ? payload.pairs : [];
     const bds = payload.bodies instanceof Array ? payload.bodies.filter(b => notEmptyString(b) && b.length === 2) : [];
     const allCombos = payload.allCombos === true;
@@ -4123,7 +4124,7 @@ export class AstrologicController {
             const kutas = kutaBuilder.calcAllSingleKutas(
               true,
               bodies,
-              'ashta',
+              kutaSetKey,
               allCombos,
             );
             results.push({kutas, p1, p2});

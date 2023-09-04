@@ -20,4 +20,7 @@ export class PairedInputDTO {
   @ApiProperty()
   readonly bodies?: string[];
 
+  @ApiProperty()
+  readonly kutaSetKey?: string;
+
 }
