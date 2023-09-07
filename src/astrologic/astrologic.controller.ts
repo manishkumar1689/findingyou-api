@@ -4118,7 +4118,7 @@ export class AstrologicController {
             const p1 = items[i - 1];
             const p2 = items[i];
             const c1 = simpleSetToFullChart(p1.date.jd, p1.geo, p1.longitudes, p1.ayaVal, p1.name, p1.gender, aya);
-            const c2 = simpleSetToFullChart(p2.date.jd, p2.geo, p2.longitudes, p2.ayaVal, p2.name, p2.gender, aya);      
+            const c2 = simpleSetToFullChart(p2.date.jd, p2.geo, p2.longitudes, p2.ayaVal, p2.name, p2.gender, aya); 
             const kutaBuilder = new Kuta(c1, c2);
             kutaBuilder.loadCompatibility(kutaSet);
             const kutas = kutaBuilder.calcAllSingleKutas(
