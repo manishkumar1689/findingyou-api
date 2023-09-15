@@ -3316,7 +3316,7 @@ export class AstrologicService {
       eq,
       topo,
       aya
-    }
+    };
    const response = await this.postHttp(uri, payload);
    if (response.status < 300) {
       const { data } = response;
