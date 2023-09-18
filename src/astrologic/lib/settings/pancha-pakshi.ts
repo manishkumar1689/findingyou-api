@@ -1910,14 +1910,14 @@ export const matchTransitionPeak = (rk = '', relTr: TransitionData): number => {
       case 'as':
       case 'rise':
       case 'rising':
-        return keys.includes('rise') ? relTr.rise.jd : -1;
+        return keys.includes('rise') && relTr.rise instanceof Object? relTr.rise.jd : -1;
       case 'ds':
       case 'set':
       case 'setting':
-        return keys.includes('set') ? relTr.set.jd : -1;
+        return keys.includes('set') && relTr.set instanceof Object ? relTr.set.jd : -1;
       case 'mc':
       case 'ic':
-        return keys.includes(rk) ? relTr[rk].jd : -1;
+        return keys.includes(rk) && relTr[rk] instanceof Object ? relTr[rk].jd : -1;
       default:
         return -1;
     }
@@ -2539,6 +2539,8 @@ export const calculatePanchaPakshiDataRaw = async (
         : [];
       data.set('numSubMatches', matchedRules.length);
       data.set('hasSubMatches', hasSubs);
+
+      data.set('specialKeys', { yogi: chart.yogiGraha().key, avaYogi: chart.avayogiGraha().key })
       const periods = matchPeriodsWithPPScores(
         allYamasWithSubs,
         rules,
@@ -2750,6 +2752,7 @@ export const calculatePanchaPakshiDataRaw = async (
           data.set('notMatchedRuleNames', notMatchedRuleNames);
           data.set('minuteMatches', minuteMatches);
           //data.set('matchedTransitions', matchedTransitions);
+          
         }
       }
     }

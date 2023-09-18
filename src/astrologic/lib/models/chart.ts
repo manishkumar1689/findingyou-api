@@ -21,6 +21,7 @@ import {
   calcAyanamsha,
   calcJdPeriodRange,
   fetchHouseDataJd,
+  matchNakshatra,
   relativeAngle,
 } from './../core';
 import {
@@ -1489,6 +1490,25 @@ export class Chart {
     const deg = this.addBodyLngs(['su', 'mo']);
     const supplement = 93 + 1 / 3; /// 93 1/3
     return (deg + supplement) % 360;
+  }
+  calcAvayogiSphuta() {
+    const ys = this.calcYogiSphuta();
+    return (ys + 560 / 3) % 360;
+  }
+
+  calcSpecialGraha(lng = 0) {
+    const refNk = matchNakshatra(lng);
+    return this.graha(refNk.ruler);
+  }
+
+  yogiGraha() {
+    const lng = this.calcYogiSphuta();
+    return this.calcSpecialGraha(lng);
+  }
+
+  avayogiGraha() {
+    const lng = this.calcAvayogiSphuta();
+    return this.calcSpecialGraha(lng);
   }
 
   calcBijaSphuta() {

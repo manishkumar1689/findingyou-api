@@ -475,6 +475,7 @@ export class AstrologicController {
         }
       }
       data.set('jd', jd);
+      
       data.set('dtUtc', dtUtc);
     } else {
       data.set('message', 'Invalid parameters');
