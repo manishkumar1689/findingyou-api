@@ -1551,7 +1551,7 @@ export const buildBirdSet = (
 export const periodTypes = ['segment', 'yama', 'subyama', 'orb'];
 
 export class PPRule {
-  from = '';
+  from = '';2460206.8729
   to = '';
   key = '';
   name = '';
@@ -2013,6 +2013,8 @@ const matchPPRulesToMinutes = (
                 match.start,
                 match.end,
               );
+              
+              
               if (endSubJd < 0 || (peak <= endSubJd && endSubJd > 0)) {
                 score += rule.score * fraction;
                 names.push(rule.name);
@@ -2729,14 +2731,6 @@ export const calculatePanchaPakshiDataRaw = async (
         const notMatchedRuleNames = rules
           .map(r => r.name)
           .filter(nm => matchedRulesNames.indexOf(nm) < 0);
-        /*         console.log(times.map(time => {
-          const before = time.end < time.peak;
-          const beforeStart = time.peak < time.start;
-          const s = new Date(time.start * 1000).toISOString();
-          const p = new Date(time.peak * 1000).toISOString();
-          const e = new Date(time.end * 1000).toISOString();
-          return {...time, before, beforeStart, s, p, e};
-        })) */
         data.set('rules', rules.map(simplifyRule));
         if (showMinutes) {
           data.set('minutes', scores);

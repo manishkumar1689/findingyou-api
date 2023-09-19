@@ -606,7 +606,7 @@ export const calcAllTransitionsJd = async (
   jd: number,
   geo,
   jdOffset = 0,
-  fullSet = false,
+  fullMode = 0,
   showLng = false,
   adjustRise = false,
 ): Promise<Array<TransitionData>> => {
@@ -617,11 +617,17 @@ export const calcAllTransitionsJd = async (
     'SE_MARS',
     'SE_JUPITER',
     'SE_SATURN',
-    'SE_URANUS',
-    'SE_NEPTUNE',
-    'SE_PLUTO',
-    'SE_MEAN_NODE',
   ];
+  const fullSet = fullMode > 0;
+  if (fullMode > 1) {
+    extraKeys.push(
+      'SE_URANUS',
+      'SE_NEPTUNE',
+      'SE_PLUTO');
+  }
+  if (fullSet) {
+    extraKeys.push('SE_MEAN_NODE');
+  }
   const bodyKeys = fullSet ? [...baseKeys, ...extraKeys] : baseKeys;
   const bodies: Array<TransitionData> = [];
   let sunRiseJd = 0;
@@ -673,7 +679,7 @@ export const calcAllTransitionsFromJd = async (
     jd,
     geo,
     jdOffset,
-    true,
+    1,
     showLng,
     true,
   );
@@ -1818,7 +1824,8 @@ export const calcCompactChartData = async (
   const { jd } = grahaSet;
   const dayFracOffset = tzOffset / 86400;
   const dayStartJd = Math.floor(jd + 0.5) - 0.5 - dayFracOffset;
-  const transitions = await calcAllTransitionsJd(dayStartJd, geo, 0, fetchFull);
+  const fullMode = fetchFull ? 2 : 0;
+  const transitions = await calcAllTransitionsJd(dayStartJd, geo, 0, fullMode);
   grahaSet.mergeTransitions(transitions);
   const matchedAyaNum = fetchFull
     ? 0
