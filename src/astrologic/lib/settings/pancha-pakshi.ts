@@ -2860,10 +2860,15 @@ export const calculatePanchaPakshiDataRaw = async (
               const dnRule = rules.find(r => r.startsWith('pp_dn'));
               const ysRule = rules.find(r => r.startsWith('pp_ys'));
               rows.push({jd: start, start, end, yama, setNum, score, dnRule, ysRule, trRule: ''});
+              const trKs: string[] = [];
               if (row.trs instanceof Array && row.trs.length > 0) {
                 row.trs.forEach(tr => {
                   const trRule = toTransitionRuleKey(tr, spKeys.yogi);
-                  rows.push({jd: tr.jd, start, end, yama, setNum, score, dnRule, ysRule, trRule });
+                  trKs.push(trRule);
+                  if (trKs.indexOf(trRule) < 0) {
+                    rows.push({jd: tr.jd, start, end, yama, setNum, score, dnRule, ysRule, trRule });
+                    trKs.push(trRule);
+                  }
                 })
               }
             })
