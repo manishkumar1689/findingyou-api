@@ -1127,11 +1127,11 @@ export class SettingService {
     return await this.getRuleSets(type, activeOnly, false);
   }
 
-  async getPPRules(): Promise<PPRule[]> {
+  async getPPRules(skipCache = false): Promise<PPRule[]> {
     const key = 'pp_active_rules';
     const stored = await this.redisGet(key);
     let rules: any[] = [];
-    if (stored instanceof Array && stored.length > 0) {
+    if (!skipCache && stored instanceof Array && stored.length > 0) {
       rules = stored;
     } else {
       const items = await this.getRuleSetsByType('panchapakshi');

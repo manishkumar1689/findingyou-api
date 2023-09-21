@@ -1425,6 +1425,18 @@ export const toTransitKey = (abbr: string) => {
   }
 };
 
+export const toShortTransKey = (abbr: string) => {
+  const key = abbr.toLowerCase();
+  switch (key) {
+    case 'rise':
+      return 'asc';
+    case 'set':
+      return 'dsc';
+    default:
+      return key;
+  }
+};
+
 interface BirdGraha {
   bird: string;
   grahas: string[];
@@ -2067,6 +2079,7 @@ export const translateTransitionKey = (key = '', isTr = false): string => {
   }
 };
 
+
 const processPPTransition = (
   r: PPRule,
   chart: Chart,
@@ -2419,6 +2432,61 @@ export const toAllYamaSubs = (allYamasWithSubs: any[] = [], dayFirst) => {
     });
 };
 
+const translateSpecialGrahaKey = (key = '', yogiKey = '') => {
+  const lcVal = notEmptyString(key) ? key.toLowerCase().replace(/\d+$/, '') : '';
+  switch (lcVal) {
+    case 'lotoffortune':
+    case 'fortune':
+      return 'lof';
+    case 'lotofspirit':
+    case 'spirit':
+      return 'los';
+    case 'brghubindu':
+    case 'brighubindu':
+      return 'bb';
+    case 'yogi':
+    case 'yoga':
+      return 'yp';
+    case 'yogigraha':
+    case 'yogagraha':
+    case yogiKey:
+      return 'yg';
+    default:
+      return key;
+  }
+}
+
+
+const toTransitionRuleKey = (tr: TransitionItem, yogiKey = '') => {
+  const mode = tr.transposed ? 'nt' : 'tr';
+  const grRef = translateSpecialGrahaKey(tr.key, yogiKey);
+  return ['tr', mode, grRef, toShortTransKey(tr.type)].join('_');
+}
+
+const addTransitionsToSubYamas = (data: Map<string, any>, matchedTransitions: TransitionItem[], rules: PPRule[], yg = '', setNum = 1) => {
+  const suffix = setNum > 1 ? setNum.toString() : '';
+  const groupKey = `yamas${suffix}`;
+  const yamas = data.get(groupKey);
+  const rows = [];
+  if (yamas instanceof Array) {
+    //const mrs = ).filter(yrs => yrs.length > 0)
+    yamas.forEach((y, yi) => y.subs.forEach((sy, syi) => {
+        const trs = matchedTransitions.filter(tr => tr.jd >= sy.start && tr.jd <= sy.end);
+        if (trs.length > 0) {
+          trs.forEach(tr => {
+            const trK = toTransitionRuleKey(tr, yg)
+            yamas[yi].subs[syi].rules.push(trK);
+            tr.matched = rules.some(r => r.name === trK)
+          })
+        }
+        yamas[yi].subs[syi].trs = trs;
+        rows.push({...sy, yama: (yi+1), setNum})
+    }));
+    data.set(groupKey, yamas);
+  }
+  return rows;
+}
+
 export const calculatePanchaPakshiDataRaw = async (
   chart: Chart,
   jd = 0,
@@ -2745,8 +2813,62 @@ export const calculatePanchaPakshiDataRaw = async (
           data.set('matchRuleNames', matchedRulesNames);
           data.set('notMatchedRuleNames', notMatchedRuleNames);
           data.set('minuteMatches', minuteMatches);
-          //data.set('matchedTransitions', matchedTransitions);
-          
+          const spKeys = data.get('specialKeys');
+          if (spKeys instanceof Object) {
+            const corePPTransKeys = ['ju', 've', 'lotOfFortune', 'lotOfSpirit', 'brghuBindu', 'yogi', spKeys.yogi];
+            const mapMatchedTransitions = (tr: TransitionData) => {
+              const { key, rise, set, mc, ic } = tr;
+              return {
+                key,
+                rise: rise.jd,
+                set: set.jd,
+                mc: mc.jd,
+                ic: ic.jd,
+              }
+            }
+            const filterMatchedTransitions = (tr: TransitionData) => corePPTransKeys.includes(tr.key.replace(/\d+$/, ''));
+            const relTrs = transitions.filter(filterMatchedTransitions).map(mapMatchedTransitions);
+            const relBTrs = birthTransitions.filter(filterMatchedTransitions).map(mapMatchedTransitions);
+            const mTrs = [];
+            relTrs.forEach(tr => {
+              ['rise','set','mc', 'ic'].forEach(tk => {
+                if (tr[tk]) {
+                  mTrs.push({ key: tr.key, type: tk, jd: tr[tk], current: true })
+                }
+              })
+            })
+            relBTrs.forEach(tr => {
+              ['rise','set','mc', 'ic'].forEach(tk => {
+                if (tr[tk]) {
+                  mTrs.push({ key: tr.key, type: tk, jd: tr[tk], current: false })
+                }
+              })
+            })
+            mTrs.sort((a, b) => a.jd - b.jd);
+            const matchedTransitions = mTrs.map(tr => {
+              const dt = julToISODate(tr.jd);
+              return { ...tr, dt};
+            })
+            // data.set('matchTrs', matchedTransitions);
+            
+            const rows1 = addTransitionsToSubYamas(data, matchedTransitions, rules, spKeys.yogi, 1);
+            const rows2 = addTransitionsToSubYamas(data, matchedTransitions, rules, spKeys.yogi, 2);
+            const syRows = [...rows1, ...rows2];
+            const rows: any[] = [];
+            syRows.forEach(row => {
+              const { rules, start, end, score, yama, setNum } = row;
+              const dnRule = rules.find(r => r.startsWith('pp_dn'));
+              const ysRule = rules.find(r => r.startsWith('pp_ys'));
+              rows.push({jd: start, start, end, yama, setNum, score, dnRule, ysRule, trRule: ''});
+              if (row.trs instanceof Array && row.trs.length > 0) {
+                row.trs.forEach(tr => {
+                  const trRule = toTransitionRuleKey(tr, spKeys.yogi);
+                  rows.push({jd: tr.jd, start, end, yama, setNum, score, dnRule, ysRule, trRule });
+                })
+              }
+            })
+            data.set('rows', rows);
+          }
         }
       }
     }

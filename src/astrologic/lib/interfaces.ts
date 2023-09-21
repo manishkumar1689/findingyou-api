@@ -123,4 +123,6 @@ export interface TransitionItem {
   type: string;
   transposed: boolean;
   jd: number;
+  dt?: string;
+  matched?: boolean;
 }

@@ -440,6 +440,9 @@ export class AstrologicController {
     const fetchNightAndDay = ['dual', 'trans', 'rules', 'debug'].includes(mode);
     const showTransitions = ['trans', 'rules', 'debug'].includes(mode);
     const processRules = ['rules', 'debug'].includes(mode);
+    const {query} = res.req;
+    const { clear } = query;
+    const clearCache = smartCastInt(clear, 0) > 0;
     const debugMode = mode === 'debug';
     let chartID = chartRef;
     if (chartRef.includes('@') && chartRef.includes('.')) {
@@ -458,6 +461,7 @@ export class AstrologicController {
         const rules = processRules
           ? await this.settingService.getPPRules()
           : [];
+          
         const customCutoff = await this.settingService.getPPCutoff();
         data = await calculatePanchaPakshiData(
           chart,
