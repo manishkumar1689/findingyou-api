@@ -121,7 +121,8 @@ export interface SynastryAspectMatch {
 export interface TransitionItem {
   key: string;
   type: string;
-  transposed: boolean;
+  current?: boolean;
+  transposed?: boolean;
   jd: number;
   dt?: string;
   matched?: boolean;

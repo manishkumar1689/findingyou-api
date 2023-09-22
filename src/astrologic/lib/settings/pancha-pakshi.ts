@@ -2458,7 +2458,7 @@ const translateSpecialGrahaKey = (key = '', yogiKey = '') => {
 
 
 const toTransitionRuleKey = (tr: TransitionItem, yogiKey = '') => {
-  const mode = tr.transposed ? 'nt' : 'tr';
+  const mode = tr.current ? 'tr' : 'nt';
   const grRef = translateSpecialGrahaKey(tr.key, yogiKey);
   return ['tr', mode, grRef, toShortTransKey(tr.type)].join('_');
 }
