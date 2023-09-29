@@ -459,7 +459,7 @@ export class AstrologicController {
         const chartObj = hasChart ? chartData.toObject() : {};
         const chart = new Chart(chartObj);
         const rules = processRules
-          ? await this.settingService.getPPRules()
+          ? await this.settingService.getPPRules(clearCache)
           : [];
           
         const customCutoff = await this.settingService.getPPCutoff();

@@ -246,6 +246,7 @@ export class FeedbackService {
     const mode = startMode ? 'start' : 'end';
     const url = [chatApi, 'set-block', currUserID, otherUserID, mode].join('/');
     this.getHttp(url);
+    return true;
   }
 
   async getBlocksByUser(

@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { HttpService, Injectable } from '@nestjs/common';
 import { isValidObjectId, Model } from 'mongoose';
 import { ObjectId } from 'mongoose/lib/types';
 import { InjectModel } from '@nestjs/mongoose';
-import { MailerService } from '@nest-modules/mailer';
+import { AxiosResponse } from 'axios';
 import { User } from './interfaces/user.interface';
 import { CreateUserDTO } from './dto/create-user.dto';
 import {
@@ -59,6 +59,7 @@ import { IdBoolDTO } from './dto/id-bool.dto';
 import { IdsLocationDTO } from './dto/ids-location.dto';
 import { calcYearsAgo } from '../astrologic/lib/date-funcs';
 import { Status } from './interfaces/status.interface';
+import { chatApi } from '../.config';
 
 const userEditPaths = [
   'fullName',
@@ -96,7 +97,7 @@ export class UserService {
     private readonly publicUserModel: Model<PublicUser>,
     @InjectModel('AnswerSet')
     private readonly answerSetModel: Model<AnswerSet>,
-    private readonly mailerService: MailerService,
+    private http: HttpService,
   ) {}
   // fetch all Users
   async list(
@@ -114,6 +115,10 @@ export class UserService {
       .sort({ createdAt: -1 });
   }
   // count users by criteria
+
+  getHttp(url: string): Promise<AxiosResponse> {
+    return this.http.get(url).toPromise();
+  }
 
   mapBasicUser(item: any = null) {
     const obj =
@@ -1016,6 +1021,7 @@ export class UserService {
           currRoles.includes('blocked') === false
         ) {
           userObj.status = this.addNewStatus(user.status, 'blocked');
+          this.blockAllOnChat(userID, false);
         } else if (currRoles.includes('blocked') && userObj.active) {
           this.disableBlockedStatus(user, userObj);
         }
@@ -1181,6 +1187,8 @@ export class UserService {
             return row;
           }
         });
+        // ondu block/all on chat api too
+        this.blockAllOnChat(user._id, true);
         newUserObj.status = status;
       }
     }
@@ -2570,6 +2578,17 @@ export class UserService {
         break;
     }
     return valid;
+  }
+
+
+  async blockAllOnChat(userID = '', undo = false) {
+    const undoFlag = undo ? '1' : '0';
+    // Will only work with a base-36 millisec timestamp
+    // This is converted at the other end via .toString(36) and compared with the current timestamp
+    const ts36 = Date.now().toString(36);
+    const url = [chatApi, 'set-block-all', userID, undoFlag, ts36].join('/');
+    this.getHttp(url);
+    return true;
   }
 
   // save / update a single user with basic data

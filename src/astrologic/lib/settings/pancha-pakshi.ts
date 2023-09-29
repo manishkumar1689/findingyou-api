@@ -2894,6 +2894,7 @@ export const calculatePanchaPakshiData = async (
   const transSet = showTransitions
     ? await buildCurrentAndBirthExtendedTransitions(chart, geo, jd)
     : new TransSet();
+    // console.log(transSet.transposedTransitions.filter(r => r.key === 'su'))
   return await calculatePanchaPakshiDataRaw(
     chart,
     jd,
