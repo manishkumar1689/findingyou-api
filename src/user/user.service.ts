@@ -864,6 +864,10 @@ export class UserService {
             }
           }
           break;
+        case 'likeStartTs':
+        case 'superlikeStartTs':
+          userData.set(key, smartCastInt(val, -1));
+          break;
         default:
           if (userEditPaths.includes(key)) {
             userData.set(key, val);

@@ -1088,6 +1088,29 @@ export class UserController {
     return res.json(items);
   }
 
+  @Put('clear-likes/:userID')
+  async clearLikeability(@Res() res, @Param('userID') userID, @Body() payload: ResetDTO) {
+    const result = { valid: false, cleared: 0 };
+    if (isValidObjectId(userID) && payload instanceof Object && payload.ts >= 0) {
+      const clearLikeRecords = payload.value > 0;
+      const resetTimestampsOnly = payload.value < -1;
+      const mutual = payload.value > 1;
+      if (clearLikeRecords) {
+        result.cleared = await this.feedbackService.clearLikes(userID, payload.ts, mutual);
+        result.valid = true;
+      }
+      if (result.valid || resetTimestampsOnly) {
+        const newTs = resetTimestampsOnly ? Date.now() : -1;
+        const editParams = { likeStartTs: newTs, superlikeStartTs: newTs } as CreateUserDTO;
+        const updated = await this.userService.updateUser(userID, editParams);
+        if (updated.keys.length > 1) {
+          result.valid = true;
+        }
+      }
+    }
+    return res.json(result);
+  }
+
   /*
     Fetch role options and merge related payment options
     #mobile

@@ -825,6 +825,30 @@ export class FeedbackService {
     return Object.fromEntries(entries);
   }
 
+  async clearLikes(userID = '', ts = 0, mutual = false) {
+    const filter: Map<string, any> = new Map();
+    filter.set('key', 'likeability');
+    if (mutual) {
+      filter.set('$or', [
+        { user: userID },
+        { targetUser: userID}
+      ]);
+    } else {
+      filter.set('user', userID);
+    }
+    if (ts > 100000) {
+      filter.set('createdAt', { '$gte': new Date(ts)  });
+    }
+
+    const criteria = Object.fromEntries(filter);
+    const result = await this.flagModel.deleteMany(criteria);
+    if (result instanceof Object && result.deletedCount > 0) {
+      return result.deletedCount;
+    } else {
+      return 0;
+    }
+  }
+
   async lastFlagSentDaysAgo(userId = '') {
     const lastItems = await this.flagModel
       .find({ user: userId })
