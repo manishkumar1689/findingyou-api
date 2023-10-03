@@ -1020,10 +1020,13 @@ export class UserService {
           user.status instanceof Array &&
           currRoles.includes('blocked') === false
         ) {
-          userObj.status = this.addNewStatus(user.status, 'blocked');
-          this.blockAllOnChat(userID, false);
-        } else if (currRoles.includes('blocked') && userObj.active) {
-          this.disableBlockedStatus(user, userObj);
+          userObj.status = this.addNewStatus(user.status, 'blocked'); 
+        }
+      }
+      if (editKeys.includes('active')) {
+        if (userObj.active !== user.active) {
+          const undoChatBlock = userObj.active === true;
+          this.applyBlockOnChatApi(userID, undoChatBlock);
         }
       }
       if (editKeys.length > 0 && !mayNotEditPassword) {
@@ -1187,8 +1190,6 @@ export class UserService {
             return row;
           }
         });
-        // ondu block/all on chat api too
-        this.blockAllOnChat(user._id, true);
         newUserObj.status = status;
       }
     }
@@ -2581,7 +2582,7 @@ export class UserService {
   }
 
 
-  async blockAllOnChat(userID = '', undo = false) {
+  async applyBlockOnChatApi(userID = '', undo = false) {
     const undoFlag = undo ? '1' : '0';
     // Will only work with a base-36 millisec timestamp
     // This is converted at the other end via .toString(36) and compared with the current timestamp
